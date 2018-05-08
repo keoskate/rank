@@ -1,0 +1,40 @@
+{
+  "name": "rank",
+  "version": "1.0.0",
+  "description": "Investments have a score and are ranked in a table",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack -d --watch",
+    "start": "node ./server/index.js",
+    "build": "webpack -p",
+    "react-dev": "webpack -d --watch",
+    "server-dev": "nodemon server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "git+https://github.com/keoskate/rank.git",
+  "author": "Keion Anvaripour",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/keoskate/rank/issues"
+  },
+  "homepage": "https://github.com/keoskate/rank#readme",
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-php": "^1.2.0",
+    "babel-preset-react": "^6.24.1",
+    "body-parser": "^1.18.2",
+    "express": "^4.16.3",
+    "npm": "^6.0.0",
+    "react": "^16.3.2",
+    "react-bootstrap-table": "^4.3.1",
+    "react-dom": "^16.3.2",
+    "react-router": "^4.2.0",
+    "react-router-dom": "^4.2.2",
+    "webpack": "^4.6.0"
+  },
+  "devDependencies": {
+    "webpack-cli": "^2.1.2"
+  }
+}
