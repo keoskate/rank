@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
+import * as math from 'mathjs';
 // import RawData from './rank-data.json'
 
 
@@ -13,31 +14,80 @@ class HomePage extends Component {
             sortOrder: undefined,
             rGrid: [],
             sGrid: [],
+            uiData: [],
             params: {
-                "rank": [0, 0],
-                "ticker": [0, 0],
-                "marketCap": [0, 1],
-                "volume": [0, 1],
-                "price": [0, -1],
-                "nav": [0, 1],
-                "discount": [0.50, -1],
-                "distribution": [0.50, 1],
-                "zScore1y": [0, -1],
-                "leverage": [0, -1],
-                "maturity": [0, -1],
-                "uniiDist": [0, -1]
-            },
-            multiplier: {
-                marketCap: 1,
-                volume: 1,
-                price: -1,
-                nav: 1,
-                discount: 0,
-                distribution: 1,
-                zScore1: 0,
-                leverage: 0,
-                maturity: 0,
-                uniiDist: 0,
+                "rank": {
+                    weight: 0, 
+                    multiplier: 0,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "ticker": {
+                    weight: 0, 
+                    multiplier: 0,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "marketCap": {
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "volume": {
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "price": {
+                    weight: 0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "nav": {
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "discount": {
+                    weight: 0.50, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "distribution": {
+                    weight: 0.50, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "zScore1y": {
+                    weight: 0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "leverage": {
+                    weight: 0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "maturity": {
+                    weight: 0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "uniiDist": {
+                    weight: 0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                }
             },
             data: [
                 {
@@ -606,14 +656,21 @@ class HomePage extends Component {
         };
         
         this.cleanData(this.state.data);
+        
+        // This binding is necessary to make `this` work in the callback
+        this.handleRelativeScoreboard = this.handleRelativeScoreboard.bind(this);
+        this.handleStdScoreboard = this.handleStdScoreboard.bind(this);
+        this.handleFullDataScoreboard = this.handleFullDataScoreboard.bind(this);
+        
         this.onSortChange = this.onSortChange.bind(this);
     }
 
     componentDidMount() {
-        this.setupDataStructures();
+        this.setupDataStructures(this.state.data);
     }
 
-    getColList(data, name) {
+    getColList(name, data) {
+        data = data || this.state.data;
         const list = [];
         for (let i = 0; i < data.length; i++){
             const row = data[i];
@@ -636,12 +693,13 @@ class HomePage extends Component {
                 if (col === 'ticker') {
                     clearedRow[col] = row[col];
                 } else {
-                    const weight = this.state.params[col][0];
-                    if (weight === 0) {
+                    const weight = this.state.params[col].weight;
+                    if (!weight || weight === 0) {
                         clearedRow[col] = 0;
                     } else {
                         clearedRow[col] = row[col];
                     }
+                    
                 }
             }
 
@@ -656,13 +714,45 @@ class HomePage extends Component {
         let sGrid = this.initGrid(this.state.data);
 
         this.rankCols(rGrid);
+        this.rankColsStd(sGrid);
+
+        this.calculateRank(data, rGrid, sGrid);
 
         this.setState({
-            rGrid: rGrid
+            uiData: data,
+            rGrid: rGrid,
+            sGrid: sGrid
         });
     }
 
-    getSumAndRelativeRank(grid) {
+    calculateRank(data, rGrid, sGrid) {
+        data.map((row, index) => {
+            row.rank = math.mean(rGrid[index].goodRank, sGrid[index].goodRank)
+        });
+
+        const rankList = this.getColList('rank', data);
+        const rankedRankList = this.rankCol(rankList, 'asc');
+
+        const self = this;
+        const rankedList = JSON.parse(JSON.stringify(rankedRankList));
+
+        data.map((row, index) => {
+            const rank = rankedList[index].rank;
+            const range = rankedList.slice(0, index);
+            const count = self.countIf(range, rank) === 0 ? 1 : self.countIf(range, rank) + 1;
+            const trueRank = rank + count - 1;
+            row.rank = trueRank
+            rankedList[index].rank = trueRank;
+        });
+    }
+
+    countIf(list, number) {
+        return list.reduce((sum, item) => {
+            return sum + (item.rank === number);
+        }, 0);
+    }
+
+    getSumAndRelativeRank(grid, order) {
         for (let i = 0; i < grid.length; i++) {
             // A row
             const rowItem = grid[i];
@@ -677,8 +767,8 @@ class HomePage extends Component {
             grid[i].sum = rowSum;
         }
 
-        const sumList = this.getColList(grid, 'sum');
-        const rankedSumList = this.rankCol(sumList, 'desc');
+        const sumList = this.getColList('sum', grid);
+        const rankedSumList = this.rankCol(sumList, order);
 
         // Insert rankedCol into each grid row. 
         for (let row in grid) {
@@ -686,16 +776,71 @@ class HomePage extends Component {
         }
     }
     
-    rankCols(grid) {
+    // cell = [ (cell - colAvg) / colStd ] * this.state.param[1] 
+    rankColsStd(grid) {
         // const colNames = Object.keys(this.state.weights);
+        const parameters = this.state.params;
+
+        // Each key of state.params is the name of the column.
+        for (let col in parameters) {
+            if (col !== 'ticker' && col !== 'rank') {
+                const param = parameters[col];
+                const order = param.multiplier === 1 ? 'asc' : 'desc';
+                const multiplier = param.multiplier;
+                const weight = param.weight;
+                const stdDev = param.stdDev || this.getColStandardDeviation(col) || 0;
+                const average = param.average || this.getColAverage(col) || 0;
+    
+                if (weight > 0) {
+                    const colList = this.getColList(col);
+                    const rankedCol = this.rankCol(colList, order);
+                    
+                    // Insert rankedCol into each grid row. 
+                    for (let row in grid) {
+                        let variance = (rankedCol[row].item - average) / stdDev;
+                        grid[row][col] = variance * multiplier * (1 + weight);
+                    }
+                }
+            }
+        }
+
+        this.getSumAndRelativeRank(grid, 'desc');
+    }
+
+    getColAverage(col) {
+        const list = this.getColList(col);
+        const avg = this.getListAverage(list);
+
+        return avg;
+    }
+
+    getListAverage(list) {
+        // const sum = list.reduce((sum, value) => {
+        //     return sum + value;
+        //   }, 0);
+        
+        // const avg = sum / list.length;
+        return math.mean(...list);
+    }
+
+    getColStandardDeviation(col) {
+        const list = this.getColList(col);
+        const avg = this.getListAverage(list);
+
+        const stdDev = math.std(...list);
+
+        return stdDev;
+    }
+
+    rankCols(grid) {
         const parameters = this.state.params;
         for (let col in parameters) {
             const param = parameters[col];
-            const order = param[1] === 1 ? 'asc' : 'desc';
-            const weight = param[0];
+            const order = param.multiplier === 1 ? 'asc' : 'desc';
+            const weight = param.weight;
             
             if (weight > 0) {
-                const colList = this.getColList(this.state.data, col);
+                const colList = this.getColList(col);
                 const rankedCol = this.rankCol(colList, order);
                 
                 // Insert rankedCol into each grid row. 
@@ -705,7 +850,7 @@ class HomePage extends Component {
             }
         }
 
-        this.getSumAndRelativeRank(grid);
+        this.getSumAndRelativeRank(grid, 'desc');
     }
 
     rankCol(list, order) {
@@ -741,6 +886,7 @@ class HomePage extends Component {
                 holder.rank = index + 1;
             }
         });
+        
         rankings.sort((a, b) => a.row - b.row);
         return rankings;
     }
@@ -769,36 +915,6 @@ class HomePage extends Component {
                 // }
             }
         }
-        
-    }
-
-    /**
-     * Rank a list in Descending/Ascending order 
-     * 
-     * @param {Array} cell : data.getCol('name')
-     * @param {*} order : 0=des, 1=asc
-     */
-    Rank(cell, order) {
-
-        for (const cell in data) {
-            // for ()
-        }
-    }
-
-    standardDeviationRankingStrategy() {
-
-    }
-
-    getCumulativeRankScore(item) {
-        // const method = parameters.directions[parameter] === 1 ? "zrevrange" : "zrange";
-        return '1'
-    }
-
-    getAverageOfCol(index, name) {
-
-    }
-
-    getStdDeviationOfCol(index, name) {
         
     }
 
@@ -835,24 +951,26 @@ class HomePage extends Component {
         }
 
         this.setState({
-            data
+            data: data
         });
     }
 
     // Step 1c
     cleanRow(item) {
         return {
-            rank: this.getCumulativeRankScore(item),
-            price: item.price.replace(/$/, ''),
-            nav: item.nav.replace(/$/, ''),
-            discount: item.discount.replace(/%/, ''),
-            // Discount: item.Discount.replace(/%/, ''),
-            distribution: item.distribution.replace(/%/, '')
+            rank: 0,
+            marketCap: item.marketCap === 0 ? 0 : Number(item.marketCap.replace(/,/g, '')),
+            volume: item.volume === 0 ? 0 : Number(item.volume.replace(/,/g, '')),
+            price: item.price === 0 ? 0 : Number(item.price.replace(/\$/, '')),
+            nav: item.nav === 0 ? 0 : Number(item.nav.replace(/\$/, '')),
+            discount: item.discount === 0 ? 0 : Number(item.discount.replace(/%/, '')),
+            distribution: item.distribution === 0 ? 0 : Number(item.distribution.replace(/%/, '')),
+            leverage: item.leverage === 0 ? 0 : Number(item.leverage.replace(/%/, '')),
+            uniiDist: item.uniiDist === 0 ? 0 : Number(item.uniiDist.replace(/%/, '')),
         };
     }
 
     revertSortFunc(a, b, order, sortField) {   // order is desc or asc
-        debugger;
         if (order === 'desc') {
           return a[sortField] - b[sortField];
         } else {
@@ -866,6 +984,24 @@ class HomePage extends Component {
             sortOrder
         });
     }
+
+    handleStdScoreboard() {
+        this.setState({
+            uiData: this.state.sGrid
+        });
+    }
+
+    handleRelativeScoreboard() {
+        this.setState(({
+            uiData: this.state.rGrid
+        }));
+    }
+
+    handleFullDataScoreboard() {
+        this.setState(({
+            uiData: this.state.data
+        }));
+    }
       
     render() {
         const options = {
@@ -875,118 +1011,127 @@ class HomePage extends Component {
           };
         return (
             <div>
-                Scoreboard
-                <BootstrapTable data={this.state.rGrid} options={options} striped hover condensed>
+                <button onClick={this.handleFullDataScoreboard}>
+                Full Grid
+                </button>
+
+                <button onClick={this.handleRelativeScoreboard}>
+                Relative Rank Grid
+                </button>
+
+                <button onClick={this.handleStdScoreboard}>
+                Std Deviation Grid
+                </button>
+                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
                     <TableHeaderColumn
                         isKey
                         dataField='rank'
+                        dataSort
+                        sortFunc={ this.revertSortFunc }
+                        // dataFormat={(cell, row) => `$${row.ticker}`}
                         >
                         Rank
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='ticker'
-                        // dataSort
-                        // dataFormat={(cell, row) => `$${row.ticker}`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        sortFunc={ this.revertSortFunc }
                         >
                         Ticker
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='marketCap'   
-                        // dataSort
-                        // dataFormat={(cell, row) => `$${row.marketCap}`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `${row.marketCap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         Market Cap
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='volume'
-                        // dataSort
-                        // dataFormat={(cell, row) => `$${row.volume}`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `${row.volume.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         Volume
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='price'        
-                        // dataSort
-                        // dataFormat={(cell, row) => `$${row.price}`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `$${row.price}`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         Price
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='nav'   
-                        // dataSort      
-                        // dataFormat={(cell, row) => `$${row.nav}`} 
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort      
+                        dataFormat={(cell, row) => `$${row.nav}`} 
+                        sortFunc={ this.revertSortFunc }
                         >
                         NAV
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='discount'
-                        // dataFormat={(cell, row) => `${row.discount}%`}
-                        // dataSort
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `${row.discount}%`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         Discount
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='distribution' 
-                        // dataFormat={(cell, row) => `${row.distribution}%`}
-                        // dataSort
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `${row.distribution}%`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         Distribution
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='zScore1y'
-                        // dataSort
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        sortFunc={ this.revertSortFunc }
                         >
                         Z-Score 1Y
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='leverage'
-                        // dataSort
-                        // dataFormat={(cell, row) => `${row.leverage}%`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `${row.leverage}%`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         Leverage
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='maturity'
                         dataSort
-                        // dataFormat={(cell, row) => `${row.leverage}%`}
-                        // sortFunc={ this.revertSortFunc }
+                        sortFunc={ this.revertSortFunc }
                         >
                         Maturity
                     </TableHeaderColumn>
                     <TableHeaderColumn 
                         dataField='uniiDist'
-                        // dataSort
-                        // dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        dataFormat={(cell, row) => `${row.uniiDist}%`}
+                        sortFunc={ this.revertSortFunc }
                         >
                         UNII/Dist
                     </TableHeaderColumn>
 
                     <TableHeaderColumn 
                         dataField='sum'
-                        // dataSort
-                        // dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        sortFunc={ this.revertSortFunc }
                         >
                         Sum
                     </TableHeaderColumn>
 
                     <TableHeaderColumn 
                         dataField='goodRank'
-                        // dataSort
-                        // dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        // sortFunc={ this.revertSortFunc }
+                        dataSort
+                        sortFunc={ this.revertSortFunc }
                         >
-                        Good Rank
+                        Alt Rank
                     </TableHeaderColumn>
 
                 </BootstrapTable>
