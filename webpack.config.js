@@ -26,6 +26,10 @@ module.exports = {
         test: /\.jpg/,
         loader: 'file-loader'
       },
+      { 
+        test: /\.json$/, 
+        loader: 'json-loader' 
+      },
       {
         test : /\.jsx?/,
         include : SRC_DIR,

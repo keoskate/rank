@@ -1,12 +1,10 @@
 import React, { Component } from 'react';
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 import * as math from 'mathjs';
-// import RawData from './rank-data.json'
-
-
+import Scoreboard from './Scoreboard'
+import StockBoard from './StockBoard'
 
 class HomePage extends Component {
-
     constructor() {
         super();
         this.state = { 
@@ -511,7 +509,7 @@ class HomePage extends Component {
                   "UNII/Dist": "-2.33%"
                 }
               ],
-            data1: [
+            data2: [
                 {
                   "Rank": undefined,
                   "Ticker": "ZF",
@@ -656,13 +654,6 @@ class HomePage extends Component {
         };
         
         this.cleanData(this.state.data);
-        
-        // This binding is necessary to make `this` work in the callback
-        this.handleRelativeScoreboard = this.handleRelativeScoreboard.bind(this);
-        this.handleStdScoreboard = this.handleStdScoreboard.bind(this);
-        this.handleFullDataScoreboard = this.handleFullDataScoreboard.bind(this);
-        
-        this.onSortChange = this.onSortChange.bind(this);
     }
 
     componentDidMount() {
@@ -776,7 +767,6 @@ class HomePage extends Component {
         }
     }
     
-    // cell = [ (cell - colAvg) / colStd ] * this.state.param[1] 
     rankColsStd(grid) {
         // const colNames = Object.keys(this.state.weights);
         const parameters = this.state.params;
@@ -837,6 +827,9 @@ class HomePage extends Component {
         for (let col in parameters) {
             const param = parameters[col];
             const order = param.multiplier === 1 ? 'asc' : 'desc';
+            // if (override) {
+            //     order = override; 
+            // }
             const weight = param.weight;
             
             if (weight > 0) {
@@ -891,41 +884,6 @@ class HomePage extends Component {
         return rankings;
     }
 
-    /**
-     * 1) Rank each col in Asc/Dec order
-     * 2) Multiple that rank by 1 + weight %
-     * 
-     * 3) Get cumulative sum for each row 
-     * 4) Rank this col 
-     * 5) Return the Rank for each Row.at(col)
-     */
-    relativeRankingStrategy(cell, row) {
-        const itemSortOrder = paramters.order[cell];
-        const itemWeight = paramters.weight[cell]; // 0.5%
-
-        const item = data.row;
-
-        const itemRank = Rank(cell, itemSortOrder); 
-        return itemRank * (1 + itemWeight);
-
-        for (let col in weights) {
-            if (weights[index] > 0.0) {
-                // if (Rank(this.getCol(col)item.Discount, )) {
-                //     item.Discount
-                // }
-            }
-        }
-        
-    }
-
-    getRow(index) {
-        return this.state.data[index];
-    }
-
-    getColumn(index, name) {
-        return getRow(index)[name];
-    }
-
     // Step 1b
     swapKeys(rowItem) {
         let newRow = {};
@@ -937,7 +895,6 @@ class HomePage extends Component {
 
         return newRow;
     }
-
 
     // Step 1a
     cleanData(data) {
@@ -1002,139 +959,31 @@ class HomePage extends Component {
             uiData: this.state.data
         }));
     }
+
+    updateGrid() {
+        this.setupDataStructures(this.state.data);
+    }
+
+    handleWeightChange(evt) {
+        this.state.params[evt.target.name].weight = evt.target.valueAsNumber || 0;
+        
+        this.setState(({
+            params: this.state.params
+        }));
+
+        this.updateGrid();
+    }
+
+    getUiData() {
+        return this.state.uiData;
+    }
       
     render() {
-        const options = {
-            sortName: this.state.sortName,
-            sortOrder: this.state.sortOrder,
-            onSortChange: this.onSortChange
-          };
         return (
             <div>
-                <button onClick={this.handleFullDataScoreboard}>
-                Full Grid
-                </button>
-
-                <button onClick={this.handleRelativeScoreboard}>
-                Relative Rank Grid
-                </button>
-
-                <button onClick={this.handleStdScoreboard}>
-                Std Deviation Grid
-                </button>
-                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
-                    <TableHeaderColumn
-                        isKey
-                        dataField='rank'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        // dataFormat={(cell, row) => `$${row.ticker}`}
-                        >
-                        Rank
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='ticker'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Ticker
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='marketCap'   
-                        dataSort
-                        dataFormat={(cell, row) => `${row.marketCap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Market Cap
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='volume'
-                        dataSort
-                        dataFormat={(cell, row) => `${row.volume.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Volume
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='price'        
-                        dataSort
-                        dataFormat={(cell, row) => `$${row.price}`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Price
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='nav'   
-                        dataSort      
-                        dataFormat={(cell, row) => `$${row.nav}`} 
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        NAV
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='discount'
-                        dataSort
-                        dataFormat={(cell, row) => `${row.discount}%`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Discount
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='distribution' 
-                        dataSort
-                        dataFormat={(cell, row) => `${row.distribution}%`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Distribution
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='zScore1y'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Z-Score 1Y
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='leverage'
-                        dataSort
-                        dataFormat={(cell, row) => `${row.leverage}%`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Leverage
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='maturity'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Maturity
-                    </TableHeaderColumn>
-                    <TableHeaderColumn 
-                        dataField='uniiDist'
-                        dataSort
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        UNII/Dist
-                    </TableHeaderColumn>
-
-                    <TableHeaderColumn 
-                        dataField='sum'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Sum
-                    </TableHeaderColumn>
-
-                    <TableHeaderColumn 
-                        dataField='goodRank'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Alt Rank
-                    </TableHeaderColumn>
-
-                </BootstrapTable>
+            {/* data, coloumnParams, type */}
+                <Scoreboard type="CEF"></Scoreboard> 
+                {/* <StockBoard uiData={this.state.uiData} params={this.state.params}></StockBoard>  */}
             </div>
         );
     }
