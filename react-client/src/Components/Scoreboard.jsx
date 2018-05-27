@@ -12,7 +12,6 @@ const SIZE = {
 };
 
 class Scoreboard extends Component {
-
     constructor() {
         super();
 
@@ -662,17 +661,11 @@ class Scoreboard extends Component {
         return (
             <div>
                 {this.parameters()}
-                <button onClick={this.handleFullDataScoreboard}>
-                Full Grid
-                </button>
 
-                <button onClick={this.handleRelativeScoreboard}>
-                Relative Rank Grid
-                </button>
+                <button onClick={this.handleFullDataScoreboard}>Full Grid</button>
+                <button onClick={this.handleRelativeScoreboard}>Relative Rank Grid</button>
+                <button onClick={this.handleStdScoreboard}>Std Deviation Grid</button>
 
-                <button onClick={this.handleStdScoreboard}>
-                Std Deviation Grid
-                </button>
                 <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
                     {this.headers(this.state.params)}
                     {this.sumCol()}

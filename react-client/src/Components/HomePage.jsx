@@ -8,6 +8,7 @@ class HomePage extends Component {
     constructor() {
         super();
         this.state = { 
+            currentBoard: 'stock',
             sortName: undefined,
             sortOrder: undefined,
             rGrid: [],
@@ -977,15 +978,36 @@ class HomePage extends Component {
     getUiData() {
         return this.state.uiData;
     }
-      
+    
+    handleSwitchboard() {
+        let current = this.state.currentBoard;
+        if (current === 'cef') {
+            current = 'stock';
+        } else {
+            current = 'cef';
+        }
+
+        this.setState({
+            currentBoard: current
+        });
+    }
     render() {
-        return (
-            <div>
-            {/* data, coloumnParams, type */}
-                <Scoreboard type="CEF"></Scoreboard> 
-                {/* <StockBoard uiData={this.state.uiData} params={this.state.params}></StockBoard>  */}
-            </div>
-        );
+        const current = this.state.currentBoard;
+        if (current === 'cef') {
+            return (
+                <div>
+                    <button onClick={this.handleSwitchboard.bind(this)}>{`View Stock Board`}</button>
+                    <Scoreboard type="CEF"></Scoreboard>
+                </div>
+            );
+        } else {
+            return (
+                <div>
+                    <button onClick={this.handleSwitchboard.bind(this)}>{`View CEF Board`}</button>
+                    <StockBoard type="STOCK"></StockBoard>
+                </div>
+            );
+        }
     }
 }
 

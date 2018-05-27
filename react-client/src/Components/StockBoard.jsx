@@ -1,113 +1,453 @@
 import React, { Component } from 'react';
-import { BootstrapTable, TableHeaderColumn, InsertButton } from 'react-bootstrap-table';
+import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 import * as math from 'mathjs';
 import WeightSlider from './WeightSlider';
+import ColorColumn from './ColorColumn';
 import * as rawData from '../rank-data'
+
+const SIZE = {
+    small: 50,
+    medium: 75,
+    large: 125
+};
 
 class StockBoard extends Component {
     constructor() {
         super();
-
         this.state = {
             sortName: undefined,
             sortOrder: undefined,
+            altGrid: false, 
             rGrid: [],
             sGrid: [],
-            data: [],
             params: {
                 "rank": {
+                    label: 'Rank',
+                    type: '',
+                    size: SIZE.small,
                     weight: 0, 
                     multiplier: 0,
                     average: undefined,
                     stdDev: undefined
                 },
                 "ticker": {
+                    label: 'Ticker',
+                    type: '',
+                    size: SIZE.small,
                     weight: 0, 
                     multiplier: 0,
                     average: undefined,
                     stdDev: undefined
                 },
                 "name": {
+                    label: 'Company Name',
+                    type: '',
+                    size: SIZE.large,
                     weight: 0, 
                     multiplier: 0,
                     average: undefined,
                     stdDev: undefined
                 },
                 "industry": {
+                    label: 'Industry',
+                    type: '',
+                    size: SIZE.large,
                     weight: 0, 
                     multiplier: 0,
                     average: undefined,
                     stdDev: undefined
                 },
                 "sector": {
+                    label: 'Sector',
+                    type: '',
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 0,
                     average: undefined,
                     stdDev: undefined
                 },
                 "sharesOutstanding": {
+                    label: 'Shares Outstanding',
+                    type: 'money',
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
                 "marketCap": {
-                    weight: 0.50, 
+                    label: 'Market Cap',
+                    type: 'money',
+                    size: SIZE.large,
+                    weight: 0, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "avgVolume": {
-                    weight: 0.50, 
+                "volume": {
+                    label: 'Avg Volume',
+                    type: 'number',
+                    size: SIZE.large,
+                    weight: 0, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
                 "price": {
+                    label: 'Price',
+                    type: 'money',
+                    size: SIZE.small,
+                    weight: 0.1, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "52high": {
+                    label: '52 Week High',
+                    type: 'money',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "52low": {
+                    label: '52 Week Low',
+                    type: 'money',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "pricePercent52": {
+                    label: 'Price as a % of 52 Wk H-L Range',
+                    type: 'money',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "beta": {
+                    label: 'Beta',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.2, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "priceChange1Week": {
+                    label: '% Price Change (1 Week)',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "priceChange4Week": {
+                    label: '% Price Change (4 Weeks)',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "priceChange12Week": {
+                    label: '% Price Change (12 Weeks)',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "priceChangeYTD": {
+                    label: '% Price Change (YTD)',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "relativePriceChange": {
+                    label: 'Relative Price Change',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "earningsGrowthLTM": {
+                    label: 'Earnings Growth (LTM)',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.2, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "earningsGrowthQuarterly": {
+                    label: 'Earnings Growth (Quarterly)',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.1, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "salesGrowthLTM": {
+                    label: 'Sales Growth (LTM)',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "salesGrowth5yr": {
+                    label: 'Sales Growth (5 Yr)',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "pe12month": {
+                    label: 'P/E (Trailing 12 Months)',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.2, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "pegRatio": {
+                    label: 'PEG Ratio',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "priceBook": {
+                    label: 'Price/Book',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "priceSales": {
+                    label: 'Price/Sales',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "roe": {
+                    label: 'Current ROE (TTM)',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "roa": {
+                    label: 'Current ROA (TTM)',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "divYield": {
+                    label: 'Div. Yield %',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "dividend": {
+                    label: 'Dividend',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "divYield5yr": {
+                    label: 'Div. Yield % (5 Yr)',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "netMargin": {
+                    label: 'Net Margin',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "oppMargin12m": {
+                    label: 'Operating Margin 12 Mo',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "debtEquityRatio": {
+                    label: 'Debt/Equity Ratio',
+                    type: '',
+                    size: SIZE.small,
                     weight: 0, 
                     multiplier: -1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "52High": {
+                "currentRatio": {
+                    label: 'Current Ratio',
+                    type: '',
+                    size: SIZE.small,
                     weight: 0, 
                     multiplier: -1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "52Low": {
+                "currentRatio": {
+                    label: 'Current Ratio',
+                    type: '',
+                    size: SIZE.small,
                     weight: 0, 
-                    multiplier: -1,
+                    multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "uniiDist": {
+                "quickRatio": {
+                    label: 'Quick Ratio',
+                    type: '',
+                    size: SIZE.small,
                     weight: 0, 
-                    multiplier: -1,
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "annualSales": {
+                    label: 'Annual Sales',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "ebitda": {
+                    label: 'EBITDA',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "netIncome": {
+                    label: 'Net Income',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0.2, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "cogs": {
+                    label: 'Cost of Goods Sold',
+                    type: '',
+                    size: SIZE.small,
+                    weight: 0, 
+                    multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 }
             },
+            data: []
         };
+
+        this.handleRelativeScoreboard = this.handleRelativeScoreboard.bind(this);
+        this.handleStdScoreboard = this.handleStdScoreboard.bind(this);
+        this.handleFullDataScoreboard = this.handleFullDataScoreboard.bind(this);
 
         this.onSortChange = this.onSortChange.bind(this);
     }
 
     componentDidMount() {
-        const data = rawData.default.cef;
+        let data = rawData.default.stocks;
+        data = this.cleanData(data);
+        this.setupDataStructures(data);
         this.setState({
-            data: data
-        });
-    }
-
-    componentWillReceiveProps() {
-        this.setState({
-            data: this.props.uiData,
-            params: this.props.params
+            data: data,
         });
     }
 
     // ------------------- SETUP Methods -------------------
+    setupDataStructures(data) {
+        let rGrid = this.initGrid(data);
+        let sGrid = this.initGrid(data);
+
+        this.rankCols(rGrid, data);
+        this.rankColsStd(sGrid, data);
+
+        this.calculateRank(data, rGrid, sGrid);
+
+        this.setState({
+            uiData: data,
+            rGrid: rGrid,
+            sGrid: sGrid
+        });
+    }
+
+    handleStdScoreboard() {
+        this.setState({
+            uiData: this.state.sGrid,
+            altGrid: true
+        });
+    }
+
+    handleRelativeScoreboard() {
+        this.setState(({
+            uiData: this.state.rGrid,
+            altGrid: true
+        }));
+    }
+
+    handleFullDataScoreboard() {
+        this.setState(({
+            uiData: this.state.data,
+            altGrid: false
+        }));
+    }
+    
     updateGrid() {
         this.rankData(this.state.data);
     }
@@ -117,13 +457,16 @@ class StockBoard extends Component {
         let rGrid = this.initGrid(this.state.data);
         let sGrid = this.initGrid(this.state.data);
 
-        this.rankCols(rGrid);
+        this.rankCols(rGrid, data);
         this.rankColsStd(sGrid);
 
         this.calculateRank(data, rGrid, sGrid);
 
         this.setState({
-            data: data
+            data: data,
+            uiData: data,
+            rGrid: rGrid,
+            sGrid: sGrid
         });
     }
 
@@ -160,7 +503,7 @@ class StockBoard extends Component {
     // ------------------- Calculation Methods -------------------    
 
     // Relative Ranking 
-    rankCols(grid) {
+    rankCols(grid, data) {
         const parameters = this.state.params;
         for (let col in parameters) {
             const param = parameters[col];
@@ -168,7 +511,7 @@ class StockBoard extends Component {
             const weight = param.weight;
 
             if (weight > 0) {
-                const colList = this.getColList(col);
+                const colList = this.getColList(col, data);
                 const rankedCol = this.rankCol(colList, order);
 
                 // Insert rankedCol into each grid row. 
@@ -182,21 +525,35 @@ class StockBoard extends Component {
     }
 
     // Standard Deviation Ranking 
-    rankColsStd(grid) {
+    rankColsStd(grid, data) {
         const parameters = this.state.params;
 
         // Each key of state.params is the name of the column.
         for (let col in parameters) {
-            if (col !== 'ticker' && col !== 'rank') {
-                const param = parameters[col];
+            const param = parameters[col];
+            const multiplier = param.multiplier;
+            // Don't rank non-numerical data
+            if (multiplier !== 0) {
                 const order = param.multiplier === 1 ? 'asc' : 'desc';
-                const multiplier = param.multiplier;
                 const weight = param.weight;
-                const stdDev = param.stdDev || this.getColStandardDeviation(col) || 0;
-                const average = param.average || this.getColAverage(col) || 0;
+                let stdDev = undefined;
+                let average = undefined;
+                if (!param.average && !param.stdDev) {
+                    stdDev = this.getColStandardDeviation(col, data);
+                    average = this.getColAverage(col, data);
+
+                    this.state.params[col].stdDev = stdDev;
+                    this.state.params[col].average = average;
+
+                    this.setState(({
+                        params: this.state.params
+                    }));
+                }
+                stdDev = stdDev || this.getColStandardDeviation(col, data);
+                average = average || this.getColAverage(col, data);
 
                 if (weight > 0) {
-                    const colList = this.getColList(col);
+                    const colList = this.getColList(col, data);
                     const rankedCol = this.rankCol(colList, order);
 
                     // Insert rankedCol into each grid row. 
@@ -300,8 +657,8 @@ class StockBoard extends Component {
         }, 0);
     }
 
-    getColAverage(col) {
-        const list = this.getColList(col);
+    getColAverage(col, data) {
+        const list = this.getColList(col, data);
         const avg = this.getListAverage(list);
 
         return avg;
@@ -311,8 +668,8 @@ class StockBoard extends Component {
         return math.mean(...list);
     }
 
-    getColStandardDeviation(col) {
-        const list = this.getColList(col);
+    getColStandardDeviation(col, data) {
+        const list = this.getColList(col, data);
         const avg = this.getListAverage(list);
 
         const stdDev = math.std(...list);
@@ -331,7 +688,6 @@ class StockBoard extends Component {
         return list;
     }
 
-
     onSortChange(sortName, sortOrder) {
         this.setState({
             sortName,
@@ -347,8 +703,29 @@ class StockBoard extends Component {
         }
     }
 
+    sumOfWeights() {
+        let sum = 0;
+        Object.keys(this.state.params).map((key) => {
+            return sum += this.state.params[key].weight;
+        });
+
+        return sum; 
+    }
+
     handleWeightChange(evt) {
+        if (this.sumOfWeights() >= 1.0 && this.state.params[evt.target.name].weight < evt.target.valueAsNumber) {
+            return;
+        }
         this.state.params[evt.target.name].weight = evt.target.valueAsNumber || 0;
+        this.setState(({
+            params: this.state.params
+        }));
+
+        this.updateGrid();
+    }
+
+    handleMultiplierClick(evt) {
+        this.state.params[evt.target.name].multiplier = this.state.params[evt.target.name].multiplier === 1 ? -1 : 1;
 
         this.setState(({
             params: this.state.params
@@ -357,10 +734,191 @@ class StockBoard extends Component {
         this.updateGrid();
     }
 
-    cellButton(cell, row) {
-        return (
-            <p>hey</p>
-        );
+    // Step 1a
+    cleanData(data) {
+        // clean keys 
+        for (let row in data) {
+            data[row] = this.swapKeys(data[row]);
+        }
+
+        // This Data is already clean 
+        // for (let index in data) {
+        //     data[index] = Object.assign(data[index], this.cleanRow(data[index]));
+        // }
+
+        this.setState({
+            data: data
+        });
+
+        return data;
+    }
+
+    // Step 1b
+    swapKeys(rowItem) {
+        let newRow = {};
+        const goodKeys = Object.keys(this.state.params);
+
+        Object.keys(rowItem).map(function(key, index) {
+            newRow[goodKeys[index]] = rowItem[key];
+         });
+
+        return newRow;
+    }
+
+    // Step 1c
+    cleanRow(item) {
+        return {
+            rank: 0,
+            marketCap: item.marketCap === 0 ? 0 : Number(item.marketCap.replace(/,/g, '')),
+            volume: item.volume === 0 ? 0 : Number(item.volume.replace(/,/g, '')),
+            price: item.price === 0 ? 0 : Number(item.price.replace(/\$/, '')),
+            nav: item.nav === 0 ? 0 : Number(item.nav.replace(/\$/, '')),
+            discount: item.discount === 0 ? 0 : Number(item.discount.replace(/%/, '')),
+            distribution: item.distribution === 0 ? 0 : Number(item.distribution.replace(/%/, '')),
+            leverage: item.leverage === 0 ? 0 : Number(item.leverage.replace(/%/, '')),
+            uniiDist: item.uniiDist === 0 ? 0 : Number(item.uniiDist.replace(/%/, '')),
+        };
+    }
+
+    getConditionalColor(col, value, params) {
+        const weight = params[col].weight;
+        let avg = params[col].average;
+        let std = params[col].stdDev;
+        const mult = params[col].multiplier === 1;
+
+        if (avg === undefined) {
+            return;
+        }
+
+        // avg = Math.abs(params[col].average);
+        // std = Math.abs(params[col].stdDev);
+        // value = Math.abs(value);
+
+        if (weight === 0) {
+            return '#ffffff';
+        } else if ( (((avg - 1.5*std) >= value) && (value >= (avg - 2*std)) && !mult) ||
+                    (((avg + 1.5*std) <= value) && (value <= (avg + 2*std)) && mult)) {
+            return '#a5d3a5';
+        } else if ( (((avg - 1*std) >= value) && (value >= (avg - 1.5*std)) && !mult) ||
+                    (((avg + 1*std) <= value) && (value <= (avg + 1.5*std)) && mult)) {
+            return '#b1e1b0';
+        } else if ( (((avg - 0.5*std) >= value) && (value >= (avg - 1*std)) && !mult) ||
+                    (((avg + 0.5*std) <= value) && (value <= (avg + 1*std)) && mult)) {
+            return '#c5f1c6';
+        } else if ( ((avg >= value) && (value >= (avg - 0.5*std)) && !mult) ||
+                    ((avg <= value) && (value <= (avg + 0.5*std)) && mult)) {
+            return '#e7f6e5';
+        } else if ( ((avg >= value) && (value >= (avg - 0.5*std)) && mult) ||
+                    ((avg <= value) && (value <= (avg + 0.5*std)) && !mult)) {
+            return '#fff3f3';
+        } else if ( ((avg - 0.5*std >= value) && (value >= (avg - 1*std)) && mult) ||
+                    ((avg + 0.5*std <= value) && (value <= (avg + 1*std)) && !mult)) {
+            return '#ffe1e1';
+        } else if ( ((avg - 1*std >= value) && (value >= (avg - 1.5*std)) && mult) ||
+                    ((avg + 1*std <= value) && (value <= (avg + 1.5*std)) && !mult)) {
+            return '#fdc2c2';
+        } else if ( ((avg - 1.5*std >= value) && (value >= (avg - 2*std)) && mult) ||
+                    ((avg + 1.5*std <= value) && (value <= (avg + 2*std)) && !mult)) {
+            return '#fda4a4';
+        } else if (((value < (avg - 2*std)) && !mult) || 
+                    ((value > (avg + 2*std) && mult))) {
+            return '#67c279';
+        } else if ( ((value < (avg - 2*std)) && mult) || 
+                    ((value > (avg + 2*std) && !mult))) {
+            return '#fd7979';
+        }
+    }
+    
+    getCellStyle(col, params, cell, row, ridx, cidx) {
+        const value = cell;
+        const color = this.getConditionalColor(col, value, params);
+        return { background: color };
+    }
+
+    parameters() { 
+        return Object.keys(this.state.params).map((key) => {
+            if (this.state.params[key].multiplier !== 0) {
+                return (
+                    <span style={{ display:'inline-block', margin: 5, width: 120 }}>
+                        <WeightSlider label={`${key}`} name={key} value={this.state.params[key].weight} onChange={this.handleWeightChange.bind(this)} />
+                        <button name={key} onClick={this.handleMultiplierClick.bind(this)}>
+                            {this.state.params[key].multiplier === 1 ? '+1' : '-1'}
+                        </button>
+                    </span>
+                );
+            }
+        });
+    }
+    sections() {
+
+    }
+    
+    headers(params) { 
+        return Object.keys(params).map((key) => {
+            if (key === 'rank') {
+                return (
+                    <TableHeaderColumn
+                        isKey
+                        dataField={key}
+                        dataSort
+                        row='0' 
+                        rowSpan='2'
+                        width='50'
+                        sortFunc={this.revertSortFunc}
+                    >
+                        {params[key].label}
+                    </TableHeaderColumn>
+                );                
+            } else {
+                // Add Label, type(money, %, number), size ...
+                const colString = (cell, row) => {
+                    return <ColorColumn value={row[key]} class={key}/>
+                    // return `${row[key].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+                };
+                return (
+                    <TableHeaderColumn
+                        dataField={key}
+                        dataSort
+                        row='1'
+                        tdClass={key}
+                        tdStyle={ this.getCellStyle.bind(this, key, params) }
+                        width={params[key].size}
+                        dataFormat={(cell, row) => colString(cell, row)}
+                        sortFunc={this.revertSortFunc}
+                        >
+                        {params[key].label}
+                    </TableHeaderColumn>
+                );
+            }
+        });
+    }
+
+    sumCol() {
+        if (this.state.altGrid) {
+            return (
+                <TableHeaderColumn 
+                    dataField='sum'
+                    dataSort
+                    sortFunc={ this.revertSortFunc }
+                    >
+                    Sum
+                </TableHeaderColumn>
+            )
+        }
+    }
+
+    goodRankCol() {
+        if (this.state.altGrid) {
+            return (
+                <TableHeaderColumn 
+                    dataField='goodRank'
+                    dataSort
+                    sortFunc={ this.revertSortFunc }
+                    >
+                    Alt Rank
+                </TableHeaderColumn>
+            )
+        }
     }
 
     render() {
@@ -372,242 +930,27 @@ class StockBoard extends Component {
         
         return (
             <div>
-                <WeightSlider label='Test Slider' name='marketCap' value={this.props.params.marketCap.weight} onChange={this.handleWeightChange.bind(this)} />
-                
-                <div>
-                    <label>
-                        Market Cap Weight: [{this.props.params.marketCap.weight}] <input type="range" value={this.props.params.marketCap.weight} min="0" max="1" step="0.05" name="marketCap" onChange={this.handleWeightChange.bind(this)} />
-                    </label>
-                    <button>hey</button>
-                </div>
+                {this.parameters()}
 
-                <div>
-                    <label>
-                        Discount: [{this.props.params.discount.weight}] <input type="range" value={this.props.params.discount.weight} min="0" max="1" step="0.05" name="discount" onChange={this.handleWeightChange.bind(this)} />
-                    </label>
-                </div>
+                <button onClick={this.handleFullDataScoreboard}>Full Grid</button>
+                <button onClick={this.handleRelativeScoreboard}>Relative Rank Grid</button>
+                <button onClick={this.handleStdScoreboard}>Std Deviation Grid</button>
 
-                <div>
-                    <label>
-                        Distribution: [{this.props.params.distribution.weight}] <input type="range" value={this.props.params.distribution.weight} min="0" max="1" step="0.05" name="distribution" onChange={this.handleWeightChange.bind(this)} />
-                    </label>
-                </div>
-
-                <div>
-                    <label>
-                        Volume: [{this.props.params.volume.weight}] <input type="range" value={this.props.params.volume.weight} min="0" max="1" step="0.05" name="volume" onChange={this.handleWeightChange.bind(this)} />
-                    </label>
-                </div>
-
-                <div>
-                    <label>
-                        Z-Score: [{this.props.params.zScore1y.weight}] <input type="range" value={this.props.params.zScore1y.weight} min="0" max="1" step="0.05" name="zScore1y" onChange={this.handleWeightChange.bind(this)} />
-                    </label>
-                </div>
-
-                <BootstrapTable data={this.props.uiData} options={options} striped hover condensed pagination containerStyle={ { overflow: scroll  } }>
-                    {/* <TableHeaderColumn row='0' colSpan='3' dataField='' dataFormat={this.cellButton}>Positive Multiplier</TableHeaderColumn> */}
-                    {/* <TableHeaderColumn row='0' colSpan='1' dataField=''>Positive Multiplier</TableHeaderColumn> */}
-                    <TableHeaderColumn
-                        isKey
-                        row='1'
-                        dataField='rank'
-                        dataSort
-                        width='75'
-                        sortFunc={this.revertSortFunc}
-                    // dataFormat={(cell, row) => `$${row.ticker}`}
-                    >
-                        Rank
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='ticker'
-                        dataSort
-                        row='1'
-                        width='100'
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Ticker
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='marketCap'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.marketCap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Market Cap
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='volume'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.volume.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Volume
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='price'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `$${row.price}`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Price
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='nav'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `$${row.nav}`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        NAV
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='discount'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.discount}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Discount
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='distribution'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.distribution}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Distribution
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='zScore1y'
-                        dataSort
-                        row='1'
-                        width='100'
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Z-Score 1Y
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='leverage'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.leverage}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Leverage
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='maturity'
-                        dataSort
-                        row='1'
-                        width='100'
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Maturity
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        width='100'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-                    <TableHeaderColumn
-                        dataField='uniiDist'
-                        dataSort
-                        row='1'
-                        dataFormat={(cell, row) => `${row.uniiDist}%`}
-                        sortFunc={this.revertSortFunc}
-                    >
-                        UNII/Dist
-                    </TableHeaderColumn>
-
-                    {/* <TableHeaderColumn
-                        dataField='sum'
-                        dataSort
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Sum
-                    </TableHeaderColumn>
-
-                    <TableHeaderColumn
-                        dataField='goodRank'
-                        dataSort
-                        sortFunc={this.revertSortFunc}
-                    >
-                        Alt Rank
-                    </TableHeaderColumn> */}
+                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
+                    {this.headers(this.state.params)}
+                    <TableHeaderColumn row='0' colSpan='4'>Company Descriptors</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='3'>{'Size & Share Volume'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='10'>{'Price & Price Changes'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='2'>{'EPS Growth'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='2'>{'Sales Growth'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='4'>{'Valuations'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='2'>{'Return on Investment'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='3'>{'Dividends'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='2'>{'Margins'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='3'>{'Balance Sheet'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='4'>{'Income Statement'}</TableHeaderColumn>
+                    {this.sumCol()}
+                    {this.goodRankCol()}
                 </BootstrapTable>
             </div>
         );

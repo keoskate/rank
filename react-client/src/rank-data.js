@@ -422,8 +422,9 @@ export default {
       "UNII/Dist": "-2.33%"
     }
   ],
-  "stock":[
+  "stocks":[
     {
+      "Rank": 0,
       "Ticker": "A",
       "Company Name": "Agilent Technologies, Inc.",
       "Industry": "Electronics - Testing Equipment",
@@ -465,6 +466,7 @@ export default {
       "Cost of Goods Sold": 2063
     },
     {
+      "Rank": 0,
       "Ticker": "AAPL",
       "Company Name": "Apple Inc.",
       "Industry": "Computer - Mini computers",
@@ -506,6 +508,7 @@ export default {
       "Cost of Goods Sold": 141048
     },
     {
+      "Rank": 0,
       "Ticker": "ABBV",
       "Company Name": "AbbVie Inc.",
       "Industry": "Large Cap Pharmaceuticals",
@@ -547,6 +550,7 @@ export default {
       "Cost of Goods Sold": 7040
     },
     {
+      "Rank": 0,
       "Ticker": "ABC",
       "Company Name": "AmerisourceBergen Corporation",
       "Industry": "Medical - Dental Supplies",
@@ -588,6 +592,7 @@ export default {
       "Cost of Goods Sold": 148597.7969
     },
     {
+      "Rank": 0,
       "Ticker": "ABT",
       "Company Name": "Abbott Laboratories",
       "Industry": "Medical - Products",
@@ -629,6 +634,7 @@ export default {
       "Cost of Goods Sold": 12337
     },
     {
+      "Rank": 0,
       "Ticker": "ACN",
       "Company Name": "Accenture PLC",
       "Industry": "Consulting Services",
@@ -670,6 +676,7 @@ export default {
       "Cost of Goods Sold": 25734.99023
     },
     {
+      "Rank": 0,
       "Ticker": "ADBE",
       "Company Name": "Adobe Systems Incorporated",
       "Industry": "Computer - Software",
@@ -711,6 +718,7 @@ export default {
       "Cost of Goods Sold": 1010.48999
     },
     {
+      "Rank": 0,
       "Ticker": "ADP",
       "Company Name": "Automatic Data Processing, Inc.",
       "Industry": "Outsourcing",
@@ -752,6 +760,7 @@ export default {
       "Cost of Goods Sold": 7269.7998
     },
     {
+      "Rank": 0,
       "Ticker": "ADS",
       "Company Name": "Alliance Data Systems Corporation",
       "Industry": "Financial Transaction Services",
@@ -793,6 +802,7 @@ export default {
       "Cost of Goods Sold": 4269.8999
     },
     {
+      "Rank": 0,
       "Ticker": "AEE",
       "Company Name": "Ameren Corporation",
       "Industry": "Utility - Electric Power",
@@ -834,6 +844,7 @@ export default {
       "Cost of Goods Sold": 3346
     },
     {
+      "Rank": 0,
       "Ticker": "AEP",
       "Company Name": "American Electric Power Company, Inc.",
       "Industry": "Utility - Electric Power",
@@ -875,6 +886,7 @@ export default {
       "Cost of Goods Sold": 8937.0996
     },
     {
+      "Rank": 0,
       "Ticker": "AES",
       "Company Name": "The AES Corporation",
       "Industry": "Utility - Electric Power",
@@ -916,6 +928,7 @@ export default {
       "Cost of Goods Sold": 8066
     },
     {
+      "Rank": 0,
       "Ticker": "AET",
       "Company Name": "Aetna Inc.",
       "Industry": "Medical - HMOs",
@@ -957,6 +970,7 @@ export default {
       "Cost of Goods Sold": 44628
     },
     {
+      "Rank": 0,
       "Ticker": "AFL",
       "Company Name": "Aflac Incorporated",
       "Industry": "Insurance - Accident and Health",
@@ -998,6 +1012,7 @@ export default {
       "Cost of Goods Sold": 13497
     },
     {
+      "Rank": 0,
       "Ticker": "AIG",
       "Company Name": "American International Group, Inc.",
       "Industry": "Insurance - Multi line",
@@ -1039,6 +1054,7 @@ export default {
       "Cost of Goods Sold": 42671
     },
     {
+      "Rank": 0,
       "Ticker": "AIV",
       "Company Name": "Apartment Investment and Management Company",
       "Industry": "REIT and Equity Trust - Residential",
@@ -1080,6 +1096,7 @@ export default {
       "Cost of Goods Sold": 354.36999
     },
     {
+      "Rank": 0,
       "Ticker": "AIZ",
       "Company Name": "Assurant, Inc.",
       "Industry": "Insurance - Multi line",
@@ -1121,6 +1138,7 @@ export default {
       "Cost of Goods Sold": 1870.59997
     },
     {
+      "Rank": 0,
       "Ticker": "AJG",
       "Company Name": "Arthur J. Gallagher & Co.",
       "Industry": "Insurance - Brokerage",
@@ -1162,6 +1180,7 @@ export default {
       "Cost of Goods Sold": 4388.20019
     },
     {
+      "Rank": 0,
       "Ticker": "AKAM",
       "Company Name": "Akamai Technologies, Inc.",
       "Industry": "Internet - Services",
@@ -1203,6 +1222,7 @@ export default {
       "Cost of Goods Sold": 875.75
     },
     {
+      "Rank": 0,
       "Ticker": "ALB",
       "Company Name": "Albemarle Corporation",
       "Industry": "Chemical - Diversified",
@@ -1244,6 +1264,7 @@ export default {
       "Cost of Goods Sold": 1961.98999
     },
     {
+      "Rank": 0,
       "Ticker": "ALGN",
       "Company Name": "Align Technology, Inc.",
       "Industry": "Medical - Dental Supplies",
@@ -1285,6 +1306,7 @@ export default {
       "Cost of Goods Sold": 356.45999
     },
     {
+      "Rank": 0,
       "Ticker": "ALK",
       "Company Name": "Alaska Air Group, Inc.",
       "Industry": "Transportation - Airline",
@@ -1326,6 +1348,7 @@ export default {
       "Cost of Goods Sold": 3081
     },
     {
+      "Rank": 0,
       "Ticker": "ALL",
       "Company Name": "The Allstate Corporation",
       "Industry": "Insurance - Property and Casualty",
@@ -1367,6 +1390,7 @@ export default {
       "Cost of Goods Sold": 24542
     },
     {
+      "Rank": 0,
       "Ticker": "ALLE",
       "Company Name": "Allegion PLC",
       "Industry": "Security and Safety Services",
@@ -1408,6 +1432,7 @@ export default {
       "Cost of Goods Sold": 1337.5
     },
     {
+      "Rank": 0,
       "Ticker": "ALXN",
       "Company Name": "Alexion Pharmaceuticals, Inc.",
       "Industry": "Medical - Biomedical and Genetics",
@@ -1449,6 +1474,7 @@ export default {
       "Cost of Goods Sold": 454.20001
     },
     {
+      "Rank": 0,
       "Ticker": "AMD",
       "Company Name": "Advanced Micro Devices, Inc.",
       "Industry": "Electronics - Semiconductors",
@@ -1490,6 +1516,7 @@ export default {
       "Cost of Goods Sold": 3506
     },
     {
+      "Rank": 0,
       "Ticker": "AME",
       "Company Name": "AMETEK, Inc.",
       "Industry": "Electronics - Testing Equipment",
@@ -1531,6 +1558,7 @@ export default {
       "Cost of Goods Sold": 2851.42993
     },
     {
+      "Rank": 0,
       "Ticker": "AMG",
       "Company Name": "Affiliated Managers Group, Inc.",
       "Industry": "Financial - Investment Management",
@@ -1572,6 +1600,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "AMGN",
       "Company Name": "Amgen Inc.",
       "Industry": "Medical - Biomedical and Genetics",
@@ -1613,6 +1642,7 @@ export default {
       "Cost of Goods Sold": 4069
     },
     {
+      "Rank": 0,
       "Ticker": "AMT",
       "Company Name": "American Tower Corporation (REIT)",
       "Industry": "REIT and Equity Trust - Other",
@@ -1654,6 +1684,7 @@ export default {
       "Cost of Goods Sold": 2056.60009
     },
     {
+      "Rank": 0,
       "Ticker": "AMZN",
       "Company Name": "Amazon.com, Inc.",
       "Industry": "Internet - Commerce",
@@ -1695,6 +1726,7 @@ export default {
       "Cost of Goods Sold": 111934
     },
     {
+      "Rank": 0,
       "Ticker": "ANDV",
       "Company Name": "Tesoro Corporation",
       "Industry": "Oil and Gas - Refining and Marketing",
@@ -1736,6 +1768,7 @@ export default {
       "Cost of Goods Sold": 28480
     },
     {
+      "Rank": 0,
       "Ticker": "ANTM",
       "Company Name": "Anthem, Inc.",
       "Industry": "Medical - HMOs",
@@ -1777,6 +1810,7 @@ export default {
       "Cost of Goods Sold": 72236.20312
     },
     {
+      "Rank": 0,
       "Ticker": "AON",
       "Company Name": "Aon plc",
       "Industry": "Insurance - Brokerage",
@@ -1818,6 +1852,7 @@ export default {
       "Cost of Goods Sold": 6089
     },
     {
+      "Rank": 0,
       "Ticker": "AOS",
       "Company Name": "A. O. Smith Corporation",
       "Industry": "Manufacturing - Electronics",
@@ -1859,6 +1894,7 @@ export default {
       "Cost of Goods Sold": 1758
     },
     {
+      "Rank": 0,
       "Ticker": "APA",
       "Company Name": "Apache Corporation",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -1900,6 +1936,7 @@ export default {
       "Cost of Goods Sold": 1579
     },
     {
+      "Rank": 0,
       "Ticker": "APD",
       "Company Name": "Air Products and Chemicals, Inc.",
       "Industry": "Chemical - Diversified",
@@ -1941,6 +1978,7 @@ export default {
       "Cost of Goods Sold": 5753.3999
     },
     {
+      "Rank": 0,
       "Ticker": "APH",
       "Company Name": "Amphenol Corporation",
       "Industry": "Electronics - Connectors",
@@ -1982,6 +2020,7 @@ export default {
       "Cost of Goods Sold": 4701.3999
     },
     {
+      "Rank": 0,
       "Ticker": "APTV",
       "Company Name": "Delphi Automotive PLC",
       "Industry": "Technology Services",
@@ -2023,6 +2062,7 @@ export default {
       "Cost of Goods Sold": 10270
     },
     {
+      "Rank": 0,
       "Ticker": "ARE",
       "Company Name": "Alexandria Real Estate Equities, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -2064,6 +2104,7 @@ export default {
       "Cost of Goods Sold": 325.6
     },
     {
+      "Rank": 0,
       "Ticker": "ARNC",
       "Company Name": "Arconic Inc.",
       "Industry": "Mining - Non Ferrous",
@@ -2105,6 +2146,7 @@ export default {
       "Cost of Goods Sold": 10357
     },
     {
+      "Rank": 0,
       "Ticker": "ATVI",
       "Company Name": "Activision Blizzard, Inc",
       "Industry": "Toys - Games - Hobbies",
@@ -2146,6 +2188,7 @@ export default {
       "Cost of Goods Sold": 2501
     },
     {
+      "Rank": 0,
       "Ticker": "AVB",
       "Company Name": "AvalonBay Communities, Inc.",
       "Industry": "REIT and Equity Trust - Residential",
@@ -2187,6 +2230,7 @@ export default {
       "Cost of Goods Sold": 725.32
     },
     {
+      "Rank": 0,
       "Ticker": "AVY",
       "Company Name": "Avery Dennison Corporation",
       "Industry": "Office Supplies",
@@ -2228,6 +2272,7 @@ export default {
       "Cost of Goods Sold": 4801.60009
     },
     {
+      "Rank": 0,
       "Ticker": "AWK",
       "Company Name": "American Water Works",
       "Industry": "Utility - Water Supply",
@@ -2269,6 +2314,7 @@ export default {
       "Cost of Goods Sold": 1378
     },
     {
+      "Rank": 0,
       "Ticker": "AXP",
       "Company Name": "American Express Company",
       "Industry": "Financial - Miscellaneous Services",
@@ -2310,6 +2356,7 @@ export default {
       "Cost of Goods Sold": 779
     },
     {
+      "Rank": 0,
       "Ticker": "AYI",
       "Company Name": "Acuity Brands Inc",
       "Industry": "Building Products - Lighting",
@@ -2351,6 +2398,7 @@ export default {
       "Cost of Goods Sold": 2023.90002
     },
     {
+      "Rank": 0,
       "Ticker": "BA",
       "Company Name": "The Boeing Company",
       "Industry": "Aerospace - Defense",
@@ -2392,6 +2440,7 @@ export default {
       "Cost of Goods Sold": 75996
     },
     {
+      "Rank": 0,
       "Ticker": "BAC",
       "Company Name": "Bank of America Corporation",
       "Industry": "Banks - Major Regional",
@@ -2433,6 +2482,7 @@ export default {
       "Cost of Goods Sold": 1931
     },
     {
+      "Rank": 0,
       "Ticker": "BAX",
       "Company Name": "Baxter International Inc.",
       "Industry": "Medical - Products",
@@ -2474,6 +2524,7 @@ export default {
       "Cost of Goods Sold": 6099
     },
     {
+      "Rank": 0,
       "Ticker": "BBT",
       "Company Name": "BB&T Corporation",
       "Industry": "Banks - Major Regional",
@@ -2515,6 +2566,7 @@ export default {
       "Cost of Goods Sold": 344
     },
     {
+      "Rank": 0,
       "Ticker": "BDX",
       "Company Name": "Becton, Dickinson and Company",
       "Industry": "Medical - Dental Supplies",
@@ -2556,6 +2608,7 @@ export default {
       "Cost of Goods Sold": 6151
     },
     {
+      "Rank": 0,
       "Ticker": "BEN",
       "Company Name": "Franklin Resources, Inc.",
       "Industry": "Financial - Investment Management",
@@ -2597,6 +2650,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "BHGE",
       "Company Name": "Baker Hughes Incorporated",
       "Industry": "Oil and Gas - Field Services",
@@ -2638,6 +2692,7 @@ export default {
       "Cost of Goods Sold": 14046
     },
     {
+      "Rank": 0,
       "Ticker": "BIIB",
       "Company Name": "Biogen Inc.",
       "Industry": "Medical - Biomedical and Genetics",
@@ -2679,6 +2734,7 @@ export default {
       "Cost of Goods Sold": 1630
     },
     {
+      "Rank": 0,
       "Ticker": "BK",
       "Company Name": "The Bank of New York Mellon Corporation",
       "Industry": "Banks - Major Regional",
@@ -2720,6 +2776,7 @@ export default {
       "Cost of Goods Sold": 162
     },
     {
+      "Rank": 0,
       "Ticker": "BKNG",
       "Company Name": "Booking Holdings Inc.",
       "Industry": "Internet - Commerce",
@@ -2761,6 +2818,7 @@ export default {
       "Cost of Goods Sold": 250.52999
     },
     {
+      "Rank": 0,
       "Ticker": "BLK",
       "Company Name": "BlackRock, Inc.",
       "Industry": "Financial - Investment Management",
@@ -2802,6 +2860,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "BLL",
       "Company Name": "Ball Corporation",
       "Industry": "Containers - Metal and Glass",
@@ -2843,6 +2902,7 @@ export default {
       "Cost of Goods Sold": 8717
     },
     {
+      "Rank": 0,
       "Ticker": "BMY",
       "Company Name": "Bristol-Myers Squibb Company",
       "Industry": "Large Cap Pharmaceuticals",
@@ -2884,6 +2944,7 @@ export default {
       "Cost of Goods Sold": 6066
     },
     {
+      "Rank": 0,
       "Ticker": "BRK.B",
       "Company Name": "Berkshire Hathaway Inc.",
       "Industry": "Insurance - Property and Casualty",
@@ -2925,6 +2986,7 @@ export default {
       "Cost of Goods Sold": 63830
     },
     {
+      "Rank": 0,
       "Ticker": "BSX",
       "Company Name": "Boston Scientific Corporation",
       "Industry": "Medical - Products",
@@ -2966,6 +3028,7 @@ export default {
       "Cost of Goods Sold": 2593
     },
     {
+      "Rank": 0,
       "Ticker": "BWA",
       "Company Name": "BorgWarner Inc.",
       "Industry": "Automotive - Original Equipment",
@@ -3007,6 +3070,7 @@ export default {
       "Cost of Goods Sold": 7679.20019
     },
     {
+      "Rank": 0,
       "Ticker": "BXP",
       "Company Name": "Boston Properties, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -3048,6 +3112,7 @@ export default {
       "Cost of Goods Sold": 962.03002
     },
     {
+      "Rank": 0,
       "Ticker": "C",
       "Company Name": "Citigroup Inc.",
       "Industry": "Banks - Major Regional",
@@ -3089,6 +3154,7 @@ export default {
       "Cost of Goods Sold": 6586
     },
     {
+      "Rank": 0,
       "Ticker": "CA",
       "Company Name": "CA Inc.",
       "Industry": "Computer - Software",
@@ -3130,6 +3196,7 @@ export default {
       "Cost of Goods Sold": 600
     },
     {
+      "Rank": 0,
       "Ticker": "CAG",
       "Company Name": "Conagra Brands Inc.",
       "Industry": "Food - Miscellaneous",
@@ -3171,6 +3238,7 @@ export default {
       "Cost of Goods Sold": 5484.7998
     },
     {
+      "Rank": 0,
       "Ticker": "CAH",
       "Company Name": "Cardinal Health, Inc.",
       "Industry": "Medical - Dental Supplies",
@@ -3212,6 +3280,7 @@ export default {
       "Cost of Goods Sold": 123432
     },
     {
+      "Rank": 0,
       "Ticker": "CAT",
       "Company Name": "Caterpillar Inc.",
       "Industry": "Manufacturing - Construction and Mining",
@@ -3253,6 +3322,7 @@ export default {
       "Cost of Goods Sold": 31049
     },
     {
+      "Rank": 0,
       "Ticker": "CB",
       "Company Name": "Chubb Limited",
       "Industry": "Insurance - Property and Casualty",
@@ -3294,6 +3364,7 @@ export default {
       "Cost of Goods Sold": 24911
     },
     {
+      "Rank": 0,
       "Ticker": "CBOE",
       "Company Name": "Cboe Global Markets, Inc.",
       "Industry": "Securities and Exchanges",
@@ -3335,6 +3406,7 @@ export default {
       "Cost of Goods Sold": 1233.5
     },
     {
+      "Rank": 0,
       "Ticker": "CBRE",
       "Company Name": "CBRE Group, Inc.",
       "Industry": "Real Estate - Operations",
@@ -3376,6 +3448,7 @@ export default {
       "Cost of Goods Sold": 9893.21972
     },
     {
+      "Rank": 0,
       "Ticker": "CBS",
       "Company Name": "CBS Corporation",
       "Industry": "Broadcast Radio and Television",
@@ -3417,6 +3490,7 @@ export default {
       "Cost of Goods Sold": 8438
     },
     {
+      "Rank": 0,
       "Ticker": "CCI",
       "Company Name": "Crown Castle International Corporation",
       "Industry": "REIT and Equity Trust - Other",
@@ -3458,6 +3532,7 @@ export default {
       "Cost of Goods Sold": 1563.69995
     },
     {
+      "Rank": 0,
       "Ticker": "CCL",
       "Company Name": "Carnival Corporation",
       "Industry": "Leisure and Recreation Services",
@@ -3499,6 +3574,7 @@ export default {
       "Cost of Goods Sold": 10501
     },
     {
+      "Rank": 0,
       "Ticker": "CDNS",
       "Company Name": "Cadence Design Systems, Inc.",
       "Industry": "Computer - Software",
@@ -3540,6 +3616,7 @@ export default {
       "Cost of Goods Sold": 237.38999
     },
     {
+      "Rank": 0,
       "Ticker": "CELG",
       "Company Name": "Celgene Corporation",
       "Industry": "Medical - Biomedical and Genetics",
@@ -3581,6 +3658,7 @@ export default {
       "Cost of Goods Sold": 461
     },
     {
+      "Rank": 0,
       "Ticker": "CERN",
       "Company Name": "Cerner Corporation",
       "Industry": "Medical Info Systems",
@@ -3622,6 +3700,7 @@ export default {
       "Cost of Goods Sold": 854.09002
     },
     {
+      "Rank": 0,
       "Ticker": "CFG",
       "Company Name": "Citizens Financial Group, Inc.",
       "Industry": "Financial - Savings and Loan",
@@ -3663,6 +3742,7 @@ export default {
       "Cost of Goods Sold": 441
     },
     {
+      "Rank": 0,
       "Ticker": "CHD",
       "Company Name": "Church & Dwight Co., Inc.",
       "Industry": "Soap and Cleaning Materials",
@@ -3704,6 +3784,7 @@ export default {
       "Cost of Goods Sold": 2046.59997
     },
     {
+      "Rank": 0,
       "Ticker": "CHRW",
       "Company Name": "C.H. Robinson Worldwide, Inc.",
       "Industry": "Transportation - Services",
@@ -3745,6 +3826,7 @@ export default {
       "Cost of Goods Sold": 12501.33007
     },
     {
+      "Rank": 0,
       "Ticker": "CHTR",
       "Company Name": "Charter Communications, Inc.",
       "Industry": "Cable Television",
@@ -3786,6 +3868,7 @@ export default {
       "Cost of Goods Sold": 26541
     },
     {
+      "Rank": 0,
       "Ticker": "CI",
       "Company Name": "Cigna Corporation",
       "Industry": "Insurance - Multi line",
@@ -3827,6 +3910,7 @@ export default {
       "Cost of Goods Sold": 25406
     },
     {
+      "Rank": 0,
       "Ticker": "CL",
       "Company Name": "Colgate-Palmolive Company",
       "Industry": "Soap and Cleaning Materials",
@@ -3868,6 +3952,7 @@ export default {
       "Cost of Goods Sold": 6174
     },
     {
+      "Rank": 0,
       "Ticker": "CLX",
       "Company Name": "The Clorox Company",
       "Industry": "Soap and Cleaning Materials",
@@ -3909,6 +3994,7 @@ export default {
       "Cost of Goods Sold": 3302
     },
     {
+      "Rank": 0,
       "Ticker": "CMA",
       "Company Name": "Comerica Incorporated",
       "Industry": "Banks - Major Regional",
@@ -3950,6 +4036,7 @@ export default {
       "Cost of Goods Sold": 42
     },
     {
+      "Rank": 0,
       "Ticker": "CMCSA",
       "Company Name": "Comcast Corporation",
       "Industry": "Cable Television",
@@ -3991,6 +4078,7 @@ export default {
       "Cost of Goods Sold": 50397
     },
     {
+      "Rank": 0,
       "Ticker": "CME",
       "Company Name": "CME Group Inc.",
       "Industry": "Securities and Exchanges",
@@ -4032,6 +4120,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "CMG",
       "Company Name": "Chipotle Mexican Grill, Inc.",
       "Industry": "Retail - Restaurants",
@@ -4073,6 +4162,7 @@ export default {
       "Cost of Goods Sold": 3720.18994
     },
     {
+      "Rank": 0,
       "Ticker": "CMI",
       "Company Name": "Cummins Inc.",
       "Industry": "Automotive - Internal Combustion Engines",
@@ -4114,6 +4204,7 @@ export default {
       "Cost of Goods Sold": 15338
     },
     {
+      "Rank": 0,
       "Ticker": "CMS",
       "Company Name": "CMS Energy Corporation",
       "Industry": "Utility - Electric Power",
@@ -4155,6 +4246,7 @@ export default {
       "Cost of Goods Sold": 4080
     },
     {
+      "Rank": 0,
       "Ticker": "CNC",
       "Company Name": "Centene Corporation",
       "Industry": "Medical - HMOs",
@@ -4196,6 +4288,7 @@ export default {
       "Cost of Goods Sold": 42581
     },
     {
+      "Rank": 0,
       "Ticker": "CNP",
       "Company Name": "CenterPoint Energy, Inc.",
       "Industry": "Utility - Electric Power",
@@ -4237,6 +4330,7 @@ export default {
       "Cost of Goods Sold": 7115
     },
     {
+      "Rank": 0,
       "Ticker": "COF",
       "Company Name": "Capital One Financial Corporation",
       "Industry": "Financial - Consumer Loans",
@@ -4278,6 +4372,7 @@ export default {
       "Cost of Goods Sold": 1602
     },
     {
+      "Rank": 0,
       "Ticker": "COG",
       "Company Name": "Cabot Oil & Gas Corporation",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -4319,6 +4414,7 @@ export default {
       "Cost of Goods Sold": 599
     },
     {
+      "Rank": 0,
       "Ticker": "COL",
       "Company Name": "Rockwell Collins, Inc.",
       "Industry": "Aerospace - Defense Equipment",
@@ -4360,6 +4456,7 @@ export default {
       "Cost of Goods Sold": 4868
     },
     {
+      "Rank": 0,
       "Ticker": "COP",
       "Company Name": "ConocoPhillips",
       "Industry": "Oil and Gas - Integrated - United States",
@@ -4401,6 +4498,7 @@ export default {
       "Cost of Goods Sold": 18586
     },
     {
+      "Rank": 0,
       "Ticker": "COST",
       "Company Name": "Costco Wholesale Corporation",
       "Industry": "Retail - Discount Stores",
@@ -4442,6 +4540,7 @@ export default {
       "Cost of Goods Sold": 111882
     },
     {
+      "Rank": 0,
       "Ticker": "COTY",
       "Company Name": "Coty Inc.",
       "Industry": "Cosmetics",
@@ -4483,6 +4582,7 @@ export default {
       "Cost of Goods Sold": 3028.5
     },
     {
+      "Rank": 0,
       "Ticker": "CSCO",
       "Company Name": "Cisco Systems, Inc.",
       "Industry": "Computer - Networking",
@@ -4524,6 +4624,7 @@ export default {
       "Cost of Goods Sold": 17781
     },
     {
+      "Rank": 0,
       "Ticker": "CSX",
       "Company Name": "CSX Corporation",
       "Industry": "Transportation - Rail",
@@ -4565,6 +4666,7 @@ export default {
       "Cost of Goods Sold": 3406
     },
     {
+      "Rank": 0,
       "Ticker": "CTAS",
       "Company Name": "Cintas Corporation",
       "Industry": "Uniform and Related",
@@ -4606,6 +4708,7 @@ export default {
       "Cost of Goods Sold": 2943.08007
     },
     {
+      "Rank": 0,
       "Ticker": "CTL",
       "Company Name": "CenturyLink, Inc.",
       "Industry": "Wireless National",
@@ -4647,6 +4750,7 @@ export default {
       "Cost of Goods Sold": 8203
     },
     {
+      "Rank": 0,
       "Ticker": "CTSH",
       "Company Name": "Cognizant Technology Solutions Corporation",
       "Industry": "Business - Software Services",
@@ -4688,6 +4792,7 @@ export default {
       "Cost of Goods Sold": 9152
     },
     {
+      "Rank": 0,
       "Ticker": "CTXS",
       "Company Name": "Citrix Systems, Inc.",
       "Industry": "Computer - Software",
@@ -4729,6 +4834,7 @@ export default {
       "Cost of Goods Sold": 439.64001
     },
     {
+      "Rank": 0,
       "Ticker": "CVS",
       "Company Name": "CVS Health Corporation",
       "Industry": "Retail - Pharmacies and Drug Stores",
@@ -4770,6 +4876,7 @@ export default {
       "Cost of Goods Sold": 156220
     },
     {
+      "Rank": 0,
       "Ticker": "CVX",
       "Company Name": "Chevron Corporation",
       "Industry": "Oil and Gas - Integrated - International",
@@ -4811,6 +4918,7 @@ export default {
       "Cost of Goods Sold": 88096
     },
     {
+      "Rank": 0,
       "Ticker": "D",
       "Company Name": "Dominion Energy Inc.",
       "Industry": "Utility - Electric Power",
@@ -4852,6 +4960,7 @@ export default {
       "Cost of Goods Sold": 5883
     },
     {
+      "Rank": 0,
       "Ticker": "DFS",
       "Company Name": "Discover Financial Services",
       "Industry": "Financial - Consumer Loans",
@@ -4893,6 +5002,7 @@ export default {
       "Cost of Goods Sold": 846
     },
     {
+      "Rank": 0,
       "Ticker": "DGX",
       "Company Name": "Quest Diagnostics Incorporated",
       "Industry": "Medical - Outpatient and Home Healthcare",
@@ -4934,6 +5044,7 @@ export default {
       "Cost of Goods Sold": 4719
     },
     {
+      "Rank": 0,
       "Ticker": "DHI",
       "Company Name": "D.R. Horton, Inc.",
       "Industry": "Building Products - Home Builders",
@@ -4975,6 +5086,7 @@ export default {
       "Cost of Goods Sold": 11042.7998
     },
     {
+      "Rank": 0,
       "Ticker": "DHR",
       "Company Name": "Danaher Corporation",
       "Industry": "Diversified Operations",
@@ -5016,6 +5128,7 @@ export default {
       "Cost of Goods Sold": 8137.20019
     },
     {
+      "Rank": 0,
       "Ticker": "DIS",
       "Company Name": "The Walt Disney Company",
       "Industry": "Media Conglomerates",
@@ -5057,6 +5170,7 @@ export default {
       "Cost of Goods Sold": 30306
     },
     {
+      "Rank": 0,
       "Ticker": "DISCA",
       "Company Name": "Discovery Communications, Inc.",
       "Industry": "Broadcast Radio and Television",
@@ -5098,6 +5212,7 @@ export default {
       "Cost of Goods Sold": 2656
     },
     {
+      "Rank": 0,
       "Ticker": "DISH",
       "Company Name": "DISH Network Corporation",
       "Industry": "Cable Television",
@@ -5139,6 +5254,7 @@ export default {
       "Cost of Goods Sold": 9747.25976
     },
     {
+      "Rank": 0,
       "Ticker": "DLR",
       "Company Name": "Digital Realty Trust, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -5180,6 +5296,7 @@ export default {
       "Cost of Goods Sold": 894.60998
     },
     {
+      "Rank": 0,
       "Ticker": "DOV",
       "Company Name": "Dover Corporation",
       "Industry": "Manufacturing - General Industrial",
@@ -5221,6 +5338,7 @@ export default {
       "Cost of Goods Sold": 4940.0498
     },
     {
+      "Rank": 0,
       "Ticker": "DPS",
       "Company Name": "Dr Pepper Snapple Group, Inc",
       "Industry": "Beverages - Soft drinks",
@@ -5262,6 +5380,7 @@ export default {
       "Cost of Goods Sold": 2695
     },
     {
+      "Rank": 0,
       "Ticker": "DRE",
       "Company Name": "Duke Realty Corporation",
       "Industry": "REIT and Equity Trust - Other",
@@ -5303,6 +5422,7 @@ export default {
       "Cost of Goods Sold": 263
     },
     {
+      "Rank": 0,
       "Ticker": "DRI",
       "Company Name": "Darden Restaurants, Inc.",
       "Industry": "Retail - Restaurants",
@@ -5344,6 +5464,7 @@ export default {
       "Cost of Goods Sold": 5600.7998
     },
     {
+      "Rank": 0,
       "Ticker": "DTE",
       "Company Name": "DTE Energy Company",
       "Industry": "Utility - Electric Power",
@@ -5385,6 +5506,7 @@ export default {
       "Cost of Goods Sold": 9499
     },
     {
+      "Rank": 0,
       "Ticker": "DUK",
       "Company Name": "Duke Energy Corporation",
       "Industry": "Utility - Electric Power",
@@ -5426,6 +5548,7 @@ export default {
       "Cost of Goods Sold": 12770
     },
     {
+      "Rank": 0,
       "Ticker": "DVA",
       "Company Name": "DaVita Inc.",
       "Industry": "Medical - Outpatient and Home Healthcare",
@@ -5467,6 +5590,7 @@ export default {
       "Cost of Goods Sold": 7640
     },
     {
+      "Rank": 0,
       "Ticker": "DVN",
       "Company Name": "Devon Energy Corporation",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -5508,6 +5632,7 @@ export default {
       "Cost of Goods Sold": 1823
     },
     {
+      "Rank": 0,
       "Ticker": "DWDP",
       "Company Name": "Dow Chemical Company (The)",
       "Industry": "Chemical - Diversified",
@@ -5549,6 +5674,7 @@ export default {
       "Cost of Goods Sold": 50414
     },
     {
+      "Rank": 0,
       "Ticker": "EBAY",
       "Company Name": "eBay Inc.",
       "Industry": "Internet - Commerce",
@@ -5590,6 +5716,7 @@ export default {
       "Cost of Goods Sold": 2222
     },
     {
+      "Rank": 0,
       "Ticker": "ECL",
       "Company Name": "Ecolab Inc.",
       "Industry": "Chemical - Specialty",
@@ -5631,6 +5758,7 @@ export default {
       "Cost of Goods Sold": 7405.10009
     },
     {
+      "Rank": 0,
       "Ticker": "ED",
       "Company Name": "Consolidated Edison Inc",
       "Industry": "Utility - Electric Power",
@@ -5672,6 +5800,7 @@ export default {
       "Cost of Goods Sold": 5928
     },
     {
+      "Rank": 0,
       "Ticker": "EFX",
       "Company Name": "Equifax, Inc.",
       "Industry": "Financial Transaction Services",
@@ -5713,6 +5842,7 @@ export default {
       "Cost of Goods Sold": 1210.69995
     },
     {
+      "Rank": 0,
       "Ticker": "EIX",
       "Company Name": "Edison International",
       "Industry": "Utility - Electric Power",
@@ -5754,6 +5884,7 @@ export default {
       "Cost of Goods Sold": 7680
     },
     {
+      "Rank": 0,
       "Ticker": "EL",
       "Company Name": "The Estee Lauder Companies Inc.",
       "Industry": "Cosmetics",
@@ -5795,6 +5926,7 @@ export default {
       "Cost of Goods Sold": 2437
     },
     {
+      "Rank": 0,
       "Ticker": "EMN",
       "Company Name": "Eastman Chemical Company",
       "Industry": "Chemical - Diversified",
@@ -5836,6 +5968,7 @@ export default {
       "Cost of Goods Sold": 7095
     },
     {
+      "Rank": 0,
       "Ticker": "EMR",
       "Company Name": "Emerson Electric Co.",
       "Industry": "Manufacturing - Electronics",
@@ -5877,6 +6010,7 @@ export default {
       "Cost of Goods Sold": 8860
     },
     {
+      "Rank": 0,
       "Ticker": "EOG",
       "Company Name": "EOG Resources, Inc.",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -5918,6 +6052,7 @@ export default {
       "Cost of Goods Sold": 1933.96997
     },
     {
+      "Rank": 0,
       "Ticker": "EQIX",
       "Company Name": "Equinix, Inc.",
       "Industry": "REIT and Equity Trust - Retail",
@@ -5959,6 +6094,7 @@ export default {
       "Cost of Goods Sold": 2193.13989
     },
     {
+      "Rank": 0,
       "Ticker": "EQR",
       "Company Name": "Equity Residential",
       "Industry": "REIT and Equity Trust - Residential",
@@ -6000,6 +6136,7 @@ export default {
       "Cost of Goods Sold": 826.26
     },
     {
+      "Rank": 0,
       "Ticker": "EQT",
       "Company Name": "EQT Corporation",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -6041,6 +6178,7 @@ export default {
       "Cost of Goods Sold": 856.54998
     },
     {
+      "Rank": 0,
       "Ticker": "ES",
       "Company Name": "Eversource Energy",
       "Industry": "Utility - Electric Power",
@@ -6082,6 +6220,7 @@ export default {
       "Cost of Goods Sold": 3812.40991
     },
     {
+      "Rank": 0,
       "Ticker": "ESRX",
       "Company Name": "Express Scripts Holding Company",
       "Industry": "Medical Services",
@@ -6123,6 +6262,7 @@ export default {
       "Cost of Goods Sold": 91302.5
     },
     {
+      "Rank": 0,
       "Ticker": "ESS",
       "Company Name": "Essex Property Trust, Inc.",
       "Industry": "REIT and Equity Trust - Residential",
@@ -6164,6 +6304,7 @@ export default {
       "Cost of Goods Sold": 405.54
     },
     {
+      "Rank": 0,
       "Ticker": "ETFC",
       "Company Name": "E*TRADE Financial Corporation",
       "Industry": "Financial - Investment Bank",
@@ -6205,6 +6346,7 @@ export default {
       "Cost of Goods Sold": 4
     },
     {
+      "Rank": 0,
       "Ticker": "ETN",
       "Company Name": "Eaton Corporation, PLC",
       "Industry": "Manufacturing - Electronics",
@@ -6246,6 +6388,7 @@ export default {
       "Cost of Goods Sold": 13756
     },
     {
+      "Rank": 0,
       "Ticker": "ETR",
       "Company Name": "Entergy Corporation",
       "Industry": "Utility - Electric Power",
@@ -6287,6 +6430,7 @@ export default {
       "Cost of Goods Sold": 7011.37011
     },
     {
+      "Rank": 0,
       "Ticker": "EVHC",
       "Company Name": "Envision Healthcare Corporation",
       "Industry": "Medical - Outpatient and Home Healthcare",
@@ -6328,6 +6472,7 @@ export default {
       "Cost of Goods Sold": 5850.10009
     },
     {
+      "Rank": 0,
       "Ticker": "EW",
       "Company Name": "Edwards Lifesciences Corporation",
       "Industry": "Medical - Instruments",
@@ -6369,6 +6514,7 @@ export default {
       "Cost of Goods Sold": 875.29998
     },
     {
+      "Rank": 0,
       "Ticker": "EXC",
       "Company Name": "Exelon Corporation",
       "Industry": "Utility - Electric Power",
@@ -6410,6 +6556,7 @@ export default {
       "Cost of Goods Sold": 24161
     },
     {
+      "Rank": 0,
       "Ticker": "EXPD",
       "Company Name": "Expeditors International of Washington, Inc.",
       "Industry": "Transportation - Services",
@@ -6451,6 +6598,7 @@ export default {
       "Cost of Goods Sold": 4601.75
     },
     {
+      "Rank": 0,
       "Ticker": "EXPE",
       "Company Name": "Expedia, Inc.",
       "Industry": "Internet - Commerce",
@@ -6492,6 +6640,7 @@ export default {
       "Cost of Goods Sold": 1756.53002
     },
     {
+      "Rank": 0,
       "Ticker": "EXR",
       "Company Name": "Extra Space Storage Inc",
       "Industry": "REIT and Equity Trust - Other",
@@ -6533,6 +6682,7 @@ export default {
       "Cost of Goods Sold": 291.14001
     },
     {
+      "Rank": 0,
       "Ticker": "F",
       "Company Name": "Ford Motor Company",
       "Industry": "Automotive - Domestic",
@@ -6574,6 +6724,7 @@ export default {
       "Cost of Goods Sold": 131332
     },
     {
+      "Rank": 0,
       "Ticker": "FAST",
       "Company Name": "Fastenal Company",
       "Industry": "Building Products - Retail",
@@ -6615,6 +6766,7 @@ export default {
       "Cost of Goods Sold": 2226.8999
     },
     {
+      "Rank": 0,
       "Ticker": "FB",
       "Company Name": "Facebook, Inc.",
       "Industry": "Internet - Services",
@@ -6656,6 +6808,7 @@ export default {
       "Cost of Goods Sold": 5454
     },
     {
+      "Rank": 0,
       "Ticker": "FBHS",
       "Company Name": "Fortune Brands Home & Security, Inc.",
       "Industry": "Security and Safety Services",
@@ -6697,6 +6850,7 @@ export default {
       "Cost of Goods Sold": 3350.80004
     },
     {
+      "Rank": 0,
       "Ticker": "FDX",
       "Company Name": "FedEx Corporation",
       "Industry": "Transportation - Air Freight and Cargo",
@@ -6738,6 +6892,7 @@ export default {
       "Cost of Goods Sold": 16403
     },
     {
+      "Rank": 0,
       "Ticker": "FE",
       "Company Name": "FirstEnergy Corporation",
       "Industry": "Utility - Electric Power",
@@ -6779,6 +6934,7 @@ export default {
       "Cost of Goods Sold": 4577
     },
     {
+      "Rank": 0,
       "Ticker": "FFIV",
       "Company Name": "F5 Networks, Inc.",
       "Industry": "Internet - Software",
@@ -6820,6 +6976,7 @@ export default {
       "Cost of Goods Sold": 353.48001
     },
     {
+      "Rank": 0,
       "Ticker": "FIS",
       "Company Name": "Fidelity National Information Services, Inc.",
       "Industry": "Financial Transaction Services",
@@ -6861,6 +7018,7 @@ export default {
       "Cost of Goods Sold": 6181
     },
     {
+      "Rank": 0,
       "Ticker": "FISV",
       "Company Name": "Fiserv, Inc.",
       "Industry": "Financial Transaction Services",
@@ -6902,6 +7060,7 @@ export default {
       "Cost of Goods Sold": 3024
     },
     {
+      "Rank": 0,
       "Ticker": "FITB",
       "Company Name": "Fifth Third Bancorp",
       "Industry": "Banks - Major Regional",
@@ -6943,6 +7102,7 @@ export default {
       "Cost of Goods Sold": 277
     },
     {
+      "Rank": 0,
       "Ticker": "FLR",
       "Company Name": "Fluor Corporation",
       "Industry": "Engineering - R and D Services",
@@ -6984,6 +7144,7 @@ export default {
       "Cost of Goods Sold": 18902.48046
     },
     {
+      "Rank": 0,
       "Ticker": "FLS",
       "Company Name": "Flowserve Corporation",
       "Industry": "Manufacturing - General Industrial",
@@ -7025,6 +7186,7 @@ export default {
       "Cost of Goods Sold": 2575.44995
     },
     {
+      "Rank": 0,
       "Ticker": "FMC",
       "Company Name": "FMC Corporation",
       "Industry": "Chemical - Diversified",
@@ -7066,6 +7228,7 @@ export default {
       "Cost of Goods Sold": 1777.30004
     },
     {
+      "Rank": 0,
       "Ticker": "FOXA",
       "Company Name": "Twenty-First Century Fox, Inc.",
       "Industry": "Film and Television Production and Distribution",
@@ -7107,6 +7270,7 @@ export default {
       "Cost of Goods Sold": 17775
     },
     {
+      "Rank": 0,
       "Ticker": "FRT",
       "Company Name": "Federal Realty Investment Trust",
       "Industry": "REIT and Equity Trust - Retail",
@@ -7148,6 +7312,7 @@ export default {
       "Cost of Goods Sold": 272.72
     },
     {
+      "Rank": 0,
       "Ticker": "FTI",
       "Company Name": "TechnipFMC plc",
       "Industry": "Oil and Gas - Field Services",
@@ -7189,6 +7354,7 @@ export default {
       "Cost of Goods Sold": 12524.5996
     },
     {
+      "Rank": 0,
       "Ticker": "GD",
       "Company Name": "General Dynamics Corporation",
       "Industry": "Aerospace - Defense",
@@ -7230,6 +7396,7 @@ export default {
       "Cost of Goods Sold": 24786
     },
     {
+      "Rank": 0,
       "Ticker": "GE",
       "Company Name": "General Electric Company",
       "Industry": "Diversified Operations",
@@ -7271,6 +7438,7 @@ export default {
       "Cost of Goods Sold": 91934
     },
     {
+      "Rank": 0,
       "Ticker": "GILD",
       "Company Name": "Gilead Sciences, Inc.",
       "Industry": "Medical - Biomedical and Genetics",
@@ -7312,6 +7480,7 @@ export default {
       "Cost of Goods Sold": 4371
     },
     {
+      "Rank": 0,
       "Ticker": "GIS",
       "Company Name": "General Mills, Inc.",
       "Industry": "Food - Miscellaneous",
@@ -7353,6 +7522,7 @@ export default {
       "Cost of Goods Sold": 10056
     },
     {
+      "Rank": 0,
       "Ticker": "GLW",
       "Company Name": "Corning Incorporated",
       "Industry": "Communication - Components",
@@ -7394,6 +7564,7 @@ export default {
       "Cost of Goods Sold": 6084
     },
     {
+      "Rank": 0,
       "Ticker": "GM",
       "Company Name": "General Motors Company",
       "Industry": "Automotive - Domestic",
@@ -7435,6 +7606,7 @@ export default {
       "Cost of Goods Sold": 125997
     },
     {
+      "Rank": 0,
       "Ticker": "GOOGL",
       "Company Name": "Alphabet Inc.",
       "Industry": "Internet - Services",
@@ -7476,6 +7648,7 @@ export default {
       "Cost of Goods Sold": 45583
     },
     {
+      "Rank": 0,
       "Ticker": "GPC",
       "Company Name": "Genuine Parts Company",
       "Industry": "Automotive - Replacement Parts",
@@ -7517,6 +7690,7 @@ export default {
       "Cost of Goods Sold": 11402.40039
     },
     {
+      "Rank": 0,
       "Ticker": "GRMN",
       "Company Name": "Garmin Ltd.",
       "Industry": "Electronics - Miscellaneous Products",
@@ -7558,6 +7732,7 @@ export default {
       "Cost of Goods Sold": 1303.83996
     },
     {
+      "Rank": 0,
       "Ticker": "GS",
       "Company Name": "The Goldman Sachs Group, Inc.",
       "Industry": "Financial - Investment Bank",
@@ -7599,6 +7774,7 @@ export default {
       "Cost of Goods Sold": 2540
     },
     {
+      "Rank": 0,
       "Ticker": "GWW",
       "Company Name": "W.W. Grainger, Inc.",
       "Industry": "Industrial Services",
@@ -7640,6 +7816,7 @@ export default {
       "Cost of Goods Sold": 6327.2998
     },
     {
+      "Rank": 0,
       "Ticker": "HAL",
       "Company Name": "Halliburton Company",
       "Industry": "Oil and Gas - Field Services",
@@ -7681,6 +7858,7 @@ export default {
       "Cost of Goods Sold": 18355
     },
     {
+      "Rank": 0,
       "Ticker": "HAS",
       "Company Name": "Hasbro, Inc.",
       "Industry": "Toys - Games - Hobbies",
@@ -7722,6 +7900,7 @@ export default {
       "Cost of Goods Sold": 2033.68994
     },
     {
+      "Rank": 0,
       "Ticker": "HBAN",
       "Company Name": "Huntington Bancshares Incorporated",
       "Industry": "Banks - Midwest",
@@ -7763,6 +7942,7 @@ export default {
       "Cost of Goods Sold": 180
     },
     {
+      "Rank": 0,
       "Ticker": "HBI",
       "Company Name": "Hanesbrands Inc.",
       "Industry": "Textile - Apparel",
@@ -7804,6 +7984,7 @@ export default {
       "Cost of Goods Sold": 3980.85009
     },
     {
+      "Rank": 0,
       "Ticker": "HCP",
       "Company Name": "HCP, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -7845,6 +8026,7 @@ export default {
       "Cost of Goods Sold": 666.25
     },
     {
+      "Rank": 0,
       "Ticker": "HD",
       "Company Name": "The Home Depot, Inc.",
       "Industry": "Building Products - Retail",
@@ -7886,6 +8068,7 @@ export default {
       "Cost of Goods Sold": 66548
     },
     {
+      "Rank": 0,
       "Ticker": "HIG",
       "Company Name": "The Hartford Financial Services Group, Inc.",
       "Industry": "Insurance - Multi line",
@@ -7927,6 +8110,7 @@ export default {
       "Cost of Goods Sold": 10174
     },
     {
+      "Rank": 0,
       "Ticker": "HII",
       "Company Name": "Huntington Ingalls Industries, Inc.",
       "Industry": "Aerospace - Defense",
@@ -7968,6 +8152,7 @@ export default {
       "Cost of Goods Sold": 6018
     },
     {
+      "Rank": 0,
       "Ticker": "HLT",
       "Company Name": "Hilton Worldwide Holdings Inc.",
       "Industry": "Hotels and Motels",
@@ -8009,6 +8194,7 @@ export default {
       "Cost of Goods Sold": 1286
     },
     {
+      "Rank": 0,
       "Ticker": "HOG",
       "Company Name": "Harley-Davidson, Inc.",
       "Industry": "Automotive - Domestic",
@@ -8050,6 +8236,7 @@ export default {
       "Cost of Goods Sold": 3441.87011
     },
     {
+      "Rank": 0,
       "Ticker": "HOLX",
       "Company Name": "Hologic, Inc.",
       "Industry": "Medical - Instruments",
@@ -8091,6 +8278,7 @@ export default {
       "Cost of Goods Sold": 1437.80004
     },
     {
+      "Rank": 0,
       "Ticker": "HON",
       "Company Name": "Honeywell International Inc.",
       "Industry": "Diversified Operations",
@@ -8132,6 +8320,7 @@ export default {
       "Cost of Goods Sold": 27575
     },
     {
+      "Rank": 0,
       "Ticker": "HRS",
       "Company Name": "Harris Corporation",
       "Industry": "Wireless Equipment",
@@ -8173,6 +8362,7 @@ export default {
       "Cost of Goods Sold": 3811
     },
     {
+      "Rank": 0,
       "Ticker": "HSIC",
       "Company Name": "Henry Schein, Inc.",
       "Industry": "Medical - Dental Supplies",
@@ -8214,6 +8404,7 @@ export default {
       "Cost of Goods Sold": 9062.44042
     },
     {
+      "Rank": 0,
       "Ticker": "HST",
       "Company Name": "Host Hotels & Resorts, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -8255,6 +8446,7 @@ export default {
       "Cost of Goods Sold": 3876
     },
     {
+      "Rank": 0,
       "Ticker": "HSY",
       "Company Name": "Hershey Company (The)",
       "Industry": "Food - Confectionery",
@@ -8296,6 +8488,7 @@ export default {
       "Cost of Goods Sold": 4070.8999
     },
     {
+      "Rank": 0,
       "Ticker": "HUM",
       "Company Name": "Humana Inc.",
       "Industry": "Medical - HMOs",
@@ -8337,6 +8530,7 @@ export default {
       "Cost of Goods Sold": 43496
     },
     {
+      "Rank": 0,
       "Ticker": "IBM",
       "Company Name": "International Business Machines Corporation",
       "Industry": "Computer - Integrated Systems",
@@ -8378,6 +8572,7 @@ export default {
       "Cost of Goods Sold": 42913
     },
     {
+      "Rank": 0,
       "Ticker": "ICE",
       "Company Name": "Intercontinental Exchange Inc.",
       "Industry": "Securities and Exchanges",
@@ -8419,6 +8614,7 @@ export default {
       "Cost of Goods Sold": 121
     },
     {
+      "Rank": 0,
       "Ticker": "IFF",
       "Company Name": "Internationa Flavors & Fragrances, Inc.",
       "Industry": "Chemical - Specialty",
@@ -8460,6 +8656,7 @@ export default {
       "Cost of Goods Sold": 1919.70996
     },
     {
+      "Rank": 0,
       "Ticker": "ILMN",
       "Company Name": "Illumina, Inc.",
       "Industry": "Medical - Biomedical and Genetics",
@@ -8501,6 +8698,7 @@ export default {
       "Cost of Goods Sold": 926
     },
     {
+      "Rank": 0,
       "Ticker": "INFO",
       "Company Name": "IHS Markit Ltd.",
       "Industry": "Business - Information Services",
@@ -8542,6 +8740,7 @@ export default {
       "Cost of Goods Sold": 1348.40002
     },
     {
+      "Rank": 0,
       "Ticker": "INTC",
       "Company Name": "Intel Corporation",
       "Industry": "Semiconductor - General",
@@ -8583,6 +8782,7 @@ export default {
       "Cost of Goods Sold": 23692
     },
     {
+      "Rank": 0,
       "Ticker": "IP",
       "Company Name": "International Paper Company",
       "Industry": "Paper and Related Products",
@@ -8624,6 +8824,7 @@ export default {
       "Cost of Goods Sold": 15300
     },
     {
+      "Rank": 0,
       "Ticker": "IPG",
       "Company Name": "Interpublic Group of Companies, Inc. (The)",
       "Industry": "Advertising and Marketing",
@@ -8665,6 +8866,7 @@ export default {
       "Cost of Goods Sold": 6908.7998
     },
     {
+      "Rank": 0,
       "Ticker": "IPGP",
       "Company Name": "IPG Photonics Corporation",
       "Industry": "Lasers Systems and Components",
@@ -8706,6 +8908,7 @@ export default {
       "Cost of Goods Sold": 611.96997
     },
     {
+      "Rank": 0,
       "Ticker": "IQV",
       "Company Name": "Quintiles Transitional Holdings Inc.",
       "Industry": "Technology Services",
@@ -8747,6 +8950,7 @@ export default {
       "Cost of Goods Sold": 6301
     },
     {
+      "Rank": 0,
       "Ticker": "IR",
       "Company Name": "Ingersoll-Rand PLC (Ireland)",
       "Industry": "Manufacturing - General Industrial",
@@ -8788,6 +8992,7 @@ export default {
       "Cost of Goods Sold": 9811.5996
     },
     {
+      "Rank": 0,
       "Ticker": "ISRG",
       "Company Name": "Intuitive Surgical, Inc.",
       "Industry": "Medical - Instruments",
@@ -8829,6 +9034,7 @@ export default {
       "Cost of Goods Sold": 934.79998
     },
     {
+      "Rank": 0,
       "Ticker": "IT",
       "Company Name": "Gartner, Inc.",
       "Industry": "Consulting Services",
@@ -8870,6 +9076,7 @@ export default {
       "Cost of Goods Sold": 1320.18994
     },
     {
+      "Rank": 0,
       "Ticker": "ITW",
       "Company Name": "Illinois Tool Works Inc.",
       "Industry": "Manufacturing - General Industrial",
@@ -8911,6 +9118,7 @@ export default {
       "Cost of Goods Sold": 8309
     },
     {
+      "Rank": 0,
       "Ticker": "IVZ",
       "Company Name": "Invesco Ltd.",
       "Industry": "Financial - Investment Management",
@@ -8952,6 +9160,7 @@ export default {
       "Cost of Goods Sold": 1486.5
     },
     {
+      "Rank": 0,
       "Ticker": "JBHT",
       "Company Name": "J.B. Hunt Transport Services, Inc.",
       "Industry": "Transportation - Truck",
@@ -8993,6 +9202,7 @@ export default {
       "Cost of Goods Sold": 4255.60986
     },
     {
+      "Rank": 0,
       "Ticker": "JCI",
       "Company Name": "Johnson Controls International plc",
       "Industry": "Security and Safety Services",
@@ -9034,6 +9244,7 @@ export default {
       "Cost of Goods Sold": 20833
     },
     {
+      "Rank": 0,
       "Ticker": "JEC",
       "Company Name": "Jacobs Engineering Group Inc.",
       "Industry": "Engineering - R and D Services",
@@ -9075,6 +9286,7 @@ export default {
       "Cost of Goods Sold": 8250.53027
     },
     {
+      "Rank": 0,
       "Ticker": "JNJ",
       "Company Name": "Johnson & Johnson",
       "Industry": "Large Cap Pharmaceuticals",
@@ -9116,6 +9328,7 @@ export default {
       "Cost of Goods Sold": 25354
     },
     {
+      "Rank": 0,
       "Ticker": "JNPR",
       "Company Name": "Juniper Networks, Inc.",
       "Industry": "Wireless Equipment",
@@ -9157,6 +9370,7 @@ export default {
       "Cost of Goods Sold": 1955.09997
     },
     {
+      "Rank": 0,
       "Ticker": "JPM",
       "Company Name": "JPMorgan Chase & Co.",
       "Industry": "Banks - Major Regional",
@@ -9198,6 +9412,7 @@ export default {
       "Cost of Goods Sold": 2857
     },
     {
+      "Rank": 0,
       "Ticker": "K",
       "Company Name": "Kellogg Company",
       "Industry": "Food - Miscellaneous",
@@ -9239,6 +9454,7 @@ export default {
       "Cost of Goods Sold": 7901
     },
     {
+      "Rank": 0,
       "Ticker": "KEY",
       "Company Name": "KeyCorp",
       "Industry": "Banks - Major Regional",
@@ -9280,6 +9496,7 @@ export default {
       "Cost of Goods Sold": 278
     },
     {
+      "Rank": 0,
       "Ticker": "KHC",
       "Company Name": "The Kraft Heinz Company",
       "Industry": "Food - Miscellaneous",
@@ -9321,6 +9538,7 @@ export default {
       "Cost of Goods Sold": 16529
     },
     {
+      "Rank": 0,
       "Ticker": "KIM",
       "Company Name": "Kimco Realty Corporation",
       "Industry": "REIT and Equity Trust - Retail",
@@ -9362,6 +9580,7 @@ export default {
       "Cost of Goods Sold": 311.11999
     },
     {
+      "Rank": 0,
       "Ticker": "KLAC",
       "Company Name": "KLA-Tencor Corporation",
       "Industry": "Semiconductor Equipment - Wafer Fabrication",
@@ -9403,6 +9622,7 @@ export default {
       "Cost of Goods Sold": 1287.54003
     },
     {
+      "Rank": 0,
       "Ticker": "KMB",
       "Company Name": "Kimberly-Clark Corporation",
       "Industry": "Consumer Products - Staples",
@@ -9444,6 +9664,7 @@ export default {
       "Cost of Goods Sold": 11706
     },
     {
+      "Rank": 0,
       "Ticker": "KMI",
       "Company Name": "Kinder Morgan, Inc.",
       "Industry": "Oil and Gas - Production and Pipelines",
@@ -9485,6 +9706,7 @@ export default {
       "Cost of Goods Sold": 6817
     },
     {
+      "Rank": 0,
       "Ticker": "KMX",
       "Company Name": "CarMax, Inc.",
       "Industry": "Automotive - Retail and Wholesale - Parts",
@@ -9526,6 +9748,7 @@ export default {
       "Cost of Goods Sold": 14791.3496
     },
     {
+      "Rank": 0,
       "Ticker": "KO",
       "Company Name": "Coca-Cola Company (The)",
       "Industry": "Beverages - Soft drinks",
@@ -9567,6 +9790,7 @@ export default {
       "Cost of Goods Sold": 13256
     },
     {
+      "Rank": 0,
       "Ticker": "KSU",
       "Company Name": "Kansas City Southern",
       "Industry": "Transportation - Rail",
@@ -9608,6 +9832,7 @@ export default {
       "Cost of Goods Sold": 846.59997
     },
     {
+      "Rank": 0,
       "Ticker": "LEG",
       "Company Name": "Leggett & Platt, Incorporated",
       "Industry": "Furniture",
@@ -9649,6 +9874,7 @@ export default {
       "Cost of Goods Sold": 3075.8999
     },
     {
+      "Rank": 0,
       "Ticker": "LEN",
       "Company Name": "Lennar Corporation",
       "Industry": "Building Products - Home Builders",
@@ -9690,6 +9916,7 @@ export default {
       "Cost of Goods Sold": 11021.48046
     },
     {
+      "Rank": 0,
       "Ticker": "LH",
       "Company Name": "Laboratory Corporation of America Holdings",
       "Industry": "Medical - Dental Supplies",
@@ -9731,6 +9958,7 @@ export default {
       "Cost of Goods Sold": 6977.3999
     },
     {
+      "Rank": 0,
       "Ticker": "LKQ",
       "Company Name": "LKQ Corporation",
       "Industry": "Automotive - Replacement Parts",
@@ -9772,6 +10000,7 @@ export default {
       "Cost of Goods Sold": 5937.27978
     },
     {
+      "Rank": 0,
       "Ticker": "LLL",
       "Company Name": "L3 Technologies Inc.",
       "Industry": "Electronics - Military",
@@ -9813,6 +10042,7 @@ export default {
       "Cost of Goods Sold": 8553
     },
     {
+      "Rank": 0,
       "Ticker": "LLY",
       "Company Name": "Eli Lilly and Company",
       "Industry": "Large Cap Pharmaceuticals",
@@ -9854,6 +10084,7 @@ export default {
       "Cost of Goods Sold": 6070.20019
     },
     {
+      "Rank": 0,
       "Ticker": "LNC",
       "Company Name": "Lincoln National Corporation",
       "Industry": "Insurance - Life Insurance",
@@ -9895,6 +10126,7 @@ export default {
       "Cost of Goods Sold": 11926
     },
     {
+      "Rank": 0,
       "Ticker": "LNT",
       "Company Name": "Alliant Energy Corporation",
       "Industry": "Utility - Electric Power",
@@ -9936,6 +10168,7 @@ export default {
       "Cost of Goods Sold": 2161.3999
     },
     {
+      "Rank": 0,
       "Ticker": "LRCX",
       "Company Name": "Lam Research Corporation",
       "Industry": "Semiconductor Equipment - Wafer Fabrication",
@@ -9977,6 +10210,7 @@ export default {
       "Cost of Goods Sold": 4410.25976
     },
     {
+      "Rank": 0,
       "Ticker": "LUK",
       "Company Name": "Leucadia National Corporation",
       "Industry": "Diversified Operations",
@@ -10018,6 +10252,7 @@ export default {
       "Cost of Goods Sold": 7045
     },
     {
+      "Rank": 0,
       "Ticker": "LUV",
       "Company Name": "Southwest Airlines Co.",
       "Industry": "Transportation - Airline",
@@ -10059,6 +10294,7 @@ export default {
       "Cost of Goods Sold": 13750
     },
     {
+      "Rank": 0,
       "Ticker": "LYB",
       "Company Name": "LyondellBasell Industries N.V.",
       "Industry": "Chemical - Diversified",
@@ -10100,6 +10336,7 @@ export default {
       "Cost of Goods Sold": 28059
     },
     {
+      "Rank": 0,
       "Ticker": "M",
       "Company Name": "Macy's, Inc.",
       "Industry": "Retail - Regional Department Stores",
@@ -10141,6 +10378,7 @@ export default {
       "Cost of Goods Sold": 15152
     },
     {
+      "Rank": 0,
       "Ticker": "MA",
       "Company Name": "Mastercard Incorporated",
       "Industry": "Financial Transaction Services",
@@ -10182,6 +10420,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "MAA",
       "Company Name": "Mid-America Apartment Communities, Inc.",
       "Industry": "REIT and Equity Trust - Residential",
@@ -10223,6 +10462,7 @@ export default {
       "Cost of Goods Sold": 620.30999
     },
     {
+      "Rank": 0,
       "Ticker": "MAC",
       "Company Name": "Macerich Company (The)",
       "Industry": "REIT and Equity Trust - Retail",
@@ -10264,6 +10504,7 @@ export default {
       "Cost of Goods Sold": 395.30999
     },
     {
+      "Rank": 0,
       "Ticker": "MAR",
       "Company Name": "Marriott International",
       "Industry": "Hotels and Motels",
@@ -10305,6 +10546,7 @@ export default {
       "Cost of Goods Sold": 19192
     },
     {
+      "Rank": 0,
       "Ticker": "MAS",
       "Company Name": "Masco Corporation",
       "Industry": "Building Products - Miscellaneous",
@@ -10346,6 +10588,7 @@ export default {
       "Cost of Goods Sold": 5033
     },
     {
+      "Rank": 0,
       "Ticker": "MCHP",
       "Company Name": "Microchip Technology Incorporated",
       "Industry": "Semiconductor - Analog and Mixed",
@@ -10387,6 +10630,7 @@ export default {
       "Cost of Goods Sold": 1560.09997
     },
     {
+      "Rank": 0,
       "Ticker": "MCO",
       "Company Name": "Moody's Corporation",
       "Industry": "Financial - Miscellaneous Services",
@@ -10428,6 +10672,7 @@ export default {
       "Cost of Goods Sold": 1222.80004
     },
     {
+      "Rank": 0,
       "Ticker": "MDLZ",
       "Company Name": "Mondelez International, Inc.",
       "Industry": "Food - Miscellaneous",
@@ -10469,6 +10714,7 @@ export default {
       "Cost of Goods Sold": 15831
     },
     {
+      "Rank": 0,
       "Ticker": "MET",
       "Company Name": "MetLife, Inc.",
       "Industry": "Insurance - Multi line",
@@ -10510,6 +10756,7 @@ export default {
       "Cost of Goods Sold": 45151
     },
     {
+      "Rank": 0,
       "Ticker": "MGM",
       "Company Name": "MGM Resorts International",
       "Industry": "Gaming",
@@ -10551,6 +10798,7 @@ export default {
       "Cost of Goods Sold": 6166
     },
     {
+      "Rank": 0,
       "Ticker": "MHK",
       "Company Name": "Mohawk Industries, Inc.",
       "Industry": "Textile - Home Furnishing",
@@ -10592,6 +10840,7 @@ export default {
       "Cost of Goods Sold": 6494.87011
     },
     {
+      "Rank": 0,
       "Ticker": "MKC",
       "Company Name": "McCormick & Company, Incorporated",
       "Industry": "Food - Miscellaneous",
@@ -10633,6 +10882,7 @@ export default {
       "Cost of Goods Sold": 2823.8999
     },
     {
+      "Rank": 0,
       "Ticker": "MLM",
       "Company Name": "Martin Marietta Materials, Inc.",
       "Industry": "Building Products - Concrete and Aggregates",
@@ -10674,6 +10924,7 @@ export default {
       "Cost of Goods Sold": 2993.6499
     },
     {
+      "Rank": 0,
       "Ticker": "MMC",
       "Company Name": "Marsh & McLennan Companies, Inc.",
       "Industry": "Insurance - Brokerage",
@@ -10715,6 +10966,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "MMM",
       "Company Name": "3M Company",
       "Industry": "Diversified Operations",
@@ -10756,6 +11008,7 @@ export default {
       "Cost of Goods Sold": 16001
     },
     {
+      "Rank": 0,
       "Ticker": "MNST",
       "Company Name": "Monster Beverage Corporation",
       "Industry": "Beverages - Soft drinks",
@@ -10797,6 +11050,7 @@ export default {
       "Cost of Goods Sold": 1231.34997
     },
     {
+      "Rank": 0,
       "Ticker": "MO",
       "Company Name": "Altria Group, Inc.",
       "Industry": "Tobacco",
@@ -10838,6 +11092,7 @@ export default {
       "Cost of Goods Sold": 13625
     },
     {
+      "Rank": 0,
       "Ticker": "MON",
       "Company Name": "Monsanto Company",
       "Industry": "Agriculture - Products",
@@ -10879,6 +11134,7 @@ export default {
       "Cost of Goods Sold": 6703
     },
     {
+      "Rank": 0,
       "Ticker": "MOS",
       "Company Name": "The Mosaic Company",
       "Industry": "Fertilizers",
@@ -10920,6 +11176,7 @@ export default {
       "Cost of Goods Sold": 6566.60009
     },
     {
+      "Rank": 0,
       "Ticker": "MPC",
       "Company Name": "Marathon Petroleum Corporation",
       "Industry": "Oil and Gas - Refining and Marketing",
@@ -10961,6 +11218,7 @@ export default {
       "Cost of Goods Sold": 58760
     },
     {
+      "Rank": 0,
       "Ticker": "MRK",
       "Company Name": "Merck & Co., Inc.",
       "Industry": "Large Cap Pharmaceuticals",
@@ -11002,6 +11260,7 @@ export default {
       "Cost of Goods Sold": 12775
     },
     {
+      "Rank": 0,
       "Ticker": "MS",
       "Company Name": "Morgan Stanley",
       "Industry": "Financial - Investment Bank",
@@ -11043,6 +11302,7 @@ export default {
       "Cost of Goods Sold": 2093
     },
     {
+      "Rank": 0,
       "Ticker": "MSCI",
       "Company Name": "MSCI Inc",
       "Industry": "Business - Software Services",
@@ -11084,6 +11344,7 @@ export default {
       "Cost of Goods Sold": 273.91
     },
     {
+      "Rank": 0,
       "Ticker": "MSFT",
       "Company Name": "Microsoft Corporation",
       "Industry": "Computer - Software",
@@ -11125,6 +11386,7 @@ export default {
       "Cost of Goods Sold": 34261
     },
     {
+      "Rank": 0,
       "Ticker": "MTB",
       "Company Name": "M&T Bank Corporation",
       "Industry": "Banks - Major Regional",
@@ -11166,6 +11428,7 @@ export default {
       "Cost of Goods Sold": 195.86
     },
     {
+      "Rank": 0,
       "Ticker": "MTD",
       "Company Name": "Mettler-Toledo International, Inc.",
       "Industry": "Instruments - Scientific",
@@ -11207,6 +11470,7 @@ export default {
       "Cost of Goods Sold": 1151.73999
     },
     {
+      "Rank": 0,
       "Ticker": "MU",
       "Company Name": "Micron Technology, Inc.",
       "Industry": "Semiconductor Memory",
@@ -11248,6 +11512,7 @@ export default {
       "Cost of Goods Sold": 11886
     },
     {
+      "Rank": 0,
       "Ticker": "MYL",
       "Company Name": "Mylan N.V.",
       "Industry": "Medical - Generic Drugs",
@@ -11289,6 +11554,7 @@ export default {
       "Cost of Goods Sold": 7124.60009
     },
     {
+      "Rank": 0,
       "Ticker": "NAVI",
       "Company Name": "Navient Corporation",
       "Industry": "Financial - Consumer Loans",
@@ -11330,6 +11596,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "NCLH",
       "Company Name": "Norwegian Cruise Line Holdings Ltd.",
       "Industry": "Leisure and Recreation Services",
@@ -11371,6 +11638,7 @@ export default {
       "Cost of Goods Sold": 3063.63989
     },
     {
+      "Rank": 0,
       "Ticker": "NDAQ",
       "Company Name": "Nasdaq, Inc.",
       "Industry": "Securities and Exchanges",
@@ -11412,6 +11680,7 @@ export default {
       "Cost of Goods Sold": 1537
     },
     {
+      "Rank": 0,
       "Ticker": "NEE",
       "Company Name": "NextEra Energy, Inc.",
       "Industry": "Utility - Electric Power",
@@ -11453,6 +11722,7 @@ export default {
       "Cost of Goods Sold": 7398
     },
     {
+      "Rank": 0,
       "Ticker": "NFLX",
       "Company Name": "Netflix, Inc.",
       "Industry": "Broadcast Radio and Television",
@@ -11494,6 +11764,7 @@ export default {
       "Cost of Goods Sold": 7659.66015
     },
     {
+      "Rank": 0,
       "Ticker": "NFX",
       "Company Name": "Newfield Exploration Company",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -11535,6 +11806,7 @@ export default {
       "Cost of Goods Sold": 579
     },
     {
+      "Rank": 0,
       "Ticker": "NI",
       "Company Name": "NiSource, Inc",
       "Industry": "Utility - Electric Power",
@@ -11576,6 +11848,7 @@ export default {
       "Cost of Goods Sold": 3131
     },
     {
+      "Rank": 0,
       "Ticker": "NKE",
       "Company Name": "NIKE, Inc.",
       "Industry": "Shoes and Retail Apparel",
@@ -11617,6 +11890,7 @@ export default {
       "Cost of Goods Sold": 19038
     },
     {
+      "Rank": 0,
       "Ticker": "NLSN",
       "Company Name": "Nielsen Holdings Plc",
       "Industry": "Business - Information Services",
@@ -11658,6 +11932,7 @@ export default {
       "Cost of Goods Sold": 2765
     },
     {
+      "Rank": 0,
       "Ticker": "NOC",
       "Company Name": "Northrop Grumman Corporation",
       "Industry": "Aerospace - Defense",
@@ -11699,6 +11974,7 @@ export default {
       "Cost of Goods Sold": 19849
     },
     {
+      "Rank": 0,
       "Ticker": "NSC",
       "Company Name": "Norfolk Southern Corporation",
       "Industry": "Transportation - Rail",
@@ -11740,6 +12016,7 @@ export default {
       "Cost of Goods Sold": 2995
     },
     {
+      "Rank": 0,
       "Ticker": "NTRS",
       "Company Name": "Northern Trust Corporation",
       "Industry": "Banks - Major Regional",
@@ -11781,6 +12058,7 @@ export default {
       "Cost of Goods Sold": 182.1
     },
     {
+      "Rank": 0,
       "Ticker": "NUE",
       "Company Name": "Nucor Corporation",
       "Industry": "Steel - Producers",
@@ -11822,6 +12100,7 @@ export default {
       "Cost of Goods Sold": 17682.99023
     },
     {
+      "Rank": 0,
       "Ticker": "NVDA",
       "Company Name": "NVIDIA Corporation",
       "Industry": "Semiconductor - General",
@@ -11863,6 +12142,7 @@ export default {
       "Cost of Goods Sold": 3892
     },
     {
+      "Rank": 0,
       "Ticker": "NWL",
       "Company Name": "Newell Brands Inc.",
       "Industry": "Consumer Products - Staples",
@@ -11904,6 +12184,7 @@ export default {
       "Cost of Goods Sold": 9652.90039
     },
     {
+      "Rank": 0,
       "Ticker": "O",
       "Company Name": "Realty Income Corporation",
       "Industry": "REIT and Equity Trust - Retail",
@@ -11945,6 +12226,7 @@ export default {
       "Cost of Goods Sold": 69.48
     },
     {
+      "Rank": 0,
       "Ticker": "OKE",
       "Company Name": "ONEOK, Inc.",
       "Industry": "Utility - Gas Distribution",
@@ -11986,6 +12268,7 @@ export default {
       "Cost of Goods Sold": 10273.24023
     },
     {
+      "Rank": 0,
       "Ticker": "OMC",
       "Company Name": "Omnicom Group Inc.",
       "Industry": "Advertising and Marketing",
@@ -12027,6 +12310,7 @@ export default {
       "Cost of Goods Sold": 12481.7998
     },
     {
+      "Rank": 0,
       "Ticker": "ORCL",
       "Company Name": "Oracle Corporation",
       "Industry": "Computer - Software",
@@ -12068,6 +12352,7 @@ export default {
       "Cost of Goods Sold": 7469
     },
     {
+      "Rank": 0,
       "Ticker": "ORLY",
       "Company Name": "O'Reilly Automotive, Inc.",
       "Industry": "Automotive - Retail and Wholesale - Parts",
@@ -12109,6 +12394,7 @@ export default {
       "Cost of Goods Sold": 4257.04003
     },
     {
+      "Rank": 0,
       "Ticker": "OXY",
       "Company Name": "Occidental Petroleum Corporation",
       "Industry": "Oil and Gas - Integrated - United States",
@@ -12150,6 +12436,7 @@ export default {
       "Cost of Goods Sold": 5594
     },
     {
+      "Rank": 0,
       "Ticker": "PAYX",
       "Company Name": "Paychex, Inc.",
       "Industry": "Outsourcing",
@@ -12191,6 +12478,7 @@ export default {
       "Cost of Goods Sold": 919.59997
     },
     {
+      "Rank": 0,
       "Ticker": "PBCT",
       "Company Name": "People's United Financial, Inc.",
       "Industry": "Financial - Savings and Loan",
@@ -12232,6 +12520,7 @@ export default {
       "Cost of Goods Sold": 130.69999
     },
     {
+      "Rank": 0,
       "Ticker": "PCAR",
       "Company Name": "PACCAR Inc.",
       "Industry": "Automotive - Domestic",
@@ -12273,6 +12562,7 @@ export default {
       "Cost of Goods Sold": 15593.70019
     },
     {
+      "Rank": 0,
       "Ticker": "PCG",
       "Company Name": "Pacific Gas & Electric Co.",
       "Industry": "Utility - Electric Power",
@@ -12314,6 +12604,7 @@ export default {
       "Cost of Goods Sold": 11325
     },
     {
+      "Rank": 0,
       "Ticker": "PEG",
       "Company Name": "Public Service Enterprise Group Incorporated",
       "Industry": "Utility - Electric Power",
@@ -12355,6 +12646,7 @@ export default {
       "Cost of Goods Sold": 5669
     },
     {
+      "Rank": 0,
       "Ticker": "PEP",
       "Company Name": "Pepsico, Inc.",
       "Industry": "Beverages - Soft drinks",
@@ -12396,6 +12688,7 @@ export default {
       "Cost of Goods Sold": 28785
     },
     {
+      "Rank": 0,
       "Ticker": "PFE",
       "Company Name": "Pfizer Inc.",
       "Industry": "Large Cap Pharmaceuticals",
@@ -12437,6 +12730,7 @@ export default {
       "Cost of Goods Sold": 11240
     },
     {
+      "Rank": 0,
       "Ticker": "PFG",
       "Company Name": "Principal Financial Group, Inc.",
       "Industry": "Financial - Investment Management",
@@ -12478,6 +12772,7 @@ export default {
       "Cost of Goods Sold": 7947.20019
     },
     {
+      "Rank": 0,
       "Ticker": "PG",
       "Company Name": "Procter & Gamble Company (The)",
       "Industry": "Soap and Cleaning Materials",
@@ -12519,6 +12814,7 @@ export default {
       "Cost of Goods Sold": 32535
     },
     {
+      "Rank": 0,
       "Ticker": "PGR",
       "Company Name": "The Progressive Corporation",
       "Industry": "Insurance - Property and Casualty",
@@ -12560,6 +12856,7 @@ export default {
       "Cost of Goods Sold": 24413.5996
     },
     {
+      "Rank": 0,
       "Ticker": "PH",
       "Company Name": "Parker-Hannifin Corporation",
       "Industry": "Manufacturing - General Industrial",
@@ -12601,6 +12898,7 @@ export default {
       "Cost of Goods Sold": 9188.95996
     },
     {
+      "Rank": 0,
       "Ticker": "PHM",
       "Company Name": "PulteGroup, Inc.",
       "Industry": "Building Products - Home Builders",
@@ -12642,6 +12940,7 @@ export default {
       "Cost of Goods Sold": 6714.89013
     },
     {
+      "Rank": 0,
       "Ticker": "PKG",
       "Company Name": "Packaging Corporation of America",
       "Industry": "Containers - Paper and Packaging",
@@ -12683,6 +12982,7 @@ export default {
       "Cost of Goods Sold": 4972.70019
     },
     {
+      "Rank": 0,
       "Ticker": "PKI",
       "Company Name": "PerkinElmer, Inc.",
       "Industry": "Instruments - Scientific",
@@ -12724,6 +13024,7 @@ export default {
       "Cost of Goods Sold": 1183.94995
     },
     {
+      "Rank": 0,
       "Ticker": "PLD",
       "Company Name": "Prologis, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -12765,6 +13066,7 @@ export default {
       "Cost of Goods Sold": 724.65997
     },
     {
+      "Rank": 0,
       "Ticker": "PNC",
       "Company Name": "The PNC Financial Services Group, Inc",
       "Industry": "Banks - Major Regional",
@@ -12806,6 +13108,7 @@ export default {
       "Cost of Goods Sold": 623
     },
     {
+      "Rank": 0,
       "Ticker": "PNR",
       "Company Name": "Pentair plc",
       "Industry": "Manufacturing - Thermal Products",
@@ -12847,6 +13150,7 @@ export default {
       "Cost of Goods Sold": 3107.3999
     },
     {
+      "Rank": 0,
       "Ticker": "PNW",
       "Company Name": "Pinnacle West Capital Corporation",
       "Industry": "Utility - Electric Power",
@@ -12888,6 +13192,7 @@ export default {
       "Cost of Goods Sold": 1905.73999
     },
     {
+      "Rank": 0,
       "Ticker": "PPL",
       "Company Name": "PPL Corporation",
       "Industry": "Utility - Electric Power",
@@ -12929,6 +13234,7 @@ export default {
       "Cost of Goods Sold": 3079
     },
     {
+      "Rank": 0,
       "Ticker": "PRGO",
       "Company Name": "Perrigo Company plc",
       "Industry": "Medical - Products",
@@ -12970,6 +13276,7 @@ export default {
       "Cost of Goods Sold": 2966.69995
     },
     {
+      "Rank": 0,
       "Ticker": "PRU",
       "Company Name": "Prudential Financial, Inc.",
       "Industry": "Insurance - Multi line",
@@ -13011,6 +13318,7 @@ export default {
       "Cost of Goods Sold": 39707
     },
     {
+      "Rank": 0,
       "Ticker": "PSA",
       "Company Name": "Public Storage",
       "Industry": "REIT and Equity Trust - Other",
@@ -13052,6 +13360,7 @@ export default {
       "Cost of Goods Sold": 707.96997
     },
     {
+      "Rank": 0,
       "Ticker": "PSX",
       "Company Name": "Phillips 66",
       "Industry": "Oil and Gas - Refining and Marketing",
@@ -13093,6 +13402,7 @@ export default {
       "Cost of Goods Sold": 79409
     },
     {
+      "Rank": 0,
       "Ticker": "PWR",
       "Company Name": "Quanta Services, Inc.",
       "Industry": "Engineering - R and D Services",
@@ -13134,6 +13444,7 @@ export default {
       "Cost of Goods Sold": 8224.61035
     },
     {
+      "Rank": 0,
       "Ticker": "PX",
       "Company Name": "Praxair, Inc.",
       "Industry": "Chemical - Diversified",
@@ -13175,6 +13486,7 @@ export default {
       "Cost of Goods Sold": 6455
     },
     {
+      "Rank": 0,
       "Ticker": "PXD",
       "Company Name": "Pioneer Natural Resources Company",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -13216,6 +13528,7 @@ export default {
       "Cost of Goods Sold": 2613
     },
     {
+      "Rank": 0,
       "Ticker": "PYPL",
       "Company Name": "PayPal Holdings, Inc.",
       "Industry": "Internet - Software",
@@ -13257,6 +13570,7 @@ export default {
       "Cost of Goods Sold": 6794
     },
     {
+      "Rank": 0,
       "Ticker": "QCOM",
       "Company Name": "QUALCOMM Incorporated",
       "Industry": "Wireless Equipment",
@@ -13298,6 +13612,7 @@ export default {
       "Cost of Goods Sold": 9792
     },
     {
+      "Rank": 0,
       "Ticker": "QRVO",
       "Company Name": "Qorvo, Inc.",
       "Industry": "Semiconductors - Radio Frequency",
@@ -13339,6 +13654,7 @@ export default {
       "Cost of Goods Sold": 1826.56994
     },
     {
+      "Rank": 0,
       "Ticker": "RCL",
       "Company Name": "Royal Caribbean Cruises Ltd.",
       "Industry": "Leisure and Recreation Services",
@@ -13380,6 +13696,7 @@ export default {
       "Cost of Goods Sold": 4896.56982
     },
     {
+      "Rank": 0,
       "Ticker": "RE",
       "Company Name": "Everest Re Group, Ltd.",
       "Industry": "Insurance - Property and Casualty",
@@ -13421,6 +13738,7 @@ export default {
       "Cost of Goods Sold": 6145.35986
     },
     {
+      "Rank": 0,
       "Ticker": "REG",
       "Company Name": "Regency Centers Corporation",
       "Industry": "REIT and Equity Trust - Retail",
@@ -13462,6 +13780,7 @@ export default {
       "Cost of Goods Sold": 253.71
     },
     {
+      "Rank": 0,
       "Ticker": "REGN",
       "Company Name": "Regeneron Pharmaceuticals, Inc.",
       "Industry": "Medical - Biomedical and Genetics",
@@ -13503,6 +13822,7 @@ export default {
       "Cost of Goods Sold": 397.05999
     },
     {
+      "Rank": 0,
       "Ticker": "RF",
       "Company Name": "Regions Financial Corporation",
       "Industry": "Banks - Southeast",
@@ -13544,6 +13864,7 @@ export default {
       "Cost of Goods Sold": 156
     },
     {
+      "Rank": 0,
       "Ticker": "RHT",
       "Company Name": "Red Hat, Inc.",
       "Industry": "Computer - Software",
@@ -13585,6 +13906,7 @@ export default {
       "Cost of Goods Sold": 431.79
     },
     {
+      "Rank": 0,
       "Ticker": "RJF",
       "Company Name": "Raymond James Financial, Inc.",
       "Industry": "Financial - Investment Bank",
@@ -13626,6 +13948,7 @@ export default {
       "Cost of Goods Sold": 48.58
     },
     {
+      "Rank": 0,
       "Ticker": "ROK",
       "Company Name": "Rockwell Automation, Inc.",
       "Industry": "Industrial Automation and Robotics",
@@ -13667,6 +13990,7 @@ export default {
       "Cost of Goods Sold": 3687.10009
     },
     {
+      "Rank": 0,
       "Ticker": "ROP",
       "Company Name": "Roper Technologies, Inc.",
       "Industry": "Manufacturing - General Industrial",
@@ -13708,6 +14032,7 @@ export default {
       "Cost of Goods Sold": 1742.67004
     },
     {
+      "Rank": 0,
       "Ticker": "RRC",
       "Company Name": "Range Resources Corporation",
       "Industry": "Oil and Gas - Exploration and Production - United States",
@@ -13749,6 +14074,7 @@ export default {
       "Cost of Goods Sold": 1169.40002
     },
     {
+      "Rank": 0,
       "Ticker": "RSG",
       "Company Name": "Republic Services, Inc.",
       "Industry": "Waste Removal Services",
@@ -13790,6 +14116,7 @@ export default {
       "Cost of Goods Sold": 6214.60009
     },
     {
+      "Rank": 0,
       "Ticker": "RTN",
       "Company Name": "Raytheon Company",
       "Industry": "Aerospace - Defense Equipment",
@@ -13831,6 +14158,7 @@ export default {
       "Cost of Goods Sold": 19076
     },
     {
+      "Rank": 0,
       "Ticker": "SBUX",
       "Company Name": "Starbucks Corporation",
       "Industry": "Retail - Restaurants",
@@ -13872,6 +14200,7 @@ export default {
       "Cost of Goods Sold": 9038.20019
     },
     {
+      "Rank": 0,
       "Ticker": "SCG",
       "Company Name": "SCANA Corporation",
       "Industry": "Utility - Electric Power",
@@ -13913,6 +14242,7 @@ export default {
       "Cost of Goods Sold": 2567
     },
     {
+      "Rank": 0,
       "Ticker": "SCHW",
       "Company Name": "The Charles Schwab Corporation",
       "Industry": "Financial - Investment Bank",
@@ -13954,6 +14284,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "SHW",
       "Company Name": "The Sherwin-Williams Company",
       "Industry": "Paints and Related Products",
@@ -13995,6 +14326,7 @@ export default {
       "Cost of Goods Sold": 8202.57031
     },
     {
+      "Rank": 0,
       "Ticker": "SIVB",
       "Company Name": "SVB Financial Group",
       "Industry": "Banks - West",
@@ -14036,6 +14368,7 @@ export default {
       "Cost of Goods Sold": 8.67
     },
     {
+      "Rank": 0,
       "Ticker": "SLB",
       "Company Name": "Schlumberger Limited",
       "Industry": "Oil and Gas - Field Services",
@@ -14077,6 +14410,7 @@ export default {
       "Cost of Goods Sold": 26543
     },
     {
+      "Rank": 0,
       "Ticker": "SLG",
       "Company Name": "SL Green Realty Corporation",
       "Industry": "REIT and Equity Trust - Other",
@@ -14118,6 +14452,7 @@ export default {
       "Cost of Goods Sold": 570.90997
     },
     {
+      "Rank": 0,
       "Ticker": "SNA",
       "Company Name": "Snap-On Incorporated",
       "Industry": "Tools - Handheld",
@@ -14159,6 +14494,7 @@ export default {
       "Cost of Goods Sold": 1862
     },
     {
+      "Rank": 0,
       "Ticker": "SO",
       "Company Name": "Southern Company (The)",
       "Industry": "Utility - Electric Power",
@@ -14200,6 +14536,7 @@ export default {
       "Cost of Goods Sold": 12858
     },
     {
+      "Rank": 0,
       "Ticker": "SPG",
       "Company Name": "Simon Property Group, Inc.",
       "Industry": "REIT and Equity Trust - Retail",
@@ -14241,6 +14578,7 @@ export default {
       "Cost of Goods Sold": 980.08001
     },
     {
+      "Rank": 0,
       "Ticker": "SPGI",
       "Company Name": "S&P Global Inc.",
       "Industry": "Business - Information Services",
@@ -14282,6 +14620,7 @@ export default {
       "Cost of Goods Sold": 1713
     },
     {
+      "Rank": 0,
       "Ticker": "SRCL",
       "Company Name": "Stericycle, Inc.",
       "Industry": "Waste Removal Services",
@@ -14323,6 +14662,7 @@ export default {
       "Cost of Goods Sold": 2118.19995
     },
     {
+      "Rank": 0,
       "Ticker": "SRE",
       "Company Name": "Sempra Energy",
       "Industry": "Utility - Gas Distribution",
@@ -14364,6 +14704,7 @@ export default {
       "Cost of Goods Sold": 6951
     },
     {
+      "Rank": 0,
       "Ticker": "STI",
       "Company Name": "SunTrust Banks, Inc.",
       "Industry": "Banks - Major Regional",
@@ -14405,6 +14746,7 @@ export default {
       "Cost of Goods Sold": 404
     },
     {
+      "Rank": 0,
       "Ticker": "STT",
       "Company Name": "State Street Corporation",
       "Industry": "Banks - Major Regional",
@@ -14446,6 +14788,7 @@ export default {
       "Cost of Goods Sold": 163
     },
     {
+      "Rank": 0,
       "Ticker": "STX",
       "Company Name": "Seagate Technology PLC",
       "Industry": "Computer- Storage Devices",
@@ -14487,6 +14830,7 @@ export default {
       "Cost of Goods Sold": 7597
     },
     {
+      "Rank": 0,
       "Ticker": "STZ",
       "Company Name": "Constellation Brands Inc",
       "Industry": "Beverages - Alcohol",
@@ -14528,6 +14872,7 @@ export default {
       "Cost of Goods Sold": 3767.80004
     },
     {
+      "Rank": 0,
       "Ticker": "SWK",
       "Company Name": "Stanley Black & Decker, Inc.",
       "Industry": "Manufacturing - Tools & Related Products",
@@ -14569,6 +14914,7 @@ export default {
       "Cost of Goods Sold": 7969.20019
     },
     {
+      "Rank": 0,
       "Ticker": "SWKS",
       "Company Name": "Skyworks Solutions, Inc.",
       "Industry": "Semiconductors - Radio Frequency",
@@ -14610,6 +14956,7 @@ export default {
       "Cost of Goods Sold": 1809.59997
     },
     {
+      "Rank": 0,
       "Ticker": "SYF",
       "Company Name": "Synchrony Financial",
       "Industry": "Financial - Miscellaneous Services",
@@ -14651,6 +14998,7 @@ export default {
       "Cost of Goods Sold": 848
     },
     {
+      "Rank": 0,
       "Ticker": "SYK",
       "Company Name": "Stryker Corporation",
       "Industry": "Medical - Products",
@@ -14692,6 +15040,7 @@ export default {
       "Cost of Goods Sold": 4271
     },
     {
+      "Rank": 0,
       "Ticker": "SYY",
       "Company Name": "Sysco Corporation",
       "Industry": "Food - Miscellaneous",
@@ -14733,6 +15082,7 @@ export default {
       "Cost of Goods Sold": 44813.6289
     },
     {
+      "Rank": 0,
       "Ticker": "T",
       "Company Name": "AT&T Inc.",
       "Industry": "Wireless National",
@@ -14774,6 +15124,7 @@ export default {
       "Cost of Goods Sold": 77379
     },
     {
+      "Rank": 0,
       "Ticker": "TAP",
       "Company Name": "Molson Coors Brewing  Company",
       "Industry": "Beverages - Alcohol",
@@ -14815,6 +15166,7 @@ export default {
       "Cost of Goods Sold": 6217.20019
     },
     {
+      "Rank": 0,
       "Ticker": "TEL",
       "Company Name": "TE Connectivity Ltd.",
       "Industry": "Electronics - Miscellaneous Components",
@@ -14856,6 +15208,7 @@ export default {
       "Cost of Goods Sold": 8663
     },
     {
+      "Rank": 0,
       "Ticker": "TMK",
       "Company Name": "Torchmark Corporation",
       "Industry": "Insurance - Life Insurance",
@@ -14897,6 +15250,7 @@ export default {
       "Cost of Goods Sold": 2492.72998
     },
     {
+      "Rank": 0,
       "Ticker": "TMO",
       "Company Name": "Thermo Fisher Scientific Inc.",
       "Industry": "Medical - Instruments",
@@ -14938,6 +15292,7 @@ export default {
       "Cost of Goods Sold": 11473
     },
     {
+      "Rank": 0,
       "Ticker": "TPR",
       "Company Name": "Tapestry, Inc.",
       "Industry": "Retail - Apparel and Shoes",
@@ -14979,6 +15334,7 @@ export default {
       "Cost of Goods Sold": 1407.19995
     },
     {
+      "Rank": 0,
       "Ticker": "TRIP",
       "Company Name": "TripAdvisor, Inc.",
       "Industry": "Internet - Commerce",
@@ -15020,6 +15376,7 @@ export default {
       "Cost of Goods Sold": 72
     },
     {
+      "Rank": 0,
       "Ticker": "TROW",
       "Company Name": "T. Rowe Price Group, Inc.",
       "Industry": "Financial - Investment Management",
@@ -15061,6 +15418,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "TRV",
       "Company Name": "The Travelers Companies, Inc.",
       "Industry": "Insurance - Property and Casualty",
@@ -15102,6 +15460,7 @@ export default {
       "Cost of Goods Sold": 17467
     },
     {
+      "Rank": 0,
       "Ticker": "TSCO",
       "Company Name": "Tractor Supply Company",
       "Industry": "Retail - Miscellaneous",
@@ -15143,6 +15502,7 @@ export default {
       "Cost of Goods Sold": 4764.41015
     },
     {
+      "Rank": 0,
       "Ticker": "TSN",
       "Company Name": "Tyson Foods, Inc.",
       "Industry": "Food - Meat Products",
@@ -15184,6 +15544,7 @@ export default {
       "Cost of Goods Sold": 33177
     },
     {
+      "Rank": 0,
       "Ticker": "TSS",
       "Company Name": "Total System Services, Inc.",
       "Industry": "Financial Transaction Services",
@@ -15225,6 +15586,7 @@ export default {
       "Cost of Goods Sold": 3577.32006
     },
     {
+      "Rank": 0,
       "Ticker": "TWX",
       "Company Name": "Time Warner Inc.",
       "Industry": "Media Conglomerates",
@@ -15266,6 +15628,7 @@ export default {
       "Cost of Goods Sold": 17647
     },
     {
+      "Rank": 0,
       "Ticker": "TXN",
       "Company Name": "Texas Instruments Incorporated",
       "Industry": "Semiconductor - General",
@@ -15307,6 +15670,7 @@ export default {
       "Cost of Goods Sold": 5347
     },
     {
+      "Rank": 0,
       "Ticker": "TXT",
       "Company Name": "Textron Inc.",
       "Industry": "Aerospace - Defense",
@@ -15348,6 +15712,7 @@ export default {
       "Cost of Goods Sold": 11795
     },
     {
+      "Rank": 0,
       "Ticker": "UDR",
       "Company Name": "United Dominion Realty Trust, Inc.",
       "Industry": "REIT and Equity Trust - Residential",
@@ -15389,6 +15754,7 @@ export default {
       "Cost of Goods Sold": 321.92999
     },
     {
+      "Rank": 0,
       "Ticker": "UHS",
       "Company Name": "Universal Health Services, Inc.",
       "Industry": "Medical - Hospital",
@@ -15430,6 +15796,7 @@ export default {
       "Cost of Goods Sold": 1105.08996
     },
     {
+      "Rank": 0,
       "Ticker": "UNH",
       "Company Name": "UnitedHealth Group Incorporated",
       "Industry": "Medical - HMOs",
@@ -15471,6 +15838,7 @@ export default {
       "Cost of Goods Sold": 154148
     },
     {
+      "Rank": 0,
       "Ticker": "UNM",
       "Company Name": "Unum Group",
       "Industry": "Insurance - Accident and Health",
@@ -15512,6 +15880,7 @@ export default {
       "Cost of Goods Sold": 7488.5
     },
     {
+      "Rank": 0,
       "Ticker": "UNP",
       "Company Name": "Union Pacific Corporation",
       "Industry": "Transportation - Rail",
@@ -15553,6 +15922,7 @@ export default {
       "Cost of Goods Sold": 9238
     },
     {
+      "Rank": 0,
       "Ticker": "UPS",
       "Company Name": "United Parcel Service, Inc.",
       "Industry": "Transportation - Air Freight and Cargo",
@@ -15594,6 +15964,7 @@ export default {
       "Cost of Goods Sold": 15279
     },
     {
+      "Rank": 0,
       "Ticker": "URI",
       "Company Name": "United Rentals, Inc.",
       "Industry": "Building Products - Miscellaneous",
@@ -15635,6 +16006,7 @@ export default {
       "Cost of Goods Sold": 3872
     },
     {
+      "Rank": 0,
       "Ticker": "USB",
       "Company Name": "U.S. Bancorp",
       "Industry": "Banks - Major Regional",
@@ -15676,6 +16048,7 @@ export default {
       "Cost of Goods Sold": 1041
     },
     {
+      "Rank": 0,
       "Ticker": "UTX",
       "Company Name": "United Technologies Corporation",
       "Industry": "Diversified Operations",
@@ -15717,6 +16090,7 @@ export default {
       "Cost of Goods Sold": 43953
     },
     {
+      "Rank": 0,
       "Ticker": "V",
       "Company Name": "Visa Inc.",
       "Industry": "Financial Transaction Services",
@@ -15758,6 +16132,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "VAR",
       "Company Name": "Varian Medical Systems, Inc.",
       "Industry": "Medical - Instruments",
@@ -15799,6 +16174,7 @@ export default {
       "Cost of Goods Sold": 1512.59997
     },
     {
+      "Rank": 0,
       "Ticker": "VFC",
       "Company Name": "V.F. Corporation",
       "Industry": "Textile - Apparel",
@@ -15840,6 +16216,7 @@ export default {
       "Cost of Goods Sold": 5844.93994
     },
     {
+      "Rank": 0,
       "Ticker": "VIAB",
       "Company Name": "Viacom Inc.",
       "Industry": "Media Conglomerates",
@@ -15881,6 +16258,7 @@ export default {
       "Cost of Goods Sold": 7436
     },
     {
+      "Rank": 0,
       "Ticker": "VLO",
       "Company Name": "Valero Energy Corporation",
       "Industry": "Oil and Gas - Refining and Marketing",
@@ -15922,6 +16300,7 @@ export default {
       "Cost of Goods Sold": 87499
     },
     {
+      "Rank": 0,
       "Ticker": "VMC",
       "Company Name": "Vulcan Materials Company",
       "Industry": "Building Products - Concrete and Aggregates",
@@ -15963,6 +16342,7 @@ export default {
       "Cost of Goods Sold": 2889.72998
     },
     {
+      "Rank": 0,
       "Ticker": "VRSK",
       "Company Name": "Verisk Analytics, Inc.",
       "Industry": "Business - Information Services",
@@ -16004,6 +16384,7 @@ export default {
       "Cost of Goods Sold": 783.79998
     },
     {
+      "Rank": 0,
       "Ticker": "VRTX",
       "Company Name": "Vertex Pharmaceuticals Incorporated",
       "Industry": "Medical - Biomedical and Genetics",
@@ -16045,6 +16426,7 @@ export default {
       "Cost of Goods Sold": 275.10998
     },
     {
+      "Rank": 0,
       "Ticker": "VTR",
       "Company Name": "Ventas, Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -16086,6 +16468,7 @@ export default {
       "Cost of Goods Sold": 236.38999
     },
     {
+      "Rank": 0,
       "Ticker": "VZ",
       "Company Name": "Verizon Communications Inc.",
       "Industry": "Wireless National",
@@ -16127,6 +16510,7 @@ export default {
       "Cost of Goods Sold": 51556
     },
     {
+      "Rank": 0,
       "Ticker": "WAT",
       "Company Name": "Waters Corporation",
       "Industry": "Instruments - Scientific",
@@ -16168,6 +16552,7 @@ export default {
       "Cost of Goods Sold": 947.05999
     },
     {
+      "Rank": 0,
       "Ticker": "WBA",
       "Company Name": "Walgreens Boots Alliance, Inc.",
       "Industry": "Retail - Pharmacies and Drug Stores",
@@ -16209,6 +16594,7 @@ export default {
       "Cost of Goods Sold": 89052
     },
     {
+      "Rank": 0,
       "Ticker": "WDC",
       "Company Name": "Western Digital Corporation",
       "Industry": "Computer- Storage Devices",
@@ -16250,6 +16636,7 @@ export default {
       "Cost of Goods Sold": 13021
     },
     {
+      "Rank": 0,
       "Ticker": "WEC",
       "Company Name": "WEC Energy Group, Inc.",
       "Industry": "Utility - Electric Power",
@@ -16291,6 +16678,7 @@ export default {
       "Cost of Goods Sold": 4869.7998
     },
     {
+      "Rank": 0,
       "Ticker": "WELL",
       "Company Name": "Welltower Inc.",
       "Industry": "REIT and Equity Trust - Other",
@@ -16332,6 +16720,7 @@ export default {
       "Cost of Goods Sold": 2146.88989
     },
     {
+      "Rank": 0,
       "Ticker": "WFC",
       "Company Name": "Wells Fargo & Company",
       "Industry": "Banks - Major Regional",
@@ -16373,6 +16762,7 @@ export default {
       "Cost of Goods Sold": 3013
     },
     {
+      "Rank": 0,
       "Ticker": "WHR",
       "Company Name": "Whirlpool Corporation",
       "Industry": "Household Appliances",
@@ -16414,6 +16804,7 @@ export default {
       "Cost of Goods Sold": 17651
     },
     {
+      "Rank": 0,
       "Ticker": "WLTW",
       "Company Name": "Willis Towers Watson Public Limited Company",
       "Industry": "Insurance - Brokerage",
@@ -16455,6 +16846,7 @@ export default {
       "Cost of Goods Sold": 0
     },
     {
+      "Rank": 0,
       "Ticker": "WM",
       "Company Name": "Waste Management, Inc.",
       "Industry": "Waste Removal Services",
@@ -16496,6 +16888,7 @@ export default {
       "Cost of Goods Sold": 9021
     },
     {
+      "Rank": 0,
       "Ticker": "WMT",
       "Company Name": "Walmart Inc.",
       "Industry": "Retail - Supermarkets",
@@ -16537,6 +16930,7 @@ export default {
       "Cost of Goods Sold": 373396
     },
     {
+      "Rank": 0,
       "Ticker": "WRK",
       "Company Name": "WestRock Company",
       "Industry": "Paper and Related Products",
@@ -16578,6 +16972,7 @@ export default {
       "Cost of Goods Sold": 12119.5
     },
     {
+      "Rank": 0,
       "Ticker": "WY",
       "Company Name": "Weyerhaeuser Company",
       "Industry": "Building Products - Wood",
@@ -16619,6 +17014,7 @@ export default {
       "Cost of Goods Sold": 5298
     },
     {
+      "Rank": 0,
       "Ticker": "XEL",
       "Company Name": "Xcel Energy Inc.",
       "Industry": "Utility - Electric Power",
@@ -16660,6 +17056,7 @@ export default {
       "Cost of Goods Sold": 6917
     },
     {
+      "Rank": 0,
       "Ticker": "XLNX",
       "Company Name": "Xilinx, Inc.",
       "Industry": "Semiconductors - Programmable Logic",
@@ -16701,6 +17098,7 @@ export default {
       "Cost of Goods Sold": 756.35998
     },
     {
+      "Rank": 0,
       "Ticker": "XOM",
       "Company Name": "Exxon Mobil Corporation",
       "Industry": "Oil and Gas - Integrated - International",
@@ -16742,6 +17140,7 @@ export default {
       "Cost of Goods Sold": 192449
     },
     {
+      "Rank": 0,
       "Ticker": "XRAY",
       "Company Name": "DENTSPLY SIRONA Inc.",
       "Industry": "Medical - Dental Supplies",
@@ -16783,6 +17182,7 @@ export default {
       "Cost of Goods Sold": 1804.90002
     },
     {
+      "Rank": 0,
       "Ticker": "XYL",
       "Company Name": "Xylem Inc.",
       "Industry": "Manufacturing - General Industrial",
@@ -16824,6 +17224,7 @@ export default {
       "Cost of Goods Sold": 2856
     },
     {
+      "Rank": 0,
       "Ticker": "ZBH",
       "Company Name": "Zimmer Biomet Holdings, Inc.",
       "Industry": "Medical - Products",
@@ -16865,6 +17266,7 @@ export default {
       "Cost of Goods Sold": 2132.8999
     },
     {
+      "Rank": 0,
       "Ticker": "ZION",
       "Company Name": "Zions Bancorporation",
       "Industry": "Banks - West",
@@ -16906,6 +17308,7 @@ export default {
       "Cost of Goods Sold": 59
     },
     {
+      "Rank": 0,
       "Ticker": "ZTS",
       "Company Name": "Zoetis Inc.",
       "Industry": "Medical - Drugs",
