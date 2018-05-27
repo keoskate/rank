@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 import * as math from 'mathjs';
 import WeightSlider from './WeightSlider';
+import ColorColumn from './ColorColumn';
 import * as rawData from '../rank-data'
 
 const SIZE = {
@@ -62,7 +63,7 @@ class Scoreboard extends Component {
                     label: 'Price',
                     type: 'money',
                     size: SIZE.small,
-                    weight: 0, 
+                    weight: 0.1, 
                     multiplier: -1,
                     average: undefined,
                     stdDev: undefined
@@ -80,7 +81,7 @@ class Scoreboard extends Component {
                     label: 'Discount',
                     type: '',
                     size: SIZE.medium,
-                    weight: 0.50, 
+                    weight: 0.40, 
                     multiplier: -1,
                     average: undefined,
                     stdDev: undefined
@@ -89,7 +90,7 @@ class Scoreboard extends Component {
                     label: 'Distribution',
                     type: '',
                     size: SIZE.medium,
-                    weight: 0.50, 
+                    weight: 0.30, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
@@ -98,7 +99,7 @@ class Scoreboard extends Component {
                     label: 'Z-Score 1Y',
                     type: '',
                     size: SIZE.small,
-                    weight: 0, 
+                    weight: 0.2, 
                     multiplier: -1,
                     average: undefined,
                     stdDev: undefined
@@ -202,7 +203,10 @@ class Scoreboard extends Component {
         this.calculateRank(data, rGrid, sGrid);
 
         this.setState({
-            data: data
+            data: data,
+            uiData: data,
+            rGrid: rGrid,
+            sGrid: sGrid
         });
     }
 
@@ -271,8 +275,21 @@ class Scoreboard extends Component {
                 const order = param.multiplier === 1 ? 'asc' : 'desc';
                 const multiplier = param.multiplier;
                 const weight = param.weight;
-                const stdDev = param.stdDev || this.getColStandardDeviation(col, data) || 0;
-                const average = param.average || this.getColAverage(col, data) || 0;
+                let stdDev = undefined;
+                let average = undefined;
+                if (!param.average && !param.stdDev) {
+                    stdDev = this.getColStandardDeviation(col, data); // || 0;
+                    average = this.getColAverage(col, data); // || 0;
+
+                    this.state.params[col].stdDev = stdDev;
+                    this.state.params[col].average = average;
+
+                    this.setState(({
+                        params: this.state.params
+                    }));
+                }
+                stdDev = stdDev || this.getColStandardDeviation(col, data); // || 0;
+                average = average || this.getColAverage(col, data);
 
                 if (weight > 0) {
                     const colList = this.getColList(col, data);
@@ -500,13 +517,63 @@ class Scoreboard extends Component {
         };
     }
 
-    render() {
-        const options = {
-            sortName: this.state.sortName,
-            sortOrder: this.state.sortOrder,
-            onSortChange: this.onSortChange
-        };
-        const parameters = Object.keys(this.state.params).map((key) => {
+    getConditionalColor(col, value, params) {
+        const weight = params[col].weight;
+        let avg = params[col].average;
+        let std = params[col].stdDev;
+        const mult = params[col].multiplier === 1;
+
+        if (avg === undefined) {
+            return;
+        }
+
+        // avg = Math.abs(params[col].average);
+        // std = Math.abs(params[col].stdDev);
+        // value = Math.abs(value);
+
+        if (weight === 0) {
+            return '#ffffff';
+        } else if ( (((avg - 1.5*std) >= value) && (value >= (avg - 2*std)) && !mult) ||
+                    (((avg + 1.5*std) <= value) && (value <= (avg + 2*std)) && mult)) {
+            return '#a5d3a5';
+        } else if ( (((avg - 1*std) >= value) && (value >= (avg - 1.5*std)) && !mult) ||
+                    (((avg + 1*std) <= value) && (value <= (avg + 1.5*std)) && mult)) {
+            return '#b1e1b0';
+        } else if ( (((avg - 0.5*std) >= value) && (value >= (avg - 1*std)) && !mult) ||
+                    (((avg + 0.5*std) <= value) && (value <= (avg + 1*std)) && mult)) {
+            return '#c5f1c6';
+        } else if ( ((avg >= value) && (value >= (avg - 0.5*std)) && !mult) ||
+                    ((avg <= value) && (value <= (avg + 0.5*std)) && mult)) {
+            return '#e7f6e5';
+        } else if ( ((avg >= value) && (value >= (avg - 0.5*std)) && mult) ||
+                    ((avg <= value) && (value <= (avg + 0.5*std)) && !mult)) {
+            return '#fff3f3';
+        } else if ( ((avg - 0.5*std >= value) && (value >= (avg - 1*std)) && mult) ||
+                    ((avg + 0.5*std <= value) && (value <= (avg + 1*std)) && !mult)) {
+            return '#ffe1e1';
+        } else if ( ((avg - 1*std >= value) && (value >= (avg - 1.5*std)) && mult) ||
+                    ((avg + 1*std <= value) && (value <= (avg + 1.5*std)) && !mult)) {
+            return '#fdc2c2';
+        } else if ( ((avg - 1.5*std >= value) && (value >= (avg - 2*std)) && mult) ||
+                    ((avg + 1.5*std <= value) && (value <= (avg + 2*std)) && !mult)) {
+            return '#fda4a4';
+        } else if (((value < (avg - 2*std)) && !mult) || 
+                    ((value > (avg + 2*std) && mult))) {
+            return '#67c279';
+        } else if ( ((value < (avg - 2*std)) && mult) || 
+                    ((value > (avg + 2*std) && !mult))) {
+            return '#fd7979';
+        }
+    }
+    
+    stylingID(col, params, cell, row, ridx, cidx) {
+        const value = cell;
+        const color = this.getConditionalColor(col, value, params);
+        return { background: color };
+    }
+
+    parameters() { 
+        return Object.keys(this.state.params).map((key) => {
             if (this.state.params[key].multiplier !== 0) {
                 return (
                     <span style={{ display:'inline-block', margin: 5, width: 120 }}>
@@ -518,8 +585,10 @@ class Scoreboard extends Component {
                 );
             }
         });
+    }
 
-        const headers = Object.keys(this.state.params).map((key) => {
+    headers(params) { 
+        return Object.keys(params).map((key) => {
             if (key === 'rank') {
                 return (
                     <TableHeaderColumn
@@ -529,56 +598,70 @@ class Scoreboard extends Component {
                         width='50'
                         sortFunc={this.revertSortFunc}
                     >
-                        {this.state.params[key].label}
+                        {params[key].label}
                     </TableHeaderColumn>
                 );                
             } else {
                 // Add Label, type(money, %, number), size ...
+                const colString = (cell, row) => {
+                    return <ColorColumn value={row[key]} class={key}/>
+                    // return `${row[key].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+                };
                 return (
                     <TableHeaderColumn
                         dataField={key}
                         dataSort
-                        width={this.state.params[key].size}
-                        dataFormat={(cell, row) => `${row[key].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`}
+                        tdClass={key}
+                        tdStyle={ this.stylingID.bind(this, key, params) }
+                        width={params[key].size}
+                        dataFormat={(cell, row) => colString(cell, row)}
                         sortFunc={this.revertSortFunc}
                         >
-                        {this.state.params[key].label}
+                        {params[key].label}
                     </TableHeaderColumn>
                 );
             }
         });
+    }
 
-        const sumCol = () => {
-            if (this.state.altGrid) {
-                return (
-                    <TableHeaderColumn 
-                        dataField='sum'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Sum
-                    </TableHeaderColumn>
-                )
-            }
+    sumCol() {
+        if (this.state.altGrid) {
+            return (
+                <TableHeaderColumn 
+                    dataField='sum'
+                    dataSort
+                    sortFunc={ this.revertSortFunc }
+                    >
+                    Sum
+                </TableHeaderColumn>
+            )
         }
+    }
 
-        const goodRankCol = () => {
-            if (this.state.altGrid) {
-                return (
-                    <TableHeaderColumn 
-                        dataField='goodRank'
-                        dataSort
-                        sortFunc={ this.revertSortFunc }
-                        >
-                        Alt Rank
-                    </TableHeaderColumn>
-                )
-            }
+    goodRankCol() {
+        if (this.state.altGrid) {
+            return (
+                <TableHeaderColumn 
+                    dataField='goodRank'
+                    dataSort
+                    sortFunc={ this.revertSortFunc }
+                    >
+                    Alt Rank
+                </TableHeaderColumn>
+            )
         }
+    }
 
+    render() {
+        const options = {
+            sortName: this.state.sortName,
+            sortOrder: this.state.sortOrder,
+            onSortChange: this.onSortChange
+        };
+        
         return (
             <div>
-                {parameters}
+                {this.parameters()}
                 <button onClick={this.handleFullDataScoreboard}>
                 Full Grid
                 </button>
@@ -591,9 +674,9 @@ class Scoreboard extends Component {
                 Std Deviation Grid
                 </button>
                 <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
-                    {headers}
-                    {sumCol()}
-                    {goodRankCol()}
+                    {this.headers(this.state.params)}
+                    {this.sumCol()}
+                    {this.goodRankCol()}
                 </BootstrapTable>
             </div>
         );
