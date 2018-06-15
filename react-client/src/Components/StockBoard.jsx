@@ -15,8 +15,8 @@ class StockBoard extends Component {
     constructor() {
         super();
         this.state = {
-            sortName: undefined,
-            sortOrder: undefined,
+            sortName: 'rank',
+            sortOrder: 'desc',
             altGrid: false, 
             rGrid: [],
             sGrid: [],
@@ -96,7 +96,7 @@ class StockBoard extends Component {
                 "price": {
                     label: 'Price',
                     type: 'money',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.1, 
                     multiplier: -1,
                     average: undefined,
@@ -105,7 +105,7 @@ class StockBoard extends Component {
                 "52high": {
                     label: '52 Week High',
                     type: 'money',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: -1,
                     average: undefined,
@@ -114,7 +114,7 @@ class StockBoard extends Component {
                 "52low": {
                     label: '52 Week Low',
                     type: 'money',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -123,7 +123,7 @@ class StockBoard extends Component {
                 "pricePercent52": {
                     label: 'Price as a % of 52 Wk H-L Range',
                     type: 'money',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -204,7 +204,7 @@ class StockBoard extends Component {
                 "salesGrowthLTM": {
                     label: 'Sales Growth (LTM)',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -213,7 +213,7 @@ class StockBoard extends Component {
                 "salesGrowth5yr": {
                     label: 'Sales Growth (5 Yr)',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -222,7 +222,7 @@ class StockBoard extends Component {
                 "pe12month": {
                     label: 'P/E (Trailing 12 Months)',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.2, 
                     multiplier: -1,
                     average: undefined,
@@ -231,7 +231,7 @@ class StockBoard extends Component {
                 "pegRatio": {
                     label: 'PEG Ratio',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: -1,
                     average: undefined,
@@ -240,7 +240,7 @@ class StockBoard extends Component {
                 "priceBook": {
                     label: 'Price/Book',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: -1,
                     average: undefined,
@@ -249,7 +249,7 @@ class StockBoard extends Component {
                 "priceSales": {
                     label: 'Price/Sales',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: -1,
                     average: undefined,
@@ -258,7 +258,7 @@ class StockBoard extends Component {
                 "roe": {
                     label: 'Current ROE (TTM)',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -267,7 +267,7 @@ class StockBoard extends Component {
                 "roa": {
                     label: 'Current ROA (TTM)',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -276,7 +276,7 @@ class StockBoard extends Component {
                 "divYield": {
                     label: 'Div. Yield %',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -285,7 +285,7 @@ class StockBoard extends Component {
                 "dividend": {
                     label: 'Dividend',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -294,7 +294,7 @@ class StockBoard extends Component {
                 "divYield5yr": {
                     label: 'Div. Yield % (5 Yr)',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: 1,
                     average: undefined,
@@ -303,7 +303,7 @@ class StockBoard extends Component {
                 "netMargin": {
                     label: 'Net Margin',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -312,7 +312,7 @@ class StockBoard extends Component {
                 "oppMargin12m": {
                     label: 'Operating Margin 12 Mo',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -321,7 +321,7 @@ class StockBoard extends Component {
                 "debtEquityRatio": {
                     label: 'Debt/Equity Ratio',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: -1,
                     average: undefined,
@@ -330,7 +330,7 @@ class StockBoard extends Component {
                 "currentRatio": {
                     label: 'Current Ratio',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: -1,
                     average: undefined,
@@ -339,7 +339,7 @@ class StockBoard extends Component {
                 "currentRatio": {
                     label: 'Current Ratio',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -348,7 +348,7 @@ class StockBoard extends Component {
                 "quickRatio": {
                     label: 'Quick Ratio',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -357,7 +357,7 @@ class StockBoard extends Component {
                 "annualSales": {
                     label: 'Annual Sales',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -366,7 +366,7 @@ class StockBoard extends Component {
                 "ebitda": {
                     label: 'EBITDA',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -375,7 +375,7 @@ class StockBoard extends Component {
                 "netIncome": {
                     label: 'Net Income',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0.2, 
                     multiplier: 1,
                     average: undefined,
@@ -384,7 +384,7 @@ class StockBoard extends Component {
                 "cogs": {
                     label: 'Cost of Goods Sold',
                     type: '',
-                    size: SIZE.small,
+                    size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
@@ -689,6 +689,7 @@ class StockBoard extends Component {
     }
 
     onSortChange(sortName, sortOrder) {
+        debugger;
         this.setState({
             sortName,
             sortOrder
@@ -936,7 +937,7 @@ class StockBoard extends Component {
                 <button onClick={this.handleRelativeScoreboard}>Relative Rank Grid</button>
                 <button onClick={this.handleStdScoreboard}>Std Deviation Grid</button>
 
-                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
+                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed pagination={ true }>
                     {this.headers(this.state.params)}
                     <TableHeaderColumn row='0' colSpan='4'>Company Descriptors</TableHeaderColumn>
                     <TableHeaderColumn row='0' colSpan='3'>{'Size & Share Volume'}</TableHeaderColumn>
