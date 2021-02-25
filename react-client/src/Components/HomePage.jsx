@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 import * as math from 'mathjs';
-import Scoreboard from './Scoreboard'
-import StockBoard from './StockBoard'
+import Scoreboard from './Scoreboard';
+// import StockBoard from './StockBoard';
+import StonkBoard from './StonkBoard';
 
 class HomePage extends Component {
     constructor() {
@@ -1003,8 +1004,8 @@ class HomePage extends Component {
         } else {
             return (
                 <div>
-                    <button onClick={this.handleSwitchboard.bind(this)}>{`View CEF Board`}</button>
-                    <StockBoard type="STOCK"></StockBoard>
+                    {/* <button onClick={this.handleSwitchboard.bind(this)}>{`View CEF Board`}</button> */}
+                    <StonkBoard type="STOCK"></StonkBoard>
                 </div>
             );
         }

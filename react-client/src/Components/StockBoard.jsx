@@ -11,6 +11,171 @@ const SIZE = {
     large: 125
 };
 
+ const DEBUG = true;
+
+ /**
+  * How this works:
+  * 
+  * Create an Array KEO_STOCKS
+  *     0 => Array of Stock Tickers
+  *     1 => Cached response used when DEBUG = true
+  */
+ const KEO_STOCKS = [[
+    'WM',
+    'ADSK',
+    'NKE',
+    'LSCC',
+    'DIS',
+    'LRCX',
+    'XRAY',
+    'RTN',
+    'YETI',
+    'ENPH',
+    'TEVA',
+    'RUBI',
+    'RUN',
+    'DAL',
+    'ZFGN',
+    'RCL',
+    'SHOP',
+    'HIMX',
+    'PI',
+    'PENN'
+], rawData.default.KeoStocks];
+
+const ELVIS_STOCKS = [["EAT", "BLK", "DRI", "EDIT", "CRSP", "PYPL", "BA", "CYBR", "BILI", "TCEHY", "ADPT", "ZM", "ROKU", "BYND", "REAL", "LK", "SFIX", "LULU", "PCRFY", "TPTX", "UNH", "CVS", "GILD", "PK", "WYNN", "MGM", "HRI", "TCOM", "ZNH", "CCL", "CEA", "CPCAY", "DAL", "ALK", "OXY", "NOVA", "ACB", "HEXO", "SNDL"]];
+
+const LOOKOUT_STOCKS = [[
+    'AMZN',
+    'WM',
+    'NFLX',
+    'BABA',
+    'ADBE',
+    'AAPL',
+    'MSFT',
+    'GOOG',
+    'ADSK',
+    'AMD',
+    'FB',
+    'NKE',
+    'NVDA',
+    'LSCC',
+    'LUV',
+    'DIS',
+    'BTG',
+    'MU',
+    'TER',
+    'LRCX',
+    'XRAY',
+    'LUNA',
+    'RTN',
+    'TWTR',
+    'ENSG',
+    'YETI',
+    'WORK',
+    'SNAP',
+    'ENPH',
+    'XOM',
+    'TEVA',
+    'HIMX',
+    'RUBI',
+    'RUN',
+    'TSLA',
+    'DAL',
+    'PI',
+    'ZFGN',
+    'RCL',
+    'SHOP',
+    'MAXR',
+    'WAB',
+], rawData.default.blob];
+
+
+const BIG_MONEY = [[
+    "PENN",
+    "EAT",
+    "BLK",
+    "DRI",
+    "EDIT",
+    "CRSP",
+    "PYPL",
+    "BA",
+    "CYBR",
+    "BILI",
+    "TCEHY",
+    "ADPT",
+    "ZM",
+    "ROKU",
+    "BYND",
+    "REAL",
+    "LK",
+    "SFIX",
+    "LULU",
+    "PCRFY",
+    "TPTX",
+    "UNH",
+    "CVS",
+    "GILD",
+    "PK",
+    "WYNN",
+    "MGM",
+    "HRI",
+    "TCOM",
+    "ZNH",
+    "CCL",
+    "CEA",
+    "CPCAY",
+    "ALK",
+    "OXY",
+    "NOVA",
+    "ACB",
+    "HEXO",
+    "SNDL",
+    "AMZN",
+    "WM",
+    "NFLX",
+    "BABA",
+    "ADBE",
+    "AAPL",
+    "MSFT",
+    "GOOG",
+    "ADSK",
+    "AMD",
+    "FB",
+    "NKE",
+    "NVDA",
+    "LSCC",
+    "LUV",
+    "DIS",
+    "BTG",
+    "MU",
+    "TER",
+    "LRCX",
+    "XRAY",
+    "LUNA",
+    "RTN",
+    "TWTR",
+    "ENSG",
+    "YETI",
+    "WORK",
+    "SNAP",
+    "ENPH",
+    "XOM",
+    "TEVA",
+    "HIMX",
+    "RUBI",
+    "RUN",
+    "TSLA",
+    "DAL",
+    "PI",
+    "ZFGN",
+    "RCL",
+    "SHOP",
+    "MAXR"
+  ], rawData.default.ALL_STOCKS];
+
+const STOCKS = LOOKOUT_STOCKS; // LOOKOUT_STOCKS;
+
 class StockBoard extends Component {
     constructor() {
         super();
@@ -57,62 +222,17 @@ class StockBoard extends Component {
                     average: undefined,
                     stdDev: undefined
                 },
-                "sector": {
-                    label: 'Sector',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: 0,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "sharesOutstanding": {
-                    label: 'Shares Outstanding',
-                    type: 'money',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "marketCap": {
-                    label: 'Market Cap',
-                    type: 'money',
-                    size: SIZE.large,
-                    weight: 0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "volume": {
-                    label: 'Avg Volume',
-                    type: 'number',
-                    size: SIZE.large,
-                    weight: 0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
                 "price": {
                     label: 'Price',
                     type: 'money',
                     size: SIZE.medium,
-                    weight: 0.1, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "52high": {
-                    label: '52 Week High',
-                    type: 'money',
-                    size: SIZE.medium,
                     weight: 0.0, 
                     multiplier: -1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "52low": {
-                    label: '52 Week Low',
+                "yearHigh": {
+                    label: 'Year High',
                     type: 'money',
                     size: SIZE.medium,
                     weight: 0.0, 
@@ -120,12 +240,30 @@ class StockBoard extends Component {
                     average: undefined,
                     stdDev: undefined
                 },
-                "pricePercent52": {
-                    label: 'Price as a % of 52 Wk H-L Range',
-                    type: 'money',
+                "yearRange": {
+                    label: '52 Week Range',
+                    type: '',
                     size: SIZE.medium,
-                    weight: 0.0, 
+                    weight: 0.4, 
                     multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "debtEbitda": {
+                    label: 'Debt / Ebitda',
+                    type: '',
+                    size: SIZE.medium,
+                    weight: 0.15, 
+                    multiplier: -1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                "netDebt": {
+                    label: 'Net Debt',
+                    type: '',
+                    size: SIZE.large,
+                    weight: 0.15, 
+                    multiplier: -1,
                     average: undefined,
                     stdDev: undefined
                 },
@@ -133,215 +271,8 @@ class StockBoard extends Component {
                     label: 'Beta',
                     type: '',
                     size: SIZE.small,
-                    weight: 0.2, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "priceChange1Week": {
-                    label: '% Price Change (1 Week)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
+                    weight: 0.15, 
                     multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "priceChange4Week": {
-                    label: '% Price Change (4 Weeks)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "priceChange12Week": {
-                    label: '% Price Change (12 Weeks)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "priceChangeYTD": {
-                    label: '% Price Change (YTD)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "relativePriceChange": {
-                    label: 'Relative Price Change',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "earningsGrowthLTM": {
-                    label: 'Earnings Growth (LTM)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.2, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "earningsGrowthQuarterly": {
-                    label: 'Earnings Growth (Quarterly)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.1, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "salesGrowthLTM": {
-                    label: 'Sales Growth (LTM)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "salesGrowth5yr": {
-                    label: 'Sales Growth (5 Yr)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "pe12month": {
-                    label: 'P/E (Trailing 12 Months)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.2, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "pegRatio": {
-                    label: 'PEG Ratio',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "priceBook": {
-                    label: 'Price/Book',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "priceSales": {
-                    label: 'Price/Sales',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "roe": {
-                    label: 'Current ROE (TTM)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "roa": {
-                    label: 'Current ROA (TTM)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "divYield": {
-                    label: 'Div. Yield %',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "dividend": {
-                    label: 'Dividend',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "divYield5yr": {
-                    label: 'Div. Yield % (5 Yr)',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "netMargin": {
-                    label: 'Net Margin',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "oppMargin12m": {
-                    label: 'Operating Margin 12 Mo',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "debtEquityRatio": {
-                    label: 'Debt/Equity Ratio',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "currentRatio": {
-                    label: 'Current Ratio',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: -1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "currentRatio": {
-                    label: 'Current Ratio',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0, 
-                    multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
@@ -349,16 +280,16 @@ class StockBoard extends Component {
                     label: 'Quick Ratio',
                     type: '',
                     size: SIZE.medium,
-                    weight: 0, 
+                    weight: 0.1, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "annualSales": {
-                    label: 'Annual Sales',
+                "dividend": {
+                    label: 'Dividend Rate',
                     type: '',
                     size: SIZE.medium,
-                    weight: 0, 
+                    weight: 0.05, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
@@ -366,30 +297,57 @@ class StockBoard extends Component {
                 "ebitda": {
                     label: 'EBITDA',
                     type: '',
-                    size: SIZE.medium,
+                    size: SIZE.large,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
                 },
-                "netIncome": {
-                    label: 'Net Income',
-                    type: '',
-                    size: SIZE.medium,
-                    weight: 0.2, 
-                    multiplier: 1,
-                    average: undefined,
-                    stdDev: undefined
-                },
-                "cogs": {
-                    label: 'Cost of Goods Sold',
+                "evEbitda": {
+                    label: 'EV / Ebitda',
                     type: '',
                     size: SIZE.medium,
                     weight: 0, 
                     multiplier: 1,
                     average: undefined,
                     stdDev: undefined
-                }
+                },
+                "cash": {
+                    label: 'Cash',
+                    type: '',
+                    size: SIZE.large,
+                    weight: 0, 
+                    multiplier: 1,
+                    average: undefined,
+                    stdDev: undefined
+                },
+                // "shortDebt": {
+                //     label: 'Short Term Debt',
+                //     type: 'money',
+                //     size: SIZE.medium,
+                //     weight: 0, 
+                //     multiplier: 1,
+                //     average: undefined,
+                //     stdDev: undefined
+                // },
+                // "sectorTrend": {
+                //     label: 'Sector Trend',
+                //     type: '',
+                //     size: SIZE.large,
+                //     weight: 0, 
+                //     multiplier: 1,
+                //     average: undefined,
+                //     stdDev: undefined
+                // },
+                // "peRatio": {
+                //     label: 'PE Ratio',
+                //     type: '',
+                //     size: SIZE.large,
+                //     weight: 0, 
+                //     multiplier: 1,
+                //     average: undefined,
+                //     stdDev: undefined
+                // },
             },
             data: []
         };
@@ -401,13 +359,128 @@ class StockBoard extends Component {
         this.onSortChange = this.onSortChange.bind(this);
     }
 
-    componentDidMount() {
-        let data = rawData.default.stocks;
-        data = this.cleanData(data);
-        this.setupDataStructures(data);
+    async componentDidMount() {
+        const data = await this.getFinancialData(STOCKS[0].slice(0, 5));
+        const cleanedData = DEBUG ? data : this.cleanData(data);
+        
+        debugger;
+
+        this.setupDataStructures(cleanedData);
         this.setState({
-            data: data,
+            data: cleanedData,
         });
+
+        if (!DEBUG) this.fetchAllData();
+    }
+
+    wait(ms) {
+        var start = new Date().getTime();
+        var end = start;
+        while(end < start + ms) {
+          end = new Date().getTime();
+       }
+     }
+
+    async fetchAllData() {
+        this.wait(2000);
+
+        for (let i = 5; i < STOCKS[0].length; i+=5) {
+            const data = await this.getFinancialData(STOCKS[0].slice(i, i+5));
+            const cleanedData = this.cleanData(data);
+            const mergedData = [...this.state.uiData, ...cleanedData];
+
+            debugger;
+            console.log(JSON.stringify(mergedData));
+            console.log('Merged Data:');
+            console.log(mergedData);
+            this.setupDataStructures(mergedData);
+            this.setState({
+                data: mergedData,
+            });
+
+            this.wait(2500);
+        } 
+    }
+
+    async getFinancialData(stocks) {
+        const endPoint = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-detail?region=US&lang=en&symbol=AAPL'
+
+        if (DEBUG) {
+            return STOCKS[1];
+        } else {
+            const allData = [];
+            const fetchAll = [];
+
+            stocks.forEach(stock => {
+                fetchAll.push(this.getStockData(stock));
+                this.wait(1000);
+            });
+            const data = await Promise.all(fetchAll);
+            return data.filter(x => x && x.ticker);
+        }
+    }
+
+    async getStockData(stock) {
+        const endPoint = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-detail?region=US&lang=en&symbol='
+
+        const altEndPoint = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials?symbol='
+
+        try {
+            const results = await Promise.all([
+                fetch(`${endPoint}${stock}`, {
+                    "method": "GET",
+                    "headers": {
+                        "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
+                        "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
+                    }
+                }),
+                // fetch(`${altEndPoint}${stock}`, {
+                //     "method": "GET",
+                //     "headers": {
+                //         "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
+                //         "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
+                //     }
+                // })
+              ]);
+ 
+            const data = this.parseData(Object.assign({}, await results[0].json(), results.length === 2 ? await results[1].json() : {}));
+        
+            // const stockData = await response.json();  
+            console.log('Financial Data for ' + stock)  
+            console.log(data);
+
+            return data;
+        } catch(err) {
+            try {
+                const results = await Promise.all([
+                    fetch(`${endPoint}${stock}`, {
+                        "method": "GET",
+                        "headers": {
+                            "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
+                            "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
+                        }
+                    }),
+                    // fetch(`${altEndPoint}${stock}`, {
+                    //     "method": "GET",
+                    //     "headers": {
+                    //         "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
+                    //         "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
+                    //     }
+                    // })
+                  ]);
+     
+                const data = this.parseData(Object.assign({}, await results[0].json(), results.length === 2 ? await results[1].json() : {}));
+            
+                // const stockData = await response.json();  
+                console.log('Financial Data for ' + stock)  
+                console.log(data);
+    
+                return data;
+            } catch(err) {
+                console.log(err);
+                return [];
+            }
+        }
     }
 
     // ------------------- SETUP Methods -------------------
@@ -665,14 +738,14 @@ class StockBoard extends Component {
     }
 
     getListAverage(list) {
-        return math.mean(...list);
+        return list.length > 0 ? math.mean(...list) : 0;
     }
 
     getColStandardDeviation(col, data) {
         const list = this.getColList(col, data);
         const avg = this.getListAverage(list);
 
-        const stdDev = math.std(...list);
+        const stdDev = list.length > 0 ? math.std(...list) : 0; 
 
         return stdDev;
     }
@@ -689,7 +762,6 @@ class StockBoard extends Component {
     }
 
     onSortChange(sortName, sortOrder) {
-        debugger;
         this.setState({
             sortName,
             sortOrder
@@ -735,6 +807,95 @@ class StockBoard extends Component {
         this.updateGrid();
     }
 
+    parseData(data) {
+        if (!data.quoteType || !data.quoteType.symbol) return;
+        // {
+        //     "Rank": 0,
+        //     "Ticker": "ZTS",
+        //     "Company Name": "Zoetis Inc.",
+        //     "Industry": "Medical - Drugs",
+        //     "Price": 20.68,
+        //     "52 Week Range": 94.02,
+        //     "Debt / Ebitda": 0.32,
+        //     "Net Debt": 483.86,
+        //     "Beta": 0.97,
+        //     "Quick Ratio": 40838.21,
+        //     "Dividend Rate": 2699959,
+        //     "EBITDA": 84.4,
+        //     "EV / Ebitda": 85.97,
+        //     "Cash": 59.73,
+        //     "Short Term Debt": 94.02,
+        //     "Sector Trend": 1.13,
+        //     "PE Ratio": -1.18,
+        //   }
+
+        const formater = (value, percision) => {
+            return value == null ? 0 : Number.parseFloat(value).toFixed(percision);
+        };
+
+        const formatValue = (value) => {
+            return value == null ? 0 : value;
+        };
+
+        const calculateDebtEbitda = (totalDebt, ebitda) => {
+            totalDebt = totalDebt == null ? 0 : totalDebt;
+            ebitda = ebitda == null ? 0 : ebitda;
+            const value = (totalDebt == 0 || ebitda == 0) ? 0 : totalDebt / ebitda;
+            if (value == 'NaN' || value == null || value == NaN) {
+                return 0;
+            } else {
+                return Number.parseFloat(value).toFixed(2);
+            }
+        };
+
+        const calculateYearRange = () => {
+            const high = data.summaryDetail.fiftyTwoWeekHigh.raw;
+            const low = data.summaryDetail.fiftyTwoWeekLow.raw;
+
+            return Number.parseFloat((high - low) / high).toFixed(2)
+        };
+
+        debugger;
+        const formatData = {
+            rank: 0,
+            
+            ticker: data.quoteType.symbol,
+            
+            name: data.quoteType.shortName,
+            
+            industry: data.summaryProfile.industry,
+            
+            price: Number.parseFloat(data.price.regularMarketPrice.raw).toFixed(2),
+            
+            yearHigh: data.summaryDetail.fiftyTwoWeekHigh.raw,
+
+            yearRange: calculateYearRange(),
+            
+            debtEbitda: calculateDebtEbitda(data.financialData.totalDebt.raw, data.financialData.ebitda.raw),
+            
+            
+            netDebt: formater(formatValue(data.financialData.totalDebt.raw) - formatValue(data.financialData.totalCash.raw), 0) || 0,
+            
+            beta: Number.parseFloat(data.summaryDetail.beta.raw || 0).toFixed(2) || 0,
+            
+            quickRatio: Number.parseFloat(data.financialData.quickRatio.raw || 0).toFixed(2) || 0,
+            
+            dividend: data.summaryDetail.dividendRate.raw || 0,
+            
+            ebitda: formater(data.financialData.ebitda.raw, 0) || 0,
+            
+            evEbitda: formater(data.defaultKeyStatistics.enterpriseToEbitda.raw, 0) || 0,
+            
+            cash: data.financialData.totalCash.raw || 0,
+            
+            // shortDebt: data.balanceSheetHistoryQuarterly.shortLongTermDebt,
+            // sectorTrend: data.sectorTrend.PeRatio.raw.reduce((acc, next) => acc + next) / data.sectorTrend.PeRatio.raw.length
+        
+        };
+
+        // debugger;
+        return formatData;
+    }
     // Step 1a
     cleanData(data) {
         // clean keys 
@@ -742,14 +903,11 @@ class StockBoard extends Component {
             data[row] = this.swapKeys(data[row]);
         }
 
-        // This Data is already clean 
-        // for (let index in data) {
-        //     data[index] = Object.assign(data[index], this.cleanRow(data[index]));
-        // }
-
         this.setState({
             data: data
         });
+
+        // debugger;
 
         return data;
     }
@@ -766,7 +924,7 @@ class StockBoard extends Component {
         return newRow;
     }
 
-    // Step 1c
+    // Step 1c - not used
     cleanRow(item) {
         return {
             rank: 0,
@@ -867,7 +1025,10 @@ class StockBoard extends Component {
                         width='50'
                         sortFunc={this.revertSortFunc}
                     >
+                        <div>
                         {params[key].label}
+                        </div>
+                        
                     </TableHeaderColumn>
                 );                
             } else {
@@ -887,7 +1048,10 @@ class StockBoard extends Component {
                         dataFormat={(cell, row) => colString(cell, row)}
                         sortFunc={this.revertSortFunc}
                         >
-                        {params[key].label}
+                            <div style={{'white-space': 'pre-line'}}>
+                            {params[key].label}
+                            </div>
+                        
                     </TableHeaderColumn>
                 );
             }
@@ -937,9 +1101,9 @@ class StockBoard extends Component {
                 <button onClick={this.handleRelativeScoreboard}>Relative Rank Grid</button>
                 <button onClick={this.handleStdScoreboard}>Std Deviation Grid</button>
 
-                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed pagination={ true }>
+                <BootstrapTable data={this.state.uiData} options={options} striped hover condensed>
                     {this.headers(this.state.params)}
-                    <TableHeaderColumn row='0' colSpan='4'>Company Descriptors</TableHeaderColumn>
+                    {/* <TableHeaderColumn row='0' colSpan='4'>Company Descriptors</TableHeaderColumn>
                     <TableHeaderColumn row='0' colSpan='3'>{'Size & Share Volume'}</TableHeaderColumn>
                     <TableHeaderColumn row='0' colSpan='10'>{'Price & Price Changes'}</TableHeaderColumn>
                     <TableHeaderColumn row='0' colSpan='2'>{'EPS Growth'}</TableHeaderColumn>
@@ -949,7 +1113,7 @@ class StockBoard extends Component {
                     <TableHeaderColumn row='0' colSpan='3'>{'Dividends'}</TableHeaderColumn>
                     <TableHeaderColumn row='0' colSpan='2'>{'Margins'}</TableHeaderColumn>
                     <TableHeaderColumn row='0' colSpan='3'>{'Balance Sheet'}</TableHeaderColumn>
-                    <TableHeaderColumn row='0' colSpan='4'>{'Income Statement'}</TableHeaderColumn>
+                    <TableHeaderColumn row='0' colSpan='4'>{'Income Statement'}</TableHeaderColumn> */}
                     {this.sumCol()}
                     {this.goodRankCol()}
                 </BootstrapTable>
