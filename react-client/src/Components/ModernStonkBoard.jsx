@@ -111,6 +111,13 @@ function ModernStonkBoard() {
         initializeData();
     }, []);
 
+    // Recalculate rankings when params change
+    useEffect(() => {
+        if (data.length > 0) {
+            setupDataStructures(data);
+        }
+    }, [params, setupDataStructures]);
+
     // Get the Stock data for a list of stocks
     const getFinancialData = async (stocks, fetchFinancials = false) => {
         console.info('Fetching Stocks: ' + stocks);
@@ -466,10 +473,7 @@ function ModernStonkBoard() {
                 weight: newWeight
             }
         }));
-
-        // Recalculate rankings
-        setupDataStructures(data);
-    }, [params, data, setupDataStructures]);
+    }, [params]);
 
     const handleMultiplierClick = useCallback((evt) => {
         const columnName = evt.target.name;
@@ -481,10 +485,7 @@ function ModernStonkBoard() {
                 multiplier: prev[columnName].multiplier === 1 ? -1 : 1
             }
         }));
-
-        // Recalculate rankings
-        setupDataStructures(data);
-    }, [params, data, setupDataStructures]);
+    }, []);
 
     // Board switching functions
     const handleFullDataScoreboard = () => {
