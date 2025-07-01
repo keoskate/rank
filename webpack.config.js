@@ -4,6 +4,7 @@ const DIST_DIR = path.join(__dirname, '/react-client/dist');
 const webpack = require('webpack');
 
 module.exports = {
+  mode: 'production', // Fix the mode warning and enable optimizations
   entry: `${SRC_DIR}/index.jsx`,
   output: {
     path: DIST_DIR,
@@ -44,4 +45,31 @@ module.exports = {
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
   ],
+  optimization: {
+    // Enable tree shaking and dead code elimination
+    usedExports: true,
+    sideEffects: false,
+    // Split chunks to reduce main bundle size
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+        common: {
+          name: 'common',
+          minChunks: 2,
+          chunks: 'all',
+        }
+      }
+    }
+  },
+  performance: {
+    // Increase size limits to suppress warnings for now
+    maxAssetSize: 1000000, // 1MB
+    maxEntrypointSize: 1000000, // 1MB
+    hints: 'warning'
+  },
 };

@@ -1,0 +1,7 @@
+
+> rank@1.0.0 start
+> node ./server/index.js
+
+listening on port 8080!
+📊 Proxying Yahoo Finance request for AAPL
+❌ Yahoo proxy failed for AAPL: HTTP 401
