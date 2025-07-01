@@ -334,23 +334,19 @@ function ModernStonkBoard() {
         const order = param.multiplier === 1 ? 'asc' : 'desc';
         const weight = param.weight;
 
-        if (!param.average && !param.stdDev) {
-          const stdDev = getColStandardDeviation(col, stockData);
-          const average = getColAverage(col, stockData);
+        // Always recalculate stats for current stock data (fixes stock list switching bug)
+        const stdDev = getColStandardDeviation(col, stockData);
+        const average = getColAverage(col, stockData);
 
-          // Update params with calculated values
-          setParams(prev => ({
-            ...prev,
-            [col]: {
-              ...prev[col],
-              stdDev,
-              average,
-            },
-          }));
-        }
-
-        const stdDev = param.stdDev || getColStandardDeviation(col, stockData);
-        const average = param.average || getColAverage(col, stockData);
+        // Update params with calculated values
+        setParams(prev => ({
+          ...prev,
+          [col]: {
+            ...prev[col],
+            stdDev,
+            average,
+          },
+        }));
 
         if (weight > 0) {
           const colList = getColList(col, stockData);
