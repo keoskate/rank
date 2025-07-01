@@ -14,6 +14,7 @@ import WeightSlider from '../Components/WeightSlider';
 import { getAllCacheInfo, clearCache, clearAllCache } from '../utils/cacheManager';
 import { getApiInfo } from '../Components/StockUtils';
 import { getStockListNames } from '../config/stockLists';
+import { getDebugModeInfo } from '../utils/debugPreference';
 import { useState } from 'react';
 
 const BoardControls = ({
@@ -39,6 +40,9 @@ const BoardControls = ({
   
   // Get available stock lists
   const availableStockLists = getStockListNames();
+  
+  // Get debug mode info for better UI
+  const debugModeInfo = getDebugModeInfo(debugMode);
 
   // Cache management functions
   const refreshCacheInfo = () => {
@@ -150,30 +154,60 @@ const BoardControls = ({
         )}
       </div>
 
-      {/* Debug Mode Toggle */}
+      {/* Debug Mode Toggle - Enhanced with clear indicators */}
       <div style={{ marginBottom: 20 }}>
-        <h4>Debug Mode</h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={onDebugModeToggle}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: debugMode ? '#28a745' : '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-            }}
-          >
-            {debugMode ? '🔒 CACHED DATA' : '🌐 LIVE API'}
-          </button>
-          <span style={{ fontSize: '12px', color: '#6c757d' }}>
-            {debugMode
-              ? 'Using cached data (preserves API quota)'
-              : 'Fetching live data from API (uses quota)'}
-          </span>
+        <h4>Data Fetching Mode</h4>
+        <div style={{ 
+          backgroundColor: '#f8f9fa',
+          padding: '15px',
+          borderRadius: '6px',
+          border: '1px solid #dee2e6',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+            <button
+              onClick={onDebugModeToggle}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: debugModeInfo.color,
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                minWidth: '150px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+            >
+              {debugModeInfo.icon} {debugModeInfo.mode}
+            </button>
+            
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                color: '#495057',
+                marginBottom: '3px'
+              }}>
+                {debugModeInfo.description}
+              </div>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#6c757d',
+                fontStyle: 'italic'
+              }}>
+                {debugModeInfo.behavior}
+              </div>
+            </div>
+          </div>
+          
+          <div style={{
+            fontSize: '11px',
+            color: '#28a745',
+            fontWeight: 'bold',
+          }}>
+            ✅ Preference saved automatically (persists on page refresh)
+          </div>
         </div>
       </div>
 

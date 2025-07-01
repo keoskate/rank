@@ -12,7 +12,7 @@
  * - Optimized for performance
  */
 
-import * as math from 'mathjs';
+import { math } from './simpleMath';
 
 /**
  * Extract a column of values from stock data

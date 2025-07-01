@@ -15,7 +15,7 @@
  * - Grid-based ranking system
  */
 
-import * as math from 'mathjs';
+import { math } from './simpleMath';
 import {
   getColAverage,
   getColStandardDeviation,

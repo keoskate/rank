@@ -27,7 +27,7 @@ import {
   flexRender,
   createColumnHelper,
 } from '@tanstack/react-table';
-import * as math from 'mathjs';
+import { math } from '../utils/simpleMath';
 import WeightSlider from './WeightSlider';
 import BoardControls from './BoardControls';
 import * as Utils from './StockUtils';
@@ -44,11 +44,14 @@ import {
   DEFAULT_STOCK_LIST,
   isValidStockListId,
 } from '../config/stockLists';
-
-/** KEO: TOGGLE FOR DEBUGGING NETWORK ISSUES */
-const DEBUG = false; // If we want to use cached data (preserve network request quota)
+import {
+  getDebugPreference,
+  setDebugPreference,
+  getDebugModeInfo,
+} from '../utils/debugPreference';
 
 // Stock list configuration - now managed by stockLists.js
+// Debug mode is now managed by debugPreference.js with localStorage persistence
 
 const THROTTLE = {
   SMALL: 100,
@@ -67,7 +70,7 @@ function ModernStonkBoard() {
   const [currentView, setCurrentView] = useState('full'); // 'full', 'relative', 'std'
   const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
-  const [debugMode, setDebugMode] = useState(DEBUG); // Toggle for cached vs live data
+  const [debugMode, setDebugMode] = useState(() => getDebugPreference()); // Load saved preference
   const [backgroundFetching, setBackgroundFetching] = useState(false);
   const [currentStockListId, setCurrentStockListId] = useState(DEFAULT_STOCK_LIST); // New: current stock list
 
@@ -640,11 +643,12 @@ function ModernStonkBoard() {
     setAltGrid(true);
   };
 
-  // Debug mode toggle handler
+  // Debug mode toggle handler with persistence
   const handleDebugModeToggle = () => {
     const newDebugMode = !debugMode;
     setDebugMode(newDebugMode);
-    console.info(`DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'}`);
+    setDebugPreference(newDebugMode); // Save to localStorage
+    console.info(`🔧 DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'} (preference saved)`);
   };
 
   // Stock list switching handler
