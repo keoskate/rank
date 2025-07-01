@@ -1,33 +1,32 @@
 /**
- * STOCK UTILITIES - Modern API Integration & Configuration
+ * STOCK UTILITIES - Unified API Integration & Configuration
  *
  * This module provides a clean interface for stock data operations:
  *
  * KEY FUNCTIONS:
- * 1. getStockData() - Fetches live data from Alpha Vantage API
+ * 1. getStockData() - Fetches live data from configured API provider
  * 2. Helper utilities for data manipulation
  * 3. STOCK_COLUMNS - Ranking criteria and weights configuration
  *
- * MODERN FEATURES:
- * - Alpha Vantage API integration (500 calls/day vs 500/month)
+ * UNIFIED API FEATURES:
+ * - Single configurable API (switch providers in config/apiConfig.js)
  * - Environment-based API key management
  * - Built-in rate limiting and error handling
- * - Modular API structure for easy switching
- * - Better security and reliability
+ * - Clean, provider-agnostic interface
+ * - Smart caching with validation
  *
- * IMPORTANT: Uses Alpha Vantage API for modern, reliable data
- * Changes here affect data fetching and ranking calculations
+ * SUPPORTED PROVIDERS: Alpha Vantage, Polygon.io
+ * Configure provider in: config/apiConfig.js
  */
 
-// Import from modern Alpha Vantage API
-import { getStockData as getAlphaVantageData } from '../api/alphaVantageAPI';
-import { batchFetchStocks } from '../api/batchAPI';
+// Import from unified API system
+import { getStockData as getUnifiedStockData, batchFetchStocks, getApiInfo } from '../api/unifiedAPI';
 
 // Import stock columns configuration
 export { STOCK_COLUMNS } from '../config/stockColumns';
 
 /**
- * Get stock data using the modern Alpha Vantage API (single stock)
+ * Get stock data using the configured API provider (single stock)
  * 
  * For better performance with multiple stocks, use getMultipleStocksData() instead.
  *
@@ -37,57 +36,49 @@ export { STOCK_COLUMNS } from '../config/stockColumns';
  * @returns {Object|null} Formatted stock data or null if failed
  */
 export async function getStockData(stock, fetchFinancials = false, retry = true) {
-  return await getAlphaVantageData(stock, fetchFinancials, retry);
+  return await getUnifiedStockData(stock, { fetchFinancials, retry });
 }
 
 /**
  * Get multiple stocks data efficiently using batch processing
  * 
- * This function automatically handles rate limit fallbacks:
- * 1. Try Alpha Vantage first (most comprehensive data)
- * 2. Fall back to Yahoo Direct if rate limited (no limits, no API key)
- * 3. Provide clear logging about which provider is being used
+ * Uses the configured API provider from config/apiConfig.js
+ * Automatically handles rate limiting and provides clear progress updates
  *
  * @param {string[]} stocks - Array of stock tickers
- * @param {string} provider - API provider ('alphavantage', 'yahoo-direct', 'polygon')
+ * @param {string} provider - Legacy parameter (ignored, uses config instead)
  * @param {Object} options - Additional options
  * @returns {Promise<Object[]>} Array of stock data objects
  */
-export async function getMultipleStocksData(stocks, provider = 'alphavantage', options = {}) {
+export async function getMultipleStocksData(stocks, provider = null, options = {}) {
   if (!Array.isArray(stocks) || stocks.length === 0) {
     throw new Error('Stocks must be a non-empty array');
   }
   
+  // Log current API configuration
+  const apiInfo = getApiInfo();
+  console.info(`🎯 Using ${apiInfo.name} (${apiInfo.cost}) for ${stocks.length} stocks`);
+  
   if (stocks.length === 1) {
     // Single stock - use individual API for simplicity
-    const result = await getStockData(stocks[0]);
+    const result = await getStockData(stocks[0], options.fetchFinancials);
     return result ? [result] : [];
   }
   
   try {
-    // Try primary provider first
-    console.info(`🎯 Attempting to fetch with ${provider}...`);
-    return await batchFetchStocks(stocks, provider, options);
+    return await batchFetchStocks(stocks, options);
     
   } catch (error) {
-    console.warn(`⚠️ ${provider} failed:`, error.message);
+    console.error(`❌ Failed to fetch stocks using ${apiInfo.name}:`, error.message);
     
-    // Auto-fallback to Yahoo Direct if Alpha Vantage is rate limited
-    if (provider === 'alphavantage' && (
-      error.message.includes('rate limit') || 
-      error.message.includes('API calls quota') ||
-      error.message.includes('exceeded')
-    )) {
-      console.info('🔄 Rate limit detected, falling back to Yahoo Direct (no limits)...');
-      try {
-        return await batchFetchStocks(stocks, 'yahoo-direct', options);
-      } catch (fallbackError) {
-        console.error('❌ Fallback also failed:', fallbackError.message);
-        throw new Error(`Both ${provider} and yahoo-direct failed`);
-      }
-    }
+    // Provide helpful error guidance
+    console.info('💡 Troubleshooting suggestions:');
+    console.info(`1. Check your API key is set correctly`);
+    console.info(`2. Verify you haven't exceeded your ${apiInfo.dailyLimit} daily limit`);
+    console.info(`3. Check rate limiting: ${apiInfo.rateLimit}`);
+    console.info(`4. Switch providers in config/apiConfig.js if needed`);
+    console.info(`5. Use debug mode with cached data for development`);
     
-    // Re-throw original error if no fallback available
     throw error;
   }
 }
@@ -111,7 +102,5 @@ export function wait(ms) {
   }
 }
 
-// Re-export for backward compatibility if needed
-// Note: Prefer using the direct imports from api/ folder for new code
-export { getStockData as getAlphaVantageData } from '../api/alphaVantageAPI';
-export { getStockDataLegacy as getYahooFinanceData } from '../api/yahooFinanceAPI';
+// Export API information for debugging and UI display
+export { getApiInfo } from '../api/unifiedAPI';

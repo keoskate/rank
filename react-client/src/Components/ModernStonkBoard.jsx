@@ -32,9 +32,16 @@ import WeightSlider from './WeightSlider';
 import BoardControls from './BoardControls';
 import * as cachedData20 from '../stock-data_20';
 import * as Utils from './StockUtils';
+import {
+  cacheOrFetch,
+  cacheWithBackgroundRefresh,
+  getCachedStockData,
+  getCacheInfo,
+  clearCache,
+} from '../utils/cacheManager';
 
 /** KEO: TOGGLE FOR DEBUGGING NETWORK ISSUES */
-const DEBUG = true; // If we want to use cached data (preserve network request quota)
+const DEBUG = false; // If we want to use cached data (preserve network request quota)
 
 // Configuration constants
 const COVID_STOCKS = [cachedData20.COVID_19, cachedData20.COVID_19_cached];
@@ -78,6 +85,7 @@ function ModernStonkBoard() {
   const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
   const [debugMode, setDebugMode] = useState(DEBUG); // Toggle for cached vs live data
+  const [backgroundFetching, setBackgroundFetching] = useState(false);
 
   // Utility function for waiting
   const wait = useCallback(ms => {
@@ -97,22 +105,35 @@ function ModernStonkBoard() {
       console.info(`DEBUG_MODE = ${debugMode ? 'ON' : 'OFF'}`);
 
       try {
-        // Get the first 5 stocks and display them right away
-        const offset = 5;
         const getFinancials = false;
-        const initialData = await getFinancialData(
-          STOCKS[0].slice(0, offset),
-          getFinancials
-        );
-        const cleanedData = debugMode ? initialData : cleanData(initialData);
 
-        setupDataStructures(cleanedData);
-        setData(cleanedData);
-        setUiData(cleanedData);
-        setLoading(false);
-
-        if (!debugMode) {
-          fetchAllData(offset, getFinancials);
+        if (debugMode) {
+          // Debug mode: Load just first 5 stocks to save quota
+          const offset = 5;
+          const initialData = await getFinancialData(
+            STOCKS[0].slice(0, offset),
+            getFinancials
+          );
+          const cleanedData = cleanData(initialData);
+          setupDataStructures(cleanedData);
+          setData(cleanedData);
+          setUiData(cleanedData);
+          setLoading(false);
+        } else {
+          // Live mode: Load ALL stocks at once (optimized for unlimited subscription)
+          console.info(
+            `🚀 Loading all ${STOCKS[0].length} stocks at once with unlimited subscription...`
+          );
+          const allData = await getFinancialData(
+            STOCKS[0], // Load ALL stocks
+            getFinancials
+          );
+          const cleanedData = cleanData(allData);
+          setupDataStructures(cleanedData);
+          setData(cleanedData);
+          setUiData(cleanedData);
+          setLoading(false);
+          console.info(`✅ Successfully loaded ${allData.length} stocks`);
         }
       } catch (error) {
         console.error('Error initializing data:', error);
@@ -149,28 +170,74 @@ function ModernStonkBoard() {
     }
   }, [rGrid, sGrid, data, currentView]);
 
-  // Get the Stock data for a list of stocks (OPTIMIZED)
+  // Get the Stock data for a list of stocks (OPTIMIZED WITH SMART CACHING)
   const getFinancialData = async (stocks, fetchFinancials = false) => {
     console.info('Fetching Stocks: ' + stocks);
+
+    // Generate cache key based on stocks and settings
+    const stocksKey = stocks.sort().join('_');
+    const cacheKey = `STOCKS_${stocksKey}_${fetchFinancials ? 'with_financials' : 'basic'}`;
+
     if (debugMode) {
-      return STOCKS[1]; // Cached data is at index 1
+      // Try smart cache first, fallback to static cache
+      const smartCached = getCachedStockData(cacheKey);
+      if (smartCached) {
+        console.info(`📦 Using smart cache for ${stocks.length} stocks`);
+        return smartCached;
+      }
+
+      console.info(
+        `📁 No smart cache found, using static cache for ${stocks.length} stocks`
+      );
+      return STOCKS[1]; // Fallback to static cached data
     } else {
       try {
-        // USE BATCH API for much better performance
-        // TEMPORARY: Use Yahoo Direct due to Alpha Vantage rate limit
+        // GET API INFO FIRST - outside the fetchFunction
+        const apiInfo = Utils.getApiInfo();
         console.info(
-          '🚀 Using Yahoo Direct API (no rate limits, no API key needed)'
-        );
-        const fetchedData = await Utils.getMultipleStocksData(
-          stocks,
-          'yahoo-direct',
-          {
-            fetchFinancials,
-          }
+          `🚀 Using ${apiInfo.name} (${apiInfo.cost}) - Configure in config/apiConfig.js`
         );
 
-        // Filter out null responses and ensure valid ticker
-        return fetchedData.filter(x => x && x.ticker);
+        // Smart cache-or-fetch: tries cache first, fetches if needed, caches good results
+        const fetchFunction = async () => {
+          const fetchedData = await Utils.getMultipleStocksData(
+            stocks,
+            null, // Provider determined by config
+            {
+              fetchFinancials,
+            }
+          );
+
+          // Filter out null responses and ensure valid ticker
+          return fetchedData.filter(x => x && x.ticker);
+        };
+
+        // Use background refresh for real-time updates when not in debug mode
+        if (!debugMode) {
+          return await cacheWithBackgroundRefresh(
+            cacheKey,
+            fetchFunction,
+            freshData => {
+              // Background update callback - update table with fresh data
+              console.info('🔄 Updating table with fresh background data...');
+              setBackgroundFetching(false);
+              const cleanedData = cleanData(freshData);
+              setupDataStructures(cleanedData);
+              setData(cleanedData);
+              setUiData(cleanedData);
+            },
+            {
+              provider: apiInfo.provider,
+              forceRefresh: fetchFinancials,
+            }
+          );
+        } else {
+          // Debug mode - use standard cache behavior
+          return await cacheOrFetch(cacheKey, fetchFunction, {
+            provider: apiInfo.provider,
+            forceRefresh: fetchFinancials,
+          });
+        }
       } catch (error) {
         console.error(
           '❌ Batch fetch failed, falling back to individual requests:',
@@ -623,6 +690,48 @@ function ModernStonkBoard() {
     }
   };
 
+  // Cache refresh handler
+  const handleCacheRefresh = async (forceRefresh = false) => {
+    console.info(
+      `🔄 ${forceRefresh ? 'Force refreshing' : 'Refreshing'} cache...`
+    );
+    setLoading(true);
+
+    try {
+      // Clear current data
+      setData([]);
+      setUiData([]);
+
+      // If force refresh, we'll bypass cache in the fetch function
+      const offset = 5;
+      const getFinancials = false;
+
+      // Generate cache key and clear it if force refresh
+      const stocks = STOCKS[0].slice(0, offset);
+      const stocksKey = stocks.sort().join('_');
+      const cacheKey = `STOCKS_${stocksKey}_${getFinancials ? 'with_financials' : 'basic'}`;
+
+      if (forceRefresh) {
+        clearCache(cacheKey);
+      }
+
+      const initialData = await getFinancialData(stocks, getFinancials);
+      const cleanedData = debugMode ? initialData : cleanData(initialData);
+
+      setupDataStructures(cleanedData);
+      setData(cleanedData);
+      setUiData(cleanedData);
+      setLoading(false);
+
+      console.info(
+        `✅ Cache refresh complete: ${cleanedData.length} stocks loaded`
+      );
+    } catch (error) {
+      console.error('❌ Cache refresh failed:', error);
+      setLoading(false);
+    }
+  };
+
   // Column helper for TanStack Table
   const columnHelper = createColumnHelper();
 
@@ -765,7 +874,7 @@ function ModernStonkBoard() {
 
   return (
     <div>
-      {/* Board Controls with Debug Toggle */}
+      {/* Board Controls with Debug Toggle and Smart Cache */}
       <BoardControls
         params={params}
         sumOfWeights={sumOfWeights}
@@ -776,6 +885,7 @@ function ModernStonkBoard() {
         onStdScoreboard={handleStdScoreboard}
         debugMode={debugMode}
         onDebugModeToggle={handleDebugModeToggle}
+        onCacheRefresh={handleCacheRefresh}
       />
 
       <div style={{ overflowX: 'auto' }}>
@@ -832,8 +942,22 @@ function ModernStonkBoard() {
 
       <div style={{ marginTop: 20, fontSize: '12px', color: '#666' }}>
         Showing {table.getRowModel().rows.length} stocks • Mode:{' '}
-        <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong> • Powered
-        by TanStack React Table • React 18 + Modern Build System
+        <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong>
+        {backgroundFetching && !debugMode && (
+          <span style={{ color: '#007bff', fontWeight: 'bold' }}>
+            {' '}
+            • 🔄 Refreshing in background...
+          </span>
+        )}
+        {!debugMode && (
+          <span style={{ color: '#28a745' }}>
+            {' '}
+            • ⚡ Fast loading with background updates
+          </span>
+        )}
+        <br />
+        API: <strong>{Utils.getApiInfo().name}</strong> (
+        {Utils.getApiInfo().cost}) • Powered by TanStack React Table
       </div>
     </div>
   );
