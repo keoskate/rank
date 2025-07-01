@@ -1,8 +1,28 @@
-// Stonk Utils
+/**
+ * STOCK UTILITIES - API Integration & Configuration
+ * 
+ * This module contains CRITICAL infrastructure for stock data:
+ * 
+ * KEY FUNCTIONS:
+ * 1. getStockData() - Fetches live data from Yahoo Finance API
+ * 2. parseData() - Transforms API response into app data structure
+ * 3. STOCK_COLUMNS - Defines ranking criteria and weights
+ * 
+ * CRITICAL PATHS:
+ * - API_ENDPOINT constants - Yahoo Finance API endpoints
+ * - parseData() - Data transformation logic
+ * - STOCK_COLUMNS - Column configuration with weights/multipliers
+ * 
+ * IMPORTANT: Contains API key and data parsing logic
+ * Changes here affect data fetching and ranking calculations
+ */
 
-export const API_ENDPOINT__GET_DETAIL = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-detail?region=US&lang=en&symbol=';
+const API_ENDPOINT__GET_SUMMARY = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v3/get-summary?region=US&lang=en&symbol=';
 
-export const API_ENDPOINT__GET_FINANCIALS = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials?symbol=';
+const API_ENDPOINT__GET_DETAIL = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-detail?region=US&lang=en&symbol=';
+
+const API_ENDPOINT__GET_FINANCIALS = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials?symbol=';
+
 
 /**
  * Get the Yahoo finance data for a given stock.
@@ -14,12 +34,13 @@ export const API_ENDPOINT__GET_FINANCIALS = 'https://apidojo-yahoo-finance-v1.p.
  * @param {string} stock - The Stock Ticker
  * @param {string} retry - By default request will try again after failing
  */
-export async function getStockData(stock, fetchFinancials = false, retry = true) {
-  const endPoint = API_ENDPOINT__GET_DETAIL;
+export async function getStockData(stock, fetchFinancials = false, retry = false) {
+  const endPoint = API_ENDPOINT__GET_SUMMARY;
   const altEndPoint = API_ENDPOINT__GET_FINANCIALS;
   console.info('Fetching Financial Data for: ' + stock);
 
   try {
+    // Make API requests
     const results = await Promise.all([
       fetch(`${endPoint}${stock}`, {
         "method": "GET",
@@ -28,29 +49,90 @@ export async function getStockData(stock, fetchFinancials = false, retry = true)
           "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
         }
       }),
-      // This will get us additional financial data, but at the cost of another network request
-      // Each time we fetch we double the amount of requests... eeek!
       fetchFinancials ? fetch(`${altEndPoint}${stock}`, {
         "method": "GET",
         "headers": {
           "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
           "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
         }
-      }) : null
+      }) : Promise.resolve(null)
     ]);
 
-
-    const results1 = await results[0].json();
-    const results2 = (fetchFinancials && results.length === 2) ? await results[0].json() : {};
-    const mergedResults = Object.assign({}, results1, results2);
+    // Get data from main endpoint
+    let mainData = {};
+    if (results[0] && results[0].ok) {
+      try {
+        // Try direct approach first with simple error handling
+        const reader = results[0].body.getReader();
+        let rawData = '';
+        const decoder = new TextDecoder();
+        
+        // Read the stream chunk by chunk
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          rawData += decoder.decode(value, { stream: true });
+        }
+        // Final flush
+        rawData += decoder.decode();
+        
+        // Handle empty response
+        if (!rawData || rawData.trim() === '') {
+          console.warn('Empty response from main endpoint');
+        } else {
+          try {
+            mainData = JSON.parse(rawData);
+          } catch (jsonError) {
+            console.warn('Failed to parse main response JSON');
+            // Return empty object in case of parse failure
+          }
+        }
+      } catch (readError) {
+        console.error('Error reading main response:', readError);
+      }
+    }
+    
+    // Get data from financial endpoint
+    let financialData = {};
+    if (fetchFinancials && results[1] && results[1].ok) {
+      try {
+        // Use the same stream reading approach for consistency
+        const reader = results[1].body.getReader();
+        let rawData = '';
+        const decoder = new TextDecoder();
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          rawData += decoder.decode(value, { stream: true });
+        }
+        // Final flush
+        rawData += decoder.decode();
+        
+        if (!rawData || rawData.trim() === '') {
+          console.warn('Empty response from financial endpoint');
+        } else {
+          try {
+            financialData = JSON.parse(rawData);
+          } catch (jsonError) {
+            console.warn('Failed to parse financial response JSON');
+          }
+        }
+      } catch (readError) {
+        console.error('Error reading financial response:', readError);
+      }
+    }
+      
+    // Merge results and return
+    const mergedResults = Object.assign({}, mainData, financialData);
     return parseData(mergedResults);
   } catch (err) {
     if (retry) {
-      // Try again...
+      // Try again only once
       console.info('Error! Trying again...');
       return getStockData(stock, fetchFinancials, false);
     } else {
-      console.info('(skiped) Oops there was an issue fetching this stock...');
+      console.info('(skipped) Oops there was an issue fetching this stock...');
       console.error(err);
       return [];
     }
@@ -146,6 +228,8 @@ export function parseData(data) {
     evEbitda: formater(data.defaultKeyStatistics.enterpriseToEbitda.raw, 0) || 0,
 
     cash: data.financialData.totalCash.raw || 0,
+
+    // cap: data.summaryDetail.marketCap.raw || 0,
 
     // shortDebt: data.balanceSheetHistoryQuarterly.shortLongTermDebt,
     // sectorTrend: data.sectorTrend.PeRatio.raw.reduce((acc, next) => acc + next) / data.sectorTrend.PeRatio.raw.length
@@ -334,6 +418,16 @@ export const STOCK_COLUMNS = {
     average: undefined,
     stdDev: undefined
   },
+  // "cap": {
+  //   label: 'Cap',
+  //   type: '',
+  //   size: COLUMN_SIZE.large,
+  //   weight: 0,
+  //   multiplier: 1,
+  //   average: undefined,
+  //   stdDev: undefined
+  // },
+  
   // "shortDebt": {
   //     label: 'Short Term Debt',
   //     type: 'money',

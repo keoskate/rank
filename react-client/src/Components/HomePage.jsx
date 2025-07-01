@@ -1,9 +1,22 @@
+/**
+ * HOME PAGE - Main Application View
+ * 
+ * This component serves as the main dashboard and handles:
+ * - Board type selection (CEF vs Stock rankings)
+ * - Renders either Scoreboard (CEF data) or StonkBoard (Stock data)
+ * - Contains the primary user interface logic
+ * 
+ * CRITICAL PATH: This is the main view users see. Changes here directly
+ * impact the user experience and board switching functionality.
+ * 
+ * CURRENT STATE: Uses StonkBoard for stock data by default
+ */
 import React, { Component } from 'react';
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 import * as math from 'mathjs';
 import Scoreboard from './Scoreboard';
-// import StockBoard from './StockBoard';
-import StonkBoard from './StonkBoard';
+// import StockBoard from './StockBoard'; // OLD STOCK BOARD - NOT USED
+import StonkBoard from './StonkBoard'; // CURRENT ACTIVE STOCK BOARD
 
 class HomePage extends Component {
     constructor() {

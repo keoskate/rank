@@ -1,3 +1,12 @@
+/**
+ * LEGACY STOCK BOARD - DEPRECATED
+ * 
+ * This is the OLD stock board implementation.
+ * It has been replaced by StonkBoard.jsx
+ * 
+ * STATUS: NOT USED - Consider removing this file
+ * REPLACED BY: StonkBoard.jsx
+ */
 import React, { Component } from 'react';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 import * as math from 'mathjs';

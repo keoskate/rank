@@ -5,7 +5,7 @@ class NavBar extends Component {
     return (
       <header>
         <ul id="headerButtons">
-          <li className="navButton"><span style={{ color: 'white', fontSize: 35 }}>KEO STONKS</span></li>
+          <li className="navButton"><span style={{ color: 'white', fontSize: 35 }}>KEO STONKS V2</span></li>
         </ul>
       </header>
     )

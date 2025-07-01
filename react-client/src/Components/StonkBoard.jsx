@@ -1,12 +1,35 @@
+/**
+ * STONK BOARD - Core Stock Ranking Component
+ * 
+ * This is the MAIN COMPONENT for stock analysis and ranking.
+ * 
+ * KEY RESPONSIBILITIES:
+ * - Fetches stock data from Yahoo Finance API (or uses cached data)
+ * - Implements dual ranking algorithm (relative + standard deviation)
+ * - Renders interactive table with sortable columns
+ * - Provides weight adjustment sliders for ranking criteria
+ * - Handles conditional cell coloring based on statistical analysis
+ * 
+ * CRITICAL PATHS:
+ * 1. componentDidMount() - Initial data loading
+ * 2. setupDataStructures() - Core ranking calculation
+ * 3. rankCols() & rankColsStd() - The two ranking algorithms
+ * 4. render() - Table display with interactive controls
+ * 
+ * DATA FLOW:
+ * Stock Symbols → API Fetch → Data Parsing → Ranking Calculation → UI Display
+ * 
+ * IMPORTANT: This component contains the core business logic for stock ranking
+ */
 import React, { Component } from 'react';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 import * as math from 'mathjs';
 import WeightSlider from './WeightSlider';
 import ColorColumn from './ColorColumn';
-import * as rawData from '../rank-data';
-import * as cachedData19 from '../stock-data_19';
-import * as cachedData20 from '../stock-data_20';
-import * as Utils from './StockUtils';
+import * as rawData from '../rank-data';           // CEF data (not used here)
+import * as cachedData19 from '../stock-data_19';   // 2019 cached stock data
+import * as cachedData20 from '../stock-data_20';   // 2020 cached stock data (ACTIVE)
+import * as Utils from './StockUtils';              // API utilities & column config
 
 
 /**
@@ -24,11 +47,11 @@ const ALL_STOCKS = [cachedData20.ALL_STOCKS, cachedData20.ALL_STOCKS_cached];
 // Use this to combine different groups of stock (without duplicates)
 const CUSTOM_STOCKS = [
     ...cachedData20.COVID_19,
-    ...cachedData20.KEO_STOCKS,
-    ...cachedData20.MEME_STOCKS,
+    // ...cachedData20.KEO_STOCKS,
+    // ...cachedData20.MEME_STOCKS,
     // ...cachedData20.NEW_STOCKS,
-    ...cachedData20.GROUP_STOCKS,
-    ...cachedData20.ALL_STOCKS,
+    // ...cachedData20.GROUP_STOCKS,
+    // ...cachedData20.ALL_STOCKS,
 ];
 
 const TEST_STOCKS = [[...new Set(CUSTOM_STOCKS)], [
@@ -41,9 +64,9 @@ const STOCKS = TEST_STOCKS;
 const DEBUG = true; // If we want to use cached data (preserve network request quota)
 
 const THROTTLE = {
-    SMALL: 500,
-    MEDIUM: 1000,
-    LARGE: 2000,
+    SMALL: 100,
+    MEDIUM: 500,
+    LARGE: 1000,
 };
 
 class StonkBoard extends Component {
@@ -66,9 +89,18 @@ class StonkBoard extends Component {
         this.onSortChange = this.onSortChange.bind(this);
     }
 
-    // First thing that happens when the site loads
+    /**
+     * CRITICAL: Component initialization and data loading
+     * 
+     * This method handles the initial app startup:
+     * 1. Loads first batch of stocks (5 by default) for immediate display
+     * 2. Sets up data structures for ranking calculations
+     * 3. Triggers background loading of remaining stocks
+     * 
+     * PERFORMANCE NOTE: Uses offset loading to prevent API rate limiting
+     */
     async componentDidMount() {
-        console.info('Welcome to Keo Stonks!');
+        console.info('Welcome to Keo Stonks V2!');
         console.info(`DEBUG_MODE = ${DEBUG ? 'ON' : 'OFF'}`);
 
         // Get the first 5<offset> stocks and display them right away
@@ -135,13 +167,23 @@ class StonkBoard extends Component {
 
     // ------------------- SETUP Methods -------------------
 
+    /**
+     * CORE RANKING ENGINE - Sets up dual ranking system
+     * 
+     * This is the HEART of the ranking algorithm:
+     * 1. Creates two ranking grids (relative + standard deviation)
+     * 2. Calculates rankings using both methods
+     * 3. Combines results for final ranking
+     * 
+     * CRITICAL: All ranking logic flows through this method
+     */
     setupDataStructures(data) {
-        let rGrid = this.initGrid(data);
-        let sGrid = this.initGrid(data);
+        let rGrid = this.initGrid(data);  // Relative ranking grid
+        let sGrid = this.initGrid(data);  // Standard deviation ranking grid
 
-        this.rankCols(rGrid, data);
-        this.rankColsStd(sGrid, data);
-        this.calculateRank(data, rGrid, sGrid);
+        this.rankCols(rGrid, data);       // Calculate relative rankings
+        this.rankColsStd(sGrid, data);    // Calculate std dev rankings
+        this.calculateRank(data, rGrid, sGrid); // Combine both methods
 
         this.setState({
             uiData: data,
@@ -225,7 +267,15 @@ class StonkBoard extends Component {
 
     // ------------------- Calculation Methods -------------------    
 
-    // Relative Ranking 
+    /**
+     * RANKING ALGORITHM #1: Relative Position Ranking
+     * 
+     * Ranks stocks by their relative position within each metric:
+     * - Sorts stocks by each column value
+     * - Assigns rank 1, 2, 3, etc.
+     * - Applies user-defined weights
+     * - Better for understanding relative performance
+     */
     rankCols(grid, data) {
         const parameters = this.state.params;
         for (let col in parameters) {
@@ -247,7 +297,15 @@ class StonkBoard extends Component {
         this.getSumAndRelativeRank(grid, 'desc');
     }
 
-    // Standard Deviation Ranking 
+    /**
+     * RANKING ALGORITHM #2: Statistical Standard Deviation Ranking
+     * 
+     * Ranks stocks by how many standard deviations they are from the mean:
+     * - Calculates mean and standard deviation for each metric
+     * - Scores based on statistical variance from average
+     * - Better for identifying statistical outliers
+     * - Used for conditional cell coloring (green/red highlighting)
+     */
     rankColsStd(grid, data) {
         const parameters = this.state.params;
 
