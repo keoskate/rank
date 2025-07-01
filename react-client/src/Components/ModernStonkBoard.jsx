@@ -67,7 +67,15 @@ function ModernStonkBoard() {
   const [params, setParams] = useState(() => {
     // Load saved weight preferences on initialization
     const savedWeights = loadWeightPreferences();
-    return savedWeights ? applyWeightPreferences(Utils.STOCK_COLUMNS, savedWeights) : Utils.STOCK_COLUMNS;
+    if (savedWeights) {
+      console.info('🔄 Loading saved weight preferences:', savedWeights);
+      const restoredParams = applyWeightPreferences(Utils.STOCK_COLUMNS, savedWeights);
+      console.info('✅ Weight preferences restored');
+      return restoredParams;
+    } else {
+      console.info('📋 Using default weight configuration');
+      return Utils.STOCK_COLUMNS;
+    }
   });
   const [altGrid, setAltGrid] = useState(false);
   const [currentView, setCurrentView] = useState('full'); // 'full', 'relative', 'std'

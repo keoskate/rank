@@ -56,7 +56,17 @@ const WeightManager = ({
 
   const handleWeightChange = useCallback((evt) => {
     onWeightChange(evt);
-  }, [onWeightChange]);
+    // Immediate save on weight change for better reliability
+    if (autoSave) {
+      setTimeout(() => {
+        const success = saveWeightPreferences(params);
+        if (success) {
+          setLastSaved(new Date());
+          console.info('💾 Weights auto-saved after change');
+        }
+      }, 500); // Quick save after change
+    }
+  }, [onWeightChange, params, autoSave]);
 
   const handleResetToDefaults = useCallback(() => {
     clearWeightPreferences();
@@ -68,6 +78,14 @@ const WeightManager = ({
     clearWeightPreferences();
     setLastSaved(null);
   }, []);
+
+  const handleManualSave = useCallback(() => {
+    const success = saveWeightPreferences(params);
+    if (success) {
+      setLastSaved(new Date());
+      console.info('💾 Weights manually saved');
+    }
+  }, [params]);
 
   // Get active weight metrics (weight > 0)
   const activeMetrics = Object.keys(params).filter(key => 
@@ -160,7 +178,7 @@ const WeightManager = ({
                 color: preferencesInfo.exists ? '#28a745' : '#ffc107',
                 fontWeight: '500'
               }}>
-                {preferencesInfo.exists ? '✓ Saved' : '○ Modified'}
+                {preferencesInfo.exists ? '✓ Saved' : '○ Unsaved'}
               </span>
             )}
             
@@ -217,21 +235,40 @@ const WeightManager = ({
         }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             {!isUsingDefaults && (
-              <button
-                onClick={handleResetToDefaults}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#f8f9fa',
-                  color: '#6c757d',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}
-              >
-                Reset
-              </button>
+              <>
+                <button
+                  onClick={handleManualSave}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}
+                  title="Manually save current weights"
+                >
+                  Save
+                </button>
+                
+                <button
+                  onClick={handleResetToDefaults}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#f8f9fa',
+                    color: '#6c757d',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Reset
+                </button>
+              </>
             )}
             
             {preferencesInfo.exists && (
