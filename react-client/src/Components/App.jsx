@@ -1,11 +1,11 @@
 /**
  * ROOT COMPONENT - Application Shell
- * 
+ *
  * This is the main application container that handles:
  * - React Router setup for navigation
  * - Layout structure (NavBar + main content)
  * - Route definitions
- * 
+ *
  * CRITICAL PATH: This component defines the overall app structure
  * and routing. Changes here affect the entire application layout.
  * UPDATED: React Router v6 + React 18 functional component

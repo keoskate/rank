@@ -1,11 +1,11 @@
 /**
  * EXPRESS SERVER - Static File Server
- * 
+ *
  * Simple Express server that:
  * 1. Serves the built React application from /dist folder
  * 2. Handles client-side routing with catch-all route
  * 3. Provides API endpoint foundation (currently unused)
- * 
+ *
  * CRITICAL PATH: This serves the entire application
  * All HTTP requests flow through this server
  */

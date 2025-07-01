@@ -10,38 +10,38 @@ module.exports = {
     filename: 'bundle.js',
   },
   resolve: {
-    extensions: ['.js', '.jsx', '.json', '.css']
+    extensions: ['.js', '.jsx', '.json', '.css'],
   },
-  module : {
-    rules : [
+  module: {
+    rules: [
       {
         test: /\.css$/,
-        loader: 'style-loader!css-loader'
+        loader: 'style-loader!css-loader',
       },
       {
         test: /\.png$/,
-        loader: 'url-loader?limit=100000&minetype=image/png'
+        loader: 'url-loader?limit=100000&minetype=image/png',
       },
       {
         test: /\.jpg/,
-        loader: 'file-loader'
-      },
-      { 
-        test: /\.json$/, 
-        loader: 'json-loader' 
+        loader: 'file-loader',
       },
       {
-        test : /\.jsx?/,
-        include : SRC_DIR,
+        test: /\.json$/,
+        loader: 'json-loader',
+      },
+      {
+        test: /\.jsx?/,
+        include: SRC_DIR,
         use: {
-          loader: 'babel-loader'
-        }
-      }
-    ]
+          loader: 'babel-loader',
+        },
+      },
+    ],
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production')
-    })
-  ]
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+  ],
 };

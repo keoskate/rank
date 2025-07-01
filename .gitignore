@@ -15,3 +15,30 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Linting and formatting cache
+.eslintcache
+.prettierrc.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output

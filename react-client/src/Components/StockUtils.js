@@ -1,40 +1,46 @@
 /**
  * STOCK UTILITIES - API Integration & Configuration
- * 
+ *
  * This module contains CRITICAL infrastructure for stock data:
- * 
+ *
  * KEY FUNCTIONS:
  * 1. getStockData() - Fetches live data from Yahoo Finance API
  * 2. parseData() - Transforms API response into app data structure
  * 3. STOCK_COLUMNS - Defines ranking criteria and weights
- * 
+ *
  * CRITICAL PATHS:
  * - API_ENDPOINT constants - Yahoo Finance API endpoints
  * - parseData() - Data transformation logic
  * - STOCK_COLUMNS - Column configuration with weights/multipliers
- * 
+ *
  * IMPORTANT: Contains API key and data parsing logic
  * Changes here affect data fetching and ranking calculations
  */
 
-const API_ENDPOINT__GET_SUMMARY = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v3/get-summary?region=US&lang=en&symbol=';
+const API_ENDPOINT__GET_SUMMARY =
+  'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v3/get-summary?region=US&lang=en&symbol=';
 
-const API_ENDPOINT__GET_DETAIL = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-detail?region=US&lang=en&symbol=';
+const API_ENDPOINT__GET_DETAIL =
+  'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-detail?region=US&lang=en&symbol=';
 
-const API_ENDPOINT__GET_FINANCIALS = 'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials?symbol=';
-
+const API_ENDPOINT__GET_FINANCIALS =
+  'https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials?symbol=';
 
 /**
  * Get the Yahoo finance data for a given stock.
  * This is where we make the network request to fetch a given stock
  * from our Yahoo Finance API (provided by RapidAPI).
- * 
+ *
  * Note: $0 for 500 requests / month, $10 for 10,000
- * 
+ *
  * @param {string} stock - The Stock Ticker
  * @param {string} retry - By default request will try again after failing
  */
-export async function getStockData(stock, fetchFinancials = false, retry = false) {
+export async function getStockData(
+  stock,
+  fetchFinancials = false,
+  retry = false
+) {
   const endPoint = API_ENDPOINT__GET_SUMMARY;
   const altEndPoint = API_ENDPOINT__GET_FINANCIALS;
   console.info('Fetching Financial Data for: ' + stock);
@@ -43,19 +49,23 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
     // Make API requests
     const results = await Promise.all([
       fetch(`${endPoint}${stock}`, {
-        "method": "GET",
-        "headers": {
-          "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
-          "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
-        }
+        method: 'GET',
+        headers: {
+          'x-rapidapi-host': 'apidojo-yahoo-finance-v1.p.rapidapi.com',
+          'x-rapidapi-key':
+            '511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b',
+        },
       }),
-      fetchFinancials ? fetch(`${altEndPoint}${stock}`, {
-        "method": "GET",
-        "headers": {
-          "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
-          "x-rapidapi-key": "511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b"
-        }
-      }) : Promise.resolve(null)
+      fetchFinancials
+        ? fetch(`${altEndPoint}${stock}`, {
+            method: 'GET',
+            headers: {
+              'x-rapidapi-host': 'apidojo-yahoo-finance-v1.p.rapidapi.com',
+              'x-rapidapi-key':
+                '511813387amsh6e1ae8b9aaa13a4p19b849jsnfafad5e8440b',
+            },
+          })
+        : Promise.resolve(null),
     ]);
 
     // Get data from main endpoint
@@ -66,7 +76,7 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
         const reader = results[0].body.getReader();
         let rawData = '';
         const decoder = new TextDecoder();
-        
+
         // Read the stream chunk by chunk
         while (true) {
           const { done, value } = await reader.read();
@@ -75,7 +85,7 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
         }
         // Final flush
         rawData += decoder.decode();
-        
+
         // Handle empty response
         if (!rawData || rawData.trim() === '') {
           console.warn('Empty response from main endpoint');
@@ -91,7 +101,7 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
         console.error('Error reading main response:', readError);
       }
     }
-    
+
     // Get data from financial endpoint
     let financialData = {};
     if (fetchFinancials && results[1] && results[1].ok) {
@@ -100,7 +110,7 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
         const reader = results[1].body.getReader();
         let rawData = '';
         const decoder = new TextDecoder();
-        
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -108,7 +118,7 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
         }
         // Final flush
         rawData += decoder.decode();
-        
+
         if (!rawData || rawData.trim() === '') {
           console.warn('Empty response from financial endpoint');
         } else {
@@ -122,7 +132,7 @@ export async function getStockData(stock, fetchFinancials = false, retry = false
         console.error('Error reading financial response:', readError);
       }
     }
-      
+
     // Merge results and return
     const mergedResults = Object.assign({}, mainData, financialData);
     return parseData(mergedResults);
@@ -167,14 +177,14 @@ export function parseData(data) {
     return value == null ? 0 : Number.parseFloat(value).toFixed(percision);
   };
 
-  const formatValue = (value) => {
+  const formatValue = value => {
     return value == null ? 0 : value;
   };
 
   const calculateDebtEbitda = (totalDebt, ebitda) => {
     totalDebt = totalDebt == null ? 0 : totalDebt;
     ebitda = ebitda == null ? 0 : ebitda;
-    const value = (totalDebt == 0 || ebitda == 0) ? 0 : totalDebt / ebitda;
+    const value = totalDebt == 0 || ebitda == 0 ? 0 : totalDebt / ebitda;
     if (value == 'NaN' || value == null || value == NaN) {
       return 0;
     } else {
@@ -186,14 +196,14 @@ export function parseData(data) {
     const high = data.summaryDetail.fiftyTwoWeekHigh.raw;
     const low = data.summaryDetail.fiftyTwoWeekLow.raw;
 
-    return Number.parseFloat((high - low) / high).toFixed(2)
+    return Number.parseFloat((high - low) / high).toFixed(2);
   };
 
   const calculateDiscount = () => {
     const high = data.summaryDetail.fiftyTwoWeekHigh.raw;
     const low = Number.parseFloat(data.price.regularMarketPrice.raw).toFixed(2);
 
-    return Number.parseFloat((high - low) / high).toFixed(2)
+    return Number.parseFloat((high - low) / high).toFixed(2);
   };
 
   const formatData = {
@@ -213,19 +223,29 @@ export function parseData(data) {
 
     discount: calculateDiscount(),
 
-    debtEbitda: calculateDebtEbitda(data.financialData.totalDebt.raw, data.financialData.ebitda.raw),
+    debtEbitda: calculateDebtEbitda(
+      data.financialData.totalDebt.raw,
+      data.financialData.ebitda.raw
+    ),
 
-    netDebt: formater(formatValue(data.financialData.totalDebt.raw) - formatValue(data.financialData.totalCash.raw), 0) || 0,
+    netDebt:
+      formater(
+        formatValue(data.financialData.totalDebt.raw) -
+          formatValue(data.financialData.totalCash.raw),
+        0
+      ) || 0,
 
     beta: Number.parseFloat(data.summaryDetail.beta.raw || 0).toFixed(2) || 0,
 
-    quickRatio: Number.parseFloat(data.financialData.quickRatio.raw || 0).toFixed(2) || 0,
+    quickRatio:
+      Number.parseFloat(data.financialData.quickRatio.raw || 0).toFixed(2) || 0,
 
     dividend: data.summaryDetail.dividendRate.raw || 0,
 
     ebitda: formater(data.financialData.ebitda.raw, 0) || 0,
 
-    evEbitda: formater(data.defaultKeyStatistics.enterpriseToEbitda.raw, 0) || 0,
+    evEbitda:
+      formater(data.defaultKeyStatistics.enterpriseToEbitda.raw, 0) || 0,
 
     cash: data.financialData.totalCash.raw || 0,
 
@@ -237,13 +257,12 @@ export function parseData(data) {
 
   console.info(formatData);
   return formatData;
-};
-
-
+}
 
 // ******** Helpers  ********** //
 
-export function revertSortFunc(a, b, order, sortField) {   // order is desc or asc
+export function revertSortFunc(a, b, order, sortField) {
+  // order is desc or asc
   if (order === 'desc') {
     return a[sortField] - b[sortField];
   } else {
@@ -259,164 +278,163 @@ export function wait(ms) {
   }
 }
 
-
 // ******** COLUMNS / STOCK PARAMS  ********** //
 
 const COLUMN_SIZE = {
   small: 50,
   medium: 75,
-  large: 125
+  large: 125,
 };
 
 // Configure multipliers and column headers for each data point
 export const STOCK_COLUMNS = {
   // --- Rank
-  "rank": {
+  rank: {
     label: 'Rank',
     type: '',
     size: COLUMN_SIZE.small,
     weight: 0,
     multiplier: 0,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "ticker": {
+  ticker: {
     label: 'Ticker',
     type: '',
     size: COLUMN_SIZE.small,
     weight: 0,
     multiplier: 0,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "name": {
+  name: {
     label: 'Company Name',
     type: '',
     size: COLUMN_SIZE.large,
     weight: 0,
     multiplier: 0,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "industry": {
+  industry: {
     label: 'Industry',
     type: '',
     size: COLUMN_SIZE.large,
     weight: 0,
     multiplier: 0,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "price": {
+  price: {
     label: 'Price',
     type: 'money',
     size: COLUMN_SIZE.medium,
     weight: 0.0,
     multiplier: -1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "yearHigh": {
+  yearHigh: {
     label: '52 High',
     type: 'money',
     size: COLUMN_SIZE.medium,
     weight: 0.0,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
 
   // --- Year range = 0.4
-  "discount": {
+  discount: {
     label: 'Discount',
     type: '',
     size: COLUMN_SIZE.medium,
     weight: 0.4,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
 
   // --- Debt / Ebitda = 0.15
-  "debtEbitda": {
+  debtEbitda: {
     label: 'Debt / Ebitda',
     type: '',
     size: COLUMN_SIZE.medium,
     weight: 0.15,
     multiplier: -1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
 
   // --- NET DEBT = 0.15
-  "netDebt": {
+  netDebt: {
     label: 'Net Debt',
     type: '',
     size: COLUMN_SIZE.large,
     weight: 0.15,
     multiplier: -1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
 
   // --- BETA = 0.15
-  "beta": {
+  beta: {
     label: 'Beta',
     type: '',
     size: COLUMN_SIZE.small,
     weight: 0.15,
     multiplier: -1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
 
   // --- QUICK RATIO = 0.1
-  "quickRatio": {
+  quickRatio: {
     label: 'Quick Ratio',
     type: '',
     size: COLUMN_SIZE.medium,
     weight: 0.1,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
 
   // --- DIV = 0.05
-  "dividend": {
+  dividend: {
     label: 'Dividend Rate',
     type: '',
     size: COLUMN_SIZE.medium,
     weight: 0.05,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "ebitda": {
+  ebitda: {
     label: 'EBITDA',
     type: '',
     size: COLUMN_SIZE.large,
     weight: 0,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "evEbitda": {
+  evEbitda: {
     label: 'EV / Ebitda',
     type: '',
     size: COLUMN_SIZE.medium,
     weight: 0,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
-  "cash": {
+  cash: {
     label: 'Cash',
     type: '',
     size: COLUMN_SIZE.large,
     weight: 0,
     multiplier: 1,
     average: undefined,
-    stdDev: undefined
+    stdDev: undefined,
   },
   // "cap": {
   //   label: 'Cap',
@@ -427,12 +445,12 @@ export const STOCK_COLUMNS = {
   //   average: undefined,
   //   stdDev: undefined
   // },
-  
+
   // "shortDebt": {
   //     label: 'Short Term Debt',
   //     type: 'money',
   //     size: COLUMN_SIZE.medium,
-  //     weight: 0, 
+  //     weight: 0,
   //     multiplier: 1,
   //     average: undefined,
   //     stdDev: undefined
@@ -441,7 +459,7 @@ export const STOCK_COLUMNS = {
   //     label: 'Sector Trend',
   //     type: '',
   //     size: COLUMN_SIZE.large,
-  //     weight: 0, 
+  //     weight: 0,
   //     multiplier: 1,
   //     average: undefined,
   //     stdDev: undefined
@@ -450,7 +468,7 @@ export const STOCK_COLUMNS = {
   //     label: 'PE Ratio',
   //     type: '',
   //     size: COLUMN_SIZE.large,
-  //     weight: 0, 
+  //     weight: 0,
   //     multiplier: 1,
   //     average: undefined,
   //     stdDev: undefined
