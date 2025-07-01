@@ -99,10 +99,9 @@ function ModernStonkBoard() {
         const getFinancials = false;
 
         if (debugMode) {
-          // Debug mode: Load just first 5 stocks to save quota
-          const debugStocks = stockSymbols.slice(0, 5);
-          console.info(`🔒 Debug mode: Loading ${debugStocks.length} stocks from "${currentStockList.name}"`);
-          const initialData = await getFinancialData(debugStocks, getFinancials);
+          // Debug mode: Load all stocks from selected list (uses cache-first approach to save quota)
+          console.info(`🔒 Debug mode: Loading all ${stockSymbols.length} stocks from "${currentStockList.name}" (cache-first to save quota)`);
+          const initialData = await getFinancialData(stockSymbols, getFinancials);
           const cleanedData = cleanData(initialData);
           setupDataStructures(cleanedData);
           setData(cleanedData);
@@ -670,7 +669,7 @@ function ModernStonkBoard() {
       const getFinancials = false;
 
       // Use current stock list for cache refresh
-      const stocksToRefresh = debugMode ? stockSymbols.slice(0, 5) : stockSymbols;
+      const stocksToRefresh = stockSymbols; // Always refresh all stocks in selected list
       const stocksKey = stocksToRefresh.sort().join('_');
       const cacheKey = `STOCKS_${stocksKey}_${getFinancials ? 'with_financials' : 'basic'}`;
 
