@@ -29,6 +29,7 @@ import {
 } from '@tanstack/react-table';
 import * as math from 'mathjs';
 import WeightSlider from './WeightSlider';
+import BoardControls from '../components/BoardControls';
 import * as cachedData20 from '../stock-data_20';
 import * as Utils from './StockUtils';
 
@@ -74,6 +75,7 @@ function ModernStonkBoard() {
   const [currentView, setCurrentView] = useState('full'); // 'full', 'relative', 'std'
   const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
+  const [debugMode, setDebugMode] = useState(DEBUG); // Toggle for cached vs live data
 
   // Utility function for waiting
   const wait = useCallback(ms => {
@@ -90,7 +92,7 @@ function ModernStonkBoard() {
   useEffect(() => {
     const initializeData = async () => {
       console.info('Welcome to Keo Stonks V2!');
-      console.info(`DEBUG_MODE = ${DEBUG ? 'ON' : 'OFF'}`);
+      console.info(`DEBUG_MODE = ${debugMode ? 'ON' : 'OFF'}`);
 
       try {
         // Get the first 5 stocks and display them right away
@@ -100,14 +102,14 @@ function ModernStonkBoard() {
           STOCKS[0].slice(0, offset),
           getFinancials
         );
-        const cleanedData = DEBUG ? initialData : cleanData(initialData);
+        const cleanedData = debugMode ? initialData : cleanData(initialData);
 
         setupDataStructures(cleanedData);
         setData(cleanedData);
         setUiData(cleanedData);
         setLoading(false);
 
-        if (!DEBUG) {
+        if (!debugMode) {
           fetchAllData(offset, getFinancials);
         }
       } catch (error) {
@@ -148,7 +150,7 @@ function ModernStonkBoard() {
   // Get the Stock data for a list of stocks
   const getFinancialData = async (stocks, fetchFinancials = false) => {
     console.info('Fetching Stocks: ' + stocks);
-    if (DEBUG) {
+    if (debugMode) {
       return STOCKS[1]; // Cached data is at index 1
     } else {
       const fetchAll = [];
@@ -565,6 +567,19 @@ function ModernStonkBoard() {
     setAltGrid(true);
   };
 
+  // Debug mode toggle handler
+  const handleDebugModeToggle = () => {
+    const newDebugMode = !debugMode;
+    setDebugMode(newDebugMode);
+    console.info(`DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'}`);
+    
+    // Optionally reload data with new mode
+    if (data.length > 0) {
+      console.info('Reloading data with new debug mode...');
+      // You could trigger a reload here if needed
+    }
+  };
+
   // Column helper for TanStack Table
   const columnHelper = createColumnHelper();
 
@@ -699,34 +714,7 @@ function ModernStonkBoard() {
     );
   }, [params]);
 
-  // Render weight sliders
-  const renderWeightSliders = () => {
-    return Object.keys(params).map(key => {
-      if (params[key].multiplier !== 0) {
-        return (
-          <span
-            key={key}
-            style={{ display: 'inline-block', margin: 5, width: 120 }}
-          >
-            <WeightSlider
-              label={key}
-              name={key}
-              value={params[key].weight}
-              onChange={handleWeightChange}
-            />
-            <button
-              name={key}
-              onClick={handleMultiplierClick}
-              style={{ marginLeft: 5 }}
-            >
-              {params[key].multiplier === 1 ? '+1' : '-1'}
-            </button>
-          </span>
-        );
-      }
-      return null;
-    });
-  };
+  // Note: Weight slider rendering moved to BoardControls component
 
   if (loading) {
     return <div>Loading stock data...</div>;
@@ -734,20 +722,18 @@ function ModernStonkBoard() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h3>Weight Controls (Total: {sumOfWeights.toFixed(2)})</h3>
-        {renderWeightSliders()}
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
-        <button onClick={handleFullDataScoreboard} style={{ marginRight: 10 }}>
-          Full Grid
-        </button>
-        <button onClick={handleRelativeScoreboard} style={{ marginRight: 10 }}>
-          Relative Rank Grid
-        </button>
-        <button onClick={handleStdScoreboard}>Std Deviation Grid</button>
-      </div>
+      {/* Board Controls with Debug Toggle */}
+      <BoardControls
+        params={params}
+        sumOfWeights={sumOfWeights}
+        onWeightChange={handleWeightChange}
+        onMultiplierClick={handleMultiplierClick}
+        onFullDataScoreboard={handleFullDataScoreboard}
+        onRelativeScoreboard={handleRelativeScoreboard}
+        onStdScoreboard={handleStdScoreboard}
+        debugMode={debugMode}
+        onDebugModeToggle={handleDebugModeToggle}
+      />
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -802,8 +788,9 @@ function ModernStonkBoard() {
       </div>
 
       <div style={{ marginTop: 20, fontSize: '12px', color: '#666' }}>
-        Showing {table.getRowModel().rows.length} stocks • Powered by TanStack
-        React Table • React 18 + Modern Build System
+        Showing {table.getRowModel().rows.length} stocks • 
+        Mode: <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong> • 
+        Powered by TanStack React Table • React 18 + Modern Build System
       </div>
     </div>
   );

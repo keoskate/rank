@@ -10,7 +10,7 @@
  * Separated from main component to improve maintainability and reusability.
  */
 
-import WeightSlider from './WeightSlider';
+import WeightSlider from '../Components/WeightSlider';
 
 const BoardControls = ({
   params,
@@ -20,6 +20,8 @@ const BoardControls = ({
   onFullDataScoreboard,
   onRelativeScoreboard,
   onStdScoreboard,
+  debugMode,
+  onDebugModeToggle,
 }) => {
   // Render weight sliders for active parameters
   const renderWeightSliders = () => {
@@ -87,6 +89,33 @@ const BoardControls = ({
             ⚠️ Warning: Total weight exceeds 1.0
           </div>
         )}
+      </div>
+
+      {/* Debug Mode Toggle */}
+      <div style={{ marginBottom: 20 }}>
+        <h4>Debug Mode</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={onDebugModeToggle}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: debugMode ? '#28a745' : '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+            }}
+          >
+            {debugMode ? '🔒 CACHED DATA' : '🌐 LIVE API'}
+          </button>
+          <span style={{ fontSize: '12px', color: '#6c757d' }}>
+            {debugMode
+              ? 'Using cached data (preserves API quota)'
+              : 'Fetching live data from API (uses quota)'}
+          </span>
+        </div>
       </div>
 
       {/* Board Switching Controls */}
