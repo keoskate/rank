@@ -4,10 +4,10 @@
   "description": "Investments have a score and are ranked in a table",
   "main": "index.js",
   "scripts": {
-    "dev": "webpack -d --watch",
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider node build.js --watch",
     "start": "node ./server/index.js",
-    "build": "webpack -p",
-    "react-dev": "NODE_OPTIONS=--openssl-legacy-provider webpack -d --watch",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider node build.js",
+    "react-dev": "NODE_OPTIONS=--openssl-legacy-provider node build.js --watch",
     "server-dev": "nodemon server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

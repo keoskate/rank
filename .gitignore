@@ -8,3 +8,10 @@ bundle.js
 node_modules/
 
 yarn-error.log*
+
+# Environment variables (contains API keys)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
