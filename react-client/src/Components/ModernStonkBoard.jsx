@@ -53,10 +53,14 @@ import {
   getDebugModeInfo,
 } from '../utils/debugPreference';
 import { resetToDefaultWeights } from '../config/stockColumns';
-import { 
-  loadWeightPreferences, 
-  applyWeightPreferences 
+import {
+  loadWeightPreferences,
+  applyWeightPreferences,
 } from '../utils/weightPreferences';
+import {
+  loadStockListPreference,
+  saveStockListPreference,
+} from '../utils/stockListPreference';
 
 // Stock list configuration - now managed by stockLists.js
 // Debug mode is now managed by debugPreference.js with localStorage persistence
@@ -72,7 +76,10 @@ function ModernStonkBoard() {
     const savedWeights = loadWeightPreferences();
     if (savedWeights) {
       console.info('🔄 Loading saved weight preferences:', savedWeights);
-      const restoredParams = applyWeightPreferences(Utils.STOCK_COLUMNS, savedWeights);
+      const restoredParams = applyWeightPreferences(
+        Utils.STOCK_COLUMNS,
+        savedWeights
+      );
       console.info('✅ Weight preferences restored');
       return restoredParams;
     } else {
@@ -86,9 +93,11 @@ function ModernStonkBoard() {
   const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
   const [debugMode, setDebugMode] = useState(() => getDebugPreference()); // Load saved preference
   const [backgroundFetching, setBackgroundFetching] = useState(false);
-  const [currentStockListId, setCurrentStockListId] =
-    useState(DEFAULT_STOCK_LIST); // New: current stock list
+  const [currentStockListId, setCurrentStockListId] = useState(() =>
+    loadStockListPreference(DEFAULT_STOCK_LIST)
+  ); // Load saved stock list preference
   const [activeTab, setActiveTab] = useState('ranking'); // Tab management
+  const [columnVisibility, setColumnVisibility] = useState({}); // Column visibility state
 
   // Get current stock list configuration
   const currentStockList = getStockList(currentStockListId);
@@ -669,6 +678,7 @@ function ModernStonkBoard() {
         `📋 Switching to stock list: ${getStockList(newStockListId).name}`
       );
       setCurrentStockListId(newStockListId);
+      saveStockListPreference(newStockListId); // Save preference
       setLoading(true); // Will trigger reload via useEffect dependency
     }
   };
@@ -727,12 +737,15 @@ function ModernStonkBoard() {
   // Column helper for TanStack Table
   const columnHelper = createColumnHelper();
 
-  // Define table columns
+  // Define table columns with visibility control
   const columns = useMemo(() => {
     const cols = [];
 
     Object.keys(params).forEach(key => {
       const param = params[key];
+      const isVisible = columnVisibility[key] !== false; // Default to visible
+
+      if (!isVisible) return; // Skip hidden columns
 
       if (key === 'rank') {
         cols.push(
@@ -740,6 +753,10 @@ function ModernStonkBoard() {
             header: 'Rank',
             cell: info => info.getValue(),
             size: 50,
+            meta: {
+              sticky: false,
+              required: true,
+            },
           })
         );
       } else if (key === 'ticker') {
@@ -748,6 +765,10 @@ function ModernStonkBoard() {
             header: 'Ticker',
             cell: info => info.getValue(),
             size: 60,
+            meta: {
+              sticky: true,
+              required: true,
+            },
           })
         );
       } else if (param.multiplier !== 0) {
@@ -780,6 +801,10 @@ function ModernStonkBoard() {
               );
             },
             size: param.size || 100,
+            meta: {
+              sticky: false,
+              required: false,
+            },
           })
         );
       }
@@ -836,7 +861,7 @@ function ModernStonkBoard() {
     }
 
     return cols;
-  }, [params, altGrid, columnHelper]);
+  }, [params, altGrid, columnHelper, columnVisibility]);
 
   // Create table instance
   const table = useReactTable({
@@ -874,12 +899,16 @@ function ModernStonkBoard() {
             table={table}
             loading={loading}
             currentStockList={currentStockList}
+            currentStockListId={currentStockListId}
             debugMode={debugMode}
             backgroundFetching={backgroundFetching}
             apiInfo={Utils.getApiInfo()}
             onWeightChange={handleWeightChange}
             onMultiplierClick={handleMultiplierClick}
             onResetWeights={handleResetWeights}
+            onStockListChange={handleStockListChange}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
           />
         );
       case 'config':
@@ -906,10 +935,7 @@ function ModernStonkBoard() {
   return (
     <div>
       {/* Tab Navigation */}
-      <TabNavigation
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Tab Content */}
       {renderTabContent()}
