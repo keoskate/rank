@@ -56,7 +56,8 @@ const TEST_STOCKS = [
 
 // Config for the Stock board
 const STOCKS = TEST_STOCKS;
-const DEBUG = true; // If we want to use cached data (preserve network request quota)
+// KEO: TOGGLE FOR DEBUGGING NETWORK ISSUES
+const DEBUG = false; // If we want to use cached data (preserve network request quota)
 
 const THROTTLE = {
   SMALL: 100,
@@ -154,11 +155,30 @@ function ModernStonkBoard() {
       return STOCKS[1]; // Cached data is at index 1
     } else {
       const fetchAll = [];
-      stocks.forEach(stock => {
-        fetchAll.push(Utils.getStockData(stock, fetchFinancials, false));
-        wait(THROTTLE.MEDIUM);
+      stocks.forEach((stock, index) => {
+        // Add staggered delays to respect Alpha Vantage rate limits (5 calls/minute)
+        const delay = index * 12000; // 12 seconds between each call
+        fetchAll.push(
+          new Promise(resolve => {
+            setTimeout(async () => {
+              try {
+                const result = await Utils.getStockData(
+                  stock,
+                  fetchFinancials,
+                  true
+                );
+                resolve(result);
+              } catch (error) {
+                console.error(`Error fetching ${stock}:`, error);
+                resolve(null);
+              }
+            }, delay);
+          })
+        );
       });
+      
       const fetchedData = await Promise.all(fetchAll);
+      // Filter out null responses and ensure valid ticker
       return fetchedData.filter(x => x && x.ticker);
     }
   };
@@ -572,7 +592,7 @@ function ModernStonkBoard() {
     const newDebugMode = !debugMode;
     setDebugMode(newDebugMode);
     console.info(`DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'}`);
-    
+
     // Optionally reload data with new mode
     if (data.length > 0) {
       console.info('Reloading data with new debug mode...');
@@ -788,9 +808,9 @@ function ModernStonkBoard() {
       </div>
 
       <div style={{ marginTop: 20, fontSize: '12px', color: '#666' }}>
-        Showing {table.getRowModel().rows.length} stocks • 
-        Mode: <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong> • 
-        Powered by TanStack React Table • React 18 + Modern Build System
+        Showing {table.getRowModel().rows.length} stocks • Mode:{' '}
+        <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong> • Powered
+        by TanStack React Table • React 18 + Modern Build System
       </div>
     </div>
   );

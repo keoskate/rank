@@ -69,7 +69,7 @@ export const APP_CONFIG = {
 };
 
 // Environment-specific configurations
-export const getStockConfiggetStockConfig = (environment = 'development') => {
+export const getStockConfig = (environment = 'development') => {
   const configs = {
     development: {
       ...APP_CONFIG,

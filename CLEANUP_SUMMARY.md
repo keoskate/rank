@@ -29,6 +29,10 @@ Moved to `react-client/src/archive/`:
 
 ### **Configuration & Utilities**
 - ✅ `config/stockConfig.js` - Centralized stock configuration
+- ✅ `config/stockColumns.js` - Stock ranking criteria and weights
+- ✅ `api/alphaVantageAPI.js` - **MODERN** Alpha Vantage API integration
+- ✅ `api/yahooFinanceAPI.js` - Legacy Yahoo Finance API (archived)
+- ✅ `api/index.js` - API management and switching
 - ✅ `hooks/useStockData.js` - Custom data management hook
 - ✅ `hooks/useRanking.js` - Custom ranking logic hook
 - ✅ `utils/` - Utility modules for colors, math, ranking, tables
@@ -64,9 +68,14 @@ react-client/src/
 │   ├── BoardControls.jsx     # Controls & debug toggle
 │   ├── NavBar.jsx       # Navigation
 │   ├── WeightSlider.jsx # Weight controls
-│   └── StockUtils.js    # Alpha Vantage API
+│   └── StockUtils.js    # Modern API interface
+├── api/                 # Financial API integrations
+│   ├── index.js         # API management & switching
+│   ├── alphaVantageAPI.js    # Modern Alpha Vantage API
+│   └── yahooFinanceAPI.js    # Legacy Yahoo Finance API
 ├── config/              # Configuration
-│   └── stockConfig.js   # Stock groups & settings
+│   ├── stockConfig.js   # Stock groups & settings
+│   └── stockColumns.js  # Ranking criteria & weights
 ├── hooks/               # Custom React hooks
 │   ├── useStockData.js  # Data management
 │   └── useRanking.js    # Ranking algorithms
