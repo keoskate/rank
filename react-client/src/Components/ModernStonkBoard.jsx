@@ -49,6 +49,7 @@ import {
   setDebugPreference,
   getDebugModeInfo,
 } from '../utils/debugPreference';
+import { resetToDefaultWeights } from '../config/stockColumns';
 
 // Stock list configuration - now managed by stockLists.js
 // Debug mode is now managed by debugPreference.js with localStorage persistence
@@ -644,6 +645,13 @@ function ModernStonkBoard() {
     }
   };
 
+  // Reset weights to default configuration
+  const handleResetWeights = () => {
+    const defaultParams = resetToDefaultWeights(params);
+    setParams(defaultParams);
+    console.info('🔄 Weights reset to default configuration');
+  };
+
   // Cache refresh handler
   const handleCacheRefresh = async (forceRefresh = false) => {
     console.info(
@@ -842,6 +850,7 @@ function ModernStonkBoard() {
         currentStockListId={currentStockListId}
         onStockListChange={handleStockListChange}
         currentStockList={currentStockList}
+        onResetWeights={handleResetWeights}
       />
 
       <div style={{ overflowX: 'auto' }}>

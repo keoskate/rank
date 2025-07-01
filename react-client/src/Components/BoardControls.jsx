@@ -15,6 +15,12 @@ import { getAllCacheInfo, clearCache, clearAllCache } from '../utils/cacheManage
 import { getApiInfo } from '../Components/StockUtils';
 import { getStockListNames } from '../config/stockLists';
 import { getDebugModeInfo } from '../utils/debugPreference';
+import { 
+  resetToDefaultWeights, 
+  getCurrentTotalWeight, 
+  isUsingDefaultWeights,
+  DEFAULT_WEIGHTS 
+} from '../config/stockColumns';
 import { useState } from 'react';
 
 const BoardControls = ({
@@ -31,6 +37,7 @@ const BoardControls = ({
   currentStockListId, // New props for stock list management
   onStockListChange,
   currentStockList,
+  onResetWeights, // Reset weights to defaults callback
 }) => {
   const [showCacheControls, setShowCacheControls] = useState(false);
   const [cacheInfo, setCacheInfo] = useState({});
@@ -43,6 +50,10 @@ const BoardControls = ({
   
   // Get debug mode info for better UI
   const debugModeInfo = getDebugModeInfo(debugMode);
+
+  // Weight management info
+  const usingDefaultWeights = isUsingDefaultWeights(params);
+  const totalWeight = getCurrentTotalWeight(params);
 
   // Cache management functions
   const refreshCacheInfo = () => {
@@ -69,6 +80,13 @@ const BoardControls = ({
   const handleForceRefresh = () => {
     if (onCacheRefresh) {
       onCacheRefresh(true); // Force refresh
+    }
+  };
+
+  // Weight management functions
+  const handleResetWeights = () => {
+    if (onResetWeights) {
+      onResetWeights();
     }
   };
 
@@ -152,6 +170,43 @@ const BoardControls = ({
             ⚠️ Warning: Total weight exceeds 1.0
           </div>
         )}
+        
+        {/* Weight Status and Reset Controls */}
+        <div style={{ 
+          marginTop: '10px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          gap: '15px'
+        }}>
+          <div style={{ fontSize: '12px', color: '#6c757d' }}>
+            <div>
+              Status: {usingDefaultWeights ? '✅ Using default weights' : '⚡ Custom weights'} 
+            </div>
+            <div style={{ marginTop: '2px' }}>
+              Strategy: Value investing (40% discount, 45% financial health, 5% income)
+            </div>
+          </div>
+          
+          {!usingDefaultWeights && (
+            <button
+              onClick={handleResetWeights}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold',
+              }}
+              title="Reset to original tested weight configuration"
+            >
+              🔄 Reset to Defaults
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Debug Mode Toggle - Enhanced with clear indicators */}
