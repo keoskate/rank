@@ -21,15 +21,15 @@
 
 // Import from modern Alpha Vantage API
 import { getStockData as getAlphaVantageData } from '../api/alphaVantageAPI';
+import { batchFetchStocks } from '../api/batchAPI';
 
 // Import stock columns configuration
 export { STOCK_COLUMNS } from '../config/stockColumns';
 
 /**
- * Get stock data using the modern Alpha Vantage API
+ * Get stock data using the modern Alpha Vantage API (single stock)
  * 
- * This is the main entry point for fetching stock data.
- * It uses the Alpha Vantage API for reliable, up-to-date information.
+ * For better performance with multiple stocks, use getMultipleStocksData() instead.
  *
  * @param {string} stock - The Stock Ticker
  * @param {boolean} fetchFinancials - Whether to fetch additional financial data
@@ -38,6 +38,32 @@ export { STOCK_COLUMNS } from '../config/stockColumns';
  */
 export async function getStockData(stock, fetchFinancials = false, retry = true) {
   return await getAlphaVantageData(stock, fetchFinancials, retry);
+}
+
+/**
+ * Get multiple stocks data efficiently using batch processing
+ * 
+ * This is the RECOMMENDED way to fetch multiple stocks as it's much faster
+ * and uses fewer API calls than individual requests.
+ *
+ * @param {string[]} stocks - Array of stock tickers
+ * @param {string} provider - API provider ('alphavantage', 'yahoo', 'polygon')
+ * @param {Object} options - Additional options
+ * @returns {Promise<Object[]>} Array of stock data objects
+ */
+export async function getMultipleStocksData(stocks, provider = 'alphavantage', options = {}) {
+  if (!Array.isArray(stocks) || stocks.length === 0) {
+    throw new Error('Stocks must be a non-empty array');
+  }
+  
+  if (stocks.length === 1) {
+    // Single stock - use individual API for simplicity
+    const result = await getStockData(stocks[0]);
+    return result ? [result] : [];
+  }
+  
+  // Multiple stocks - use efficient batch processing
+  return await batchFetchStocks(stocks, provider, options);
 }
 
 // ******** Helpers  ********** //

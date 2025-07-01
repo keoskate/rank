@@ -148,38 +148,47 @@ function ModernStonkBoard() {
     }
   }, [rGrid, sGrid, data, currentView]);
 
-  // Get the Stock data for a list of stocks
+  // Get the Stock data for a list of stocks (OPTIMIZED)
   const getFinancialData = async (stocks, fetchFinancials = false) => {
     console.info('Fetching Stocks: ' + stocks);
     if (debugMode) {
       return STOCKS[1]; // Cached data is at index 1
     } else {
-      const fetchAll = [];
-      stocks.forEach((stock, index) => {
-        // Add staggered delays to respect Alpha Vantage rate limits (5 calls/minute)
-        const delay = index * 12000; // 12 seconds between each call
-        fetchAll.push(
-          new Promise(resolve => {
-            setTimeout(async () => {
-              try {
-                const result = await Utils.getStockData(
-                  stock,
-                  fetchFinancials,
-                  true
-                );
-                resolve(result);
-              } catch (error) {
-                console.error(`Error fetching ${stock}:`, error);
-                resolve(null);
-              }
-            }, delay);
-          })
-        );
-      });
-      
-      const fetchedData = await Promise.all(fetchAll);
-      // Filter out null responses and ensure valid ticker
-      return fetchedData.filter(x => x && x.ticker);
+      try {
+        // USE BATCH API for much better performance
+        console.info('🚀 Using efficient batch API for multiple stocks');
+        const fetchedData = await Utils.getMultipleStocksData(stocks, 'alphavantage', {
+          fetchFinancials
+        });
+        
+        // Filter out null responses and ensure valid ticker
+        return fetchedData.filter(x => x && x.ticker);
+        
+      } catch (error) {
+        console.error('❌ Batch fetch failed, falling back to individual requests:', error);
+        
+        // Fallback to individual requests (legacy behavior)
+        const fetchAll = [];
+        stocks.forEach((stock, index) => {
+          const delay = index * 12000; // 12 seconds between each call
+          fetchAll.push(
+            new Promise(resolve => {
+              setTimeout(async () => {
+                try {
+                  const result = await Utils.getStockData(stock, fetchFinancials, true);
+                  resolve(result);
+                } catch (error) {
+                  console.error(`Error fetching ${stock}:`, error);
+                  resolve(null);
+                }
+              }, delay);
+            })
+          );
+        });
+        
+        const fetchedData = await Promise.all(fetchAll);
+        return fetchedData.filter(x => x && x.ticker);
+      }
     }
   };
 

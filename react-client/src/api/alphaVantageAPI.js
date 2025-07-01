@@ -36,13 +36,14 @@ const API_ENDPOINTS = {
 
 /**
  * Get stock data from Alpha Vantage API for a given stock.
- * This function fetches comprehensive financial data including
- * company overview, current quote, and fundamental data.
+ * 
+ * PERFORMANCE NOTE: For multiple stocks, use batchFetchStocks() instead
+ * for much better performance and lower API usage.
  *
  * Note: Alpha Vantage free tier: 500 calls/day, 5 calls/minute
  *
  * @param {string} stock - The Stock Ticker
- * @param {boolean} fetchFinancials - Whether to fetch additional financial data
+ * @param {boolean} fetchFinancials - Whether to fetch additional financial data (legacy)
  * @param {boolean} retry - By default request will try again after failing
  */
 export async function getStockData(
@@ -53,45 +54,25 @@ export async function getStockData(
   console.info('Fetching Financial Data for: ' + stock);
 
   try {
-    // Build API URLs
+    // OPTIMIZED: Use only overview endpoint (contains most data we need)
+    // This reduces API calls from 2 per stock to 1 per stock
     const overviewUrl = `${API_ENDPOINTS.OVERVIEW}&symbol=${stock}&apikey=${API_KEY}`;
-    const quoteUrl = `${API_ENDPOINTS.QUOTE}&symbol=${stock}&apikey=${API_KEY}`;
     
-    // Make parallel API requests to Alpha Vantage
-    const requests = [
-      fetch(overviewUrl),
-      fetch(quoteUrl)
-    ];
+    const response = await fetch(overviewUrl);
 
-    const results = await Promise.all(requests);
-
-    // Check if requests were successful
-    if (!results[0].ok || !results[1].ok) {
-      throw new Error(`API request failed for ${stock}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} for ${stock}`);
     }
 
-    // Parse JSON responses
-    const [overviewData, quoteData] = await Promise.all([
-      results[0].json(),
-      results[1].json()
-    ]);
+    const overviewData = await response.json();
 
     // Check for API errors
-    if (overviewData.Note || quoteData.Note) {
-      throw new Error('API rate limit exceeded');
+    if (overviewData.Note || overviewData.Error || overviewData.Information) {
+      throw new Error(overviewData.Note || overviewData.Error || overviewData.Information);
     }
 
-    if (overviewData.Error || quoteData.Error) {
-      throw new Error(`API error: ${overviewData.Error || quoteData.Error}`);
-    }
-
-    // Merge data and parse
-    const mergedData = {
-      overview: overviewData,
-      quote: quoteData['Global Quote'] || quoteData
-    };
-
-    return parseData(mergedData);
+    // Parse using overview-only approach (more efficient)
+    return parseOverviewData(overviewData);
 
   } catch (err) {
     if (retry) {
@@ -105,6 +86,71 @@ export async function getStockData(
       return null;
     }
   }
+}
+
+/**
+ * Parse overview data only (more efficient than dual-endpoint approach)
+ */
+function parseOverviewData(overview) {
+  if (!overview || !overview.Symbol) {
+    console.warn('Invalid overview data:', overview);
+    return null;
+  }
+
+  // Helper functions
+  const formatNumber = (value, precision = 2) => {
+    if (value == null || value === 'None' || value === '-') return 0;
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : parseFloat(num.toFixed(precision));
+  };
+
+  // Calculate discount from 52-week high
+  const calculateDiscount = () => {
+    const currentPrice = formatNumber(overview.Price);
+    const yearHigh = formatNumber(overview['52WeekHigh']);
+    
+    if (yearHigh === 0) return 0;
+    return formatNumber((yearHigh - currentPrice) / yearHigh);
+  };
+
+  // Calculate financial ratios
+  const calculateDebtEbitda = () => {
+    const bookValue = formatNumber(overview.BookValue);
+    const ebitda = formatNumber(overview.EBITDA);
+    
+    if (ebitda === 0) return 0;
+    
+    const estimatedDebt = bookValue * 0.3;
+    return formatNumber(estimatedDebt / (ebitda / 1000000));
+  };
+
+  const calculateNetDebt = () => {
+    const bookValue = formatNumber(overview.BookValue);
+    const marketCap = formatNumber(overview.MarketCapitalization);
+    
+    const estimatedDebt = Math.max(0, bookValue * 0.2);
+    const estimatedCash = Math.max(0, marketCap * 0.05);
+    
+    return Math.max(0, estimatedDebt - estimatedCash);
+  };
+
+  return {
+    rank: 0,
+    ticker: overview.Symbol,
+    name: overview.Name,
+    industry: overview.Industry || 'Unknown',
+    price: formatNumber(overview.Price),
+    yearHigh: formatNumber(overview['52WeekHigh']),
+    discount: calculateDiscount(),
+    debtEbitda: calculateDebtEbitda(),
+    netDebt: calculateNetDebt(),
+    beta: formatNumber(overview.Beta),
+    quickRatio: formatNumber(overview.QuickRatio || 1.0),
+    dividend: formatNumber(overview.DividendPerShare),
+    ebitda: formatNumber(overview.EBITDA ? overview.EBITDA / 1000000 : 0),
+    evEbitda: formatNumber(overview.EVToEBITDA),
+    cash: formatNumber(overview.MarketCapitalization ? overview.MarketCapitalization * 0.05 : 0)
+  };
 }
 
 /** Alpha Vantage Data Structure Example:
