@@ -1,17 +1,12 @@
-header {
-    display: block;
-    background-color: black;
-    width: 100%;
-    height: 50px;
-    color: white;
+* {
+    box-sizing: border-box;
   }
-  #headerButtons {
-    list-style-type: none;
+  
+  body {
     margin: 0;
     padding: 0;
-  }
-  .navButton {
-    float: left;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    line-height: 1.5;
   }
   footer {
     display: block;

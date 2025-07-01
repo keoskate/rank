@@ -337,17 +337,37 @@ const StockDetailPage = () => {
       Utilities: ['Electric Utilities', 'Water Utilities', 'Gas Utilities'],
     };
 
+    // Generate company names based on ticker and sector
+    const companyPrefixes = {
+      Technology: ['Apex', 'Cyber', 'Digital', 'Quantum', 'Smart', 'Tech'],
+      Healthcare: ['Bio', 'Med', 'Health', 'Care', 'Pharma', 'Life'],
+      'Financial Services': ['Capital', 'Trust', 'Financial', 'Bank', 'Asset', 'Invest'],
+      'Consumer Goods': ['Global', 'Premier', 'Consumer', 'Retail', 'Brand', 'Market'],
+      Energy: ['Power', 'Energy', 'Fuel', 'Green', 'Solar', 'Oil'],
+      Industrial: ['Industrial', 'Manufacturing', 'Steel', 'Heavy', 'Construction', 'Build'],
+      'Real Estate': ['Property', 'Real Estate', 'Development', 'Land', 'Building', 'Estate'],
+      Utilities: ['Utility', 'Water', 'Electric', 'Gas', 'Power', 'Service']
+    };
+
+    const companySuffixes = ['Corp', 'Inc', 'LLC', 'Ltd', 'Co', 'Group', 'Holdings', 'Systems', 'Solutions', 'Technologies'];
+
     const selectedSector = sectors[tickerHash % sectors.length];
     const selectedIndustry =
       industries[selectedSector][
         tickerHash % industries[selectedSector].length
       ];
 
+    // Generate company name
+    const prefix = companyPrefixes[selectedSector][tickerHash % companyPrefixes[selectedSector].length];
+    const suffix = companySuffixes[tickerHash % companySuffixes.length];
+    const companyName = `${prefix} ${suffix}`;
+
     // Generate earnings date (next quarter)
     const nextEarnings = new Date();
     nextEarnings.setDate(nextEarnings.getDate() + (30 + (tickerHash % 60))); // 30-90 days from now
 
     return {
+      name: companyName,
       sector: selectedSector,
       industry: selectedIndustry,
       earningsDate: nextEarnings,
@@ -548,8 +568,16 @@ const StockDetailPage = () => {
   const timeframes = ['1W', '1M', '3M', '6M', '52W', 'YTD'];
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
+    <div style={{ 
+      minHeight: '100vh',
+      backgroundColor: '#f8f9fa'
+    }}>
+      <div style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto', 
+        padding: '24px' 
+      }}>
+        {/* Header */}
       <div
         style={{
           display: 'flex',
@@ -569,9 +597,19 @@ const StockDetailPage = () => {
               marginBottom: '12px',
             }}
           >
-            <h1 style={{ margin: '0', color: '#2c3e50' }}>
-              {stockData.ticker}
-            </h1>
+            <div>
+              <h1 style={{ margin: '0 0 4px 0', color: '#2c3e50' }}>
+                {stockData.ticker}
+              </h1>
+              <h2 style={{ 
+                margin: '0', 
+                fontWeight: '400', 
+                color: '#6c757d',
+                fontSize: '18px'
+              }}>
+                {companyMetadata.name}
+              </h2>
+            </div>
             <span
               style={{
                 fontSize: '20px',
@@ -974,6 +1012,7 @@ const StockDetailPage = () => {
             })}
         </div>
       </div>
+    </div>
     </div>
   );
 };

@@ -20,7 +20,7 @@ function App() {
   return (
     <StockDataProvider>
       <Router>
-        <div>
+        <div style={{ margin: 0, padding: 0 }}>
           {/* Navigation bar - appears on all pages */}
           <NavBar />
           {/* Main routes - using React Router v6 syntax */}
