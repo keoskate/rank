@@ -455,20 +455,11 @@ function ModernStonkBoard() {
   };
 
   const cleanData = stockData => {
-    for (let row in stockData) {
-      stockData[row] = swapKeys(stockData[row]);
-    }
+    // Data already comes with correct field names from unifiedAPI
+    // No need to swap keys anymore
     return stockData;
   };
 
-  const swapKeys = rowItem => {
-    let newRow = {};
-    const goodKeys = Object.keys(params);
-    Object.keys(rowItem).map((key, index) => {
-      newRow[goodKeys[index]] = rowItem[key];
-    });
-    return newRow;
-  };
 
   /**
    * CONDITIONAL COLOR CALCULATION - Statistical-based cell coloring
