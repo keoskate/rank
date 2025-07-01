@@ -20,7 +20,7 @@ function HomePage() {
   const [currentBoard, setCurrentBoard] = useState('stock');
 
   const handleBoardToggle = () => {
-    setCurrentBoard(currentBoard === 'stock' ? 'cef' : 'stock');
+    setCurrentBoard(currentBoard === 'stock' ? 'crypto' : 'stock');
   };
 
   return (
@@ -40,11 +40,11 @@ function HomePage() {
               cursor: 'pointer',
             }}
           >
-            {currentBoard === 'stock' ? 'Switch to CEF' : 'Switch to Stocks'}
+            {currentBoard === 'stock' ? 'Switch to Crypto' : 'Switch to Stocks'}
           </button>
           <span style={{ color: '#666', fontSize: '14px' }}>
             Currently viewing:{' '}
-            {currentBoard === 'stock' ? 'Stock Rankings' : 'CEF Rankings'}
+            {currentBoard === 'stock' ? 'Stock Rankings' : 'Crypto Rankings'}
           </span>
         </div>
       </div>
@@ -53,9 +53,9 @@ function HomePage() {
         <ModernStonkBoard />
       ) : (
         <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-          <h3>CEF Scoreboard</h3>
+          <h3>Crypto Scoreboard</h3>
           <p>
-            Coming soon! The CEF scoreboard will be modernized with the new
+            Coming soon! The Crypto scoreboard will be modernized with the new
             table system.
           </p>
           <p>For now, please use the Stock Rankings.</p>
