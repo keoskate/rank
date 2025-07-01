@@ -13,19 +13,24 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import NavBar from './NavBar';
+import StockDetailPage from './StockDetailPage';
+import StockDataProvider from './StockDataProvider';
 
 function App() {
   return (
-    <Router>
-      <div>
-        {/* Navigation bar - appears on all pages */}
-        <NavBar />
-        {/* Main routes - using React Router v6 syntax */}
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-        </Routes>
-      </div>
-    </Router>
+    <StockDataProvider>
+      <Router>
+        <div>
+          {/* Navigation bar - appears on all pages */}
+          <NavBar />
+          {/* Main routes - using React Router v6 syntax */}
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/stock/:ticker" element={<StockDetailPage />} />
+          </Routes>
+        </div>
+      </Router>
+    </StockDataProvider>
   );
 }
 

@@ -57,15 +57,20 @@ import {
   loadWeightPreferences,
   applyWeightPreferences,
 } from '../utils/weightPreferences';
+import { useNavigate } from 'react-router-dom';
 import {
   loadStockListPreference,
   saveStockListPreference,
 } from '../utils/stockListPreference';
+import { useStockData } from './StockDataProvider';
 
 // Stock list configuration - now managed by stockLists.js
 // Debug mode is now managed by debugPreference.js with localStorage persistence
 
 function ModernStonkBoard() {
+  const { updateStockData } = useStockData();
+  const navigate = useNavigate();
+  
   // State management with hooks
   const [data, setData] = useState([]);
   const [uiData, setUiData] = useState([]);
@@ -140,6 +145,9 @@ function ModernStonkBoard() {
           setData(cleanedData);
           setUiData(cleanedData);
           setLoading(false);
+          
+          // Update context for StockDetailPage
+          updateStockData(cleanedData, params, currentStockList);
         } else {
           // Live mode: Load ALL stocks at once (optimized for unlimited subscription)
           console.info(
@@ -151,6 +159,10 @@ function ModernStonkBoard() {
           setData(cleanedData);
           setUiData(cleanedData);
           setLoading(false);
+          
+          // Update context for StockDetailPage
+          updateStockData(cleanedData, params, currentStockList);
+          
           console.info(
             `✅ Successfully loaded ${allData.length} stocks from "${currentStockList.name}"`
           );
@@ -770,7 +782,37 @@ function ModernStonkBoard() {
         cols.push(
           columnHelper.accessor('ticker', {
             header: 'Ticker',
-            cell: info => info.getValue() ?? '',
+            cell: info => {
+              const ticker = info.getValue() ?? '';
+              return (
+                <button
+                  onClick={() => {
+                    // Navigate to stock detail page
+                    navigate(`/stock/${ticker}`);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#007bff',
+                    cursor: 'pointer',
+                    fontSize: 'inherit',
+                    fontWeight: '600',
+                    textDecoration: 'underline',
+                    padding: '0',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = '#0056b3';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = '#007bff';
+                  }}
+                  title={`View detailed analysis for ${ticker}`}
+                >
+                  {ticker}
+                </button>
+              );
+            },
             size: 60,
             meta: {
               sticky: true,
