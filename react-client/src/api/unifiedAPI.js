@@ -265,7 +265,26 @@ function parseAlphaVantageData(overview) {
     dividend: formatNumber(overview.DividendPerShare),
     ebitda: formatNumber(overview.EBITDA ? overview.EBITDA / 1000000 : 0),
     evEbitda: formatNumber(overview.EVToEBITDA),
-    cash: formatNumber(overview.MarketCapitalization ? overview.MarketCapitalization * 0.05 : 0)
+    cash: formatNumber(overview.MarketCapitalization ? overview.MarketCapitalization * 0.05 : 0),
+    
+    // Data quality indicators for debugging/validation
+    _dataQuality: {
+      source: 'Alpha Vantage',
+      estimationType: 'mixed',
+      metrics: {
+        price: overview.Price ? 'real' : 'missing',
+        yearHigh: overview['52WeekHigh'] ? 'real' : 'missing',
+        discount: 'calculated',
+        debtEbitda: 'calculated',
+        netDebt: 'estimated',
+        beta: overview.Beta ? 'real' : 'missing',
+        quickRatio: overview.QuickRatio ? 'real' : 'estimated',
+        dividend: overview.DividendPerShare ? 'real' : 'missing',
+        ebitda: overview.EBITDA ? 'real' : 'missing',
+        evEbitda: overview.EVToEBITDA ? 'real' : 'missing',
+        cash: 'estimated'
+      }
+    }
   };
 }
 
@@ -284,26 +303,37 @@ function parsePolygonData(symbol, marketData, financialData, dividendData) {
   // Estimate financial ratios (would use real financial data in production)
   const estimateFinancialRatios = () => {
     // Generate realistic but varying financial ratios based on stock characteristics
-    const priceVolatility = Math.sin(symbol.charCodeAt(0) + symbol.charCodeAt(1)) * 0.5 + 1;
-    const marketCapProxy = currentPrice * volume;
     const symbolHash = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     
+    // Estimate market cap more realistically (price * shares outstanding estimate)
+    const estimatedShares = 100000000 + (symbolHash % 500000000); // 100M - 600M shares
+    const estimatedMarketCap = currentPrice * estimatedShares;
+    
+    // Industry-based debt ratios (varies by company)
+    const industryDebtRatio = 0.3 + (symbolHash % 40) / 100; // Range: 0.3 - 0.7
+    const estimatedDebt = estimatedMarketCap * industryDebtRatio;
+    const estimatedCash = estimatedMarketCap * (0.10 + (symbolHash % 20) / 200); // 10-20% cash ratio
+    
+    // EBITDA as percentage of market cap (varies by profitability)
+    const ebitdaMargin = 0.05 + (symbolHash % 25) / 1000; // 5-7.5% of market cap
+    const estimatedEbitda = estimatedMarketCap * ebitdaMargin;
+    
     return {
-      debtEbitda: formatNumber(1.5 + (symbolHash % 30) / 10), // Range: 1.5 - 4.5
-      netDebt: formatNumber(marketCapProxy * 0.0001 * priceVolatility),
+      debtEbitda: formatNumber(estimatedDebt / estimatedEbitda), // Calculated ratio
+      netDebt: formatNumber(Math.max(0, estimatedDebt - estimatedCash)), // Can be 0 if cash > debt
       quickRatio: formatNumber(0.8 + (symbolHash % 20) / 25), // Range: 0.8 - 1.6
       beta: formatNumber(0.5 + (symbolHash % 15) / 10), // Range: 0.5 - 2.0
-      ebitda: formatNumber(marketCapProxy * 0.0001 * (1 + (symbolHash % 10) / 20)),
-      evEbitda: formatNumber(8 + (symbolHash % 20)), // Range: 8 - 28
-      cash: formatNumber(marketCapProxy * 0.00005 * (1 + (symbolHash % 15) / 30))
+      ebitda: formatNumber(estimatedEbitda / 1000000), // Convert to millions
+      evEbitda: formatNumber((estimatedMarketCap + estimatedDebt - estimatedCash) / estimatedEbitda), // EV/EBITDA formula
+      cash: formatNumber(estimatedCash / 1000000) // Convert to millions
     };
   };
 
   const ratios = estimateFinancialRatios();
 
-  // Calculate dynamic year high and discount based on stock characteristics
+  // Calculate realistic year high and discount based on stock characteristics
   const symbolHash = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const yearHighMultiplier = 1.1 + (symbolHash % 50) / 100; // Range: 1.1 - 1.6
+  const yearHighMultiplier = 1.2 + (symbolHash % 80) / 100; // Range: 1.2 - 2.0 (more realistic)
   const calculatedYearHigh = formatNumber(currentPrice * yearHighMultiplier);
   const discountPercent = formatNumber((calculatedYearHigh - currentPrice) / calculatedYearHigh);
 
@@ -322,7 +352,26 @@ function parsePolygonData(symbol, marketData, financialData, dividendData) {
     dividend: dividendData ? formatNumber(dividendData.cash_amount) : 0,
     ebitda: ratios.ebitda,
     evEbitda: ratios.evEbitda,
-    cash: ratios.cash
+    cash: ratios.cash,
+    
+    // Data quality indicators for debugging/validation
+    _dataQuality: {
+      source: 'Polygon.io',
+      estimationType: 'calculated',
+      metrics: {
+        price: 'real',
+        yearHigh: 'estimated',
+        discount: 'estimated', 
+        debtEbitda: 'estimated',
+        netDebt: 'estimated',
+        beta: 'estimated',
+        quickRatio: 'estimated',
+        dividend: dividendData ? 'real' : 'estimated',
+        ebitda: 'estimated',
+        evEbitda: 'estimated',
+        cash: 'estimated'
+      }
+    }
   };
 }
 
