@@ -29,7 +29,10 @@ import {
 } from '@tanstack/react-table';
 import { math } from '../utils/simpleMath';
 import WeightSlider from './WeightSlider';
-import BoardControls from './BoardControls';
+import TabNavigation from './TabNavigation';
+import RankingDashboard from './RankingDashboard';
+import ConfigPanel from './ConfigPanel';
+import InvestTab from './InvestTab';
 import * as Utils from './StockUtils';
 import {
   cacheOrFetch,
@@ -85,6 +88,7 @@ function ModernStonkBoard() {
   const [backgroundFetching, setBackgroundFetching] = useState(false);
   const [currentStockListId, setCurrentStockListId] =
     useState(DEFAULT_STOCK_LIST); // New: current stock list
+  const [activeTab, setActiveTab] = useState('ranking'); // Tab management
 
   // Get current stock list configuration
   const currentStockList = getStockList(currentStockListId);
@@ -860,100 +864,55 @@ function ModernStonkBoard() {
     return <div>Loading stock data...</div>;
   }
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'ranking':
+        return (
+          <RankingDashboard
+            params={params}
+            uiData={uiData}
+            table={table}
+            loading={loading}
+            currentStockList={currentStockList}
+            debugMode={debugMode}
+            backgroundFetching={backgroundFetching}
+            apiInfo={Utils.getApiInfo()}
+            onWeightChange={handleWeightChange}
+            onMultiplierClick={handleMultiplierClick}
+            onResetWeights={handleResetWeights}
+          />
+        );
+      case 'config':
+        return (
+          <ConfigPanel
+            debugMode={debugMode}
+            onDebugModeToggle={handleDebugModeToggle}
+            onCacheRefresh={handleCacheRefresh}
+            currentStockListId={currentStockListId}
+            onStockListChange={handleStockListChange}
+            currentStockList={currentStockList}
+            onFullDataScoreboard={handleFullDataScoreboard}
+            onRelativeScoreboard={handleRelativeScoreboard}
+            onStdScoreboard={handleStdScoreboard}
+          />
+        );
+      case 'invest':
+        return <InvestTab />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div>
-      {/* Board Controls with Debug Toggle, Smart Cache, and Stock List Selection */}
-      <BoardControls
-        params={params}
-        sumOfWeights={sumOfWeights}
-        onWeightChange={handleWeightChange}
-        onMultiplierClick={handleMultiplierClick}
-        onFullDataScoreboard={handleFullDataScoreboard}
-        onRelativeScoreboard={handleRelativeScoreboard}
-        onStdScoreboard={handleStdScoreboard}
-        debugMode={debugMode}
-        onDebugModeToggle={handleDebugModeToggle}
-        onCacheRefresh={handleCacheRefresh}
-        currentStockListId={currentStockListId}
-        onStockListChange={handleStockListChange}
-        currentStockList={currentStockList}
-        onResetWeights={handleResetWeights}
+      {/* Tab Navigation */}
+      <TabNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th
-                    key={header.id}
-                    style={{
-                      border: '1px solid #ccc',
-                      padding: '8px',
-                      backgroundColor: '#f5f5f5',
-                      cursor: header.column.getCanSort()
-                        ? 'pointer'
-                        : 'default',
-                      userSelect: 'none',
-                    }}
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                    {{
-                      asc: ' 🔼',
-                      desc: ' 🔽',
-                    }[header.column.getIsSorted()] ?? null}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map(row => (
-              <tr key={row.id}>
-                {row.getVisibleCells().map(cell => (
-                  <td
-                    key={cell.id}
-                    style={{
-                      border: '1px solid #ccc',
-                      padding: '4px', // Reduced padding so cell content fills better
-                    }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div style={{ marginTop: 20, fontSize: '12px', color: '#666' }}>
-        Showing {table.getRowModel().rows.length} stocks from{' '}
-        <strong style={{ color: currentStockList.color }}>
-          {currentStockList.name}
-        </strong>{' '}
-        • Mode: <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong>
-        {backgroundFetching && !debugMode && (
-          <span style={{ color: '#007bff', fontWeight: 'bold' }}>
-            {' '}
-            • 🔄 Refreshing in background...
-          </span>
-        )}
-        {!debugMode && (
-          <span style={{ color: '#28a745' }}>
-            {' '}
-            • ⚡ Fast loading with background updates
-          </span>
-        )}
-        <br />
-        API: <strong>{Utils.getApiInfo().name}</strong> (
-        {Utils.getApiInfo().cost}) • Powered by TanStack React Table
-      </div>
+      {/* Tab Content */}
+      {renderTabContent()}
     </div>
   );
 }
