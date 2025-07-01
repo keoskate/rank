@@ -11,16 +11,11 @@
  */
 
 import WeightSlider from '../Components/WeightSlider';
+import WeightManager from '../Components/WeightManager';
 import { getAllCacheInfo, clearCache, clearAllCache } from '../utils/cacheManager';
 import { getApiInfo } from '../Components/StockUtils';
 import { getStockListNames } from '../config/stockLists';
 import { getDebugModeInfo } from '../utils/debugPreference';
-import { 
-  resetToDefaultWeights, 
-  getCurrentTotalWeight, 
-  isUsingDefaultWeights,
-  DEFAULT_WEIGHTS 
-} from '../config/stockColumns';
 import { useState } from 'react';
 
 const BoardControls = ({
@@ -51,9 +46,6 @@ const BoardControls = ({
   // Get debug mode info for better UI
   const debugModeInfo = getDebugModeInfo(debugMode);
 
-  // Weight management info
-  const usingDefaultWeights = isUsingDefaultWeights(params);
-  const totalWeight = getCurrentTotalWeight(params);
 
   // Cache management functions
   const refreshCacheInfo = () => {
@@ -83,12 +75,6 @@ const BoardControls = ({
     }
   };
 
-  // Weight management functions
-  const handleResetWeights = () => {
-    if (onResetWeights) {
-      onResetWeights();
-    }
-  };
 
   // Format duration for display
   const formatDuration = (ms) => {
@@ -104,110 +90,16 @@ const BoardControls = ({
     }
   };
 
-  // Render weight sliders for active parameters
-  const renderWeightSliders = () => {
-    return Object.keys(params).map(key => {
-      if (params[key].multiplier !== 0) {
-        return (
-          <span
-            key={key}
-            style={{ display: 'inline-block', margin: 5, width: 120 }}
-          >
-            <WeightSlider
-              label={key}
-              name={key}
-              value={params[key].weight}
-              onChange={onWeightChange}
-            />
-            <button
-              name={key}
-              onClick={onMultiplierClick}
-              style={{
-                marginLeft: 5,
-                padding: '2px 8px',
-                fontSize: '12px',
-                border: '1px solid #ccc',
-                borderRadius: '3px',
-                backgroundColor:
-                  params[key].multiplier === 1 ? '#d4edda' : '#f8d7da',
-                color: params[key].multiplier === 1 ? '#155724' : '#721c24',
-                cursor: 'pointer',
-              }}
-            >
-              {params[key].multiplier === 1 ? '+1' : '-1'}
-            </button>
-          </span>
-        );
-      }
-      return null;
-    });
-  };
 
   return (
     <div>
-      {/* Weight Controls */}
-      <div style={{ marginBottom: 20 }}>
-        <h3>Weight Controls (Total: {sumOfWeights.toFixed(2)})</h3>
-        <div
-          style={{
-            padding: '10px',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '5px',
-            border: '1px solid #dee2e6',
-          }}
-        >
-          {renderWeightSliders()}
-        </div>
-        {sumOfWeights > 1.0 && (
-          <div
-            style={{
-              color: '#dc3545',
-              fontSize: '14px',
-              marginTop: '5px',
-              fontWeight: 'bold',
-            }}
-          >
-            ⚠️ Warning: Total weight exceeds 1.0
-          </div>
-        )}
-        
-        {/* Weight Status and Reset Controls */}
-        <div style={{ 
-          marginTop: '10px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          gap: '15px'
-        }}>
-          <div style={{ fontSize: '12px', color: '#6c757d' }}>
-            <div>
-              Status: {usingDefaultWeights ? '✅ Using default weights' : '⚡ Custom weights'} 
-            </div>
-            <div style={{ marginTop: '2px' }}>
-              Strategy: Value investing (40% discount, 45% financial health, 5% income)
-            </div>
-          </div>
-          
-          {!usingDefaultWeights && (
-            <button
-              onClick={handleResetWeights}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-              }}
-              title="Reset to original tested weight configuration"
-            >
-              🔄 Reset to Defaults
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Modern Weight Management */}
+      <WeightManager
+        params={params}
+        onWeightChange={onWeightChange}
+        onMultiplierClick={onMultiplierClick}
+        onResetWeights={onResetWeights}
+      />
 
       {/* Debug Mode Toggle - Enhanced with clear indicators */}
       <div style={{ marginBottom: 20 }}>

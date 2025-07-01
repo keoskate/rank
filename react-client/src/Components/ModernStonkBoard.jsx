@@ -50,15 +50,13 @@ import {
   getDebugModeInfo,
 } from '../utils/debugPreference';
 import { resetToDefaultWeights } from '../config/stockColumns';
+import { 
+  loadWeightPreferences, 
+  applyWeightPreferences 
+} from '../utils/weightPreferences';
 
 // Stock list configuration - now managed by stockLists.js
 // Debug mode is now managed by debugPreference.js with localStorage persistence
-
-const THROTTLE = {
-  SMALL: 100,
-  MEDIUM: 500,
-  LARGE: 1000,
-};
 
 function ModernStonkBoard() {
   // State management with hooks
@@ -66,14 +64,19 @@ function ModernStonkBoard() {
   const [uiData, setUiData] = useState([]);
   const [rGrid, setRGrid] = useState([]);
   const [sGrid, setSGrid] = useState([]);
-  const [params, setParams] = useState(Utils.STOCK_COLUMNS);
+  const [params, setParams] = useState(() => {
+    // Load saved weight preferences on initialization
+    const savedWeights = loadWeightPreferences();
+    return savedWeights ? applyWeightPreferences(Utils.STOCK_COLUMNS, savedWeights) : Utils.STOCK_COLUMNS;
+  });
   const [altGrid, setAltGrid] = useState(false);
   const [currentView, setCurrentView] = useState('full'); // 'full', 'relative', 'std'
   const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
   const [debugMode, setDebugMode] = useState(() => getDebugPreference()); // Load saved preference
   const [backgroundFetching, setBackgroundFetching] = useState(false);
-  const [currentStockListId, setCurrentStockListId] = useState(DEFAULT_STOCK_LIST); // New: current stock list
+  const [currentStockListId, setCurrentStockListId] =
+    useState(DEFAULT_STOCK_LIST); // New: current stock list
 
   // Get current stock list configuration
   const currentStockList = getStockList(currentStockListId);
@@ -101,8 +104,13 @@ function ModernStonkBoard() {
 
         if (debugMode) {
           // Debug mode: Load all stocks from selected list (uses cache-first approach to save quota)
-          console.info(`🔒 Debug mode: Loading all ${stockSymbols.length} stocks from "${currentStockList.name}" (cache-first to save quota)`);
-          const initialData = await getFinancialData(stockSymbols, getFinancials);
+          console.info(
+            `🔒 Debug mode: Loading all ${stockSymbols.length} stocks from "${currentStockList.name}" (cache-first to save quota)`
+          );
+          const initialData = await getFinancialData(
+            stockSymbols,
+            getFinancials
+          );
           const cleanedData = cleanData(initialData);
           setupDataStructures(cleanedData);
           setData(cleanedData);
@@ -119,7 +127,9 @@ function ModernStonkBoard() {
           setData(cleanedData);
           setUiData(cleanedData);
           setLoading(false);
-          console.info(`✅ Successfully loaded ${allData.length} stocks from "${currentStockList.name}"`);
+          console.info(
+            `✅ Successfully loaded ${allData.length} stocks from "${currentStockList.name}"`
+          );
         }
       } catch (error) {
         console.error('Error initializing data:', error);
@@ -224,36 +234,36 @@ function ModernStonkBoard() {
         });
       }
     } catch (error) {
-        console.error(
-          '❌ Batch fetch failed, falling back to individual requests:',
-          error
+      console.error(
+        '❌ Batch fetch failed, falling back to individual requests:',
+        error
+      );
+
+      // Fallback to individual requests (legacy behavior)
+      const fetchAll = [];
+      stocks.forEach((stock, index) => {
+        const delay = index * 12000; // 12 seconds between each call
+        fetchAll.push(
+          new Promise(resolve => {
+            setTimeout(async () => {
+              try {
+                const result = await Utils.getStockData(
+                  stock,
+                  fetchFinancials,
+                  true
+                );
+                resolve(result);
+              } catch (error) {
+                console.error(`Error fetching ${stock}:`, error);
+                resolve(null);
+              }
+            }, delay);
+          })
         );
+      });
 
-        // Fallback to individual requests (legacy behavior)
-        const fetchAll = [];
-        stocks.forEach((stock, index) => {
-          const delay = index * 12000; // 12 seconds between each call
-          fetchAll.push(
-            new Promise(resolve => {
-              setTimeout(async () => {
-                try {
-                  const result = await Utils.getStockData(
-                    stock,
-                    fetchFinancials,
-                    true
-                  );
-                  resolve(result);
-                } catch (error) {
-                  console.error(`Error fetching ${stock}:`, error);
-                  resolve(null);
-                }
-              }, delay);
-            })
-          );
-        });
-
-        const fetchedData = await Promise.all(fetchAll);
-        return fetchedData.filter(x => x && x.ticker);
+      const fetchedData = await Promise.all(fetchAll);
+      return fetchedData.filter(x => x && x.ticker);
     }
   };
 
@@ -461,7 +471,6 @@ function ModernStonkBoard() {
     return stockData;
   };
 
-
   /**
    * CONDITIONAL COLOR CALCULATION - Statistical-based cell coloring
    *
@@ -633,13 +642,20 @@ function ModernStonkBoard() {
     const newDebugMode = !debugMode;
     setDebugMode(newDebugMode);
     setDebugPreference(newDebugMode); // Save to localStorage
-    console.info(`🔧 DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'} (preference saved)`);
+    console.info(
+      `🔧 DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'} (preference saved)`
+    );
   };
 
   // Stock list switching handler
-  const handleStockListChange = (newStockListId) => {
-    if (isValidStockListId(newStockListId) && newStockListId !== currentStockListId) {
-      console.info(`📋 Switching to stock list: ${getStockList(newStockListId).name}`);
+  const handleStockListChange = newStockListId => {
+    if (
+      isValidStockListId(newStockListId) &&
+      newStockListId !== currentStockListId
+    ) {
+      console.info(
+        `📋 Switching to stock list: ${getStockList(newStockListId).name}`
+      );
       setCurrentStockListId(newStockListId);
       setLoading(true); // Will trigger reload via useEffect dependency
     }
@@ -676,7 +692,10 @@ function ModernStonkBoard() {
         clearCache(cacheKey);
       }
 
-      const initialData = await getFinancialData(stocksToRefresh, getFinancials);
+      const initialData = await getFinancialData(
+        stocksToRefresh,
+        getFinancials
+      );
       const cleanedData = debugMode ? initialData : cleanData(initialData);
 
       setupDataStructures(cleanedData);
