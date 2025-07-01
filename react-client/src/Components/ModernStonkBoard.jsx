@@ -29,7 +29,7 @@ import {
 } from '@tanstack/react-table';
 import * as math from 'mathjs';
 import WeightSlider from './WeightSlider';
-import BoardControls from '../components/BoardControls';
+import BoardControls from './BoardControls';
 import * as cachedData20 from '../stock-data_20';
 import * as Utils from './StockUtils';
 

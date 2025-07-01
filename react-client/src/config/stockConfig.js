@@ -69,16 +69,16 @@ export const APP_CONFIG = {
 };
 
 // Environment-specific configurations
-export const getStockConfig = (environment = 'development') => {
+export const getStockConfiggetStockConfig = (environment = 'development') => {
   const configs = {
     development: {
       ...APP_CONFIG,
-      DEBUG_MODE: true,
+      DEBUG_MODE: false,
       ACTIVE_STOCKS: TEST_STOCKS,
     },
     staging: {
       ...APP_CONFIG,
-      DEBUG_MODE: true,
+      DEBUG_MODE: false,
       ACTIVE_STOCKS: STOCK_GROUPS.KEO,
     },
     production: {
