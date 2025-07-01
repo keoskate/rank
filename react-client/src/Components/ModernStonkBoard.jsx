@@ -164,67 +164,66 @@ function ModernStonkBoard() {
     const stocksKey = stocks.sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_${fetchFinancials ? 'with_financials' : 'basic'}`;
 
+    // Try smart cache first in debug mode
     if (debugMode) {
-      // Try smart cache first, fallback to static cache
       const smartCached = getCachedStockData(cacheKey);
       if (smartCached) {
         console.info(`📦 Using smart cache for ${stocks.length} stocks`);
         return smartCached;
       }
-
       console.info(
-        `📁 No smart cache found for ${stocks.length} stocks`
+        `📁 No cache found - fetching ${stocks.length} stocks in debug mode (quota-saving)`
       );
-      return []; // Return empty array if no cache available in debug mode
-    } else {
-      try {
-        // GET API INFO FIRST - outside the fetchFunction
-        const apiInfo = Utils.getApiInfo();
-        console.info(
-          `🚀 Using ${apiInfo.name} (${apiInfo.cost}) - Configure in config/apiConfig.js`
+    }
+
+    try {
+      // GET API INFO FIRST - outside the fetchFunction
+      const apiInfo = Utils.getApiInfo();
+      console.info(
+        `🚀 Using ${apiInfo.name} (${apiInfo.cost}) - Configure in config/apiConfig.js`
+      );
+
+      // Smart cache-or-fetch: tries cache first, fetches if needed, caches good results
+      const fetchFunction = async () => {
+        const fetchedData = await Utils.getMultipleStocksData(
+          stocks,
+          null, // Provider determined by config
+          {
+            fetchFinancials,
+          }
         );
 
-        // Smart cache-or-fetch: tries cache first, fetches if needed, caches good results
-        const fetchFunction = async () => {
-          const fetchedData = await Utils.getMultipleStocksData(
-            stocks,
-            null, // Provider determined by config
-            {
-              fetchFinancials,
-            }
-          );
+        // Filter out null responses and ensure valid ticker
+        return fetchedData.filter(x => x && x.ticker);
+      };
 
-          // Filter out null responses and ensure valid ticker
-          return fetchedData.filter(x => x && x.ticker);
-        };
-
-        // Use background refresh for real-time updates when not in debug mode
-        if (!debugMode) {
-          return await cacheWithBackgroundRefresh(
-            cacheKey,
-            fetchFunction,
-            freshData => {
-              // Background update callback - update table with fresh data
-              console.info('🔄 Updating table with fresh background data...');
-              setBackgroundFetching(false);
-              const cleanedData = cleanData(freshData);
-              setupDataStructures(cleanedData);
-              setData(cleanedData);
-              setUiData(cleanedData);
-            },
-            {
-              provider: apiInfo.provider,
-              forceRefresh: fetchFinancials,
-            }
-          );
-        } else {
-          // Debug mode - use standard cache behavior
-          return await cacheOrFetch(cacheKey, fetchFunction, {
+      // Use background refresh for real-time updates when not in debug mode
+      if (!debugMode) {
+        return await cacheWithBackgroundRefresh(
+          cacheKey,
+          fetchFunction,
+          freshData => {
+            // Background update callback - update table with fresh data
+            console.info('🔄 Updating table with fresh background data...');
+            setBackgroundFetching(false);
+            const cleanedData = cleanData(freshData);
+            setupDataStructures(cleanedData);
+            setData(cleanedData);
+            setUiData(cleanedData);
+          },
+          {
             provider: apiInfo.provider,
             forceRefresh: fetchFinancials,
-          });
-        }
-      } catch (error) {
+          }
+        );
+      } else {
+        // Debug mode - use standard cache behavior, but still fetch if no cache
+        return await cacheOrFetch(cacheKey, fetchFunction, {
+          provider: apiInfo.provider,
+          forceRefresh: fetchFinancials,
+        });
+      }
+    } catch (error) {
         console.error(
           '❌ Batch fetch failed, falling back to individual requests:',
           error
@@ -255,7 +254,6 @@ function ModernStonkBoard() {
 
         const fetchedData = await Promise.all(fetchAll);
         return fetchedData.filter(x => x && x.ticker);
-      }
     }
   };
 
