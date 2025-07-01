@@ -8,25 +8,25 @@
  * 
  * CRITICAL PATH: This component defines the overall app structure
  * and routing. Changes here affect the entire application layout.
+ * UPDATED: React Router v6 + React 18 functional component
  */
-import React, { Component } from 'react';
-import { BrowserRouter as Router, Route, Link} from 'react-router-dom';
-import { browserHistory } from 'react-router';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import NavBar from './NavBar';
 
-class App extends Component {
-  render() {
-    return (
-      <Router>
-        <div>
-          {/* Navigation bar - appears on all pages */}
-          <NavBar />
-          {/* Main route - currently only home page */}
-          <Route name="home" exact path="/" component={HomePage} />
-        </div>
-      </Router>
-    )
-  }
+function App() {
+  return (
+    <Router>
+      <div>
+        {/* Navigation bar - appears on all pages */}
+        <NavBar />
+        {/* Main routes - using React Router v6 syntax */}
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+        </Routes>
+      </div>
+    </Router>
+  );
 }
+
 export default App;
