@@ -90,7 +90,10 @@ function ModernStonkBoard() {
   const [altGrid, setAltGrid] = useState(false);
   const [currentView, setCurrentView] = useState('full'); // 'full', 'relative', 'std'
   const [loading, setLoading] = useState(true);
-  const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
+  const [sorting, setSorting] = useState(() => {
+    // Only set rank sorting if rank column exists in data
+    return [{ id: 'rank', desc: false }];
+  });
   const [debugMode, setDebugMode] = useState(() => getDebugPreference()); // Load saved preference
   const [backgroundFetching, setBackgroundFetching] = useState(false);
   const [currentStockListId, setCurrentStockListId] = useState(() =>
@@ -184,6 +187,9 @@ function ModernStonkBoard() {
         default:
           setUiData([...data]);
       }
+    } else {
+      // Ensure uiData is always an array
+      setUiData([]);
     }
   }, [rGrid, sGrid, data, currentView]);
 
@@ -743,7 +749,8 @@ function ModernStonkBoard() {
 
     Object.keys(params).forEach(key => {
       const param = params[key];
-      const isVisible = columnVisibility[key] !== false; // Default to visible
+      const isRequired = key === 'rank' || key === 'ticker';
+      const isVisible = isRequired || columnVisibility[key] !== false; // Required columns always visible
 
       if (!isVisible) return; // Skip hidden columns
 
@@ -751,7 +758,7 @@ function ModernStonkBoard() {
         cols.push(
           columnHelper.accessor('rank', {
             header: 'Rank',
-            cell: info => info.getValue(),
+            cell: info => info.getValue() ?? 0,
             size: 50,
             meta: {
               sticky: false,
@@ -763,7 +770,7 @@ function ModernStonkBoard() {
         cols.push(
           columnHelper.accessor('ticker', {
             header: 'Ticker',
-            cell: info => info.getValue(),
+            cell: info => info.getValue() ?? '',
             size: 60,
             meta: {
               sticky: true,
@@ -865,7 +872,7 @@ function ModernStonkBoard() {
 
   // Create table instance
   const table = useReactTable({
-    data: uiData,
+    data: uiData || [], // Ensure data is never undefined
     columns,
     state: {
       sorting,
@@ -885,7 +892,7 @@ function ModernStonkBoard() {
 
   // Note: Weight slider rendering moved to BoardControls component
 
-  if (loading) {
+  if (loading || !uiData || uiData.length === 0) {
     return <div>Loading stock data...</div>;
   }
 

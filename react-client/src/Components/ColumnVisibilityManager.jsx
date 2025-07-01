@@ -57,6 +57,12 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
   }, [availableColumns, selectedCategory, searchTerm, columnCategories, params]);
 
   const handleToggleColumn = (columnKey) => {
+    // Don't allow hiding required columns
+    const isRequired = columnKey === 'rank' || columnKey === 'ticker';
+    if (isRequired && columnVisibility[columnKey] !== false) {
+      return; // Don't hide required columns
+    }
+    
     const newVisibility = {
       ...columnVisibility,
       [columnKey]: !columnVisibility[columnKey]
