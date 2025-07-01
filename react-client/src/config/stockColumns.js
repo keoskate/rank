@@ -196,43 +196,68 @@ export const STOCK_COLUMNS = {
     average: undefined,
     stdDev: undefined,
   },
-  // "cap": {
-  //   label: 'Cap',
-  //   type: '',
-  //   size: COLUMN_SIZE.large,
-  //   weight: 0,
-  //   multiplier: 1,
-  //   average: undefined,
-  //   stdDev: undefined
-  // },
 
-  // "shortDebt": {
-  //     label: 'Short Term Debt',
-  //     type: 'money',
-  //     size: COLUMN_SIZE.medium,
-  //     weight: 0,
-  //     multiplier: 1,
-  //     average: undefined,
-  //     stdDev: undefined
-  // },
-  // "sectorTrend": {
-  //     label: 'Sector Trend',
-  //     type: '',
-  //     size: COLUMN_SIZE.large,
-  //     weight: 0,
-  //     multiplier: 1,
-  //     average: undefined,
-  //     stdDev: undefined
-  // },
-  // "peRatio": {
-  //     label: 'PE Ratio',
-  //     type: '',
-  //     size: COLUMN_SIZE.large,
-  //     weight: 0,
-  //     multiplier: 1,
-  //     average: undefined,
-  //     stdDev: undefined
-  // },
+  // --- REQUESTED METRICS
+  rsi: {
+    label: 'RSI',
+    type: '',
+    size: COLUMN_SIZE.small,
+    weight: 0,
+    multiplier: -1, // Lower RSI often indicates oversold (better buy opportunity)
+    average: undefined,
+    stdDev: undefined,
+  },
+  
+  impliedVolatility: {
+    label: 'Implied Vol',
+    type: 'percentage',
+    size: COLUMN_SIZE.medium,
+    weight: 0,
+    multiplier: -1, // Lower volatility typically preferred for value investing
+    average: undefined,
+    stdDev: undefined,
+  },
+  
+  peRatio: {
+    label: 'PE Ratio',
+    type: '',
+    size: COLUMN_SIZE.medium,
+    weight: 0,
+    multiplier: -1, // Lower PE often indicates better value
+    average: undefined,
+    stdDev: undefined,
+  },
+
+  // --- ADDITIONAL CRITICAL METRICS
+  roe: {
+    label: 'ROE',
+    type: 'percentage',
+    size: COLUMN_SIZE.small,
+    weight: 0,
+    multiplier: 1, // Higher ROE indicates better management efficiency 
+    average: undefined,
+    stdDev: undefined,
+  },
+
+  freeCashFlowYield: {
+    label: 'FCF Yield',
+    type: 'percentage', 
+    size: COLUMN_SIZE.medium,
+    weight: 0,
+    multiplier: 1, // Higher FCF yield indicates better cash generation
+    average: undefined,
+    stdDev: undefined,
+  },
+
+  priceToBook: {
+    label: 'P/B Ratio',
+    type: '',
+    size: COLUMN_SIZE.medium,
+    weight: 0,
+    multiplier: -1, // Lower P/B often indicates better value relative to assets
+    average: undefined,
+    stdDev: undefined,
+  },
 };
 
 /**
