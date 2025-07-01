@@ -1,6 +1,6 @@
 /**
  * WEIGHT PREFERENCES MANAGEMENT
- * 
+ *
  * Handles saving, loading, and managing custom weight configurations
  * with localStorage persistence and validation.
  */
@@ -13,20 +13,20 @@ const WEIGHT_PREFERENCES_KEY = 'keo-stocks-weight-preferences';
  */
 export function saveWeightPreferences(params) {
   const weights = {};
-  
+
   // Extract only the weights from params
   Object.keys(params).forEach(key => {
     if (params[key] && typeof params[key].weight === 'number') {
       weights[key] = params[key].weight;
     }
   });
-  
+
   const preferences = {
     weights,
     timestamp: Date.now(),
-    version: '1.0'
+    version: '1.0',
   };
-  
+
   try {
     localStorage.setItem(WEIGHT_PREFERENCES_KEY, JSON.stringify(preferences));
     console.info('💾 Weight preferences saved to localStorage');
@@ -45,15 +45,15 @@ export function loadWeightPreferences() {
   try {
     const stored = localStorage.getItem(WEIGHT_PREFERENCES_KEY);
     if (!stored) return null;
-    
+
     const preferences = JSON.parse(stored);
-    
+
     // Validate the structure
     if (!preferences.weights || !preferences.timestamp) {
       console.warn('Invalid weight preferences structure, ignoring');
       return null;
     }
-    
+
     console.info('📂 Weight preferences loaded from localStorage');
     return preferences.weights;
   } catch (error) {
@@ -84,18 +84,18 @@ export function clearWeightPreferences() {
  */
 export function applyWeightPreferences(params, savedWeights) {
   if (!savedWeights) return params;
-  
+
   const updatedParams = { ...params };
-  
+
   Object.keys(savedWeights).forEach(key => {
     if (updatedParams[key] && typeof savedWeights[key] === 'number') {
       updatedParams[key] = {
         ...updatedParams[key],
-        weight: savedWeights[key]
+        weight: savedWeights[key],
       };
     }
   });
-  
+
   return updatedParams;
 }
 
@@ -107,13 +107,13 @@ export function getWeightPreferencesInfo() {
   try {
     const stored = localStorage.getItem(WEIGHT_PREFERENCES_KEY);
     if (!stored) return { exists: false };
-    
+
     const preferences = JSON.parse(stored);
     return {
       exists: true,
       timestamp: preferences.timestamp,
       lastSaved: new Date(preferences.timestamp).toLocaleString(),
-      version: preferences.version || '1.0'
+      version: preferences.version || '1.0',
     };
   } catch (error) {
     return { exists: false, error: true };

@@ -31,8 +31,8 @@ export const useRanking = initialParams => {
    */
   const setupDataStructures = useCallback(
     stockData => {
-      let relativeGrid = initGrid(stockData, params);
-      let stdGrid = initGrid(stockData, params);
+      const relativeGrid = initGrid(stockData, params);
+      const stdGrid = initGrid(stockData, params);
 
       rankCols(relativeGrid, stockData, params);
       rankColsStd(stdGrid, stockData, params, setParams);

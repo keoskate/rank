@@ -1,6 +1,6 @@
 /**
  * STOCK DATA PROVIDER - Shared data context for the application
- * 
+ *
  * Provides stock data, rankings, and configurations to components
  * that need access to the complete dataset for analysis.
  */

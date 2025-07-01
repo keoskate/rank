@@ -70,7 +70,7 @@ import { useStockData } from './StockDataProvider';
 function ModernStonkBoard() {
   const { updateStockData } = useStockData();
   const navigate = useNavigate();
-  
+
   // State management with hooks
   const [data, setData] = useState([]);
   const [uiData, setUiData] = useState([]);
@@ -145,7 +145,7 @@ function ModernStonkBoard() {
           setData(cleanedData);
           setUiData(cleanedData);
           setLoading(false);
-          
+
           // Update context for StockDetailPage
           updateStockData(cleanedData, params, currentStockList);
         } else {
@@ -159,10 +159,10 @@ function ModernStonkBoard() {
           setData(cleanedData);
           setUiData(cleanedData);
           setLoading(false);
-          
+
           // Update context for StockDetailPage
           updateStockData(cleanedData, params, currentStockList);
-          
+
           console.info(
             `✅ Successfully loaded ${allData.length} stocks from "${currentStockList.name}"`
           );
@@ -313,8 +313,8 @@ function ModernStonkBoard() {
    */
   const setupDataStructures = useCallback(
     stockData => {
-      let relativeGrid = initGrid(stockData);
-      let stdGrid = initGrid(stockData);
+      const relativeGrid = initGrid(stockData);
+      const stdGrid = initGrid(stockData);
 
       rankCols(relativeGrid, stockData);
       rankColsStd(stdGrid, stockData);
@@ -328,12 +328,12 @@ function ModernStonkBoard() {
 
   // Initialize grid structure
   const initGrid = stockData => {
-    let grid = [];
+    const grid = [];
     for (let i = 0; i < stockData.length; i++) {
       const row = stockData[i];
-      let clearedRow = {};
+      const clearedRow = {};
 
-      for (let col in row) {
+      for (const col in row) {
         if (col === 'ticker') {
           clearedRow[col] = row[col];
         } else {
@@ -351,7 +351,7 @@ function ModernStonkBoard() {
    */
   const rankCols = (grid, stockData) => {
     const parameters = params;
-    for (let col in parameters) {
+    for (const col in parameters) {
       const param = parameters[col];
       const order = param.multiplier === 1 ? 'asc' : 'desc';
       const weight = param.weight;
@@ -360,7 +360,7 @@ function ModernStonkBoard() {
         const colList = getColList(col, stockData);
         const rankedCol = rankCol(colList, order);
 
-        for (let row in grid) {
+        for (const row in grid) {
           grid[row][col] = rankedCol[row].rank * (1 + weight);
         }
       }
@@ -373,7 +373,7 @@ function ModernStonkBoard() {
    */
   const rankColsStd = (grid, stockData) => {
     const parameters = params;
-    for (let col in parameters) {
+    for (const col in parameters) {
       const param = parameters[col];
       const multiplier = param.multiplier;
 
@@ -399,8 +399,8 @@ function ModernStonkBoard() {
           const colList = getColList(col, stockData);
           const rankedCol = rankCol(colList, order);
 
-          for (let row in grid) {
-            let variance = (rankedCol[row].item - average) / stdDev;
+          for (const row in grid) {
+            const variance = (rankedCol[row].item - average) / stdDev;
             grid[row][col] = variance * multiplier * (1 + weight);
           }
         }
@@ -415,7 +415,7 @@ function ModernStonkBoard() {
       const rowItem = grid[i];
       let rowSum = 0;
 
-      for (let colName in rowItem) {
+      for (const colName in rowItem) {
         if (colName !== 'ticker') {
           const cell = rowItem[colName];
           rowSum += cell;
@@ -427,7 +427,7 @@ function ModernStonkBoard() {
     const sumList = getColList('sum', grid);
     const rankedSumList = rankCol(sumList, order);
 
-    for (let row in grid) {
+    for (const row in grid) {
       grid[row]['goodRank'] = rankedSumList[row].rank;
     }
   };
@@ -799,12 +799,12 @@ function ModernStonkBoard() {
                     fontWeight: '600',
                     textDecoration: 'underline',
                     padding: '0',
-                    textAlign: 'left'
+                    textAlign: 'left',
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.target.style.color = '#0056b3';
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.target.style.color = '#007bff';
                   }}
                   title={`View detailed analysis for ${ticker}`}

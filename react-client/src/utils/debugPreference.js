@@ -1,6 +1,6 @@
 /**
  * DEBUG PREFERENCE MANAGER
- * 
+ *
  * Manages the DEBUG mode preference with localStorage persistence.
  * This allows users to set their preference and have it persist across page refreshes.
  */
@@ -32,7 +32,9 @@ export function getDebugPreference() {
 export function setDebugPreference(isDebugMode) {
   try {
     localStorage.setItem(DEBUG_PREFERENCE_KEY, JSON.stringify(isDebugMode));
-    console.info(`🔧 Debug mode preference saved: ${isDebugMode ? 'ON' : 'OFF'}`);
+    console.info(
+      `🔧 Debug mode preference saved: ${isDebugMode ? 'ON' : 'OFF'}`
+    );
   } catch (error) {
     console.error('Failed to save debug preference to localStorage:', error);
   }
@@ -73,7 +75,7 @@ export function getDebugModeInfo(isDebugMode) {
       description: 'Using cached data only - preserves API quota',
       icon: '🔒',
       color: '#28a745',
-      behavior: 'No API calls, loads cached data instantly'
+      behavior: 'No API calls, loads cached data instantly',
     };
   } else {
     return {
@@ -81,7 +83,7 @@ export function getDebugModeInfo(isDebugMode) {
       description: 'Fetching fresh data from API - uses quota',
       icon: '🌐',
       color: '#007bff',
-      behavior: 'Makes API calls, updates data in real-time'
+      behavior: 'Makes API calls, updates data in real-time',
     };
   }
 }

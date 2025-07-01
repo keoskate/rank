@@ -1,6 +1,6 @@
 /**
  * STOCK LIST PREFERENCE UTILITIES
- * 
+ *
  * Manages persistence of selected stock list across page refreshes.
  * Provides localStorage-based saving and loading of user's stock list choice.
  */
@@ -17,9 +17,9 @@ export function saveStockListPreference(stockListId) {
     const preference = {
       stockListId,
       savedAt: new Date().toISOString(),
-      version: '1.0'
+      version: '1.0',
     };
-    
+
     localStorage.setItem(STOCK_LIST_PREFERENCE_KEY, JSON.stringify(preference));
     console.info(`💾 Stock list preference saved: ${stockListId}`);
     return true;
@@ -37,20 +37,22 @@ export function saveStockListPreference(stockListId) {
 export function loadStockListPreference(defaultStockListId) {
   try {
     const saved = localStorage.getItem(STOCK_LIST_PREFERENCE_KEY);
-    
+
     if (!saved) {
       console.info('📋 No saved stock list preference found, using default');
       return defaultStockListId;
     }
-    
+
     const preference = JSON.parse(saved);
-    
+
     if (!preference.stockListId) {
       console.warn('⚠️ Invalid stock list preference format, using default');
       return defaultStockListId;
     }
-    
-    console.info(`🔄 Loaded saved stock list preference: ${preference.stockListId}`);
+
+    console.info(
+      `🔄 Loaded saved stock list preference: ${preference.stockListId}`
+    );
     return preference.stockListId;
   } catch (error) {
     console.error('❌ Failed to load stock list preference:', error);
@@ -80,34 +82,37 @@ export function clearStockListPreference() {
 export function getStockListPreferenceInfo() {
   try {
     const saved = localStorage.getItem(STOCK_LIST_PREFERENCE_KEY);
-    
+
     if (!saved) {
       return {
         exists: false,
         stockListId: null,
-        savedAt: null
+        savedAt: null,
       };
     }
-    
+
     const preference = JSON.parse(saved);
     const savedDate = new Date(preference.savedAt);
     const now = new Date();
     const daysAgo = Math.floor((now - savedDate) / (1000 * 60 * 60 * 24));
-    
+
     return {
       exists: true,
       stockListId: preference.stockListId,
       savedAt: preference.savedAt,
-      lastSaved: daysAgo === 0 ? 'today' : 
-                 daysAgo === 1 ? 'yesterday' : 
-                 `${daysAgo} days ago`
+      lastSaved:
+        daysAgo === 0
+          ? 'today'
+          : daysAgo === 1
+            ? 'yesterday'
+            : `${daysAgo} days ago`,
     };
   } catch (error) {
     console.error('❌ Failed to get stock list preference info:', error);
     return {
       exists: false,
       stockListId: null,
-      savedAt: null
+      savedAt: null,
     };
   }
 }

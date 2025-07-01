@@ -57,7 +57,7 @@ export const useStockData = (stocksConfig, debugMode = true) => {
 
   // Clean data by swapping keys to match parameter structure
   const cleanData = useCallback((stockData, params) => {
-    for (let row in stockData) {
+    for (const row in stockData) {
       stockData[row] = swapKeys(stockData[row], params);
     }
     return stockData;
@@ -65,7 +65,7 @@ export const useStockData = (stocksConfig, debugMode = true) => {
 
   // Swap keys to match expected parameter structure
   const swapKeys = useCallback((rowItem, params) => {
-    let newRow = {};
+    const newRow = {};
     const goodKeys = Object.keys(params);
     Object.keys(rowItem).map((key, index) => {
       newRow[goodKeys[index]] = rowItem[key];

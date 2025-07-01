@@ -1,13 +1,17 @@
 /**
  * COLUMN VISIBILITY MANAGER
- * 
+ *
  * Provides easy controls to hide/show columns in the ranking table.
  * Includes search, categories, and bulk toggle functionality.
  */
 
 import React, { useState, useMemo } from 'react';
 
-const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange }) => {
+const ColumnVisibilityManager = ({
+  params,
+  columnVisibility,
+  onVisibilityChange,
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -15,11 +19,26 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
   // Categorize columns for better organization
   const columnCategories = useMemo(() => {
     const categories = {
-      basic: { label: 'Basic Info', columns: ['rank', 'ticker', 'name', 'industry', 'price', 'yearHigh'] },
-      value: { label: 'Value Metrics', columns: ['discount', 'peRatio', 'priceToBook', 'evEbitda'] },
-      financial: { label: 'Financial Health', columns: ['debtEbitda', 'netDebt', 'quickRatio', 'cash', 'ebitda'] },
-      profitability: { label: 'Profitability', columns: ['roe', 'freeCashFlowYield', 'dividend'] },
-      risk: { label: 'Risk & Technical', columns: ['beta', 'rsi', 'impliedVolatility'] }
+      basic: {
+        label: 'Basic Info',
+        columns: ['rank', 'ticker', 'name', 'industry', 'price', 'yearHigh'],
+      },
+      value: {
+        label: 'Value Metrics',
+        columns: ['discount', 'peRatio', 'priceToBook', 'evEbitda'],
+      },
+      financial: {
+        label: 'Financial Health',
+        columns: ['debtEbitda', 'netDebt', 'quickRatio', 'cash', 'ebitda'],
+      },
+      profitability: {
+        label: 'Profitability',
+        columns: ['roe', 'freeCashFlowYield', 'dividend'],
+      },
+      risk: {
+        label: 'Risk & Technical',
+        columns: ['beta', 'rsi', 'impliedVolatility'],
+      },
     };
 
     return categories;
@@ -27,10 +46,8 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
 
   // Get available columns from params
   const availableColumns = useMemo(() => {
-    return Object.keys(params).filter(key => 
-      params[key].label && 
-      key !== 'sum' && 
-      key !== 'goodRank'
+    return Object.keys(params).filter(
+      key => params[key].label && key !== 'sum' && key !== 'goodRank'
     );
   }, [params]);
 
@@ -48,41 +65,51 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
     if (searchTerm) {
       filtered = filtered.filter(col => {
         const label = params[col]?.label?.toLowerCase() || '';
-        return label.includes(searchTerm.toLowerCase()) || 
-               col.toLowerCase().includes(searchTerm.toLowerCase());
+        return (
+          label.includes(searchTerm.toLowerCase()) ||
+          col.toLowerCase().includes(searchTerm.toLowerCase())
+        );
       });
     }
 
     return filtered;
-  }, [availableColumns, selectedCategory, searchTerm, columnCategories, params]);
+  }, [
+    availableColumns,
+    selectedCategory,
+    searchTerm,
+    columnCategories,
+    params,
+  ]);
 
-  const handleToggleColumn = (columnKey) => {
+  const handleToggleColumn = columnKey => {
     // Don't allow hiding required columns
     const isRequired = columnKey === 'rank' || columnKey === 'ticker';
     if (isRequired && columnVisibility[columnKey] !== false) {
       return; // Don't hide required columns
     }
-    
+
     const newVisibility = {
       ...columnVisibility,
-      [columnKey]: !columnVisibility[columnKey]
+      [columnKey]: !columnVisibility[columnKey],
     };
     onVisibilityChange(newVisibility);
   };
 
-  const handleToggleCategory = (category) => {
+  const handleToggleCategory = category => {
     if (category === 'all') return;
-    
+
     const categoryColumns = columnCategories[category]?.columns || [];
-    const allVisible = categoryColumns.every(col => columnVisibility[col] !== false);
-    
+    const allVisible = categoryColumns.every(
+      col => columnVisibility[col] !== false
+    );
+
     const newVisibility = { ...columnVisibility };
     categoryColumns.forEach(col => {
       if (availableColumns.includes(col)) {
         newVisibility[col] = !allVisible;
       }
     });
-    
+
     onVisibilityChange(newVisibility);
   };
 
@@ -103,55 +130,69 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
     onVisibilityChange(newVisibility);
   };
 
-  const visibleCount = availableColumns.filter(col => columnVisibility[col] !== false).length;
+  const visibleCount = availableColumns.filter(
+    col => columnVisibility[col] !== false
+  ).length;
   const totalCount = availableColumns.length;
-  const hiddenColumns = availableColumns.filter(col => columnVisibility[col] === false);
+  const hiddenColumns = availableColumns.filter(
+    col => columnVisibility[col] === false
+  );
 
   return (
     <div style={{ marginBottom: '16px' }}>
       {/* Compact Header */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '8px',
-        border: '1px solid #e0e6ed',
-        padding: '12px 16px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center'
-        }}>
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          border: '1px solid #e0e6ed',
+          padding: '12px 16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '16px' }}>👁️</span>
             <div>
-              <span style={{ 
-                fontWeight: '600', 
-                fontSize: '14px',
-                color: '#2c3e50'
-              }}>
+              <span
+                style={{
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  color: '#2c3e50',
+                }}
+              >
                 Column Visibility
               </span>
-              <span style={{ 
-                marginLeft: '8px',
-                fontSize: '12px', 
-                color: '#6c757d'
-              }}>
+              <span
+                style={{
+                  marginLeft: '8px',
+                  fontSize: '12px',
+                  color: '#6c757d',
+                }}
+              >
                 {visibleCount}/{totalCount} visible
               </span>
               {hiddenColumns.length > 0 && (
-                <span style={{ 
-                  marginLeft: '8px',
-                  fontSize: '11px', 
-                  color: '#dc3545',
-                  fontWeight: '500'
-                }}>
+                <span
+                  style={{
+                    marginLeft: '8px',
+                    fontSize: '11px',
+                    color: '#dc3545',
+                    fontWeight: '500',
+                  }}
+                >
                   • {hiddenColumns.length} hidden
                 </span>
               )}
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={handleShowAll}
@@ -162,7 +203,7 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
                 color: 'white',
                 border: 'none',
                 borderRadius: '3px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Show All
@@ -176,7 +217,7 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
                 color: 'white',
                 border: 'none',
                 borderRadius: '3px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Hide All
@@ -190,7 +231,7 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
                 color: 'white',
                 border: 'none',
                 borderRadius: '3px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               {isExpanded ? '−' : '+'}
@@ -201,23 +242,27 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
 
       {/* Expanded Controls */}
       {isExpanded && (
-        <div style={{
-          marginTop: '8px',
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '16px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
+        <div
+          style={{
+            marginTop: '8px',
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e0e6ed',
+            padding: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        >
           {/* Quick Restore Hidden Columns */}
           {hiddenColumns.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                color: '#495057',
-                marginBottom: '8px'
-              }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#495057',
+                  marginBottom: '8px',
+                }}
+              >
                 🔄 Quick Restore Hidden Columns:
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -235,13 +280,13 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
                         border: '1px solid #ffeaa7',
                         borderRadius: '12px',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={e => {
                         e.target.style.backgroundColor = '#ffc107';
                         e.target.style.color = '#ffffff';
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={e => {
                         e.target.style.backgroundColor = '#fff3cd';
                         e.target.style.color = '#856404';
                       }}
@@ -255,40 +300,44 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
           )}
 
           {/* Search and Category Filter */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '12px', 
-            marginBottom: '16px',
-            flexWrap: 'wrap'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
             <input
               type="text"
               placeholder="Search columns..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               style={{
                 flex: 1,
                 minWidth: '200px',
                 padding: '6px 10px',
                 border: '1px solid #ced4da',
                 borderRadius: '4px',
-                fontSize: '13px'
+                fontSize: '13px',
               }}
             />
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={e => setSelectedCategory(e.target.value)}
               style={{
                 padding: '6px 10px',
                 border: '1px solid #ced4da',
                 borderRadius: '4px',
                 fontSize: '13px',
-                minWidth: '120px'
+                minWidth: '120px',
               }}
             >
               <option value="all">All Categories</option>
               {Object.entries(columnCategories).map(([key, category]) => (
-                <option key={key} value={key}>{category.label}</option>
+                <option key={key} value={key}>
+                  {category.label}
+                </option>
               ))}
             </select>
           </div>
@@ -296,19 +345,25 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
           {/* Category Toggle Buttons */}
           {selectedCategory === 'all' && (
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                color: '#495057',
-                marginBottom: '8px'
-              }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#495057',
+                  marginBottom: '8px',
+                }}
+              >
                 Toggle by Category:
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {Object.entries(columnCategories).map(([key, category]) => {
-                  const categoryColumns = category.columns.filter(col => availableColumns.includes(col));
-                  const allVisible = categoryColumns.every(col => columnVisibility[col] !== false);
-                  
+                  const categoryColumns = category.columns.filter(col =>
+                    availableColumns.includes(col)
+                  );
+                  const allVisible = categoryColumns.every(
+                    col => columnVisibility[col] !== false
+                  );
+
                   return (
                     <button
                       key={key}
@@ -320,7 +375,7 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
                         color: allVisible ? '#2d7d2d' : '#6c757d',
                         border: '1px solid #dee2e6',
                         borderRadius: '3px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
                       }}
                     >
                       {category.label} ({categoryColumns.length})
@@ -332,16 +387,18 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
           )}
 
           {/* Column Toggle Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '8px'
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '8px',
+            }}
+          >
             {filteredColumns.map(columnKey => {
               const param = params[columnKey];
               const isVisible = columnVisibility[columnKey] !== false;
               const isRequired = columnKey === 'rank' || columnKey === 'ticker';
-              
+
               return (
                 <label
                   key={columnKey}
@@ -355,28 +412,34 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
                     borderRadius: '4px',
                     cursor: isRequired ? 'not-allowed' : 'pointer',
                     opacity: isRequired ? 0.6 : 1,
-                    fontSize: '12px'
+                    fontSize: '12px',
                   }}
                 >
                   <input
                     type="checkbox"
                     checked={isVisible}
-                    onChange={() => !isRequired && handleToggleColumn(columnKey)}
+                    onChange={() =>
+                      !isRequired && handleToggleColumn(columnKey)
+                    }
                     disabled={isRequired}
                     style={{ margin: 0 }}
                   />
-                  <span style={{ 
-                    fontWeight: isVisible ? '500' : '400',
-                    color: isVisible ? '#2c3e50' : '#6c757d'
-                  }}>
+                  <span
+                    style={{
+                      fontWeight: isVisible ? '500' : '400',
+                      color: isVisible ? '#2c3e50' : '#6c757d',
+                    }}
+                  >
                     {param.label}
                   </span>
                   {isRequired && (
-                    <span style={{ 
-                      fontSize: '10px', 
-                      color: '#6c757d',
-                      fontStyle: 'italic'
-                    }}>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color: '#6c757d',
+                        fontStyle: 'italic',
+                      }}
+                    >
                       (required)
                     </span>
                   )}
@@ -386,12 +449,14 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
           </div>
 
           {filteredColumns.length === 0 && (
-            <div style={{ 
-              textAlign: 'center', 
-              color: '#6c757d', 
-              fontStyle: 'italic',
-              padding: '20px'
-            }}>
+            <div
+              style={{
+                textAlign: 'center',
+                color: '#6c757d',
+                fontStyle: 'italic',
+                padding: '20px',
+              }}
+            >
               No columns match your search criteria
             </div>
           )}

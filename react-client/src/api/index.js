@@ -1,13 +1,13 @@
 /**
  * API MODULE INDEX - Central API Management
- * 
+ *
  * This module provides a clean interface for managing different financial APIs.
  * It allows easy switching between API providers and maintains backward compatibility.
- * 
+ *
  * CURRENT SETUP:
  * - Primary: Alpha Vantage API (modern, reliable, 500 calls/day)
  * - Legacy: Yahoo Finance API (deprecated, 500 calls/month)
- * 
+ *
  * USAGE:
  * import { getStockData } from '../api';  // Uses current primary API
  * import { getAlphaVantageData, getYahooFinanceData } from '../api';  // Specific APIs
@@ -20,14 +20,14 @@ export { getStockData, parseData } from './alphaVantageAPI';
 export { batchFetchStocks, getBatchConfig } from './batchAPI';
 
 // Export specific API implementations for advanced usage
-export { 
+export {
   getStockData as getAlphaVantageData,
-  parseData as parseAlphaVantageData 
+  parseData as parseAlphaVantageData,
 } from './alphaVantageAPI';
 
-export { 
+export {
   getStockDataLegacy as getYahooFinanceData,
-  parseDataLegacy as parseYahooFinanceData 
+  parseDataLegacy as parseYahooFinanceData,
 } from './yahooFinanceAPI';
 
 // API configuration and metadata
@@ -40,16 +40,16 @@ export const API_CONFIG = {
       perMinute: 5,
       description: 'Alpha Vantage free tier',
       batchOptimized: true,
-      performance: '50% fewer API calls with batch processing'
+      performance: '50% fewer API calls with batch processing',
     },
     'yahoo-finance': {
       monthly: 500,
       perSecond: 1,
       description: 'Yahoo Finance via RapidAPI (deprecated)',
       batchOptimized: false,
-      performance: 'Slower individual requests'
-    }
-  }
+      performance: 'Slower individual requests',
+    },
+  },
 };
 
 /**
@@ -62,7 +62,7 @@ export function getAPIConfig(apiName = null) {
     return {
       name: apiName,
       limits: API_CONFIG.limits[apiName],
-      isPrimary: apiName === API_CONFIG.primary
+      isPrimary: apiName === API_CONFIG.primary,
     };
   }
   return API_CONFIG;

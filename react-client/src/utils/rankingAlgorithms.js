@@ -32,7 +32,7 @@ import {
  * - Better for understanding relative performance
  */
 export const rankCols = (grid, stockData, params) => {
-  for (let col in params) {
+  for (const col in params) {
     const param = params[col];
     const order = param.multiplier === 1 ? 'asc' : 'desc';
     const weight = param.weight;
@@ -41,7 +41,7 @@ export const rankCols = (grid, stockData, params) => {
       const colList = getColList(col, stockData);
       const rankedCol = rankCol(colList, order);
 
-      for (let row in grid) {
+      for (const row in grid) {
         grid[row][col] = rankedCol[row].rank * (1 + weight);
       }
     }
@@ -60,7 +60,7 @@ export const rankCols = (grid, stockData, params) => {
  * - Used for conditional cell coloring (green/red highlighting)
  */
 export const rankColsStd = (grid, stockData, params, setParams) => {
-  for (let col in params) {
+  for (const col in params) {
     const param = params[col];
     const multiplier = param.multiplier;
 
@@ -95,8 +95,8 @@ export const rankColsStd = (grid, stockData, params, setParams) => {
         const colList = getColList(col, stockData);
         const rankedCol = rankCol(colList, order);
 
-        for (let row in grid) {
-          let variance = (rankedCol[row].item - average) / stdDev;
+        for (const row in grid) {
+          const variance = (rankedCol[row].item - average) / stdDev;
           grid[row][col] = variance * multiplier * (1 + weight);
         }
       }
@@ -130,12 +130,12 @@ export const calculateRank = (stockData, relativeGrid, stdGrid) => {
  * Initialize grid structure for ranking calculations
  */
 export const initGrid = (stockData, params) => {
-  let grid = [];
+  const grid = [];
   for (let i = 0; i < stockData.length; i++) {
     const row = stockData[i];
-    let clearedRow = {};
+    const clearedRow = {};
 
-    for (let col in row) {
+    for (const col in row) {
       if (col === 'ticker') {
         clearedRow[col] = row[col];
       } else {
@@ -156,7 +156,7 @@ const getSumAndRelativeRank = (grid, order) => {
     const rowItem = grid[i];
     let rowSum = 0;
 
-    for (let colName in rowItem) {
+    for (const colName in rowItem) {
       if (colName !== 'ticker') {
         const cell = rowItem[colName];
         rowSum += cell;
@@ -168,7 +168,7 @@ const getSumAndRelativeRank = (grid, order) => {
   const sumList = getColList('sum', grid);
   const rankedSumList = rankCol(sumList, order);
 
-  for (let row in grid) {
+  for (const row in grid) {
     grid[row]['goodRank'] = rankedSumList[row].rank;
   }
 };

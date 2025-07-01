@@ -1,15 +1,15 @@
 /**
  * STOCK COLUMNS CONFIGURATION
- * 
+ *
  * Defines the ranking criteria, weights, and multipliers for stock analysis.
  * This configuration drives the dual ranking algorithms and table display.
- * 
+ *
  * KEY CONCEPTS:
  * - weight: How much this metric contributes to ranking (0.0 to 1.0)
  * - multiplier: Direction of ranking (1 = higher is better, -1 = lower is better)
  * - label: Display name in the table
  * - size: Column width in the table
- * 
+ *
  * DEFAULT WEIGHT STRATEGY:
  * - Value-oriented approach with 40% weight on discount from 52-week high
  * - Financial health screening (45% total): debt ratios, beta, liquidity
@@ -19,27 +19,27 @@
 
 /**
  * DEFAULT WEIGHTS CONFIGURATION
- * 
+ *
  * These are the original, tested weight allocations that create a balanced
  * value investing strategy. Use this for resetting weights or as reference.
- * 
+ *
  * STRATEGY BREAKDOWN:
  * - Discount (40%): Primary value indicator - stocks trading below 52-week high
- * - Debt/EBITDA (15%): Leverage risk assessment 
+ * - Debt/EBITDA (15%): Leverage risk assessment
  * - Net Debt (15%): Absolute debt burden
  * - Beta (15%): Volatility/risk adjustment
  * - Quick Ratio (10%): Liquidity health check
  * - Dividend (5%): Income generation bonus
- * 
+ *
  * Total: 100% (perfectly balanced)
  */
 export const DEFAULT_WEIGHTS = {
-  discount: 0.4,      // 40% - Primary value signal
-  debtEbitda: 0.15,   // 15% - Leverage assessment  
-  netDebt: 0.15,      // 15% - Debt burden
-  beta: 0.15,         // 15% - Risk adjustment
-  quickRatio: 0.1,    // 10% - Liquidity check
-  dividend: 0.05,     // 5%  - Income component
+  discount: 0.4, // 40% - Primary value signal
+  debtEbitda: 0.15, // 15% - Leverage assessment
+  netDebt: 0.15, // 15% - Debt burden
+  beta: 0.15, // 15% - Risk adjustment
+  quickRatio: 0.1, // 10% - Liquidity check
+  dividend: 0.05, // 5%  - Income component
   // All other metrics: 0% (display only)
 };
 
@@ -207,7 +207,7 @@ export const STOCK_COLUMNS = {
     average: undefined,
     stdDev: undefined,
   },
-  
+
   impliedVolatility: {
     label: 'Implied Vol',
     type: 'percentage',
@@ -217,7 +217,7 @@ export const STOCK_COLUMNS = {
     average: undefined,
     stdDev: undefined,
   },
-  
+
   peRatio: {
     label: 'PE Ratio',
     type: '',
@@ -234,14 +234,14 @@ export const STOCK_COLUMNS = {
     type: 'percentage',
     size: COLUMN_SIZE.small,
     weight: 0,
-    multiplier: 1, // Higher ROE indicates better management efficiency 
+    multiplier: 1, // Higher ROE indicates better management efficiency
     average: undefined,
     stdDev: undefined,
   },
 
   freeCashFlowYield: {
     label: 'FCF Yield',
-    type: 'percentage', 
+    type: 'percentage',
     size: COLUMN_SIZE.medium,
     weight: 0,
     multiplier: 1, // Higher FCF yield indicates better cash generation
@@ -269,29 +269,29 @@ export const STOCK_COLUMNS = {
  * @param {Object} currentParams - Current parameter configuration
  * @returns {Object} Updated parameters with default weights
  */
-export const resetToDefaultWeights = (currentParams) => {
+export const resetToDefaultWeights = currentParams => {
   const updatedParams = { ...currentParams };
-  
+
   // Reset all weights to 0 first
   Object.keys(updatedParams).forEach(key => {
     if (updatedParams[key].weight !== undefined) {
       updatedParams[key] = {
         ...updatedParams[key],
-        weight: 0
+        weight: 0,
       };
     }
   });
-  
+
   // Apply default weights
   Object.entries(DEFAULT_WEIGHTS).forEach(([key, weight]) => {
     if (updatedParams[key]) {
       updatedParams[key] = {
         ...updatedParams[key],
-        weight: weight
+        weight: weight,
       };
     }
   });
-  
+
   return updatedParams;
 };
 
@@ -300,7 +300,7 @@ export const resetToDefaultWeights = (currentParams) => {
  * @param {Object} currentParams - Current parameter configuration
  * @returns {number} Sum of all current weights
  */
-export const getCurrentTotalWeight = (currentParams) => {
+export const getCurrentTotalWeight = currentParams => {
   return Object.values(currentParams).reduce((total, param) => {
     return total + (param.weight || 0);
   }, 0);
@@ -311,7 +311,7 @@ export const getCurrentTotalWeight = (currentParams) => {
  * @param {Object} currentParams - Current parameter configuration
  * @returns {boolean} True if weights match defaults
  */
-export const isUsingDefaultWeights = (currentParams) => {
+export const isUsingDefaultWeights = currentParams => {
   return Object.entries(DEFAULT_WEIGHTS).every(([key, defaultWeight]) => {
     const currentWeight = currentParams[key]?.weight || 0;
     return Math.abs(currentWeight - defaultWeight) < 0.001; // Account for floating point precision

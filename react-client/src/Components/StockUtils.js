@@ -20,14 +20,18 @@
  */
 
 // Import from unified API system
-import { getStockData as getUnifiedStockData, batchFetchStocks, getApiInfo } from '../api/unifiedAPI';
+import {
+  getStockData as getUnifiedStockData,
+  batchFetchStocks,
+  getApiInfo,
+} from '../api/unifiedAPI';
 
 // Import stock columns configuration
 export { STOCK_COLUMNS } from '../config/stockColumns';
 
 /**
  * Get stock data using the configured API provider (single stock)
- * 
+ *
  * For better performance with multiple stocks, use getMultipleStocksData() instead.
  *
  * @param {string} stock - The Stock Ticker
@@ -35,13 +39,17 @@ export { STOCK_COLUMNS } from '../config/stockColumns';
  * @param {boolean} retry - Whether to retry on failure
  * @returns {Object|null} Formatted stock data or null if failed
  */
-export async function getStockData(stock, fetchFinancials = false, retry = true) {
+export async function getStockData(
+  stock,
+  fetchFinancials = false,
+  retry = true
+) {
   return await getUnifiedStockData(stock, { fetchFinancials, retry });
 }
 
 /**
  * Get multiple stocks data efficiently using batch processing
- * 
+ *
  * Uses the configured API provider from config/apiConfig.js
  * Automatically handles rate limiting and provides clear progress updates
  *
@@ -50,35 +58,45 @@ export async function getStockData(stock, fetchFinancials = false, retry = true)
  * @param {Object} options - Additional options
  * @returns {Promise<Object[]>} Array of stock data objects
  */
-export async function getMultipleStocksData(stocks, provider = null, options = {}) {
+export async function getMultipleStocksData(
+  stocks,
+  provider = null,
+  options = {}
+) {
   if (!Array.isArray(stocks) || stocks.length === 0) {
     throw new Error('Stocks must be a non-empty array');
   }
-  
+
   // Log current API configuration
   const apiInfo = getApiInfo();
-  console.info(`🎯 Using ${apiInfo.name} (${apiInfo.cost}) for ${stocks.length} stocks`);
-  
+  console.info(
+    `🎯 Using ${apiInfo.name} (${apiInfo.cost}) for ${stocks.length} stocks`
+  );
+
   if (stocks.length === 1) {
     // Single stock - use individual API for simplicity
     const result = await getStockData(stocks[0], options.fetchFinancials);
     return result ? [result] : [];
   }
-  
+
   try {
     return await batchFetchStocks(stocks, options);
-    
   } catch (error) {
-    console.error(`❌ Failed to fetch stocks using ${apiInfo.name}:`, error.message);
-    
+    console.error(
+      `❌ Failed to fetch stocks using ${apiInfo.name}:`,
+      error.message
+    );
+
     // Provide helpful error guidance
     console.info('💡 Troubleshooting suggestions:');
     console.info(`1. Check your API key is set correctly`);
-    console.info(`2. Verify you haven't exceeded your ${apiInfo.dailyLimit} daily limit`);
+    console.info(
+      `2. Verify you haven't exceeded your ${apiInfo.dailyLimit} daily limit`
+    );
     console.info(`3. Check rate limiting: ${apiInfo.rateLimit}`);
     console.info(`4. Switch providers in config/apiConfig.js if needed`);
     console.info(`5. Use debug mode with cached data for development`);
-    
+
     throw error;
   }
 }
@@ -95,8 +113,8 @@ export function revertSortFunc(a, b, order, sortField) {
 }
 
 export function wait(ms) {
-  var start = new Date().getTime();
-  var end = start;
+  const start = new Date().getTime();
+  let end = start;
   while (end < start + ms) {
     end = new Date().getTime();
   }

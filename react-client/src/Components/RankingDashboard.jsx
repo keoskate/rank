@@ -27,7 +27,7 @@ const RankingDashboard = ({
   onResetWeights,
   onStockListChange,
   columnVisibility,
-  onColumnVisibilityChange
+  onColumnVisibilityChange,
 }) => {
   if (loading) {
     return (
@@ -46,8 +46,8 @@ const RankingDashboard = ({
             Loading stock data...
           </div>
           <div style={{ fontSize: '13px', marginTop: '8px' }}>
-            Fetching {currentStockList.stocks.length} stocks from "
-            {currentStockList.name}"
+            Fetching {currentStockList.stocks.length} stocks from &quot;
+            {currentStockList.name}&quot;
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@ const RankingDashboard = ({
                 {table.getRowModel().rows.length} stocks
               </span>
             </div>
-            
+
             {/* Integrated Stock List Selector */}
             <StockListSelector
               currentStockListId={currentStockListId}
@@ -179,76 +179,86 @@ const RankingDashboard = ({
                             position: 'sticky',
                             left: index === 0 ? '0px' : '50px', // Rank column width
                             zIndex: 10,
-                            boxShadow: isSticky ? '2px 0 4px rgba(0,0,0,0.1)' : 'none'
-                          })
+                            boxShadow: isSticky
+                              ? '2px 0 4px rgba(0,0,0,0.1)'
+                              : 'none',
+                          }),
                         }}
                         onClick={header.column.getToggleSortingHandler()}
                       >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                        }}
-                      >
-                        {header.isPlaceholder ? null : (
-                          <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                              {header.column.columnDef.header}
-                              {{
-                                asc: ' ↑',
-                                desc: ' ↓',
-                              }[header.column.getIsSorted()] ?? null}
-                            </div>
-                            
-                            {/* Column Visibility Toggle Button */}
-                            {!header.column.columnDef.meta?.required && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent sorting when clicking hide button
-                                  const columnKey = header.column.id;
-                                  const newVisibility = {
-                                    ...columnVisibility,
-                                    [columnKey]: false
-                                  };
-                                  onColumnVisibilityChange(newVisibility);
-                                }}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                          }}
+                        >
+                          {header.isPlaceholder ? null : (
+                            <>
+                              <div
                                 style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '2px 4px',
-                                  borderRadius: '3px',
-                                  fontSize: '10px',
-                                  color: '#6c757d',
-                                  opacity: 0.6,
-                                  transition: 'all 0.2s ease',
-                                  marginLeft: '4px',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  ':hover': {
-                                    backgroundColor: '#f8f9fa',
-                                    opacity: 1
-                                  }
+                                  gap: '4px',
+                                  flex: 1,
                                 }}
-                                onMouseEnter={(e) => {
-                                  e.target.style.backgroundColor = '#f8f9fa';
-                                  e.target.style.opacity = '1';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.target.style.backgroundColor = 'transparent';
-                                  e.target.style.opacity = '0.6';
-                                }}
-                                title={`Hide ${header.column.columnDef.header} column`}
                               >
-                                ✕
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </th>
+                                {header.column.columnDef.header}
+                                {{
+                                  asc: ' ↑',
+                                  desc: ' ↓',
+                                }[header.column.getIsSorted()] ?? null}
+                              </div>
+
+                              {/* Column Visibility Toggle Button */}
+                              {!header.column.columnDef.meta?.required && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation(); // Prevent sorting when clicking hide button
+                                    const columnKey = header.column.id;
+                                    const newVisibility = {
+                                      ...columnVisibility,
+                                      [columnKey]: false,
+                                    };
+                                    onColumnVisibilityChange(newVisibility);
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '2px 4px',
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    color: '#6c757d',
+                                    opacity: 0.6,
+                                    transition: 'all 0.2s ease',
+                                    marginLeft: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    ':hover': {
+                                      backgroundColor: '#f8f9fa',
+                                      opacity: 1,
+                                    },
+                                  }}
+                                  onMouseEnter={e => {
+                                    e.target.style.backgroundColor = '#f8f9fa';
+                                    e.target.style.opacity = '1';
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.target.style.backgroundColor =
+                                      'transparent';
+                                    e.target.style.opacity = '0.6';
+                                  }}
+                                  title={`Hide ${header.column.columnDef.header} column`}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </th>
                     );
                   })}
                 </tr>
@@ -266,7 +276,7 @@ const RankingDashboard = ({
                   {row.getVisibleCells().map((cell, cellIndex) => {
                     const isSticky = cell.column.columnDef.meta?.sticky;
                     const stickyOffset = cellIndex === 0 ? '0px' : '50px';
-                    
+
                     return (
                       <td
                         key={cell.id}
@@ -277,10 +287,13 @@ const RankingDashboard = ({
                           ...(isSticky && {
                             position: 'sticky',
                             left: stickyOffset,
-                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafbfc',
+                            backgroundColor:
+                              index % 2 === 0 ? '#ffffff' : '#fafbfc',
                             zIndex: 5,
-                            boxShadow: isSticky ? '2px 0 4px rgba(0,0,0,0.1)' : 'none'
-                          })
+                            boxShadow: isSticky
+                              ? '2px 0 4px rgba(0,0,0,0.1)'
+                              : 'none',
+                          }),
                         }}
                       >
                         {cell.column.columnDef.cell(cell.getContext())}
