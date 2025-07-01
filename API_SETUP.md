@@ -15,17 +15,15 @@ The application has been updated to use **Alpha Vantage API** instead of the out
 ### 2. Update Environment Variables
 
 1. Open the `.env` file in the project root
-2. Replace the demo key:
-
+2. Your API key should already be set:
    ```
-   # Change this:
-   REACT_APP_ALPHA_VANTAGE_API_KEY=demo
-
-   # To your real key:
-   REACT_APP_ALPHA_VANTAGE_API_KEY=YOUR_ACTUAL_KEY_HERE
+   REACT_APP_ALPHA_VANTAGE_API_KEY=1KEVFA9KIQVOBJUE
    ```
-
-3. Save the file
+3. **IMPORTANT**: If you change the API key:
+   - Save the .env file
+   - Stop the development server (Ctrl+C)
+   - Restart with `npm run dev`
+   - Environment variables are loaded at build/start time in React
 
 ### 3. Test the Integration
 

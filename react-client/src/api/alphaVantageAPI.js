@@ -17,7 +17,16 @@
 const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
 
 // Get API key from environment variable for security
-const API_KEY = process.env.REACT_APP_ALPHA_VANTAGE_API_KEY || 'demo';
+const API_KEY = process.env.REACT_APP_ALPHA_VANTAGE_API_KEY || '1KEVFA9KIQVOBJUE';
+
+// Debug logging for API key
+if (API_KEY === 'demo') {
+  console.warn('⚠️ Using demo API key. Set REACT_APP_ALPHA_VANTAGE_API_KEY in .env file');
+} else if (API_KEY === '1KEVFA9KIQVOBJUE') {
+  console.info('✅ Using Alpha Vantage API key');
+} else {
+  console.info('✅ Using custom Alpha Vantage API key from environment');
+}
 
 const API_ENDPOINTS = {
   OVERVIEW: `${ALPHA_VANTAGE_BASE_URL}?function=OVERVIEW`,
