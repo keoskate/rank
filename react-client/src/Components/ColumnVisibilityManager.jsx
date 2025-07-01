@@ -105,6 +105,7 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
 
   const visibleCount = availableColumns.filter(col => columnVisibility[col] !== false).length;
   const totalCount = availableColumns.length;
+  const hiddenColumns = availableColumns.filter(col => columnVisibility[col] === false);
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -138,6 +139,16 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
               }}>
                 {visibleCount}/{totalCount} visible
               </span>
+              {hiddenColumns.length > 0 && (
+                <span style={{ 
+                  marginLeft: '8px',
+                  fontSize: '11px', 
+                  color: '#dc3545',
+                  fontWeight: '500'
+                }}>
+                  • {hiddenColumns.length} hidden
+                </span>
+              )}
             </div>
           </div>
           
@@ -198,6 +209,51 @@ const ColumnVisibilityManager = ({ params, columnVisibility, onVisibilityChange 
           padding: '16px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
+          {/* Quick Restore Hidden Columns */}
+          {hiddenColumns.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ 
+                fontSize: '12px', 
+                fontWeight: '600', 
+                color: '#495057',
+                marginBottom: '8px'
+              }}>
+                🔄 Quick Restore Hidden Columns:
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {hiddenColumns.map(columnKey => {
+                  const param = params[columnKey];
+                  return (
+                    <button
+                      key={columnKey}
+                      onClick={() => handleToggleColumn(columnKey)}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        backgroundColor: '#fff3cd',
+                        color: '#856404',
+                        border: '1px solid #ffeaa7',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = '#ffc107';
+                        e.target.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = '#fff3cd';
+                        e.target.style.color = '#856404';
+                      }}
+                    >
+                      + {param?.label || columnKey}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Search and Category Filter */}
           <div style={{ 
             display: 'flex', 

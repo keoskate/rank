@@ -188,16 +188,63 @@ const RankingDashboard = ({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px',
+                          justifyContent: 'space-between',
+                          width: '100%',
                         }}
                       >
                         {header.isPlaceholder ? null : (
                           <>
-                            {header.column.columnDef.header}
-                            {{
-                              asc: ' ↑',
-                              desc: ' ↓',
-                            }[header.column.getIsSorted()] ?? null}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                              {header.column.columnDef.header}
+                              {{
+                                asc: ' ↑',
+                                desc: ' ↓',
+                              }[header.column.getIsSorted()] ?? null}
+                            </div>
+                            
+                            {/* Column Visibility Toggle Button */}
+                            {!header.column.columnDef.meta?.required && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent sorting when clicking hide button
+                                  const columnKey = header.column.id;
+                                  const newVisibility = {
+                                    ...columnVisibility,
+                                    [columnKey]: false
+                                  };
+                                  onColumnVisibilityChange(newVisibility);
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '2px 4px',
+                                  borderRadius: '3px',
+                                  fontSize: '10px',
+                                  color: '#6c757d',
+                                  opacity: 0.6,
+                                  transition: 'all 0.2s ease',
+                                  marginLeft: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  ':hover': {
+                                    backgroundColor: '#f8f9fa',
+                                    opacity: 1
+                                  }
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.backgroundColor = '#f8f9fa';
+                                  e.target.style.opacity = '1';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.backgroundColor = 'transparent';
+                                  e.target.style.opacity = '0.6';
+                                }}
+                                title={`Hide ${header.column.columnDef.header} column`}
+                              >
+                                ✕
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
