@@ -30,7 +30,6 @@ import {
 import * as math from 'mathjs';
 import WeightSlider from './WeightSlider';
 import BoardControls from './BoardControls';
-import * as cachedData20 from '../stock-data_20';
 import * as Utils from './StockUtils';
 import {
   cacheOrFetch,
@@ -39,33 +38,17 @@ import {
   getCacheInfo,
   clearCache,
 } from '../utils/cacheManager';
+import {
+  getStockList,
+  getStockListNames,
+  DEFAULT_STOCK_LIST,
+  isValidStockListId,
+} from '../config/stockLists';
 
 /** KEO: TOGGLE FOR DEBUGGING NETWORK ISSUES */
 const DEBUG = false; // If we want to use cached data (preserve network request quota)
 
-// Configuration constants
-const COVID_STOCKS = [cachedData20.COVID_19, cachedData20.COVID_19_cached];
-const KEO_STOCKS = [cachedData20.KEO_STOCKS, cachedData20.KEO_STOCKS_cached];
-const NEW_STOCKS = [cachedData20.NEW_STOCKS, cachedData20.NEW_STOCKS_cached];
-const GROUP_STOCKS = [
-  cachedData20.GROUP_STOCKS,
-  cachedData20.GROUP_STOCKS_cached,
-];
-const MEME_STOCKS = [cachedData20.MEME_STOCKS, cachedData20.MEME_STOCKS_cached];
-
-// Use this to combine different groups of stock (without duplicates)
-const CUSTOM_STOCKS = [
-  ...cachedData20.COVID_19,
-  // Add other groups as needed
-];
-
-const TEST_STOCKS = [
-  [...new Set(CUSTOM_STOCKS)],
-  [...cachedData20.TEST_STOCKS_cached],
-];
-
-// Config for the Stock board
-const STOCKS = TEST_STOCKS;
+// Stock list configuration - now managed by stockLists.js
 
 const THROTTLE = {
   SMALL: 100,
@@ -86,6 +69,11 @@ function ModernStonkBoard() {
   const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
   const [debugMode, setDebugMode] = useState(DEBUG); // Toggle for cached vs live data
   const [backgroundFetching, setBackgroundFetching] = useState(false);
+  const [currentStockListId, setCurrentStockListId] = useState(DEFAULT_STOCK_LIST); // New: current stock list
+
+  // Get current stock list configuration
+  const currentStockList = getStockList(currentStockListId);
+  const stockSymbols = currentStockList.stocks;
 
   // Utility function for waiting
   const wait = useCallback(ms => {
@@ -109,11 +97,9 @@ function ModernStonkBoard() {
 
         if (debugMode) {
           // Debug mode: Load just first 5 stocks to save quota
-          const offset = 5;
-          const initialData = await getFinancialData(
-            STOCKS[0].slice(0, offset),
-            getFinancials
-          );
+          const debugStocks = stockSymbols.slice(0, 5);
+          console.info(`🔒 Debug mode: Loading ${debugStocks.length} stocks from "${currentStockList.name}"`);
+          const initialData = await getFinancialData(debugStocks, getFinancials);
           const cleanedData = cleanData(initialData);
           setupDataStructures(cleanedData);
           setData(cleanedData);
@@ -122,18 +108,15 @@ function ModernStonkBoard() {
         } else {
           // Live mode: Load ALL stocks at once (optimized for unlimited subscription)
           console.info(
-            `🚀 Loading all ${STOCKS[0].length} stocks at once with unlimited subscription...`
+            `🚀 Loading all ${stockSymbols.length} stocks from "${currentStockList.name}" with unlimited subscription...`
           );
-          const allData = await getFinancialData(
-            STOCKS[0], // Load ALL stocks
-            getFinancials
-          );
+          const allData = await getFinancialData(stockSymbols, getFinancials);
           const cleanedData = cleanData(allData);
           setupDataStructures(cleanedData);
           setData(cleanedData);
           setUiData(cleanedData);
           setLoading(false);
-          console.info(`✅ Successfully loaded ${allData.length} stocks`);
+          console.info(`✅ Successfully loaded ${allData.length} stocks from "${currentStockList.name}"`);
         }
       } catch (error) {
         console.error('Error initializing data:', error);
@@ -142,7 +125,7 @@ function ModernStonkBoard() {
     };
 
     initializeData();
-  }, []);
+  }, [currentStockListId, debugMode]); // Reload when stock list or debug mode changes
 
   // Recalculate rankings when params change
   useEffect(() => {
@@ -187,9 +170,9 @@ function ModernStonkBoard() {
       }
 
       console.info(
-        `📁 No smart cache found, using static cache for ${stocks.length} stocks`
+        `📁 No smart cache found for ${stocks.length} stocks`
       );
-      return STOCKS[1]; // Fallback to static cached data
+      return []; // Return empty array if no cache available in debug mode
     } else {
       try {
         // GET API INFO FIRST - outside the fetchFunction
@@ -273,27 +256,7 @@ function ModernStonkBoard() {
     }
   };
 
-  // Fetch all stock data progressively
-  const fetchAllData = async (offset, getFinancials = false) => {
-    wait(THROTTLE.LARGE);
-
-    for (let i = offset; i < STOCKS[0].length; i += offset) {
-      const stockData = await getFinancialData(
-        STOCKS[0].slice(i, i + offset),
-        getFinancials
-      );
-      const cleanedData = cleanData(stockData);
-      const mergedData = [...uiData, ...cleanedData];
-
-      console.info('Merged Data:', mergedData);
-
-      setupDataStructures(mergedData);
-      setData(mergedData);
-      setUiData(mergedData);
-
-      wait(THROTTLE.LARGE + THROTTLE.SMALL);
-    }
-  };
+  // Note: fetchAllData function removed - we now load all stocks at once
 
   /**
    * CORE RANKING ENGINE - Sets up dual ranking system
@@ -682,11 +645,14 @@ function ModernStonkBoard() {
     const newDebugMode = !debugMode;
     setDebugMode(newDebugMode);
     console.info(`DEBUG_MODE toggled to: ${newDebugMode ? 'ON' : 'OFF'}`);
+  };
 
-    // Optionally reload data with new mode
-    if (data.length > 0) {
-      console.info('Reloading data with new debug mode...');
-      // You could trigger a reload here if needed
+  // Stock list switching handler
+  const handleStockListChange = (newStockListId) => {
+    if (isValidStockListId(newStockListId) && newStockListId !== currentStockListId) {
+      console.info(`📋 Switching to stock list: ${getStockList(newStockListId).name}`);
+      setCurrentStockListId(newStockListId);
+      setLoading(true); // Will trigger reload via useEffect dependency
     }
   };
 
@@ -703,19 +669,18 @@ function ModernStonkBoard() {
       setUiData([]);
 
       // If force refresh, we'll bypass cache in the fetch function
-      const offset = 5;
       const getFinancials = false;
 
-      // Generate cache key and clear it if force refresh
-      const stocks = STOCKS[0].slice(0, offset);
-      const stocksKey = stocks.sort().join('_');
+      // Use current stock list for cache refresh
+      const stocksToRefresh = debugMode ? stockSymbols.slice(0, 5) : stockSymbols;
+      const stocksKey = stocksToRefresh.sort().join('_');
       const cacheKey = `STOCKS_${stocksKey}_${getFinancials ? 'with_financials' : 'basic'}`;
 
       if (forceRefresh) {
         clearCache(cacheKey);
       }
 
-      const initialData = await getFinancialData(stocks, getFinancials);
+      const initialData = await getFinancialData(stocksToRefresh, getFinancials);
       const cleanedData = debugMode ? initialData : cleanData(initialData);
 
       setupDataStructures(cleanedData);
@@ -874,7 +839,7 @@ function ModernStonkBoard() {
 
   return (
     <div>
-      {/* Board Controls with Debug Toggle and Smart Cache */}
+      {/* Board Controls with Debug Toggle, Smart Cache, and Stock List Selection */}
       <BoardControls
         params={params}
         sumOfWeights={sumOfWeights}
@@ -886,6 +851,9 @@ function ModernStonkBoard() {
         debugMode={debugMode}
         onDebugModeToggle={handleDebugModeToggle}
         onCacheRefresh={handleCacheRefresh}
+        currentStockListId={currentStockListId}
+        onStockListChange={handleStockListChange}
+        currentStockList={currentStockList}
       />
 
       <div style={{ overflowX: 'auto' }}>
@@ -941,8 +909,11 @@ function ModernStonkBoard() {
       </div>
 
       <div style={{ marginTop: 20, fontSize: '12px', color: '#666' }}>
-        Showing {table.getRowModel().rows.length} stocks • Mode:{' '}
-        <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong>
+        Showing {table.getRowModel().rows.length} stocks from{' '}
+        <strong style={{ color: currentStockList.color }}>
+          {currentStockList.name}
+        </strong>{' '}
+        • Mode: <strong>{debugMode ? 'Debug (Cached)' : 'Live (API)'}</strong>
         {backgroundFetching && !debugMode && (
           <span style={{ color: '#007bff', fontWeight: 'bold' }}>
             {' '}

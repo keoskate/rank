@@ -13,6 +13,7 @@
 import WeightSlider from '../Components/WeightSlider';
 import { getAllCacheInfo, clearCache, clearAllCache } from '../utils/cacheManager';
 import { getApiInfo } from '../Components/StockUtils';
+import { getStockListNames } from '../config/stockLists';
 import { useState } from 'react';
 
 const BoardControls = ({
@@ -25,13 +26,19 @@ const BoardControls = ({
   onStdScoreboard,
   debugMode,
   onDebugModeToggle,
-  onCacheRefresh, // New prop for cache refresh callback
+  onCacheRefresh, // Cache refresh callback
+  currentStockListId, // New props for stock list management
+  onStockListChange,
+  currentStockList,
 }) => {
   const [showCacheControls, setShowCacheControls] = useState(false);
   const [cacheInfo, setCacheInfo] = useState({});
   
   // Get current API configuration
   const apiInfo = getApiInfo();
+  
+  // Get available stock lists
+  const availableStockLists = getStockListNames();
 
   // Cache management functions
   const refreshCacheInfo = () => {
@@ -168,6 +175,58 @@ const BoardControls = ({
               : 'Fetching live data from API (uses quota)'}
           </span>
         </div>
+      </div>
+
+      {/* Stock List Selection */}
+      <div style={{ marginBottom: 20 }}>
+        <h4>Stock List Selection</h4>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+          <select
+            value={currentStockListId}
+            onChange={(e) => onStockListChange(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              fontSize: '14px',
+              minWidth: '200px',
+            }}
+          >
+            {availableStockLists.map((list) => (
+              <option key={list.id} value={list.id}>
+                {list.name} ({list.count} stocks)
+              </option>
+            ))}
+          </select>
+          
+          <div style={{
+            display: 'inline-block',
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            backgroundColor: currentStockList?.color || '#ccc',
+            border: '2px solid white',
+            boxShadow: '0 0 3px rgba(0,0,0,0.3)',
+          }} />
+        </div>
+        
+        {currentStockList && (
+          <div style={{ 
+            fontSize: '12px', 
+            color: '#6c757d',
+            backgroundColor: '#f8f9fa',
+            padding: '8px 12px',
+            borderRadius: '4px',
+            border: '1px solid #dee2e6',
+          }}>
+            <strong>{currentStockList.name}</strong>: {currentStockList.description}
+            <br />
+            <span style={{ color: '#007bff' }}>
+              {currentStockList.stocks.length} stocks: {currentStockList.stocks.slice(0, 8).join(', ')}
+              {currentStockList.stocks.length > 8 && ` + ${currentStockList.stocks.length - 8} more`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Smart Cache Controls */}
