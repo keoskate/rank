@@ -356,6 +356,96 @@ function ModernStonkBoard() {
         return newRow;
     };
 
+    /**
+     * CONDITIONAL COLOR CALCULATION - Statistical-based cell coloring
+     * 
+     * Colors cells based on how many standard deviations they are from the mean:
+     * - Green shades: Good values (2+ std dev in positive direction)
+     * - Red shades: Poor values (2+ std dev in negative direction)
+     * - Light colors: Values close to average
+     */
+    const getConditionalColor = useCallback((col, value, paramConfig) => {
+        const weight = paramConfig[col]?.weight || 0;
+        const avg = paramConfig[col]?.average;
+        const std = paramConfig[col]?.stdDev;
+        const mult = paramConfig[col]?.multiplier === 1;
+
+        if (avg === undefined || std === undefined) {
+            return '#ffffff'; // White if no stats available
+        }
+
+        if (weight === 0) {
+            return '#ffffff'; // White if weight is 0
+        } 
+        
+        // Best values (2+ standard deviations in good direction)
+        else if ((((avg - 2 * std) >= value) && !mult) ||
+                 (((avg + 2 * std) <= value) && mult)) {
+            return '#67c279'; // Bright green
+        }
+        
+        // Very good values (1.5-2 std dev)
+        else if ((((avg - 1.5 * std) >= value) && (value >= (avg - 2 * std)) && !mult) ||
+                 (((avg + 1.5 * std) <= value) && (value <= (avg + 2 * std)) && mult)) {
+            return '#a5d3a5'; // Green
+        }
+        
+        // Good values (1-1.5 std dev)
+        else if ((((avg - 1 * std) >= value) && (value >= (avg - 1.5 * std)) && !mult) ||
+                 (((avg + 1 * std) <= value) && (value <= (avg + 1.5 * std)) && mult)) {
+            return '#b1e1b0'; // Light green
+        }
+        
+        // Slightly good values (0.5-1 std dev)
+        else if ((((avg - 0.5 * std) >= value) && (value >= (avg - 1 * std)) && !mult) ||
+                 (((avg + 0.5 * std) <= value) && (value <= (avg + 1 * std)) && mult)) {
+            return '#c5f1c6'; // Very light green
+        }
+        
+        // Near average (good direction)
+        else if (((avg >= value) && (value >= (avg - 0.5 * std)) && !mult) ||
+                 ((avg <= value) && (value <= (avg + 0.5 * std)) && mult)) {
+            return '#e7f6e5'; // Pale green
+        }
+        
+        // Near average (poor direction) 
+        else if (((avg >= value) && (value >= (avg - 0.5 * std)) && mult) ||
+                 ((avg <= value) && (value <= (avg + 0.5 * std)) && !mult)) {
+            return '#fff3f3'; // Pale red
+        }
+        
+        // Slightly poor values (0.5-1 std dev)
+        else if (((avg - 0.5 * std >= value) && (value >= (avg - 1 * std)) && mult) ||
+                 ((avg + 0.5 * std <= value) && (value <= (avg + 1 * std)) && !mult)) {
+            return '#ffe1e1'; // Very light red
+        }
+        
+        // Poor values (1-1.5 std dev)
+        else if (((avg - 1 * std >= value) && (value >= (avg - 1.5 * std)) && mult) ||
+                 ((avg + 1 * std <= value) && (value <= (avg + 1.5 * std)) && !mult)) {
+            return '#fdc2c2'; // Light red
+        }
+        
+        // Very poor values (1.5-2 std dev)
+        else if (((avg - 1.5 * std >= value) && (value >= (avg - 2 * std)) && mult) ||
+                 ((avg + 1.5 * std <= value) && (value <= (avg + 2 * std)) && !mult)) {
+            return '#fda4a4'; // Red
+        }
+        
+        // Worst values (2+ standard deviations in poor direction)
+        else if (((value < (avg - 2 * std)) && mult) ||
+                 ((value > (avg + 2 * std)) && !mult)) {
+            return '#fd7979'; // Bright red
+        }
+        
+        return '#ffffff'; // Default white
+    }, []);
+
+    const getCellStyle = useCallback((col, value) => {
+        const color = getConditionalColor(col, value, params);
+        return { backgroundColor: color };
+    }, [params, getConditionalColor]);
+
     // Handle weight changes
     const handleWeightChange = useCallback((evt) => {
         const newWeight = evt.target.valueAsNumber || 0;
@@ -444,10 +534,25 @@ function ModernStonkBoard() {
                         header: param.label,
                         cell: info => {
                             const value = info.getValue();
+                            const cellStyle = getCellStyle(key, value);
+                            
                             // Format numbers with commas
-                            return typeof value === 'number' 
+                            const formattedValue = typeof value === 'number' 
                                 ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                                 : value;
+                            
+                            return (
+                                <div style={{
+                                    ...cellStyle,
+                                    padding: '8px',
+                                    margin: '-4px', // Negative margin to fill the cell
+                                    minHeight: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}>
+                                    {formattedValue}
+                                </div>
+                            );
                         },
                         size: param.size || 100
                     })
@@ -460,14 +565,42 @@ function ModernStonkBoard() {
             cols.push(
                 columnHelper.accessor('sum', {
                     header: 'Sum',
-                    cell: info => info.getValue()?.toFixed(2) || '',
+                    cell: info => {
+                        const value = info.getValue();
+                        return (
+                            <div style={{ 
+                                backgroundColor: '#f8f9fa',
+                                padding: '8px',
+                                margin: '-4px',
+                                minHeight: '20px',
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}>
+                                {value?.toFixed(2) || ''}
+                            </div>
+                        );
+                    },
                     size: 80
                 })
             );
             cols.push(
                 columnHelper.accessor('goodRank', {
                     header: 'Alt Rank',
-                    cell: info => info.getValue(),
+                    cell: info => {
+                        const value = info.getValue();
+                        return (
+                            <div style={{ 
+                                backgroundColor: '#e9ecef',
+                                padding: '8px',
+                                margin: '-4px',
+                                minHeight: '20px',
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}>
+                                {value}
+                            </div>
+                        );
+                    },
                     size: 80
                 })
             );
@@ -580,7 +713,7 @@ function ModernStonkBoard() {
                                         key={cell.id}
                                         style={{
                                             border: '1px solid #ccc',
-                                            padding: '8px'
+                                            padding: '4px' // Reduced padding so cell content fills better
                                         }}
                                     >
                                         {flexRender(
