@@ -202,7 +202,8 @@ const RankingDashboard = ({
                         )}
                       </div>
                     </th>
-                  ))}
+                    );
+                  })}
                 </tr>
               ))}
             </thead>
