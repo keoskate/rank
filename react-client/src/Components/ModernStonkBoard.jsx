@@ -67,6 +67,7 @@ function ModernStonkBoard() {
     const [sGrid, setSGrid] = useState([]);
     const [params, setParams] = useState(Utils.STOCK_COLUMNS);
     const [altGrid, setAltGrid] = useState(false);
+    const [currentView, setCurrentView] = useState('full'); // 'full', 'relative', 'std'
     const [loading, setLoading] = useState(true);
     const [sorting, setSorting] = useState([{ id: 'rank', desc: false }]);
 
@@ -117,6 +118,25 @@ function ModernStonkBoard() {
             setupDataStructures(data);
         }
     }, [params, setupDataStructures]);
+
+    // Update uiData when grids change based on current view
+    useEffect(() => {
+        if (data.length > 0) {
+            switch (currentView) {
+                case 'full':
+                    setUiData([...data]);
+                    break;
+                case 'relative':
+                    setUiData([...rGrid]);
+                    break;
+                case 'std':
+                    setUiData([...sGrid]);
+                    break;
+                default:
+                    setUiData([...data]);
+            }
+        }
+    }, [rGrid, sGrid, data, currentView]);
 
     // Get the Stock data for a list of stocks
     const getFinancialData = async (stocks, fetchFinancials = false) => {
@@ -489,17 +509,17 @@ function ModernStonkBoard() {
 
     // Board switching functions
     const handleFullDataScoreboard = () => {
-        setUiData(data);
+        setCurrentView('full');
         setAltGrid(false);
     };
 
     const handleRelativeScoreboard = () => {
-        setUiData(rGrid);
+        setCurrentView('relative');
         setAltGrid(true);
     };
 
     const handleStdScoreboard = () => {
-        setUiData(sGrid);
+        setCurrentView('std');
         setAltGrid(true);
     };
 
