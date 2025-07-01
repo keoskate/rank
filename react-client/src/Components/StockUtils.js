@@ -43,11 +43,13 @@ export async function getStockData(stock, fetchFinancials = false, retry = true)
 /**
  * Get multiple stocks data efficiently using batch processing
  * 
- * This is the RECOMMENDED way to fetch multiple stocks as it's much faster
- * and uses fewer API calls than individual requests.
+ * This function automatically handles rate limit fallbacks:
+ * 1. Try Alpha Vantage first (most comprehensive data)
+ * 2. Fall back to Yahoo Direct if rate limited (no limits, no API key)
+ * 3. Provide clear logging about which provider is being used
  *
  * @param {string[]} stocks - Array of stock tickers
- * @param {string} provider - API provider ('alphavantage', 'yahoo', 'polygon')
+ * @param {string} provider - API provider ('alphavantage', 'yahoo-direct', 'polygon')
  * @param {Object} options - Additional options
  * @returns {Promise<Object[]>} Array of stock data objects
  */
@@ -62,8 +64,32 @@ export async function getMultipleStocksData(stocks, provider = 'alphavantage', o
     return result ? [result] : [];
   }
   
-  // Multiple stocks - use efficient batch processing
-  return await batchFetchStocks(stocks, provider, options);
+  try {
+    // Try primary provider first
+    console.info(`🎯 Attempting to fetch with ${provider}...`);
+    return await batchFetchStocks(stocks, provider, options);
+    
+  } catch (error) {
+    console.warn(`⚠️ ${provider} failed:`, error.message);
+    
+    // Auto-fallback to Yahoo Direct if Alpha Vantage is rate limited
+    if (provider === 'alphavantage' && (
+      error.message.includes('rate limit') || 
+      error.message.includes('API calls quota') ||
+      error.message.includes('exceeded')
+    )) {
+      console.info('🔄 Rate limit detected, falling back to Yahoo Direct (no limits)...');
+      try {
+        return await batchFetchStocks(stocks, 'yahoo-direct', options);
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError.message);
+        throw new Error(`Both ${provider} and yahoo-direct failed`);
+      }
+    }
+    
+    // Re-throw original error if no fallback available
+    throw error;
+  }
 }
 
 // ******** Helpers  ********** //

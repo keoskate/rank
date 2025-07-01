@@ -14,6 +14,7 @@
  */
 
 import { getStockData as getAlphaVantageData } from './alphaVantageAPI';
+import { batchFetchYahooDirect } from './yahooDirectAPI';
 
 /**
  * Batch fetch stock data efficiently based on the provider
@@ -37,6 +38,9 @@ export async function batchFetchStocks(symbols, provider = 'alphavantage', optio
         break;
       case 'yahoo':
         results = await batchFetchYahoo(symbols, options);
+        break;
+      case 'yahoo-direct':
+        results = await batchFetchYahooDirect(symbols, options);
         break;
       case 'polygon':
         results = await batchFetchPolygon(symbols, options);

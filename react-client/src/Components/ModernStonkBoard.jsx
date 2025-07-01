@@ -33,6 +33,9 @@ import BoardControls from './BoardControls';
 import * as cachedData20 from '../stock-data_20';
 import * as Utils from './StockUtils';
 
+/** KEO: TOGGLE FOR DEBUGGING NETWORK ISSUES */
+const DEBUG = true; // If we want to use cached data (preserve network request quota)
+
 // Configuration constants
 const COVID_STOCKS = [cachedData20.COVID_19, cachedData20.COVID_19_cached];
 const KEO_STOCKS = [cachedData20.KEO_STOCKS, cachedData20.KEO_STOCKS_cached];
@@ -56,8 +59,6 @@ const TEST_STOCKS = [
 
 // Config for the Stock board
 const STOCKS = TEST_STOCKS;
-// KEO: TOGGLE FOR DEBUGGING NETWORK ISSUES
-const DEBUG = false; // If we want to use cached data (preserve network request quota)
 
 const THROTTLE = {
   SMALL: 100,
@@ -156,17 +157,26 @@ function ModernStonkBoard() {
     } else {
       try {
         // USE BATCH API for much better performance
-        console.info('🚀 Using efficient batch API for multiple stocks');
-        const fetchedData = await Utils.getMultipleStocksData(stocks, 'alphavantage', {
-          fetchFinancials
-        });
-        
+        // TEMPORARY: Use Yahoo Direct due to Alpha Vantage rate limit
+        console.info(
+          '🚀 Using Yahoo Direct API (no rate limits, no API key needed)'
+        );
+        const fetchedData = await Utils.getMultipleStocksData(
+          stocks,
+          'yahoo-direct',
+          {
+            fetchFinancials,
+          }
+        );
+
         // Filter out null responses and ensure valid ticker
         return fetchedData.filter(x => x && x.ticker);
-        
       } catch (error) {
-        console.error('❌ Batch fetch failed, falling back to individual requests:', error);
-        
+        console.error(
+          '❌ Batch fetch failed, falling back to individual requests:',
+          error
+        );
+
         // Fallback to individual requests (legacy behavior)
         const fetchAll = [];
         stocks.forEach((stock, index) => {
@@ -175,7 +185,11 @@ function ModernStonkBoard() {
             new Promise(resolve => {
               setTimeout(async () => {
                 try {
-                  const result = await Utils.getStockData(stock, fetchFinancials, true);
+                  const result = await Utils.getStockData(
+                    stock,
+                    fetchFinancials,
+                    true
+                  );
                   resolve(result);
                 } catch (error) {
                   console.error(`Error fetching ${stock}:`, error);
@@ -185,7 +199,7 @@ function ModernStonkBoard() {
             })
           );
         });
-        
+
         const fetchedData = await Promise.all(fetchAll);
         return fetchedData.filter(x => x && x.ticker);
       }
