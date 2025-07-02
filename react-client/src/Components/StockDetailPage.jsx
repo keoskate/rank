@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStockData } from './StockDataProvider';
+import { getCacheInfo } from '../utils/cacheManager';
 
 // Professional time series chart component
 const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
@@ -278,6 +279,11 @@ const StockDetailPage = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState('52W');
   const [selectedMetricChart, setSelectedMetricChart] = useState('price');
   const [loading, setLoading] = useState(true);
+  
+  // Get cache info for data freshness
+  const cacheInfo = getCacheInfo();
+  const dataAge = cacheInfo?.lastFetched ? new Date(cacheInfo.lastFetched) : null;
+  const isDataStale = dataAge ? (Date.now() - dataAge.getTime()) > (30 * 60 * 1000) : false; // 30 minutes
 
   // Find the current stock data
   const stockData = useMemo(() => {
@@ -481,8 +487,8 @@ const StockDetailPage = () => {
     }
   }, [stockData, generateHistoricalData]);
 
-  // Show loading while data is being fetched
-  if (isLoading) {
+  // Show loading only if data is being fetched AND we don't have any existing data
+  if (isLoading && allStockData.length === 0) {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
         <h2>Loading...</h2>
@@ -722,7 +728,7 @@ const StockDetailPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <span
               style={{
                 fontSize: '12px',
@@ -736,6 +742,42 @@ const StockDetailPage = () => {
             >
               {currentStockList.name}
             </span>
+            
+            {/* Data freshness indicator */}
+            {dataAge && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: isDataStale ? '#dc3545' : '#28a745',
+                  fontWeight: '500',
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  padding: '3px 6px',
+                  borderRadius: '3px',
+                  border: `1px solid ${isDataStale ? '#dc3545' : '#28a745'}`,
+                }}
+                title={`Data last updated: ${dataAge.toLocaleString()}`}
+              >
+                {isDataStale ? '⚠️ ' : '✓ '}
+                Data: {dataAge.toLocaleDateString()} {dataAge.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                {isDataStale && ' (Stale)'}
+              </span>
+            )}
+            
+            {isLoading && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: '#007bff',
+                  fontWeight: '500',
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  padding: '3px 6px',
+                  borderRadius: '3px',
+                  border: '1px solid #007bff',
+                }}
+              >
+                🔄 Refreshing...
+              </span>
+            )}
           </div>
         </div>
 
