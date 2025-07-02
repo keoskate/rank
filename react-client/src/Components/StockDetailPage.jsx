@@ -289,7 +289,7 @@ const StockDetailPage = () => {
     if (!ticker || !stockData) return {};
 
     // Use the actual company name from the stock data
-    const companyName = stockData.name || `${ticker} Corporation`;
+    const companyName = stockData.name || ticker;
 
     // Get sector and industry from stock data or use defaults
     const sector = stockData.sector || stockData.industry || 'Technology';
@@ -481,7 +481,18 @@ const StockDetailPage = () => {
     }
   }, [stockData, generateHistoricalData]);
 
-  if (!stockData) {
+  // Show loading while data is being fetched
+  if (isLoading) {
+    return (
+      <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+        <h2>Loading...</h2>
+        <p>Fetching stock data for {ticker}...</p>
+      </div>
+    );
+  }
+
+  // Show not found only after loading is complete and stock is still not found
+  if (!isLoading && !stockData) {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
         <h2>Stock Not Found</h2>
