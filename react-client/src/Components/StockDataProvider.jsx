@@ -44,21 +44,13 @@ export const StockDataProvider = ({ children }) => {
     const stocksKey = stockSymbols.sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_basic`; // ModernStonkBoard uses fetchFinancials=false initially
     
-    console.log(`🔍 StockDataProvider checking cache for key: ${cacheKey}`);
-    console.log(`🔍 Stock symbols: ${stockSymbols}`);
-    console.log(`🔍 Current stock list: ${currentStockList.name}`);
-    
-    // Also check what cache keys exist
-    const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('stonks_cache_'));
-    console.log(`🔍 All cache keys in localStorage:`, allCacheKeys);
-    
     const cachedData = getCachedStockData(cacheKey);
     if (cachedData && cachedData.length > 0) {
-      console.log(`📂 SUCCESS: Loaded ${cachedData.length} stocks from cache with key: ${cacheKey}`);
+      console.log(`📂 Loaded ${cachedData.length} stocks from cache (${currentStockList.name})`);
       setStockData(cachedData);
       setIsLoading(false);
     } else {
-      console.log(`📭 FAILED: No cached data found for key: ${cacheKey}`);
+      console.log(`📭 No cached data found for ${currentStockList.name} stock list`);
       // Set loading to false even if no cache found, so StockDetailPage can show "Stock Not Found"
       setIsLoading(false);
     }
