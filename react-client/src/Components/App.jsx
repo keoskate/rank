@@ -14,6 +14,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import NavBar from './NavBar';
 import StockDetailPage from './StockDetailPage';
+import InvestTab from './InvestTab';
 import StockDataProvider from './StockDataProvider';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
           {/* Main routes - using React Router v6 syntax */}
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/invest" element={<InvestTab />} />
             <Route path="/stock/:ticker" element={<StockDetailPage />} />
           </Routes>
         </div>
