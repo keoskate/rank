@@ -4,12 +4,13 @@ const DIST_DIR = path.join(__dirname, '/react-client/dist');
 const webpack = require('webpack');
 
 module.exports = {
-  mode: 'production', // Fix the mode warning and enable optimizations
+  mode: 'development', // Enable development mode for better debugging
   entry: `${SRC_DIR}/index.jsx`,
   output: {
     path: DIST_DIR,
     filename: 'bundle.js',
   },
+  devtool: 'eval-source-map', // Enable source maps for debugging
   resolve: {
     extensions: ['.js', '.jsx', '.json', '.css'],
   },
@@ -62,14 +63,14 @@ module.exports = {
           name: 'common',
           minChunks: 2,
           chunks: 'all',
-        }
-      }
-    }
+        },
+      },
+    },
   },
   performance: {
     // Increase size limits to suppress warnings for now
     maxAssetSize: 1000000, // 1MB
     maxEntrypointSize: 1000000, // 1MB
-    hints: 'warning'
+    hints: 'warning',
   },
 };
