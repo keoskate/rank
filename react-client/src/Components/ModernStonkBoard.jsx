@@ -820,7 +820,7 @@ function ModernStonkBoard() {
             },
           })
         );
-      } else if (param.multiplier !== 0) {
+      } else if (param.multiplier !== 0 || key === 'name') {
         cols.push(
           columnHelper.accessor(key, {
             header: param.label,

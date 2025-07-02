@@ -177,16 +177,17 @@ async function fetchFromPolygon(symbol, options = {}) {
 
   try {
     // Fetch multiple data sources for comprehensive data
-    const [marketData, dividendData] = await Promise.all([
+    const [marketData, dividendData, tickerDetails] = await Promise.all([
       fetchPolygonMarketData(symbol, config.apiKey),
       fetchPolygonDividendData(symbol, config.apiKey),
+      fetchPolygonTickerDetails(symbol, config.apiKey),
     ]);
 
     if (!marketData) {
       throw new Error('No market data available');
     }
 
-    return parsePolygonData(symbol, marketData, null, dividendData);
+    return parsePolygonData(symbol, marketData, null, dividendData, tickerDetails);
   } catch (error) {
     console.error(`❌ Polygon fetch failed for ${symbol}:`, error.message);
     throw error;
@@ -222,6 +223,23 @@ async function fetchPolygonDividendData(symbol, apiKey) {
     const data = await response.json();
     return data.results && data.results.length > 0 ? data.results[0] : null;
   } catch (error) {
+    return null;
+  }
+}
+
+async function fetchPolygonTickerDetails(symbol, apiKey) {
+  try {
+    const url = `https://api.polygon.io/v3/reference/tickers/${symbol}?apikey=${apiKey}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.results || null;
+  } catch (error) {
+    console.warn(`Failed to fetch ticker details for ${symbol}:`, error.message);
     return null;
   }
 }
@@ -350,7 +368,7 @@ function parseAlphaVantageData(overview) {
 /**
  * Parse Polygon.io data into standard format
  */
-function parsePolygonData(symbol, marketData, financialData, dividendData) {
+function parsePolygonData(symbol, marketData, financialData, dividendData, tickerDetails) {
   const formatNumber = (value, precision = 2) => {
     const num = parseFloat(value);
     return isNaN(num) ? 0 : parseFloat(num.toFixed(precision));
@@ -426,8 +444,8 @@ function parsePolygonData(symbol, marketData, financialData, dividendData) {
   return {
     rank: 0,
     ticker: symbol,
-    name: `${symbol} Corp`,
-    industry: 'Unknown',
+    name: tickerDetails?.name || `${symbol} Corporation`,
+    industry: tickerDetails?.sic_description || tickerDetails?.type || 'Unknown',
     price: currentPrice,
     yearHigh: calculatedYearHigh,
     discount: discountPercent,

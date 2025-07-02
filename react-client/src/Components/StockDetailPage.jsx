@@ -284,83 +284,21 @@ const StockDetailPage = () => {
     return allStockData.find(stock => stock.ticker === ticker);
   }, [allStockData, ticker]);
 
-  // Generate company metadata based on ticker for demonstration
+  // Use real company data from stockData
   const companyMetadata = useMemo(() => {
-    if (!ticker) return {};
+    if (!ticker || !stockData) return {};
 
+    // Use the actual company name from the stock data
+    const companyName = stockData.name || `${ticker} Corporation`;
+
+    // Get sector and industry from stock data or use defaults
+    const sector = stockData.sector || stockData.industry || 'Technology';
+    const industry = stockData.subIndustry || stockData.industry || 'Software';
+
+    // Use existing data or generate reasonable defaults based on ticker hash for missing data
     const tickerHash = ticker
       .split('')
       .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const sectors = [
-      'Technology',
-      'Healthcare',
-      'Financial Services',
-      'Consumer Goods',
-      'Energy',
-      'Industrial',
-      'Real Estate',
-      'Utilities',
-    ];
-    const industries = {
-      Technology: ['Software', 'Semiconductors', 'Hardware', 'Cloud Services'],
-      Healthcare: [
-        'Pharmaceuticals',
-        'Medical Devices',
-        'Biotechnology',
-        'Healthcare Services',
-      ],
-      'Financial Services': [
-        'Banking',
-        'Insurance',
-        'Asset Management',
-        'Fintech',
-      ],
-      'Consumer Goods': [
-        'Retail',
-        'Food & Beverage',
-        'Apparel',
-        'Consumer Electronics',
-      ],
-      Energy: [
-        'Oil & Gas',
-        'Renewable Energy',
-        'Utilities',
-        'Energy Equipment',
-      ],
-      Industrial: [
-        'Manufacturing',
-        'Aerospace',
-        'Construction',
-        'Transportation',
-      ],
-      'Real Estate': ['REITs', 'Property Development', 'Real Estate Services'],
-      Utilities: ['Electric Utilities', 'Water Utilities', 'Gas Utilities'],
-    };
-
-    // Generate company names based on ticker and sector
-    const companyPrefixes = {
-      Technology: ['Apex', 'Cyber', 'Digital', 'Quantum', 'Smart', 'Tech'],
-      Healthcare: ['Bio', 'Med', 'Health', 'Care', 'Pharma', 'Life'],
-      'Financial Services': ['Capital', 'Trust', 'Financial', 'Bank', 'Asset', 'Invest'],
-      'Consumer Goods': ['Global', 'Premier', 'Consumer', 'Retail', 'Brand', 'Market'],
-      Energy: ['Power', 'Energy', 'Fuel', 'Green', 'Solar', 'Oil'],
-      Industrial: ['Industrial', 'Manufacturing', 'Steel', 'Heavy', 'Construction', 'Build'],
-      'Real Estate': ['Property', 'Real Estate', 'Development', 'Land', 'Building', 'Estate'],
-      Utilities: ['Utility', 'Water', 'Electric', 'Gas', 'Power', 'Service']
-    };
-
-    const companySuffixes = ['Corp', 'Inc', 'LLC', 'Ltd', 'Co', 'Group', 'Holdings', 'Systems', 'Solutions', 'Technologies'];
-
-    const selectedSector = sectors[tickerHash % sectors.length];
-    const selectedIndustry =
-      industries[selectedSector][
-        tickerHash % industries[selectedSector].length
-      ];
-
-    // Generate company name
-    const prefix = companyPrefixes[selectedSector][tickerHash % companyPrefixes[selectedSector].length];
-    const suffix = companySuffixes[tickerHash % companySuffixes.length];
-    const companyName = `${prefix} ${suffix}`;
 
     // Generate earnings date (next quarter)
     const nextEarnings = new Date();
@@ -368,20 +306,20 @@ const StockDetailPage = () => {
 
     return {
       name: companyName,
-      sector: selectedSector,
-      industry: selectedIndustry,
+      sector: sector,
+      industry: industry,
       earningsDate: nextEarnings,
-      marketCap: stockData?.price
+      marketCap: stockData?.marketCap || (stockData?.price
         ? stockData.price * (50000000 + (tickerHash % 1000000000))
-        : null,
-      employees: 1000 + (tickerHash % 50000),
-      founded: 1950 + (tickerHash % 70),
-      exchange:
-        tickerHash % 3 === 0
+        : null),
+      employees: stockData?.employees || (1000 + (tickerHash % 50000)),
+      founded: stockData?.founded || (1950 + (tickerHash % 70)),
+      exchange: stockData?.exchange ||
+        (tickerHash % 3 === 0
           ? 'NASDAQ'
           : tickerHash % 3 === 1
             ? 'NYSE'
-            : 'AMEX',
+            : 'AMEX'),
     };
   }, [ticker, stockData]);
 
