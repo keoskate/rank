@@ -230,13 +230,16 @@ async function fetchPolygonDividendData(symbol, apiKey) {
 async function fetchPolygonTickerDetails(symbol, apiKey) {
   try {
     const url = `https://api.polygon.io/v3/reference/tickers/${symbol}?apikey=${apiKey}`;
+    console.log(`Fetching ticker details from: ${url}`);
     const response = await fetch(url);
 
     if (!response.ok) {
+      console.warn(`Ticker details API returned ${response.status} for ${symbol}`);
       return null;
     }
 
     const data = await response.json();
+    console.log(`Full ticker details response for ${symbol}:`, data);
     return data.results || null;
   } catch (error) {
     console.warn(`Failed to fetch ticker details for ${symbol}:`, error.message);
@@ -441,11 +444,27 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
     (calculatedYearHigh - currentPrice) / calculatedYearHigh
   );
 
+  // Debug logging for company name
+  console.log(`Parsing ticker details for ${symbol}:`, tickerDetails);
+  
+  // Extract company information from ticker details
+  const companyName = tickerDetails?.name || symbol;
+  const sector = tickerDetails?.market || tickerDetails?.primary_exchange || 'Unknown';
+  const industry = tickerDetails?.sic_description || tickerDetails?.type || tickerDetails?.locale || 'Unknown';
+  
+  console.log(`Extracted data for ${symbol}:`, {
+    name: companyName,
+    sector: sector,
+    industry: industry,
+    allFields: Object.keys(tickerDetails || {})
+  });
+  
   return {
     rank: 0,
     ticker: symbol,
-    name: tickerDetails?.name || `${symbol} Corporation`,
-    industry: tickerDetails?.sic_description || tickerDetails?.type || 'Unknown',
+    name: companyName,
+    industry: industry,
+    sector: sector,
     price: currentPrice,
     yearHigh: calculatedYearHigh,
     discount: discountPercent,
