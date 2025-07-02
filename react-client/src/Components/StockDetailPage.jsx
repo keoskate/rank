@@ -13,6 +13,74 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStockData } from './StockDataProvider';
 import { getCacheInfo } from '../utils/cacheManager';
 
+// Mini chart component for metric cards
+const MiniChart = ({ data, selectedTimeframe, metricKey }) => {
+  if (!data || data.length === 0) return null;
+
+  const width = 120;
+  const height = 40;
+  const padding = 2;
+  const plotWidth = width - padding * 2;
+  const plotHeight = height - padding * 2;
+
+  const maxValue = Math.max(...data);
+  const minValue = Math.min(...data);
+  const range = maxValue - minValue || 1;
+
+  // Generate path for the mini line
+  const pathData = data.map((value, index) => {
+    const x = padding + (index / (data.length - 1)) * plotWidth;
+    const y = padding + (1 - (value - minValue) / range) * plotHeight;
+    return { x, y, value };
+  });
+
+  const pathString = pathData
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ');
+
+  // Determine if trend is positive
+  const isPositive = data[data.length - 1] > data[0];
+  const strokeColor = isPositive ? '#28a745' : '#dc3545';
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+      <svg
+        width={width}
+        height={height}
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.9)',
+          borderRadius: '4px',
+          border: '1px solid rgba(0,0,0,0.1)',
+        }}
+      >
+        {/* Mini line chart */}
+        <path
+          d={pathString}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="1.5"
+          opacity="0.8"
+        />
+        
+        {/* Start and end points */}
+        <circle
+          cx={pathData[0]?.x}
+          cy={pathData[0]?.y}
+          r="1.5"
+          fill={strokeColor}
+          opacity="0.6"
+        />
+        <circle
+          cx={pathData[pathData.length - 1]?.x}
+          cy={pathData[pathData.length - 1]?.y}
+          r="1.5"
+          fill={strokeColor}
+        />
+      </svg>
+    </div>
+  );
+};
+
 // Professional time series chart component
 const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -568,6 +636,60 @@ const StockDetailPage = () => {
     return metricLabel || selectedMetricChart;
   };
 
+  // Generate mini chart data for a specific metric
+  const generateMiniChartData = (metricKey) => {
+    if (!stockData) return [];
+
+    const currentValue = stockData[metricKey] || stockData.price;
+    const points = 20; // Fewer points for mini charts
+    const days = selectedTimeframe === '1W' ? 7 : selectedTimeframe === '1M' ? 30 : 90;
+    
+    // Create deterministic seed
+    const tickerHash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const metricHash = metricKey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const seed = (tickerHash + metricHash) % 1000;
+
+    const data = [];
+    let currentPrice = currentValue;
+
+    for (let i = points - 1; i >= 0; i--) {
+      let dataPoint;
+
+      if (metricKey === 'price') {
+        // Price data with moderate volatility for mini chart
+        const random1 = ((Math.sin(i * 0.2 + seed) + 1) / 2);
+        const random2 = ((Math.sin(i * 0.35 + seed * 1.1) + 1) / 2);
+        
+        const change = (random1 - 0.5) * 0.03 + (random2 - 0.5) * 0.01; // Smaller movements
+        currentPrice = currentPrice * (1 + change);
+        currentPrice = Math.max(currentValue * 0.8, Math.min(currentValue * 1.2, currentPrice));
+        dataPoint = currentPrice;
+        
+      } else if (['rsi', 'impliedVolatility', 'roe'].includes(metricKey)) {
+        // Bounded metrics
+        const noise = ((Math.sin(i * 0.25 + seed) + Math.sin(i * 0.4 + seed * 1.3)) / 2) * 0.2;
+        dataPoint = currentValue * (0.9 + noise + (i / points) * 0.1);
+
+        if (metricKey === 'rsi') {
+          dataPoint = Math.max(30, Math.min(70, dataPoint));
+        } else if (metricKey === 'impliedVolatility') {
+          dataPoint = Math.max(0.15, Math.min(0.8, dataPoint));
+        } else if (metricKey === 'roe') {
+          dataPoint = Math.max(0.05, Math.min(0.4, dataPoint));
+        }
+      } else {
+        // Other metrics
+        const noise = ((Math.sin(i * 0.3 + seed) + Math.sin(i * 0.45 + seed * 0.8)) / 2) * 0.15;
+        dataPoint = currentValue * (0.9 + noise + (i / points) * 0.1);
+        dataPoint = Math.max(dataPoint, currentValue * 0.5);
+      }
+
+      data.push(dataPoint);
+    }
+
+    return data;
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh',
@@ -1032,6 +1154,13 @@ const StockDetailPage = () => {
                   >
                     {formatValue(stockData[key], param.type)}
                   </div>
+
+                  {/* Mini chart for the metric */}
+                  <MiniChart 
+                    data={generateMiniChartData(key)}
+                    selectedTimeframe={selectedTimeframe}
+                    metricKey={key}
+                  />
 
                   {ranking && (
                     <div
