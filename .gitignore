@@ -3,7 +3,20 @@ logs
 *.Logs
 # Compiled directory and file
 build/
+dist/
 bundle.js
+*.bundle.js
+*.chunk.js
+*.map
+*.min.js
+# All bundle and build files
+**/*.bundle.js
+**/*.chunk.js
+**/*.bundle.map
+**/*.chunk.map
+# Build outputs
+react-client/dist/
+react-client/build/
 # Dependency directories
 node_modules/
 

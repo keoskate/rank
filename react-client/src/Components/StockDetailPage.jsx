@@ -491,8 +491,22 @@ const StockDetailPage = () => {
   if (isLoading && allStockData.length === 0) {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-        <h2>Loading...</h2>
-        <p>Fetching stock data for {ticker}...</p>
+        <h2>Loading Stock Data...</h2>
+        <p>No cached data found. Loading fresh data for {ticker}...</p>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            marginTop: '16px',
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+          }}
+        >
+          Go to Home Page
+        </button>
       </div>
     );
   }
