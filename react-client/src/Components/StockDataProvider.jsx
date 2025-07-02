@@ -10,6 +10,7 @@ import { getCachedStockData, cacheOrFetch, cacheWithBackgroundRefresh } from '..
 import { STOCK_COLUMNS } from '../config/stockColumns';
 import { getStockList, DEFAULT_STOCK_LIST } from '../config/stockLists';
 import { getDebugPreference } from '../utils/debugPreference';
+import { loadStockListPreference } from '../utils/stockListPreference';
 import * as Utils from './StockUtils';
 
 const StockDataContext = createContext();
@@ -25,7 +26,10 @@ export const useStockData = () => {
 export const StockDataProvider = ({ children }) => {
   const [stockData, setStockData] = useState([]);
   const [stockColumns, setStockColumns] = useState(STOCK_COLUMNS);
-  const [currentStockList, setCurrentStockList] = useState(getStockList(DEFAULT_STOCK_LIST));
+  const [currentStockList, setCurrentStockList] = useState(() => {
+    const savedStockListId = loadStockListPreference(DEFAULT_STOCK_LIST);
+    return getStockList(savedStockListId);
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   // Clean data function (simplified version)
@@ -40,13 +44,23 @@ export const StockDataProvider = ({ children }) => {
     const stocksKey = stockSymbols.sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_basic`; // ModernStonkBoard uses fetchFinancials=false initially
     
+    console.log(`🔍 StockDataProvider checking cache for key: ${cacheKey}`);
+    console.log(`🔍 Stock symbols: ${stockSymbols}`);
+    console.log(`🔍 Current stock list: ${currentStockList.name}`);
+    
+    // Also check what cache keys exist
+    const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('stonks_cache_'));
+    console.log(`🔍 All cache keys in localStorage:`, allCacheKeys);
+    
     const cachedData = getCachedStockData(cacheKey);
     if (cachedData && cachedData.length > 0) {
-      console.log(`📂 Loaded ${cachedData.length} stocks from cache with key: ${cacheKey}`);
+      console.log(`📂 SUCCESS: Loaded ${cachedData.length} stocks from cache with key: ${cacheKey}`);
       setStockData(cachedData);
       setIsLoading(false);
     } else {
-      console.log(`📭 No cached data found for key: ${cacheKey}`);
+      console.log(`📭 FAILED: No cached data found for key: ${cacheKey}`);
+      // Set loading to false even if no cache found, so StockDetailPage can show "Stock Not Found"
+      setIsLoading(false);
     }
   }, [currentStockList.stocks]); // Re-run if stock list changes
 

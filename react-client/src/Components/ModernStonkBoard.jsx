@@ -213,6 +213,10 @@ function ModernStonkBoard() {
     const stocksKey = stocks.sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_${fetchFinancials ? 'with_financials' : 'basic'}`;
 
+    console.log(`🔍 ModernStonkBoard using cache key: ${cacheKey}`);
+    console.log(`🔍 Stocks: ${stocks}`);
+    console.log(`🔍 fetchFinancials: ${fetchFinancials}`);
+
     // Try smart cache first in debug mode
     if (debugMode) {
       const smartCached = getCachedStockData(cacheKey);
