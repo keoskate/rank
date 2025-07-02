@@ -525,6 +525,199 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
 }
 
 /**
+ * Get historical stock data for chart generation
+ *
+ * @param {string} symbol - Stock symbol (e.g., 'AAPL')
+ * @param {string} timeframe - Timeframe ('1W', '1M', '3M', '6M', '52W', 'YTD')
+ * @returns {Promise<Object|null>} Historical data with labels and data arrays
+ */
+export async function getHistoricalData(symbol, timeframe) {
+  const config = getCurrentProviderConfig();
+  console.info(`📈 Fetching historical data for ${symbol} (${timeframe}) from ${config.name}`);
+
+  try {
+    switch (PRIMARY_PROVIDER) {
+      case API_PROVIDERS.ALPHA_VANTAGE:
+        return await fetchHistoricalFromAlphaVantage(symbol, timeframe);
+      case API_PROVIDERS.POLYGON:
+        return await fetchHistoricalFromPolygon(symbol, timeframe);
+      default:
+        throw new Error(`Unsupported provider: ${PRIMARY_PROVIDER}`);
+    }
+  } catch (error) {
+    console.error(
+      `❌ Failed to fetch historical data for ${symbol}:`,
+      error.message
+    );
+    return null;
+  }
+}
+
+/**
+ * Fetch historical data from Alpha Vantage
+ */
+async function fetchHistoricalFromAlphaVantage(symbol, timeframe) {
+  const config = getCurrentProviderConfig();
+  
+  // Alpha Vantage historical endpoints
+  let apiFunction = 'TIME_SERIES_DAILY';
+  if (timeframe === '52W' || timeframe === 'YTD') {
+    apiFunction = 'TIME_SERIES_WEEKLY';
+  }
+  
+  const url = `https://www.alphavantage.co/query?function=${apiFunction}&symbol=${symbol}&apikey=${config.apiKey}&outputsize=full`;
+  
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  
+  // Check for API errors
+  if (data.Note || data.Error || data.Information) {
+    throw new Error(data.Note || data.Error || data.Information);
+  }
+  
+  return parseAlphaVantageHistoricalData(data, timeframe);
+}
+
+/**
+ * Fetch historical data from Polygon.io
+ */
+async function fetchHistoricalFromPolygon(symbol, timeframe) {
+  const config = getCurrentProviderConfig();
+  
+  // Calculate date range based on timeframe
+  const endDate = new Date();
+  const startDate = new Date();
+  
+  switch (timeframe) {
+    case '1W':
+      startDate.setDate(endDate.getDate() - 7);
+      break;
+    case '1M':
+      startDate.setMonth(endDate.getMonth() - 1);
+      break;
+    case '3M':
+      startDate.setMonth(endDate.getMonth() - 3);
+      break;
+    case '6M':
+      startDate.setMonth(endDate.getMonth() - 6);
+      break;
+    case '52W':
+      startDate.setFullYear(endDate.getFullYear() - 1);
+      break;
+    case 'YTD':
+      startDate.setMonth(0);
+      startDate.setDate(1);
+      break;
+    default:
+      startDate.setMonth(endDate.getMonth() - 3);
+  }
+  
+  const fromDate = startDate.toISOString().split('T')[0];
+  const toDate = endDate.toISOString().split('T')[0];
+  
+  const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=asc&apikey=${config.apiKey}`;
+  
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  
+  if (!data.results || data.results.length === 0) {
+    throw new Error('No historical data available');
+  }
+  
+  return parsePolygonHistoricalData(data.results, timeframe);
+}
+
+/**
+ * Parse Alpha Vantage historical data
+ */
+function parseAlphaVantageHistoricalData(data, timeframe) {
+  const timeSeriesKey = Object.keys(data).find(key => key.includes('Time Series'));
+  if (!timeSeriesKey) {
+    throw new Error('No time series data found');
+  }
+  
+  const timeSeries = data[timeSeriesKey];
+  const labels = [];
+  const prices = [];
+  
+  // Get dates in chronological order
+  const dates = Object.keys(timeSeries).sort();
+  
+  // Filter based on timeframe
+  const filteredDates = filterDatesByTimeframe(dates, timeframe);
+  
+  for (const date of filteredDates) {
+    const dayData = timeSeries[date];
+    labels.push(new Date(date).toISOString());
+    prices.push(parseFloat(dayData['4. close']));
+  }
+  
+  return { labels, data: prices };
+}
+
+/**
+ * Parse Polygon.io historical data
+ */
+function parsePolygonHistoricalData(results, timeframe) {
+  const labels = [];
+  const prices = [];
+  
+  for (const result of results) {
+    // Convert timestamp to ISO string
+    const date = new Date(result.t);
+    labels.push(date.toISOString());
+    prices.push(result.c); // closing price
+  }
+  
+  return { labels, data: prices };
+}
+
+/**
+ * Filter dates based on timeframe requirements
+ */
+function filterDatesByTimeframe(dates, timeframe) {
+  const endDate = new Date();
+  const startDate = new Date();
+  
+  switch (timeframe) {
+    case '1W':
+      startDate.setDate(endDate.getDate() - 7);
+      break;
+    case '1M':
+      startDate.setMonth(endDate.getMonth() - 1);
+      break;
+    case '3M':
+      startDate.setMonth(endDate.getMonth() - 3);
+      break;
+    case '6M':
+      startDate.setMonth(endDate.getMonth() - 6);
+      break;
+    case '52W':
+      startDate.setFullYear(endDate.getFullYear() - 1);
+      break;
+    case 'YTD':
+      startDate.setMonth(0);
+      startDate.setDate(1);
+      break;
+    default:
+      startDate.setMonth(endDate.getMonth() - 3);
+  }
+  
+  return dates.filter(date => {
+    const d = new Date(date);
+    return d >= startDate && d <= endDate;
+  });
+}
+
+/**
  * Get API provider information
  */
 export function getApiInfo() {

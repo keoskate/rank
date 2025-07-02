@@ -24,6 +24,7 @@ import {
   getStockData as getUnifiedStockData,
   batchFetchStocks,
   getApiInfo,
+  getHistoricalData,
 } from '../api/unifiedAPI';
 
 // Import stock columns configuration
@@ -99,6 +100,17 @@ export async function getMultipleStocksData(
 
     throw error;
   }
+}
+
+/**
+ * Get historical stock data for chart generation
+ *
+ * @param {string} symbol - Stock symbol (e.g., 'AAPL')
+ * @param {string} timeframe - Timeframe ('1W', '1M', '3M', '6M', '52W', 'YTD')
+ * @returns {Promise<Object|null>} Historical data with labels and data arrays
+ */
+export async function getStockHistoricalData(symbol, timeframe) {
+  return await getHistoricalData(symbol, timeframe);
 }
 
 // ******** Helpers  ********** //

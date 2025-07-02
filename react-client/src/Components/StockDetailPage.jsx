@@ -12,9 +12,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStockData } from './StockDataProvider';
 import { getCacheInfo } from '../utils/cacheManager';
+import { 
+  loadChartPreferences, 
+  updateChartPreference 
+} from '../utils/chartPreferences';
+import { getStockHistoricalData } from './StockUtils';
 
 // Mini chart component for metric cards
-const MiniChart = ({ data, selectedTimeframe, metricKey }) => {
+const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
   if (!data || data.length === 0) return null;
 
   const width = 120;
@@ -43,7 +48,7 @@ const MiniChart = ({ data, selectedTimeframe, metricKey }) => {
   const strokeColor = isPositive ? '#28a745' : '#dc3545';
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '8px 0' }}>
       <svg
         width={width}
         height={height}
@@ -76,6 +81,18 @@ const MiniChart = ({ data, selectedTimeframe, metricKey }) => {
           r="1.5"
           fill={strokeColor}
         />
+        
+        {/* Real data indicator */}
+        {isRealData && (
+          <circle
+            cx={width - 8}
+            cy={8}
+            r="3"
+            fill="#007bff"
+            opacity="0.8"
+            title="Real historical data"
+          />
+        )}
       </svg>
     </div>
   );
@@ -86,29 +103,107 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  if (!data || !labels || data.length === 0) {
-    return <div>No chart data available</div>;
+  if (!data || !labels || data.length === 0 || labels.length === 0) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '400px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #dee2e6',
+        borderRadius: '4px'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6c757d' }}>
+          <div>📊</div>
+          <div>No chart data available</div>
+        </div>
+      </div>
+    );
   }
 
-  const maxValue = Math.max(...data);
-  const minValue = Math.min(...data);
-  const range = maxValue - minValue || 1; // Prevent division by zero
+  // Filter out invalid data points
+  const validData = data.filter(d => d !== null && d !== undefined && isFinite(d));
+  if (validData.length === 0) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '400px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #dee2e6',
+        borderRadius: '4px'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6c757d' }}>
+          <div>⚠️</div>
+          <div>Invalid chart data</div>
+        </div>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...validData);
+  const minValue = Math.min(...validData);
+  const range = maxValue - minValue || Math.abs(maxValue) * 0.1 || 1; // Prevent division by zero
   const padding = { top: 20, right: 40, bottom: 40, left: 60 };
   const chartWidth = 800;
   const chartHeight = 300;
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
 
-  // Calculate path for the line
+  // Calculate path for the line with validation
   const pathData = data.map((value, index) => {
-    const x = padding.left + (index / (data.length - 1)) * plotWidth;
-    const y = padding.top + (1 - (value - minValue) / range) * plotHeight;
-    return { x, y, value, label: labels[index], index };
-  });
+    // Ensure value is valid for calculations
+    const safeValue = (value !== null && value !== undefined && isFinite(value)) ? value : (minValue + maxValue) / 2;
+    
+    const x = padding.left + (index / Math.max(1, data.length - 1)) * plotWidth;
+    const y = padding.top + (1 - (safeValue - minValue) / range) * plotHeight;
+    return { 
+      x: isFinite(x) ? x : padding.left, 
+      y: isFinite(y) ? y : padding.top + plotHeight / 2, 
+      value: safeValue, 
+      label: labels[index] || new Date().toISOString(), 
+      index 
+    };
+  }).filter(point => point.x >= padding.left && point.x <= chartWidth - padding.right);
 
-  const pathString = pathData
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
-    .join(' ');
+  // Create a smooth curve using bezier curves
+  const createSmoothPath = (points) => {
+    if (points.length < 2) return '';
+    
+    let path = `M ${points[0].x} ${points[0].y}`;
+    
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      
+      if (i === 1) {
+        // First segment - use quadratic curve
+        const cpx = prev.x + (curr.x - prev.x) * 0.5;
+        const cpy = prev.y;
+        path += ` Q ${cpx} ${cpy} ${curr.x} ${curr.y}`;
+      } else {
+        // Smooth cubic bezier curves
+        const prevPrev = points[i - 2];
+        const next = points[i + 1] || curr;
+        
+        // Control points for smooth curve
+        const cp1x = prev.x + (curr.x - prevPrev.x) * 0.2;
+        const cp1y = prev.y + (curr.y - prevPrev.y) * 0.2;
+        const cp2x = curr.x - (next.x - prev.x) * 0.2;
+        const cp2y = curr.y - (next.y - prev.y) * 0.2;
+        
+        path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${curr.x} ${curr.y}`;
+      }
+    }
+    
+    return path;
+  };
+
+  const pathString = createSmoothPath(pathData);
 
   const handleMouseMove = event => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -131,19 +226,28 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
 
   // Format value based on metric type
   const formatValue = value => {
-    if (selectedMetric === 'price') return `$${value.toFixed(2)}`;
+    if (value === null || value === undefined || isNaN(value)) {
+      return 'N/A';
+    }
+    
+    const numValue = Number(value);
+    if (!isFinite(numValue)) {
+      return 'N/A';
+    }
+    
+    if (selectedMetric === 'price') return `$${numValue.toFixed(2)}`;
     if (selectedMetric.includes('Ratio') || selectedMetric === 'beta')
-      return value.toFixed(2);
+      return numValue.toFixed(2);
     if (
       selectedMetric.includes('percentage') ||
       selectedMetric === 'roe' ||
       selectedMetric === 'impliedVolatility'
     ) {
-      return `${(value * 100).toFixed(2)}%`;
+      return `${(numValue * 100).toFixed(2)}%`;
     }
-    if (typeof value === 'number' && value > 1000)
-      return value.toLocaleString();
-    return value.toFixed(2);
+    if (typeof numValue === 'number' && numValue > 1000)
+      return numValue.toLocaleString();
+    return numValue.toFixed(2);
   };
 
   // Generate grid lines
@@ -237,27 +341,20 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
           d={pathString}
           fill="none"
           stroke="#007bff"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {/* Data points */}
-        {pathData.map((point, index) => (
-          <circle
-            key={index}
-            cx={point.x}
-            cy={point.y}
-            r="3"
-            fill="#007bff"
-            stroke="#ffffff"
-            strokeWidth="2"
-            style={{
-              opacity: hoveredPoint && hoveredPoint.index === index ? 1 : 0.7,
-              cursor: 'pointer',
-            }}
-          />
-        ))}
+        {/* Invisible overlay for hover detection */}
+        <rect
+          x={padding.left}
+          y={padding.top}
+          width={plotWidth}
+          height={plotHeight}
+          fill="transparent"
+          style={{ cursor: 'crosshair' }}
+        />
 
         {/* Hovered point highlight */}
         {hoveredPoint && (
@@ -344,9 +441,14 @@ const StockDetailPage = () => {
   } = useStockData();
   const { ticker } = useParams();
   const navigate = useNavigate();
-  const [selectedTimeframe, setSelectedTimeframe] = useState('52W');
-  const [selectedMetricChart, setSelectedMetricChart] = useState('price');
+  
+  // Load saved chart preferences
+  const savedPreferences = loadChartPreferences();
+  const [selectedTimeframe, setSelectedTimeframe] = useState(savedPreferences.timeframe);
+  const [selectedMetricChart, setSelectedMetricChart] = useState(savedPreferences.metric);
   const [loading, setLoading] = useState(true);
+  const [historicalData, setHistoricalData] = useState(null);
+  const [historicalLoading, setHistoricalLoading] = useState(false);
   
   // Get cache info for data freshness
   const cacheInfo = getCacheInfo();
@@ -439,101 +541,308 @@ const StockDetailPage = () => {
     return rankings;
   }, [stockData, allStockData, stockColumns]);
 
-  // Generate mock historical data for charts with support for different metrics
+  // Generate realistic historical data that works backwards from current real values
   const generateHistoricalData = useMemo(() => {
     if (!stockData) return null;
 
-    const timeframes = {
-      '1W': { days: 7, points: 35 }, // 5 points per day (more granular)
-      '1M': { days: 30, points: 120 }, // 4 points per day
-      '3M': { days: 90, points: 180 }, // 2 points per day
-      '6M': { days: 180, points: 180 }, // 1 point per day
-      '52W': { days: 365, points: 260 }, // ~weekly points but more granular
-      YTD: { days: new Date().getDayOfYear(), points: Math.min(new Date().getDayOfYear() * 2, 200) },
+    // Calculate trading days (excluding weekends)
+    const getTradingDays = (timeframe) => {
+      const tradingDaysPerWeek = 5; // Monday-Friday
+      const totalWeeks = {
+        '1W': 1,
+        '1M': 4.33, // ~4.33 weeks in a month
+        '3M': 13,   // ~13 weeks in 3 months
+        '6M': 26,   // ~26 weeks in 6 months
+        '52W': 52,  // 52 weeks in a year
+        'YTD': Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24 * 7))
+      };
+      
+      return Math.floor(totalWeeks[timeframe] * tradingDaysPerWeek);
     };
 
-    const config = timeframes[selectedTimeframe];
+    const tradingDays = getTradingDays(selectedTimeframe);
     const currentValue = stockData[selectedMetricChart] || stockData.price;
-
-    // Generate realistic data movement based on metric type
-    const data = [];
-    const labels = [];
-
-    // Generate more realistic price movement with trending and volatility
-    let currentPrice = currentValue;
-    const dailyVolatility = 0.02; // 2% daily volatility base
-    const trendStrength = 0.001; // Overall trend factor
     
-    // Create deterministic but complex seed for consistent results
+    // Safety checks for invalid data
+    if (!currentValue || !isFinite(currentValue) || currentValue <= 0) {
+      console.warn('Invalid current value for chart generation:', currentValue);
+      return { labels: [], data: [] };
+    }
+    
+    if (!tradingDays || tradingDays <= 0) {
+      console.warn('Invalid trading days for chart generation:', tradingDays);
+      return { labels: [], data: [] };
+    }
+
+    // Industry-standard Geometric Brownian Motion (GBM) parameters
+    const getGBMParameters = (timeframe, metricType) => {
+      // Base parameters for different timeframes (annualized)
+      const baseParams = {
+        '1W': { mu: 0.0, sigma: 0.15 },   // Weekly: neutral drift, moderate volatility
+        '1M': { mu: 0.05, sigma: 0.20 },  // Monthly: slight upward bias
+        '3M': { mu: 0.08, sigma: 0.25 },  // Quarterly: moderate upward bias
+        '6M': { mu: 0.10, sigma: 0.30 },  // Semi-annual: higher volatility
+        '52W': { mu: 0.12, sigma: 0.35 }, // Annual: strong trend potential
+        'YTD': { mu: 0.08, sigma: 0.25 }  // YTD: moderate parameters
+      };
+
+      let params = baseParams[timeframe] || baseParams['3M'];
+      
+      // Adjust parameters based on metric type
+      if (metricType === 'price') {
+        // Price data: standard GBM parameters
+        return params;
+      } else if (metricType === 'rsi') {
+        // RSI: mean-reverting with bounds
+        return { mu: 0.0, sigma: 0.10 };
+      } else if (metricType === 'impliedVolatility') {
+        // IV: high volatility with spikes
+        return { mu: 0.0, sigma: 0.40 };
+      } else {
+        // Other financial metrics: lower volatility
+        return { mu: params.mu * 0.5, sigma: params.sigma * 0.6 };
+      }
+    };
+
+    const { mu, sigma } = getGBMParameters(selectedTimeframe, selectedMetricChart);
+    
+    // Generate deterministic but realistic random sequence
     const tickerHash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const metricHash = selectedMetricChart.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const seed = (tickerHash + metricHash) % 1000;
+    const seed = (tickerHash + metricHash) % 10000;
 
-    for (let i = config.points - 1; i >= 0; i--) {
-      const daysAgo = (config.days / config.points) * i;
-      const date = new Date();
+    // Linear Congruential Generator for deterministic randomness
+    let randomSeed = seed;
+    const nextRandom = () => {
+      randomSeed = (randomSeed * 9301 + 49297) % 233280;
+      return randomSeed / 233280;
+    };
+
+    // Box-Muller transform for normal distribution
+    let hasSpareGaussian = false;
+    let spareGaussian = 0;
+    
+    const generateGaussian = () => {
+      if (hasSpareGaussian) {
+        hasSpareGaussian = false;
+        return spareGaussian;
+      }
       
-      // For hourly/intraday data, use hours; for daily data, use days
-      if (config.points > config.days) {
-        // Intraday data
-        date.setHours(date.getHours() - Math.floor(daysAgo * 24));
-      } else {
-        date.setDate(date.getDate() - Math.floor(daysAgo));
-      }
+      hasSpareGaussian = true;
+      
+      const u = nextRandom();
+      const v = nextRandom();
+      
+      const mag = sigma * Math.sqrt(-2.0 * Math.log(u));
+      spareGaussian = mag * Math.cos(2.0 * Math.PI * v);
+      
+      return mag * Math.sin(2.0 * Math.PI * v);
+    };
 
-      let dataPoint;
+    // Calculate time step (dt) in years
+    const timeframeDays = {
+      '1W': 7,
+      '1M': 30,
+      '3M': 90,
+      '6M': 180,
+      '52W': 365,
+      'YTD': Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24))
+    };
+    
+    const totalDays = timeframeDays[selectedTimeframe] || 90;
+    const dt = totalDays / 365.0 / tradingDays; // Time step in years
+    
+    // Calculate starting value (reasonable historical range)
+    const getStartingValue = (currentVal, timeframe) => {
+      const typicalRanges = {
+        '1W': [0.95, 1.05],   // ±5% for 1 week
+        '1M': [0.90, 1.10],   // ±10% for 1 month
+        '3M': [0.85, 1.15],   // ±15% for 3 months
+        '6M': [0.80, 1.25],   // ±20% for 6 months
+        '52W': [0.70, 1.40],  // ±30% for 1 year
+        'YTD': [0.85, 1.15]   // ±15% for YTD
+      };
+      
+      const [minFactor, maxFactor] = typicalRanges[timeframe] || [0.85, 1.15];
+      const randomFactor = minFactor + nextRandom() * (maxFactor - minFactor);
+      return currentVal * randomFactor;
+    };
 
-      if (selectedMetricChart === 'price') {
-        // Generate realistic price movement with trends, volatility, and noise
-        
-        // Multiple noise sources for more realistic movement
-        const random1 = ((Math.sin(i * 0.1 + seed) + 1) / 2); // 0-1
-        const random2 = ((Math.sin(i * 0.23 + seed * 1.3) + 1) / 2); // 0-1
-        const random3 = ((Math.sin(i * 0.47 + seed * 0.7) + 1) / 2); // 0-1
-        
-        // Combine multiple random sources for more complexity
-        const dailyChange = (random1 - 0.5) * dailyVolatility * 2; // -2% to +2%
-        const weeklyTrend = Math.sin((i + seed) / 10) * trendStrength;
-        const microMovement = (random2 - 0.5) * dailyVolatility * 0.5; // Small intraday moves
-        const volatilitySpike = (random3 > 0.95 ? (random3 - 0.95) * 0.1 : 0); // Occasional spikes
-        
-        // Apply all movement factors
-        const totalChange = dailyChange + weeklyTrend + microMovement + volatilitySpike;
-        currentPrice = currentPrice * (1 + totalChange);
-        
-        // Ensure price doesn't go too extreme
-        currentPrice = Math.max(currentValue * 0.4, Math.min(currentValue * 1.6, currentPrice));
-        dataPoint = currentPrice;
-        
-      } else if (['rsi', 'impliedVolatility', 'roe'].includes(selectedMetricChart)) {
-        // Bounded metrics with more realistic movement
-        const noise = ((Math.sin(i * 0.15 + seed) + Math.sin(i * 0.31 + seed * 1.2)) / 2) * 0.3;
-        const trend = Math.sin((i + seed) / 20) * 0.2;
-        
-        dataPoint = currentValue * (0.8 + noise + trend + (i / config.points) * 0.2);
-
-        if (selectedMetricChart === 'rsi') {
-          dataPoint = Math.max(20, Math.min(80, dataPoint));
-        } else if (selectedMetricChart === 'impliedVolatility') {
-          dataPoint = Math.max(0.1, Math.min(1.0, dataPoint));
-        } else if (selectedMetricChart === 'roe') {
-          dataPoint = Math.max(0, Math.min(0.5, dataPoint));
+    const startingValue = getStartingValue(currentValue, selectedTimeframe);
+    
+    // Generate data using Geometric Brownian Motion
+    const data = [];
+    const labels = [];
+    
+    let currentPrice = startingValue;
+    
+    for (let day = 0; day < tradingDays; day++) {
+      // Calculate date for this trading day
+      const daysAgo = tradingDays - day - 1;
+      const currentDate = new Date();
+      let tradingDate = new Date(currentDate);
+      let skippedDays = 0;
+      
+      for (let i = 0; i < daysAgo + skippedDays; i++) {
+        tradingDate.setDate(tradingDate.getDate() - 1);
+        // Skip weekends
+        while (tradingDate.getDay() === 0 || tradingDate.getDay() === 6) {
+          tradingDate.setDate(tradingDate.getDate() - 1);
+          skippedDays++;
         }
-      } else {
-        // Other financial metrics - moderate volatility
-        const noise = ((Math.sin(i * 0.2 + seed) + Math.sin(i * 0.35 + seed * 0.9)) / 2) * 0.15;
-        const trend = Math.sin((i + seed) / 25) * 0.1;
-        
-        dataPoint = currentValue * (0.85 + noise + trend + (i / config.points) * 0.15);
-        dataPoint = Math.max(dataPoint, currentValue * 0.3);
       }
-
-      data.push(dataPoint);
-      labels.push(date.toISOString());
+      
+      if (selectedMetricChart === 'price') {
+        // For price data, generate open and close prices
+        const z1 = generateGaussian();
+        const z2 = generateGaussian();
+        
+        // Geometric Brownian Motion: S(t+dt) = S(t) * exp((mu - 0.5*sigma^2)*dt + sigma*sqrt(dt)*z)
+        const drift = (mu - 0.5 * sigma * sigma) * dt;
+        const diffusion = sigma * Math.sqrt(dt) * z1;
+        const priceChange = Math.exp(drift + diffusion);
+        
+        currentPrice = currentPrice * priceChange;
+        
+        // Generate intraday variation for open/close
+        const intradayVol = sigma * 0.1; // Much smaller intraday volatility
+        const openAdjustment = Math.exp(intradayVol * Math.sqrt(dt) * z2);
+        
+        const openPrice = currentPrice * openAdjustment;
+        const closePrice = currentPrice;
+        
+        // Opening timestamp (9:30 AM)
+        const openTimestamp = new Date(tradingDate);
+        openTimestamp.setHours(9, 30, 0, 0);
+        
+        // Closing timestamp (4:00 PM)
+        const closeTimestamp = new Date(tradingDate);
+        closeTimestamp.setHours(16, 0, 0, 0);
+        
+        data.push(openPrice);
+        labels.push(openTimestamp.toISOString());
+        
+        data.push(closePrice);
+        labels.push(closeTimestamp.toISOString());
+        
+      } else {
+        // For non-price metrics, generate single daily value
+        tradingDate.setHours(16, 0, 0, 0);
+        
+        let dataPoint;
+        
+        if (selectedMetricChart === 'rsi') {
+          // RSI: Ornstein-Uhlenbeck process (mean-reverting) with bounds [0, 100]
+          const meanRSI = 50;
+          const meanReversion = 0.1;
+          const rsiChange = meanReversion * (meanRSI - currentPrice) * dt + sigma * Math.sqrt(dt) * generateGaussian();
+          currentPrice = Math.max(10, Math.min(90, currentPrice + rsiChange));
+          dataPoint = currentPrice;
+          
+        } else if (selectedMetricChart === 'impliedVolatility') {
+          // IV: GBM with occasional volatility spikes
+          const z = generateGaussian();
+          const drift = (mu - 0.5 * sigma * sigma) * dt;
+          const diffusion = sigma * Math.sqrt(dt) * z;
+          
+          // Add volatility spikes (5% chance per day)
+          const spike = nextRandom() > 0.95 ? 0.05 : 0;
+          
+          currentPrice = currentPrice * Math.exp(drift + diffusion + spike);
+          currentPrice = Math.max(0.05, Math.min(1.0, currentPrice)); // Bound IV between 5% and 100%
+          dataPoint = currentPrice;
+          
+        } else {
+          // Other financial metrics: Modified GBM with bounds
+          const z = generateGaussian();
+          const drift = (mu - 0.5 * sigma * sigma) * dt;
+          const diffusion = sigma * Math.sqrt(dt) * z;
+          
+          currentPrice = currentPrice * Math.exp(drift + diffusion);
+          
+          // Apply reasonable bounds based on starting value
+          const maxBound = startingValue * 3.0;
+          const minBound = startingValue * 0.3;
+          currentPrice = Math.max(minBound, Math.min(maxBound, currentPrice));
+          
+          dataPoint = currentPrice;
+        }
+        
+        data.push(dataPoint);
+        labels.push(tradingDate.toISOString());
+      }
     }
+
+    // REMOVED: No more forced ending values - charts end naturally where GBM leads
+    // This eliminates the artificial drop-off issue
 
     return { labels, data };
   }, [stockData, selectedTimeframe, selectedMetricChart, ticker]);
+
+  // Fetch real historical data when ticker or timeframe changes
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      if (!ticker || selectedMetricChart !== 'price') {
+        // Only fetch historical data for price charts
+        // For other metrics, continue using generated data (for now)
+        return;
+      }
+
+      setHistoricalLoading(true);
+      try {
+        console.log(`🔄 Fetching real historical data for ${ticker} (${selectedTimeframe})`);
+        const data = await getStockHistoricalData(ticker, selectedTimeframe);
+        
+        if (data && data.labels && data.data) {
+          console.log(`✅ Loaded ${data.data.length} historical data points for ${ticker}`);
+          setHistoricalData(data);
+        } else {
+          console.warn(`⚠️ No historical data available for ${ticker}, using generated data`);
+          setHistoricalData(null);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to fetch historical data for ${ticker}:`, error);
+        setHistoricalData(null);
+      } finally {
+        setHistoricalLoading(false);
+      }
+    };
+
+    if (ticker) {
+      fetchHistoricalData();
+    }
+  }, [ticker, selectedTimeframe]);
+
+  // Use real historical data for price charts, generated data for other metrics
+  const chartData = useMemo(() => {
+    if (selectedMetricChart === 'price' && historicalData) {
+      // Use real historical price data
+      return historicalData;
+    } else {
+      // Use generated data for non-price metrics or when real data unavailable
+      return generateHistoricalData;
+    }
+  }, [selectedMetricChart, historicalData, generateHistoricalData]);
+
+  // Smart mini chart data - real data for price, generated for others
+  const getMiniChartInfo = (metricKey) => {
+    if (metricKey === 'price' && historicalData) {
+      // Use real historical data for price mini charts, but sample it down for performance
+      const realData = historicalData.data;
+      let sampledData;
+      if (realData.length <= 30) {
+        sampledData = realData;
+      } else {
+        // Sample down to ~20-25 points for mini chart performance
+        const step = Math.floor(realData.length / 20);
+        sampledData = realData.filter((_, index) => index % step === 0);
+      }
+      return { data: sampledData, isRealData: true };
+    } else {
+      // Use generated data for non-price metrics
+      return { data: generateMiniChartData(metricKey), isRealData: false };
+    }
+  };
 
   // Get color based on percentile ranking
   const getMetricColor = key => {
@@ -636,58 +945,139 @@ const StockDetailPage = () => {
     return metricLabel || selectedMetricChart;
   };
 
-  // Generate mini chart data for a specific metric
+  // Generate realistic mini chart data that matches the selected timeframe
   const generateMiniChartData = (metricKey) => {
     if (!stockData) return [];
 
     const currentValue = stockData[metricKey] || stockData.price;
-    const points = 20; // Fewer points for mini charts
-    const days = selectedTimeframe === '1W' ? 7 : selectedTimeframe === '1M' ? 30 : 90;
+    
+    // Use scaled-down version of selected timeframe for mini charts
+    const getMiniTradingDays = (timeframe) => {
+      const tradingDaysMap = {
+        '1W': 5,    // 1 week
+        '1M': 10,   // 2 weeks of selected 1M
+        '3M': 15,   // 3 weeks of selected 3M
+        '6M': 20,   // 4 weeks of selected 6M
+        '52W': 30,  // 6 weeks of selected 52W
+        'YTD': 25,  // 5 weeks of selected YTD
+      };
+      return tradingDaysMap[timeframe] || 10;
+    };
+    
+    const tradingDays = getMiniTradingDays(selectedTimeframe);
     
     // Create deterministic seed
     const tickerHash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const metricHash = metricKey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const seed = (tickerHash + metricHash) % 1000;
+    const seed = (tickerHash + metricHash) % 10000;
 
-    const data = [];
-    let currentPrice = currentValue;
+    // Simple random generator for mini charts
+    let randomSeed = seed;
+    const nextRandom = () => {
+      randomSeed = (randomSeed * 9301 + 49297) % 233280;
+      return randomSeed / 233280;
+    };
 
-    for (let i = points - 1; i >= 0; i--) {
+    // Create realistic progression that ends at current value, scaled to timeframe
+    const getMiniTrend = (timeframe) => {
+      const trendMap = {
+        '1W': metricKey === 'price' ? 0.01 : 0.003,   // 1% for 1 week
+        '1M': metricKey === 'price' ? 0.02 : 0.006,   // 2% for 2 weeks
+        '3M': metricKey === 'price' ? 0.03 : 0.010,   // 3% for 3 weeks  
+        '6M': metricKey === 'price' ? 0.04 : 0.013,   // 4% for 4 weeks
+        '52W': metricKey === 'price' ? 0.06 : 0.020,  // 6% for 6 weeks
+        'YTD': metricKey === 'price' ? 0.05 : 0.016,  // 5% for 5 weeks
+      };
+      return trendMap[timeframe] || 0.03;
+    };
+    
+    const miniTrend = getMiniTrend(selectedTimeframe);
+    const startValue = metricKey === 'price' 
+      ? currentValue / (1 + miniTrend)
+      : currentValue * (0.97 + nextRandom() * 0.06); // Smaller variation for non-price
+
+    const prices = [];
+    
+    // Generate realistic market movements for mini charts
+    let currentPrice = startValue;
+    const totalReturnNeeded = (currentValue - startValue) / startValue;
+    const avgDailyReturn = totalReturnNeeded / tradingDays;
+    
+    for (let day = 0; day < tradingDays; day++) {
       let dataPoint;
-
+      
       if (metricKey === 'price') {
-        // Price data with moderate volatility for mini chart
-        const random1 = ((Math.sin(i * 0.2 + seed) + 1) / 2);
-        const random2 = ((Math.sin(i * 0.35 + seed * 1.1) + 1) / 2);
+        // Use same realistic price generation as main charts but scaled down
+        const random1 = nextRandom();
+        const random2 = nextRandom();
+        const normalRandom = Math.sqrt(-2 * Math.log(random1)) * Math.cos(2 * Math.PI * random2);
         
-        const change = (random1 - 0.5) * 0.03 + (random2 - 0.5) * 0.01; // Smaller movements
-        currentPrice = currentPrice * (1 + change);
-        currentPrice = Math.max(currentValue * 0.8, Math.min(currentValue * 1.2, currentPrice));
+        const dailyVol = 0.015; // 1.5% daily volatility for mini charts
+        const trendComponent = avgDailyReturn;
+        const randomComponent = normalRandom * dailyVol;
+        
+        const momentum = day > 0 ? (prices[day - 1] / (day > 1 ? prices[day - 2] : startValue) - 1) * 0.03 : 0;
+        const dailyReturn = trendComponent + randomComponent + momentum;
+        
+        currentPrice = currentPrice * (1 + dailyReturn);
         dataPoint = currentPrice;
         
-      } else if (['rsi', 'impliedVolatility', 'roe'].includes(metricKey)) {
-        // Bounded metrics
-        const noise = ((Math.sin(i * 0.25 + seed) + Math.sin(i * 0.4 + seed * 1.3)) / 2) * 0.2;
-        dataPoint = currentValue * (0.9 + noise + (i / points) * 0.1);
-
-        if (metricKey === 'rsi') {
-          dataPoint = Math.max(30, Math.min(70, dataPoint));
-        } else if (metricKey === 'impliedVolatility') {
-          dataPoint = Math.max(0.15, Math.min(0.8, dataPoint));
-        } else if (metricKey === 'roe') {
-          dataPoint = Math.max(0.05, Math.min(0.4, dataPoint));
+      } else if (metricKey === 'rsi') {
+        // RSI with realistic oscillation
+        if (day === 0) {
+          dataPoint = Math.max(25, Math.min(75, currentValue + (nextRandom() - 0.5) * 15));
+        } else {
+          const prevRsi = prices[day - 1];
+          const rsiChange = (nextRandom() - 0.5) * 4; // Daily RSI can move ±2 points typically
+          const trendToTarget = (currentValue - prevRsi) * 0.05; // Gradual move to target
+          
+          dataPoint = prevRsi + rsiChange + trendToTarget;
+          dataPoint = Math.max(25, Math.min(75, dataPoint));
         }
+        
+      } else if (metricKey === 'impliedVolatility') {
+        // IV with occasional spikes
+        if (day === 0) {
+          dataPoint = Math.max(0.10, Math.min(0.60, startValue));
+        } else {
+          const prevIV = prices[day - 1];
+          let ivChange = (nextRandom() - 0.5) * 0.02; // Normal daily IV change
+          
+          // Occasional volatility spikes
+          if (nextRandom() > 0.9) {
+            ivChange += (nextRandom() - 0.5) * 0.05;
+          }
+          
+          const trendToTarget = (currentValue - prevIV) * 0.03;
+          dataPoint = prevIV + ivChange + trendToTarget;
+          dataPoint = Math.max(0.10, Math.min(0.60, dataPoint));
+        }
+        
       } else {
-        // Other metrics
-        const noise = ((Math.sin(i * 0.3 + seed) + Math.sin(i * 0.45 + seed * 0.8)) / 2) * 0.15;
-        dataPoint = currentValue * (0.9 + noise + (i / points) * 0.1);
-        dataPoint = Math.max(dataPoint, currentValue * 0.5);
+        // Other financial metrics with realistic movement
+        if (day === 0) {
+          dataPoint = startValue;
+        } else {
+          const prevValue = prices[day - 1];
+          const dailyChange = (nextRandom() - 0.5) * Math.abs(currentValue) * 0.01; // 1% daily change
+          const trendToTarget = (currentValue - prevValue) * 0.04;
+          
+          dataPoint = prevValue + dailyChange + trendToTarget;
+          
+          if (currentValue > 0) {
+            dataPoint = Math.max(currentValue * 0.7, Math.min(currentValue * 1.3, dataPoint));
+          }
+        }
       }
-
-      data.push(dataPoint);
+      
+      prices.push(dataPoint);
     }
+    
+    // REMOVED: No more forced ending values or adjustment periods
+    // Mini charts now end naturally where the GBM process leads
+    // This eliminates artificial drop-offs and creates more realistic chart behavior
 
-    return data;
+    return prices;
   };
 
   return (
@@ -989,7 +1379,10 @@ const StockDetailPage = () => {
             {timeframes.map(tf => (
               <button
                 key={tf}
-                onClick={() => setSelectedTimeframe(tf)}
+                onClick={() => {
+                  setSelectedTimeframe(tf);
+                  updateChartPreference('timeframe', tf);
+                }}
                 style={{
                   padding: '6px 12px',
                   backgroundColor:
@@ -1009,11 +1402,24 @@ const StockDetailPage = () => {
         </div>
 
         <div style={{ height: '400px' }}>
-          {generateHistoricalData && !loading ? (
+          {(historicalLoading && selectedMetricChart === 'price') ? (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#6c757d',
+                fontSize: '16px',
+              }}
+            >
+              📈 Loading real historical data for {ticker}...
+            </div>
+          ) : chartData && !loading ? (
             <TimeSeriesChart
-              data={generateHistoricalData.data}
-              labels={generateHistoricalData.labels}
-              title={`${ticker} - ${selectedTimeframe} Chart`}
+              data={chartData.data}
+              labels={chartData.labels}
+              title={`${ticker} - ${selectedTimeframe} ${selectedMetricChart === 'price' && historicalData ? '(Real Data)' : '(Generated Data)'}`}
               selectedMetric={selectedMetricChart}
             />
           ) : (
@@ -1087,12 +1493,14 @@ const StockDetailPage = () => {
             .map(([key, param]) => {
               const ranking = relativeRankings[key];
               const color = getMetricColor(key);
+              const chartInfo = getMiniChartInfo(key); // Calculate once per metric
 
               return (
                 <div
                   key={key}
                   onClick={() => {
                     setSelectedMetricChart(key);
+                    updateChartPreference('metric', key);
                   }}
                   style={{
                     backgroundColor: color,
@@ -1157,9 +1565,10 @@ const StockDetailPage = () => {
 
                   {/* Mini chart for the metric */}
                   <MiniChart 
-                    data={generateMiniChartData(key)}
+                    data={chartInfo.data}
                     selectedTimeframe={selectedTimeframe}
                     metricKey={key}
+                    isRealData={chartInfo.isRealData}
                   />
 
                   {ranking && (
