@@ -471,31 +471,39 @@ const StockDetailPage = () => {
     const sector = stockData.sector || stockData.industry || 'Technology';
     const industry = stockData.subIndustry || stockData.industry || 'Software';
 
-    // Use existing data or generate reasonable defaults based on ticker hash for missing data
-    const tickerHash = ticker
-      .split('')
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    // Calculate founded year from list date if available
+    const foundedYear = stockData?.listDate 
+      ? new Date(stockData.listDate).getFullYear()
+      : null;
 
-    // Generate earnings date (next quarter)
+    // Generate reasonable earnings date (next quarter) - this is always estimated
     const nextEarnings = new Date();
-    nextEarnings.setDate(nextEarnings.getDate() + (30 + (tickerHash % 60))); // 30-90 days from now
+    const currentQuarter = Math.floor((nextEarnings.getMonth() + 3) / 3);
+    const nextQuarter = currentQuarter === 4 ? 1 : currentQuarter + 1;
+    const nextYear = currentQuarter === 4 ? nextEarnings.getFullYear() + 1 : nextEarnings.getFullYear();
+    nextEarnings.setFullYear(nextYear);
+    nextEarnings.setMonth((nextQuarter - 1) * 3 + 1); // Set to middle month of quarter
+    nextEarnings.setDate(15); // Mid-month
+
+    // Determine exchange from ticker (basic heuristics)
+    const getExchange = (ticker) => {
+      // Some basic patterns - this is still estimated since exchange isn't in API
+      if (ticker.length > 4) return 'NASDAQ';
+      if (['AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA'].includes(ticker)) return 'NASDAQ';
+      return 'NYSE'; // Default assumption
+    };
 
     return {
       name: companyName,
       sector: sector,
       industry: industry,
       earningsDate: nextEarnings,
-      marketCap: stockData?.marketCap || (stockData?.price
-        ? stockData.price * (50000000 + (tickerHash % 1000000000))
-        : null),
-      employees: stockData?.employees || (1000 + (tickerHash % 50000)),
-      founded: stockData?.founded || (1950 + (tickerHash % 70)),
-      exchange: stockData?.exchange ||
-        (tickerHash % 3 === 0
-          ? 'NASDAQ'
-          : tickerHash % 3 === 1
-            ? 'NYSE'
-            : 'AMEX'),
+      // Use REAL data from API when available, null when not available (no fake data!)
+      marketCap: stockData?.marketCap || null,
+      employees: stockData?.employees || null,
+      founded: foundedYear,
+      exchange: getExchange(ticker), // Still estimated, but using better heuristics
+      description: stockData?.description || null,
     };
   }, [ticker, stockData]);
 
@@ -865,18 +873,37 @@ const StockDetailPage = () => {
     }
   };
 
-  // Format values for display
+  // Format values for display with proper units and no unnecessary cents
   const formatValue = (value, type = '') => {
     if (value === null || value === undefined) return 'N/A';
 
     if (type === 'money' || type === 'currency') {
-      return `$${Number(value).toLocaleString()}`;
+      const num = Number(value);
+      if (num >= 1000000000) {
+        return `$${(num / 1000000000).toFixed(1)}B`;
+      } else if (num >= 1000000) {
+        return `$${(num / 1000000).toFixed(0)}M`;
+      } else if (num >= 1000) {
+        return `$${(num / 1000).toFixed(0)}K`;
+      } else {
+        return `$${Math.round(num).toLocaleString()}`;
+      }
     }
     if (type === 'percentage') {
       return `${(Number(value) * 100).toFixed(2)}%`;
     }
     if (typeof value === 'number') {
-      return value.toLocaleString();
+      // For large numbers, add proper formatting
+      const num = Number(value);
+      if (num >= 1000000000) {
+        return `${(num / 1000000000).toFixed(1)}B`;
+      } else if (num >= 1000000) {
+        return `${(num / 1000000).toFixed(0)}M`;
+      } else if (num >= 1000) {
+        return num.toLocaleString();
+      } else {
+        return Math.round(num).toLocaleString();
+      }
     }
     return value;
   };
@@ -1242,28 +1269,26 @@ const StockDetailPage = () => {
                 })}
               </div>
             </div>
-            {companyMetadata.marketCap && (
-              <div>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: '#6c757d',
-                    fontWeight: '500',
-                  }}
-                >
-                  MARKET CAP
-                </span>
-                <div
-                  style={{
-                    fontSize: '14px',
-                    color: '#2c3e50',
-                    fontWeight: '600',
-                  }}
-                >
-                  ${(companyMetadata.marketCap / 1000000000).toFixed(1)}B
-                </div>
+            <div>
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: '#6c757d',
+                  fontWeight: '500',
+                }}
+              >
+                MARKET CAP
+              </span>
+              <div
+                style={{
+                  fontSize: '14px',
+                  color: '#2c3e50',
+                  fontWeight: '600',
+                }}
+              >
+                {companyMetadata.marketCap ? formatValue(companyMetadata.marketCap, 'money') : 'N/A'}
               </div>
-            )}
+            </div>
             <div>
               <span
                 style={{
@@ -1281,7 +1306,7 @@ const StockDetailPage = () => {
                   fontWeight: '600',
                 }}
               >
-                {companyMetadata.employees?.toLocaleString()}
+                {companyMetadata.employees ? formatValue(companyMetadata.employees) : 'N/A'}
               </div>
             </div>
           </div>

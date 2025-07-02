@@ -462,10 +462,19 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
                    tickerDetails?.type || 
                    'Software'; // Default fallback
   
+  // Extract real company metrics from ticker details
+  const marketCap = tickerDetails?.market_cap || null;
+  const totalEmployees = tickerDetails?.total_employees || null;
+  const listDate = tickerDetails?.list_date || null;
+  const description = tickerDetails?.description || null;
+  
   console.log(`Extracted data for ${symbol}:`, {
     name: companyName,
     sector: sector,
     industry: industry,
+    marketCap: marketCap,
+    employees: totalEmployees,
+    listDate: listDate,
     allFields: Object.keys(tickerDetails || {})
   });
   
@@ -497,6 +506,12 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
     freeCashFlowYield: ratios.freeCashFlowYield,
     priceToBook: ratios.priceToBook,
 
+    // REAL COMPANY DATA from Polygon.io API
+    marketCap: marketCap,
+    employees: totalEmployees,
+    listDate: listDate,
+    description: description,
+
     // Data quality indicators for debugging/validation
     _dataQuality: {
       source: 'Polygon.io',
@@ -519,6 +534,8 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
         roe: 'estimated',
         freeCashFlowYield: 'estimated',
         priceToBook: 'estimated',
+        marketCap: marketCap ? 'real' : 'estimated',
+        employees: totalEmployees ? 'real' : 'estimated',
       },
     },
   };

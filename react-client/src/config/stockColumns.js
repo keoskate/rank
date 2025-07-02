@@ -131,7 +131,7 @@ export const STOCK_COLUMNS = {
 
   netDebt: {
     label: 'Net Debt',
-    type: '',
+    type: 'money',
     size: COLUMN_SIZE.large,
     weight: DEFAULT_WEIGHTS.netDebt,
     multiplier: -1,
@@ -171,7 +171,7 @@ export const STOCK_COLUMNS = {
   },
   ebitda: {
     label: 'EBITDA',
-    type: '',
+    type: 'money',
     size: COLUMN_SIZE.large,
     weight: 0,
     multiplier: 1,
@@ -189,7 +189,7 @@ export const STOCK_COLUMNS = {
   },
   cash: {
     label: 'Cash',
-    type: '',
+    type: 'money',
     size: COLUMN_SIZE.large,
     weight: 0,
     multiplier: 1,
