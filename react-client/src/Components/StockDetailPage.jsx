@@ -536,6 +536,15 @@ const StockDetailPage = () => {
 
   const timeframes = ['1W', '1M', '3M', '6M', '52W', 'YTD'];
 
+  // Get chart title based on selected metric
+  const getChartTitle = () => {
+    if (selectedMetricChart === 'price') {
+      return 'Price Performance';
+    }
+    const metricLabel = stockColumns[selectedMetricChart]?.label;
+    return metricLabel || selectedMetricChart;
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh',
@@ -830,7 +839,7 @@ const StockDetailPage = () => {
             marginBottom: '20px',
           }}
         >
-          <h3 style={{ margin: 0, color: '#2c3e50' }}>Price Performance</h3>
+          <h3 style={{ margin: 0, color: '#2c3e50' }}>{getChartTitle()}</h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             {timeframes.map(tf => (
               <button
