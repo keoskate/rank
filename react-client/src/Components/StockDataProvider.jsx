@@ -35,13 +35,20 @@ export const StockDataProvider = ({ children }) => {
 
   // Load cached data on mount (if available)
   useEffect(() => {
-    const cachedData = getCachedStockData();
+    // Generate the same cache key that ModernStonkBoard uses
+    const stockSymbols = currentStockList.stocks;
+    const stocksKey = stockSymbols.sort().join('_');
+    const cacheKey = `STOCKS_${stocksKey}_basic`; // ModernStonkBoard uses fetchFinancials=false initially
+    
+    const cachedData = getCachedStockData(cacheKey);
     if (cachedData && cachedData.length > 0) {
-      console.log(`📂 Loaded ${cachedData.length} stocks from cache`);
+      console.log(`📂 Loaded ${cachedData.length} stocks from cache with key: ${cacheKey}`);
       setStockData(cachedData);
       setIsLoading(false);
+    } else {
+      console.log(`📭 No cached data found for key: ${cacheKey}`);
     }
-  }, []); // Only run once on mount
+  }, [currentStockList.stocks]); // Re-run if stock list changes
 
   const updateStockData = (data, columns, stockList) => {
     setStockData(data);
