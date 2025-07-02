@@ -39,9 +39,9 @@ export const StockDataProvider = ({ children }) => {
 
   // Load cached data on mount (if available)
   useEffect(() => {
-    // Generate the same cache key that ModernStonkBoard uses
+    // Generate the same cache key that ModernStonkBoard uses (don't mutate original array)
     const stockSymbols = currentStockList.stocks;
-    const stocksKey = stockSymbols.sort().join('_');
+    const stocksKey = [...stockSymbols].sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_basic`; // ModernStonkBoard uses fetchFinancials=false initially
     
     const cachedData = getCachedStockData(cacheKey);

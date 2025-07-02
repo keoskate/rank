@@ -215,8 +215,8 @@ function ModernStonkBoard() {
   const getFinancialData = async (stocks, fetchFinancials = false) => {
     console.info('Fetching Stocks: ' + stocks);
 
-    // Generate cache key based on stocks and settings
-    const stocksKey = stocks.sort().join('_');
+    // Generate cache key based on stocks and settings (don't mutate original array)
+    const stocksKey = [...stocks].sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_${fetchFinancials ? 'with_financials' : 'basic'}`;
 
     // Try smart cache first in debug mode
