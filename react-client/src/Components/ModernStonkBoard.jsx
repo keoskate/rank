@@ -62,6 +62,10 @@ import {
   loadStockListPreference,
   saveStockListPreference,
 } from '../utils/stockListPreference';
+import {
+  loadColumnVisibilityPreference,
+  saveColumnVisibilityPreference,
+} from '../utils/columnVisibilityPreference';
 import { useStockData } from './StockDataProvider';
 
 // Stock list configuration - now managed by stockLists.js
@@ -105,7 +109,9 @@ function ModernStonkBoard() {
     loadStockListPreference(DEFAULT_STOCK_LIST)
   ); // Load saved stock list preference
   const [activeTab, setActiveTab] = useState('ranking'); // Tab management
-  const [columnVisibility, setColumnVisibility] = useState({}); // Column visibility state
+  const [columnVisibility, setColumnVisibility] = useState(() =>
+    loadColumnVisibilityPreference()
+  ); // Column visibility state with saved preferences
 
   // Get current stock list configuration
   const currentStockList = getStockList(currentStockListId);
@@ -701,6 +707,13 @@ function ModernStonkBoard() {
     }
   };
 
+  // Column visibility change handler with persistence
+  const handleColumnVisibilityChange = newColumnVisibility => {
+    setColumnVisibility(newColumnVisibility);
+    saveColumnVisibilityPreference(newColumnVisibility);
+    console.info('👁️ Column visibility updated and saved');
+  };
+
   // Reset weights to default configuration
   const handleResetWeights = () => {
     const defaultParams = resetToDefaultWeights(params);
@@ -957,7 +970,7 @@ function ModernStonkBoard() {
             onResetWeights={handleResetWeights}
             onStockListChange={handleStockListChange}
             columnVisibility={columnVisibility}
-            onColumnVisibilityChange={setColumnVisibility}
+            onColumnVisibilityChange={handleColumnVisibilityChange}
           />
         );
       case 'config':
