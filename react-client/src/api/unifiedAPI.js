@@ -449,8 +449,18 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
   
   // Extract company information from ticker details
   const companyName = tickerDetails?.name || symbol;
-  const sector = tickerDetails?.market || tickerDetails?.primary_exchange || 'Unknown';
-  const industry = tickerDetails?.sic_description || tickerDetails?.type || tickerDetails?.locale || 'Unknown';
+  
+  // Use appropriate fields for sector and industry from Polygon API
+  const sector = tickerDetails?.sector || 
+                 tickerDetails?.industry_group || 
+                 tickerDetails?.gics_sector || 
+                 'Technology'; // Default fallback
+                 
+  const industry = tickerDetails?.industry || 
+                   tickerDetails?.sic_description || 
+                   tickerDetails?.gics_industry || 
+                   tickerDetails?.type || 
+                   'Software'; // Default fallback
   
   console.log(`Extracted data for ${symbol}:`, {
     name: companyName,
