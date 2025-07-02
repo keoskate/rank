@@ -376,12 +376,12 @@ const StockDetailPage = () => {
     if (!stockData) return null;
 
     const timeframes = {
-      '1W': { days: 7, points: 7 },
-      '1M': { days: 30, points: 30 },
-      '3M': { days: 90, points: 30 },
-      '6M': { days: 180, points: 36 },
-      '52W': { days: 365, points: 52 },
-      YTD: { days: new Date().getDayOfYear(), points: 24 },
+      '1W': { days: 7, points: 35 }, // 5 points per day (more granular)
+      '1M': { days: 30, points: 120 }, // 4 points per day
+      '3M': { days: 90, points: 180 }, // 2 points per day
+      '6M': { days: 180, points: 180 }, // 1 point per day
+      '52W': { days: 365, points: 260 }, // ~weekly points but more granular
+      YTD: { days: new Date().getDayOfYear(), points: Math.min(new Date().getDayOfYear() * 2, 200) },
     };
 
     const config = timeframes[selectedTimeframe];
@@ -391,49 +391,72 @@ const StockDetailPage = () => {
     const data = [];
     const labels = [];
 
+    // Generate more realistic price movement with trending and volatility
+    let currentPrice = currentValue;
+    const dailyVolatility = 0.02; // 2% daily volatility base
+    const trendStrength = 0.001; // Overall trend factor
+    
+    // Create deterministic but complex seed for consistent results
+    const tickerHash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const metricHash = selectedMetricChart.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const seed = (tickerHash + metricHash) % 1000;
+
     for (let i = config.points - 1; i >= 0; i--) {
-      const daysAgo = Math.floor((config.days / config.points) * i);
+      const daysAgo = (config.days / config.points) * i;
       const date = new Date();
-      date.setDate(date.getDate() - daysAgo);
+      
+      // For hourly/intraday data, use hours; for daily data, use days
+      if (config.points > config.days) {
+        // Intraday data
+        date.setHours(date.getHours() - Math.floor(daysAgo * 24));
+      } else {
+        date.setDate(date.getDate() - Math.floor(daysAgo));
+      }
 
-      // Create variation based on ticker hash and metric type for consistency
-      const tickerHash = ticker
-        .split('')
-        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const metricHash = selectedMetricChart
-        .split('')
-        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-      let variation, dataPoint;
+      let dataPoint;
 
       if (selectedMetricChart === 'price') {
-        // Price data - more volatile
-        variation =
-          Math.sin((i + tickerHash) / 10) * 0.15 +
-          (Math.sin((i + metricHash) / 7) - 0.5) * 0.1;
-        dataPoint =
-          currentValue * (0.8 + variation * 0.4 + (i / config.points) * 0.2);
-        dataPoint = Math.max(dataPoint, currentValue * 0.5);
-      } else if (
-        ['rsi', 'impliedVolatility', 'roe'].includes(selectedMetricChart)
-      ) {
-        // Bounded metrics (0-1 or 0-100)
-        variation = Math.sin((i + tickerHash + metricHash) / 12) * 0.2;
-        dataPoint =
-          currentValue * (0.9 + variation + (i / config.points) * 0.1);
+        // Generate realistic price movement with trends, volatility, and noise
+        
+        // Multiple noise sources for more realistic movement
+        const random1 = ((Math.sin(i * 0.1 + seed) + 1) / 2); // 0-1
+        const random2 = ((Math.sin(i * 0.23 + seed * 1.3) + 1) / 2); // 0-1
+        const random3 = ((Math.sin(i * 0.47 + seed * 0.7) + 1) / 2); // 0-1
+        
+        // Combine multiple random sources for more complexity
+        const dailyChange = (random1 - 0.5) * dailyVolatility * 2; // -2% to +2%
+        const weeklyTrend = Math.sin((i + seed) / 10) * trendStrength;
+        const microMovement = (random2 - 0.5) * dailyVolatility * 0.5; // Small intraday moves
+        const volatilitySpike = (random3 > 0.95 ? (random3 - 0.95) * 0.1 : 0); // Occasional spikes
+        
+        // Apply all movement factors
+        const totalChange = dailyChange + weeklyTrend + microMovement + volatilitySpike;
+        currentPrice = currentPrice * (1 + totalChange);
+        
+        // Ensure price doesn't go too extreme
+        currentPrice = Math.max(currentValue * 0.4, Math.min(currentValue * 1.6, currentPrice));
+        dataPoint = currentPrice;
+        
+      } else if (['rsi', 'impliedVolatility', 'roe'].includes(selectedMetricChart)) {
+        // Bounded metrics with more realistic movement
+        const noise = ((Math.sin(i * 0.15 + seed) + Math.sin(i * 0.31 + seed * 1.2)) / 2) * 0.3;
+        const trend = Math.sin((i + seed) / 20) * 0.2;
+        
+        dataPoint = currentValue * (0.8 + noise + trend + (i / config.points) * 0.2);
 
         if (selectedMetricChart === 'rsi') {
-          dataPoint = Math.max(20, Math.min(80, dataPoint)); // RSI bounds
+          dataPoint = Math.max(20, Math.min(80, dataPoint));
         } else if (selectedMetricChart === 'impliedVolatility') {
-          dataPoint = Math.max(0.1, Math.min(1.0, dataPoint)); // IV bounds
+          dataPoint = Math.max(0.1, Math.min(1.0, dataPoint));
         } else if (selectedMetricChart === 'roe') {
-          dataPoint = Math.max(0, Math.min(0.5, dataPoint)); // ROE bounds
+          dataPoint = Math.max(0, Math.min(0.5, dataPoint));
         }
       } else {
-        // Other financial metrics - less volatile
-        variation = Math.sin((i + tickerHash + metricHash) / 15) * 0.1;
-        dataPoint =
-          currentValue * (0.9 + variation + (i / config.points) * 0.1);
+        // Other financial metrics - moderate volatility
+        const noise = ((Math.sin(i * 0.2 + seed) + Math.sin(i * 0.35 + seed * 0.9)) / 2) * 0.15;
+        const trend = Math.sin((i + seed) / 25) * 0.1;
+        
+        dataPoint = currentValue * (0.85 + noise + trend + (i / config.points) * 0.15);
         dataPoint = Math.max(dataPoint, currentValue * 0.3);
       }
 
