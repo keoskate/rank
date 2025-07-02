@@ -688,10 +688,33 @@ function parsePolygonHistoricalData(results, timeframe) {
   const prices = [];
   
   for (const result of results) {
+    // Validate data point
+    if (!result || !result.t || !result.c) {
+      console.warn('Skipping invalid historical data point:', result);
+      continue;
+    }
+    
+    // Validate closing price is a valid number
+    const closePrice = parseFloat(result.c);
+    if (isNaN(closePrice) || !isFinite(closePrice) || closePrice <= 0) {
+      console.warn('Skipping invalid price:', result.c);
+      continue;
+    }
+    
     // Convert timestamp to ISO string
     const date = new Date(result.t);
+    if (isNaN(date.getTime())) {
+      console.warn('Skipping invalid timestamp:', result.t);
+      continue;
+    }
+    
     labels.push(date.toISOString());
-    prices.push(result.c); // closing price
+    prices.push(closePrice);
+  }
+  
+  // Ensure we have valid data
+  if (labels.length === 0 || prices.length === 0) {
+    throw new Error('No valid historical data points found');
   }
   
   return { labels, data: prices };

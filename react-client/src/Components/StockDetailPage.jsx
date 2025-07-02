@@ -34,7 +34,7 @@ const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
 
   // Generate path for the mini line
   const pathData = data.map((value, index) => {
-    const x = padding + (index / (data.length - 1)) * plotWidth;
+    const x = padding + (data.length > 1 ? (index / (data.length - 1)) * plotWidth : plotWidth / 2);
     const y = padding + (1 - (value - minValue) / range) * plotHeight;
     return { x, y, value };
   });
@@ -224,20 +224,31 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
     setHoveredPoint(null);
   };
 
-  // Format value based on metric type
+  // Format value based on metric type with robust error handling
   const formatValue = value => {
-    if (value === null || value === undefined || isNaN(value)) {
+    if (value === null || value === undefined || value === '') {
       return 'N/A';
     }
     
     const numValue = Number(value);
-    if (!isFinite(numValue)) {
+    
+    if (isNaN(numValue) || !isFinite(numValue)) {
       return 'N/A';
     }
     
-    if (selectedMetric === 'price') return `$${numValue.toFixed(2)}`;
-    if (selectedMetric.includes('Ratio') || selectedMetric === 'beta')
+    // Handle extremely small numbers that might display as 0
+    if (Math.abs(numValue) < 0.0001 && numValue !== 0) {
+      return numValue.toExponential(2);
+    }
+    
+    if (selectedMetric === 'price') {
+      return `$${numValue.toFixed(2)}`;
+    }
+    
+    if (selectedMetric.includes('Ratio') || selectedMetric === 'beta') {
       return numValue.toFixed(2);
+    }
+    
     if (
       selectedMetric.includes('percentage') ||
       selectedMetric === 'roe' ||
@@ -245,8 +256,11 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
     ) {
       return `${(numValue * 100).toFixed(2)}%`;
     }
-    if (typeof numValue === 'number' && numValue > 1000)
-      return numValue.toLocaleString();
+    
+    if (typeof numValue === 'number' && numValue > 1000) {
+      return numValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+    
     return numValue.toFixed(2);
   };
 
@@ -787,12 +801,15 @@ const StockDetailPage = () => {
     return { labels, data };
   }, [stockData, selectedTimeframe, selectedMetricChart, ticker]);
 
-  // Fetch real historical data when ticker or timeframe changes
+  // Fetch real historical data when ticker, timeframe, or metric changes
   useEffect(() => {
+    let isCancelled = false;
+    
     const fetchHistoricalData = async () => {
       if (!ticker || selectedMetricChart !== 'price') {
         // Only fetch historical data for price charts
         // For other metrics, continue using generated data (for now)
+        setHistoricalData(null);
         return;
       }
 
@@ -801,25 +818,36 @@ const StockDetailPage = () => {
         console.log(`🔄 Fetching real historical data for ${ticker} (${selectedTimeframe})`);
         const data = await getStockHistoricalData(ticker, selectedTimeframe);
         
-        if (data && data.labels && data.data) {
-          console.log(`✅ Loaded ${data.data.length} historical data points for ${ticker}`);
-          setHistoricalData(data);
-        } else {
-          console.warn(`⚠️ No historical data available for ${ticker}, using generated data`);
-          setHistoricalData(null);
+        if (!isCancelled) {
+          if (data && data.labels && data.data && data.data.length > 0) {
+            console.log(`✅ Loaded ${data.data.length} historical data points for ${ticker}`);
+            setHistoricalData(data);
+          } else {
+            console.warn(`⚠️ No historical data available for ${ticker}, using generated data`);
+            setHistoricalData(null);
+          }
         }
       } catch (error) {
-        console.error(`❌ Failed to fetch historical data for ${ticker}:`, error);
-        setHistoricalData(null);
+        if (!isCancelled) {
+          console.error(`❌ Failed to fetch historical data for ${ticker}:`, error);
+          setHistoricalData(null);
+        }
       } finally {
-        setHistoricalLoading(false);
+        if (!isCancelled) {
+          setHistoricalLoading(false);
+        }
       }
     };
 
     if (ticker) {
       fetchHistoricalData();
     }
-  }, [ticker, selectedTimeframe]);
+    
+    // Cleanup function to cancel pending requests
+    return () => {
+      isCancelled = true;
+    };
+  }, [ticker, selectedTimeframe, selectedMetricChart]);
 
   // Use real historical data for price charts, generated data for other metrics
   const chartData = useMemo(() => {
@@ -834,21 +862,34 @@ const StockDetailPage = () => {
 
   // Smart mini chart data - real data for price, generated for others
   const getMiniChartInfo = (metricKey) => {
-    if (metricKey === 'price' && historicalData) {
-      // Use real historical data for price mini charts, but sample it down for performance
-      const realData = historicalData.data;
-      let sampledData;
-      if (realData.length <= 30) {
-        sampledData = realData;
+    try {
+      if (metricKey === 'price' && historicalData && historicalData.data && historicalData.data.length > 0) {
+        // Use real historical data for price mini charts, but sample it down for performance
+        const realData = historicalData.data.filter(val => 
+          val !== null && val !== undefined && isFinite(val) && !isNaN(val)
+        );
+        
+        if (realData.length === 0) {
+          return { data: generateMiniChartData(metricKey), isRealData: false };
+        }
+        
+        let sampledData;
+        if (realData.length <= 30) {
+          sampledData = realData;
+        } else {
+          // Sample down to ~20-25 points for mini chart performance
+          const step = Math.max(1, Math.floor(realData.length / 20));
+          sampledData = realData.filter((_, index) => index % step === 0);
+        }
+        return { data: sampledData, isRealData: true };
       } else {
-        // Sample down to ~20-25 points for mini chart performance
-        const step = Math.floor(realData.length / 20);
-        sampledData = realData.filter((_, index) => index % step === 0);
+        // Use generated data for non-price metrics
+        const generatedData = generateMiniChartData(metricKey);
+        return { data: generatedData || [], isRealData: false };
       }
-      return { data: sampledData, isRealData: true };
-    } else {
-      // Use generated data for non-price metrics
-      return { data: generateMiniChartData(metricKey), isRealData: false };
+    } catch (error) {
+      console.error(`Error generating mini chart data for ${metricKey}:`, error);
+      return { data: [], isRealData: false };
     }
   };
 
