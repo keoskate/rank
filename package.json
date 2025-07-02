@@ -8,6 +8,7 @@
     "start": "node ./server/index.js",
     "build": "NODE_OPTIONS=--openssl-legacy-provider node build.js",
     "react-dev": "NODE_OPTIONS=--openssl-legacy-provider node build.js --watch",
+    "hot-dev": "NODE_OPTIONS=--openssl-legacy-provider webpack-dev-server --config webpack.config.js",
     "server-dev": "nodemon server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint . --ext .js,.jsx",
@@ -52,6 +53,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "json-loader": "^0.5.7",
     "prettier": "^3.6.2",
-    "webpack-cli": "^2.1.2"
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.3"
   }
 }

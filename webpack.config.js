@@ -9,8 +9,19 @@ module.exports = {
   output: {
     path: DIST_DIR,
     filename: 'bundle.js',
+    publicPath: '/', // Important for dev server
   },
   devtool: 'eval-source-map', // Enable source maps for debugging
+  devServer: {
+    contentBase: DIST_DIR,
+    hot: true,
+    port: 3000,
+    open: true,
+    historyApiFallback: true, // For React Router
+    proxy: {
+      '/api': 'http://localhost:8080', // Proxy API calls to Express server
+    },
+  },
   resolve: {
     extensions: ['.js', '.jsx', '.json', '.css'],
   },
@@ -43,8 +54,9 @@ module.exports = {
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.NODE_ENV': JSON.stringify('development'),
     }),
+    new webpack.HotModuleReplacementPlugin(),
   ],
   optimization: {
     // Enable tree shaking and dead code elimination
