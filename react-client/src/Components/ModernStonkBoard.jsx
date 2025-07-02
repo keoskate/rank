@@ -391,15 +391,8 @@ function ModernStonkBoard() {
         const stdDev = getColStandardDeviation(col, stockData);
         const average = getColAverage(col, stockData);
 
-        // Update params with calculated values
-        setParams(prev => ({
-          ...prev,
-          [col]: {
-            ...prev[col],
-            stdDev,
-            average,
-          },
-        }));
+        // Note: We don't update params here to avoid infinite loops
+        // The color calculation will use these local values
 
         if (weight > 0) {
           const colList = getColList(col, stockData);
@@ -526,11 +519,13 @@ function ModernStonkBoard() {
    */
   const getConditionalColor = useCallback((col, value, paramConfig) => {
     const weight = paramConfig[col]?.weight || 0;
-    const avg = paramConfig[col]?.average;
-    const std = paramConfig[col]?.stdDev;
     const mult = paramConfig[col]?.multiplier === 1;
 
-    if (avg === undefined || std === undefined) {
+    // Calculate stats on-demand from current data
+    const avg = data.length > 0 ? getColAverage(col, data) : 0;
+    const std = data.length > 0 ? getColStandardDeviation(col, data) : 0;
+
+    if (avg === 0 || std === 0 || data.length === 0) {
       return '#ffffff'; // White if no stats available
     }
 
@@ -619,7 +614,7 @@ function ModernStonkBoard() {
     }
 
     return '#ffffff'; // Default white
-  }, []);
+  }, [data]);
 
   const getCellStyle = useCallback(
     (col, value) => {

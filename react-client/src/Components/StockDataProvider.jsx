@@ -54,7 +54,7 @@ export const StockDataProvider = ({ children }) => {
       // Set loading to false even if no cache found, so StockDetailPage can show "Stock Not Found"
       setIsLoading(false);
     }
-  }, [currentStockList.stocks]); // Re-run if stock list changes
+  }, [currentStockList.name]); // Re-run if stock list changes (use name instead of array)
 
   const updateStockData = (data, columns, stockList) => {
     setStockData(data);
