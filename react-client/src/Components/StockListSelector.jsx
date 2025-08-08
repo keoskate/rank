@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { getStockListNames } from '../config/stockLists';
+import CustomStockListManager from './CustomStockListManager';
 
 const StockListSelector = ({
   currentStockListId,
@@ -15,6 +16,7 @@ const StockListSelector = ({
   loading = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showCustomListManager, setShowCustomListManager] = useState(false);
 
   const availableStockLists = getStockListNames();
 
@@ -174,6 +176,18 @@ const StockListSelector = ({
                       }}
                     >
                       {stockList.name}
+                      {stockList.isCustom && (
+                        <span
+                          style={{
+                            marginLeft: '6px',
+                            fontSize: '10px',
+                            color: '#ff6b6b',
+                            fontWeight: '600',
+                          }}
+                        >
+                          ⚡
+                        </span>
+                      )}
                       {isSelected && (
                         <span
                           style={{
@@ -201,18 +215,38 @@ const StockListSelector = ({
             );
           })}
 
-          {/* Footer */}
-          <div
+          {/* Footer with Custom List Button */}
+          <button
+            onClick={() => {
+              setIsExpanded(false);
+              setShowCustomListManager(true);
+            }}
             style={{
-              padding: '8px 12px',
+              width: '100%',
+              padding: '10px 12px',
               borderTop: '1px solid #f1f3f4',
-              fontSize: '10px',
-              color: '#6c757d',
-              textAlign: 'center',
+              backgroundColor: '#f8f9fa',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#007bff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.target.style.backgroundColor = '#e9ecef';
+            }}
+            onMouseLeave={e => {
+              e.target.style.backgroundColor = '#f8f9fa';
             }}
           >
-            Configure lists in Config tab
-          </div>
+            <span style={{ fontSize: '14px' }}>➕</span>
+            Create Custom List
+          </button>
         </div>
       )}
 
@@ -228,6 +262,22 @@ const StockListSelector = ({
             zIndex: 999,
           }}
           onClick={() => setIsExpanded(false)}
+        />
+      )}
+
+      {/* Custom List Manager Modal */}
+      {showCustomListManager && (
+        <CustomStockListManager
+          onListCreated={(list) => {
+            // Refresh the selector and select the new list
+            onStockListChange(list.id);
+            setShowCustomListManager(false);
+          }}
+          onListUpdated={() => {
+            // Force re-render to show updated lists
+            setShowCustomListManager(false);
+          }}
+          onClose={() => setShowCustomListManager(false)}
         />
       )}
     </div>

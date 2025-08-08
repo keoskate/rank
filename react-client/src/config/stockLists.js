@@ -120,30 +120,76 @@ export const STOCK_LISTS = {
 // Default stock list (can be changed)
 export const DEFAULT_STOCK_LIST = 'COVID_19';
 
+// Storage key for custom lists
+const CUSTOM_STOCK_LISTS_KEY = 'keo_stonks_custom_stock_lists';
+
+// Get custom lists from localStorage
+const getCustomLists = () => {
+  try {
+    const saved = localStorage.getItem(CUSTOM_STOCK_LISTS_KEY);
+    if (saved) {
+      const customLists = JSON.parse(saved);
+      return customLists.reduce((acc, list) => {
+        acc[list.id] = {
+          name: list.name,
+          description: list.description,
+          stocks: list.stocks,
+          color: list.color,
+          isCustom: true
+        };
+        return acc;
+      }, {});
+    }
+  } catch (error) {
+    console.error('Failed to load custom lists:', error);
+  }
+  return {};
+};
+
 // Helper functions
 export const getStockList = listId => {
-  return STOCK_LISTS[listId] || STOCK_LISTS[DEFAULT_STOCK_LIST];
+  // Check built-in lists first
+  if (STOCK_LISTS[listId]) {
+    return STOCK_LISTS[listId];
+  }
+  
+  // Check custom lists
+  const customLists = getCustomLists();
+  if (customLists[listId]) {
+    return customLists[listId];
+  }
+  
+  return STOCK_LISTS[DEFAULT_STOCK_LIST];
 };
 
 export const getAllStockListIds = () => {
-  return Object.keys(STOCK_LISTS);
+  const customLists = getCustomLists();
+  return [...Object.keys(STOCK_LISTS), ...Object.keys(customLists)];
 };
 
 export const getAllStockLists = () => {
-  return STOCK_LISTS;
+  const customLists = getCustomLists();
+  return { ...STOCK_LISTS, ...customLists };
 };
 
 export const getStockListNames = () => {
-  return Object.entries(STOCK_LISTS).map(([id, config]) => ({
+  const allLists = getAllStockLists();
+  return Object.entries(allLists).map(([id, config]) => ({
     id,
     name: config.name,
     description: config.description,
     count: config.stocks.length,
     color: config.color,
+    isCustom: config.isCustom || false
   }));
 };
 
 // Validation
 export const isValidStockListId = listId => {
-  return listId && Object.prototype.hasOwnProperty.call(STOCK_LISTS, listId);
+  if (listId && Object.prototype.hasOwnProperty.call(STOCK_LISTS, listId)) {
+    return true;
+  }
+  
+  const customLists = getCustomLists();
+  return listId && Object.prototype.hasOwnProperty.call(customLists, listId);
 };
