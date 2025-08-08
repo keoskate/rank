@@ -12,8 +12,6 @@ const NavBar = () => {
       borderBottom: '1px solid #34495e'
     }}>
       <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'

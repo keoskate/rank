@@ -19,7 +19,8 @@ const InvestTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [connectionStep, setConnectionStep] = useState('connect'); // 'connect', 'connecting', 'connected'
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'positions', 'trades', 'paper-trading'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'positions', 'trades', 'trading'
+  const [tradingMode, setTradingMode] = useState('paper'); // 'paper' or 'live'
   
   // Paper trading state
   const [paperPortfolio, setPaperPortfolio] = useState(null);
@@ -387,18 +388,18 @@ const InvestTab = () => {
     }
   };
 
-  // Load paper portfolio when switching to paper trading tab
+  // Load paper portfolio when switching to trading tab in paper mode
   useEffect(() => {
-    if (activeTab === 'paper-trading' && connectionStep === 'connected' && !paperPortfolio) {
+    if (activeTab === 'trading' && tradingMode === 'paper' && connectionStep === 'connected' && !paperPortfolio) {
       fetchPaperPortfolio();
     }
-  }, [activeTab, connectionStep]);
+  }, [activeTab, tradingMode, connectionStep]);
 
   // Render connection step
   if (connectionStep === 'connect') {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', backgroundColor: '#f8f9fa', minHeight: '400px' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '12px', padding: '40px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '40px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏦</div>
           <h2 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '28px', fontWeight: '600' }}>
             Connect Your Brokerage Account
@@ -468,7 +469,7 @@ const InvestTab = () => {
   // Render connected state with account data
   return (
     <div style={{ padding: '20px', backgroundColor: '#f8f9fa', minHeight: '600px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div>
         <div style={{ marginBottom: '24px', textAlign: 'center' }}>
           <h2 style={{ margin: '0 0 8px 0', color: '#2c3e50', fontSize: '28px', fontWeight: '600' }}>
             🎉 Account Connected Successfully!
@@ -510,7 +511,7 @@ const InvestTab = () => {
                 { id: 'overview', label: '📊 Overview', icon: '📊' },
                 { id: 'positions', label: '💼 Positions', icon: '💼' },
                 { id: 'trades', label: '💹 Recent Trades', icon: '💹' },
-                { id: 'paper-trading', label: '📄 Paper Trading', icon: '📄' }
+                { id: 'trading', label: '🚀 Trading', icon: '🚀' }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -535,6 +536,53 @@ const InvestTab = () => {
 
           {/* Tab Content */}
           <div style={{ padding: '24px' }}>
+            {/* Trading Mode Toggle */}
+            {activeTab === 'trading' && (
+              <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <h4 style={{ margin: '0', color: '#2c3e50', fontSize: '16px', fontWeight: '600' }}>
+                    Trading Mode
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '14px', color: '#6c757d', fontWeight: '500' }}>
+                      {tradingMode === 'paper' ? '📄 Paper Trading' : '💰 Live Trading'}
+                    </span>
+                    <button
+                      onClick={() => setTradingMode(tradingMode === 'paper' ? 'live' : 'paper')}
+                      style={{
+                        backgroundColor: tradingMode === 'paper' ? '#ffc107' : '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '20px',
+                        padding: '6px 16px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}
+                    >
+                      Switch to {tradingMode === 'paper' ? 'Live' : 'Paper'}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ fontSize: '13px', color: '#6c757d', lineHeight: '1.4' }}>
+                  {tradingMode === 'paper' ? (
+                    <>
+                      <strong>Paper Trading Mode:</strong> Practice with virtual money ($100,000 starting balance) using real stock prices. 
+                      Perfect for testing strategies without financial risk.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Live Trading Mode:</strong> Execute real trades with your connected Schwab account. 
+                      <span style={{ color: '#dc3545', fontWeight: '600' }}>Use real money with caution.</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Overview Tab */}
             {activeTab === 'overview' && tradeSummary && (
               <div>
@@ -711,8 +759,8 @@ const InvestTab = () => {
               </div>
             )}
 
-            {/* Paper Trading Tab */}
-            {activeTab === 'paper-trading' && (
+            {/* Trading Tab */}
+            {activeTab === 'trading' && tradingMode === 'paper' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
@@ -1038,6 +1086,72 @@ const InvestTab = () => {
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Live Trading Tab */}
+            {activeTab === 'trading' && tradingMode === 'live' && (
+              <div>
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ margin: '0 0 12px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
+                    Live Trading - Charles Schwab
+                  </h3>
+                  <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '8px', padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>⚠️</span>
+                      <strong style={{ color: '#856404', fontSize: '16px' }}>Live Trading Mode</strong>
+                    </div>
+                    <p style={{ color: '#856404', margin: '0', fontSize: '14px', lineHeight: '1.4' }}>
+                      You are now in <strong>Live Trading Mode</strong> using your connected Charles Schwab account. 
+                      All trades will use real money and execute on live markets. Please trade responsibly.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Account Summary for Live Trading */}
+                {accounts.length > 0 && (
+                  <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
+                      Account Overview
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
+                          {formatCurrency(accounts[0].balance.total)}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Total Balance</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#007bff', marginBottom: '4px' }}>
+                          {formatCurrency(accounts[0].balance.cash)}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Available Cash</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#6c757d', marginBottom: '4px' }}>
+                          {formatCurrency(accounts[0].balance.total - accounts[0].balance.cash)}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Invested</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Trading Notice */}
+                <div style={{ backgroundColor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
+                  <h4 style={{ margin: '0 0 12px 0', color: '#1976d2', fontSize: '20px' }}>
+                    Live Trading Interface Coming Soon
+                  </h4>
+                  <p style={{ color: '#1976d2', margin: '0 0 16px 0', fontSize: '16px', lineHeight: '1.5' }}>
+                    Direct trading functionality through SnapTrade API is currently under development.
+                    <br />
+                    For now, you can view your account data, positions, and trade history in the other tabs.
+                  </p>
+                  <div style={{ fontSize: '14px', color: '#1976d2', fontWeight: '500' }}>
+                    💡 <strong>Tip:</strong> Use Paper Trading mode to test strategies while we complete the live trading integration.
+                  </div>
+                </div>
               </div>
             )}
           </div>
