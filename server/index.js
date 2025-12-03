@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 8080;
 const path = require('path');
 const snapshotManager = require('./snapshotManager');
+const backtestEngine = require('./backtestEngine');
 
 const app = express();
 
@@ -838,6 +839,44 @@ app.get('/api/quarterly/:symbol/yoy/:metric', async (req, res) => {
   }
 });
 
+// 18. Run backtest
+app.post('/api/backtest/run', async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      topN = 5,
+      rebalanceFrequency = 'daily',
+      initialCapital = 100000
+    } = req.body;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    console.log(`🧪 Running backtest: ${startDate} to ${endDate}, top ${topN}, ${rebalanceFrequency}`);
+
+    const results = await backtestEngine.backtestTopNStrategy({
+      startDate,
+      endDate,
+      topN,
+      rebalanceFrequency,
+      initialCapital
+    });
+
+    console.log(`✅ Backtest completed: ${results.performance.totalReturn.toFixed(2)}% return`);
+
+    res.json({
+      success: true,
+      results,
+      message: 'Backtest completed successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error running backtest:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to run backtest' });
+  }
+});
+
 // Serve static files from React build
 app.use(express.static(`${__dirname}/../react-client/dist`));
 
@@ -869,4 +908,5 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/quarterly/:symbol`);
   console.log(`   GET  /api/quarterly/:symbol/qoq/:metric`);
   console.log(`   GET  /api/quarterly/:symbol/yoy/:metric`);
+  console.log(`   POST /api/backtest/run`);
 });
