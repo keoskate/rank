@@ -12,11 +12,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStockData } from './StockDataProvider';
 import { getCacheInfo } from '../utils/cacheManager';
-import { 
-  loadChartPreferences, 
-  updateChartPreference 
+import {
+  loadChartPreferences,
+  updateChartPreference
 } from '../utils/chartPreferences';
 import { getStockHistoricalData } from './StockUtils';
+import {
+  calculateRSI,
+  calculateIntradayRSI,
+  getCurrentRSI,
+  validateRSI
+} from '../utils/technicalIndicators';
 
 // Mini chart component for metric cards
 const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
@@ -714,85 +720,87 @@ const StockDetailPage = () => {
         }
       }
       
-      if (selectedMetricChart === 'price') {
-        // For price data, generate open and close prices
+      if (selectedMetricChart === 'price' || selectedMetricChart === 'rsi') {
+        // For price data and RSI, generate open and close prices
         const z1 = generateGaussian();
         const z2 = generateGaussian();
-        
+
         // Geometric Brownian Motion: S(t+dt) = S(t) * exp((mu - 0.5*sigma^2)*dt + sigma*sqrt(dt)*z)
         const drift = (mu - 0.5 * sigma * sigma) * dt;
         const diffusion = sigma * Math.sqrt(dt) * z1;
         const priceChange = Math.exp(drift + diffusion);
-        
+
         currentPrice = currentPrice * priceChange;
-        
+
         // Generate intraday variation for open/close
         const intradayVol = sigma * 0.1; // Much smaller intraday volatility
         const openAdjustment = Math.exp(intradayVol * Math.sqrt(dt) * z2);
-        
+
         const openPrice = currentPrice * openAdjustment;
         const closePrice = currentPrice;
-        
+
         // Opening timestamp (9:30 AM)
         const openTimestamp = new Date(tradingDate);
         openTimestamp.setHours(9, 30, 0, 0);
-        
+
         // Closing timestamp (4:00 PM)
         const closeTimestamp = new Date(tradingDate);
         closeTimestamp.setHours(16, 0, 0, 0);
-        
+
         data.push(openPrice);
         labels.push(openTimestamp.toISOString());
-        
+
         data.push(closePrice);
         labels.push(closeTimestamp.toISOString());
-        
+
       } else {
-        // For non-price metrics, generate single daily value
+        // For non-price, non-RSI metrics, generate single daily value
         tradingDate.setHours(16, 0, 0, 0);
-        
+
         let dataPoint;
-        
-        if (selectedMetricChart === 'rsi') {
-          // RSI: Ornstein-Uhlenbeck process (mean-reverting) with bounds [0, 100]
-          const meanRSI = 50;
-          const meanReversion = 0.1;
-          const rsiChange = meanReversion * (meanRSI - currentPrice) * dt + sigma * Math.sqrt(dt) * generateGaussian();
-          currentPrice = Math.max(10, Math.min(90, currentPrice + rsiChange));
-          dataPoint = currentPrice;
-          
-        } else if (selectedMetricChart === 'impliedVolatility') {
+
+        if (selectedMetricChart === 'impliedVolatility') {
           // IV: GBM with occasional volatility spikes
           const z = generateGaussian();
           const drift = (mu - 0.5 * sigma * sigma) * dt;
           const diffusion = sigma * Math.sqrt(dt) * z;
-          
+
           // Add volatility spikes (5% chance per day)
           const spike = nextRandom() > 0.95 ? 0.05 : 0;
-          
+
           currentPrice = currentPrice * Math.exp(drift + diffusion + spike);
           currentPrice = Math.max(0.05, Math.min(1.0, currentPrice)); // Bound IV between 5% and 100%
           dataPoint = currentPrice;
-          
+
         } else {
           // Other financial metrics: Modified GBM with bounds
           const z = generateGaussian();
           const drift = (mu - 0.5 * sigma * sigma) * dt;
           const diffusion = sigma * Math.sqrt(dt) * z;
-          
+
           currentPrice = currentPrice * Math.exp(drift + diffusion);
-          
+
           // Apply reasonable bounds based on starting value
           const maxBound = startingValue * 3.0;
           const minBound = startingValue * 0.3;
           currentPrice = Math.max(minBound, Math.min(maxBound, currentPrice));
-          
+
           dataPoint = currentPrice;
         }
-        
+
         data.push(dataPoint);
         labels.push(tradingDate.toISOString());
       }
+    }
+
+    // Calculate RSI from generated price data if RSI metric is selected
+    if (selectedMetricChart === 'rsi') {
+      console.log('📊 Calculating RSI from generated price data...');
+      const rsiValues = calculateIntradayRSI(data, labels, 14);
+      const validRSI = validateRSI(rsiValues);
+
+      // Replace price data with RSI data
+      return { labels, data: validRSI };
     }
 
     // REMOVED: No more forced ending values - charts end naturally where GBM leads
@@ -849,30 +857,39 @@ const StockDetailPage = () => {
     };
   }, [ticker, selectedTimeframe, selectedMetricChart]);
 
-  // Use real historical data for price charts, generated data for other metrics
+  // Use real historical data for price charts, calculated RSI from real prices, or generated data
   const chartData = useMemo(() => {
     if (selectedMetricChart === 'price' && historicalData) {
       // Use real historical price data
       return historicalData;
+    } else if (selectedMetricChart === 'rsi' && historicalData && historicalData.data && historicalData.data.length > 15) {
+      // Calculate RSI from real historical price data
+      console.log('📊 Calculating RSI from real historical price data...');
+      const rsiValues = calculateIntradayRSI(historicalData.data, historicalData.labels, 14);
+      const validRSI = validateRSI(rsiValues);
+      return {
+        labels: historicalData.labels,
+        data: validRSI
+      };
     } else {
-      // Use generated data for non-price metrics or when real data unavailable
+      // Use generated data for other metrics or when real data unavailable
       return generateHistoricalData;
     }
   }, [selectedMetricChart, historicalData, generateHistoricalData]);
 
-  // Smart mini chart data - real data for price, generated for others
+  // Smart mini chart data - real data for price and RSI, generated for others
   const getMiniChartInfo = (metricKey) => {
     try {
       if (metricKey === 'price' && historicalData && historicalData.data && historicalData.data.length > 0) {
         // Use real historical data for price mini charts, but sample it down for performance
-        const realData = historicalData.data.filter(val => 
+        const realData = historicalData.data.filter(val =>
           val !== null && val !== undefined && isFinite(val) && !isNaN(val)
         );
-        
+
         if (realData.length === 0) {
           return { data: generateMiniChartData(metricKey), isRealData: false };
         }
-        
+
         let sampledData;
         if (realData.length <= 30) {
           sampledData = realData;
@@ -882,8 +899,26 @@ const StockDetailPage = () => {
           sampledData = realData.filter((_, index) => index % step === 0);
         }
         return { data: sampledData, isRealData: true };
+      } else if (metricKey === 'rsi' && historicalData && historicalData.data && historicalData.data.length > 15) {
+        // Calculate RSI from real historical price data for mini chart
+        const rsiValues = calculateRSI(historicalData.data, 14);
+        const validRSI = validateRSI(rsiValues).filter(val => val !== null);
+
+        if (validRSI.length === 0) {
+          return { data: generateMiniChartData(metricKey), isRealData: false };
+        }
+
+        // Sample down if needed
+        let sampledData;
+        if (validRSI.length <= 30) {
+          sampledData = validRSI;
+        } else {
+          const step = Math.max(1, Math.floor(validRSI.length / 20));
+          sampledData = validRSI.filter((_, index) => index % step === 0);
+        }
+        return { data: sampledData, isRealData: true };
       } else {
-        // Use generated data for non-price metrics
+        // Use generated data for other metrics or when real data unavailable
         const generatedData = generateMiniChartData(metricKey);
         return { data: generatedData || [], isRealData: false };
       }
@@ -1073,36 +1108,24 @@ const StockDetailPage = () => {
     
     for (let day = 0; day < tradingDays; day++) {
       let dataPoint;
-      
-      if (metricKey === 'price') {
-        // Use same realistic price generation as main charts but scaled down
+
+      if (metricKey === 'price' || metricKey === 'rsi') {
+        // For both price and RSI, generate realistic price data
+        // (RSI will be calculated from prices after the loop)
         const random1 = nextRandom();
         const random2 = nextRandom();
         const normalRandom = Math.sqrt(-2 * Math.log(random1)) * Math.cos(2 * Math.PI * random2);
-        
+
         const dailyVol = 0.015; // 1.5% daily volatility for mini charts
         const trendComponent = avgDailyReturn;
         const randomComponent = normalRandom * dailyVol;
-        
+
         const momentum = day > 0 ? (prices[day - 1] / (day > 1 ? prices[day - 2] : startValue) - 1) * 0.03 : 0;
         const dailyReturn = trendComponent + randomComponent + momentum;
-        
+
         currentPrice = currentPrice * (1 + dailyReturn);
         dataPoint = currentPrice;
-        
-      } else if (metricKey === 'rsi') {
-        // RSI with realistic oscillation
-        if (day === 0) {
-          dataPoint = Math.max(25, Math.min(75, currentValue + (nextRandom() - 0.5) * 15));
-        } else {
-          const prevRsi = prices[day - 1];
-          const rsiChange = (nextRandom() - 0.5) * 4; // Daily RSI can move ±2 points typically
-          const trendToTarget = (currentValue - prevRsi) * 0.05; // Gradual move to target
-          
-          dataPoint = prevRsi + rsiChange + trendToTarget;
-          dataPoint = Math.max(25, Math.min(75, dataPoint));
-        }
-        
+
       } else if (metricKey === 'impliedVolatility') {
         // IV with occasional spikes
         if (day === 0) {
@@ -1144,6 +1167,14 @@ const StockDetailPage = () => {
     // REMOVED: No more forced ending values or adjustment periods
     // Mini charts now end naturally where the GBM process leads
     // This eliminates artificial drop-offs and creates more realistic chart behavior
+
+    // Calculate RSI from generated prices if needed
+    if (metricKey === 'rsi') {
+      const rsiValues = calculateRSI(prices, 14);
+      const validRSI = validateRSI(rsiValues);
+      // Filter out null values from the beginning (RSI needs 14+ periods)
+      return validRSI.filter(val => val !== null);
+    }
 
     return prices;
   };
