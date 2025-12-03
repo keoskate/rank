@@ -15,6 +15,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const PORT = process.env.PORT || 8080;
 const path = require('path');
+const snapshotManager = require('./snapshotManager');
 
 const app = express();
 
@@ -661,7 +662,7 @@ app.post('/api/paper-trading/portfolio/:userId/reset', async (req, res) => {
   try {
     const { userId } = req.params;
     const { initialCash = 100000 } = req.body;
-    
+
     const newPortfolio = {
       userId: userId,
       cash: parseFloat(initialCash),
@@ -673,9 +674,9 @@ app.post('/api/paper-trading/portfolio/:userId/reset', async (req, res) => {
     };
 
     paperTradingPortfolios.set(userId, newPortfolio);
-    
+
     console.log(`🔄 Reset paper trading portfolio for user: ${userId}`);
-    
+
     res.json({
       success: true,
       portfolio: {
@@ -687,6 +688,153 @@ app.post('/api/paper-trading/portfolio/:userId/reset', async (req, res) => {
   } catch (error) {
     console.error('❌ Error resetting paper trading portfolio:', error.message);
     res.status(500).json({ error: 'Failed to reset paper trading portfolio' });
+  }
+});
+
+// ================================
+// SNAPSHOT & BACKTESTING ENDPOINTS
+// ================================
+
+// 11. Get available snapshot dates
+app.get('/api/snapshots/dates', async (req, res) => {
+  try {
+    const dates = await snapshotManager.getAvailableSnapshots();
+    res.json({
+      success: true,
+      dates,
+      count: dates.length,
+      message: 'Snapshot dates retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error retrieving snapshot dates:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve snapshot dates' });
+  }
+});
+
+// 12. Get snapshot for specific date
+app.get('/api/snapshots/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const snapshot = await snapshotManager.loadSnapshot(date);
+
+    if (!snapshot) {
+      return res.status(404).json({ error: 'Snapshot not found for specified date' });
+    }
+
+    res.json({
+      success: true,
+      snapshot,
+      message: 'Snapshot retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error retrieving snapshot:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve snapshot' });
+  }
+});
+
+// 13. Get snapshot range
+app.get('/api/snapshots/range/:startDate/:endDate', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.params;
+    const snapshots = await snapshotManager.loadSnapshotRange(startDate, endDate);
+
+    res.json({
+      success: true,
+      snapshots,
+      count: snapshots.length,
+      startDate,
+      endDate,
+      message: 'Snapshot range retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error retrieving snapshot range:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve snapshot range' });
+  }
+});
+
+// 14. Generate synthetic historical snapshots
+app.post('/api/snapshots/generate-history', async (req, res) => {
+  try {
+    const { stocks, days = 90, stockListName = 'Default' } = req.body;
+
+    if (!stocks || !Array.isArray(stocks)) {
+      return res.status(400).json({ error: 'stocks array is required' });
+    }
+
+    const snapshots = await snapshotManager.generateSyntheticHistory(stocks, days, stockListName);
+
+    res.json({
+      success: true,
+      snapshotsGenerated: snapshots.length,
+      days,
+      message: 'Synthetic historical snapshots generated successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error generating synthetic history:', error.message);
+    res.status(500).json({ error: 'Failed to generate synthetic history' });
+  }
+});
+
+// 15. Get quarterly data for a stock
+app.get('/api/quarterly/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const data = await snapshotManager.loadQuarterlyData(symbol);
+
+    if (!data) {
+      return res.status(404).json({ error: 'Quarterly data not found for symbol' });
+    }
+
+    res.json({
+      success: true,
+      data,
+      message: 'Quarterly data retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error retrieving quarterly data:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve quarterly data' });
+  }
+});
+
+// 16. Calculate QoQ for a stock metric
+app.get('/api/quarterly/:symbol/qoq/:metric', async (req, res) => {
+  try {
+    const { symbol, metric } = req.params;
+    const qoq = await snapshotManager.calculateQoQ(symbol, metric);
+
+    if (!qoq) {
+      return res.status(404).json({ error: 'QoQ data not available' });
+    }
+
+    res.json({
+      success: true,
+      qoq,
+      message: 'QoQ calculation retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error calculating QoQ:', error.message);
+    res.status(500).json({ error: 'Failed to calculate QoQ' });
+  }
+});
+
+// 17. Calculate YoY for a stock metric
+app.get('/api/quarterly/:symbol/yoy/:metric', async (req, res) => {
+  try {
+    const { symbol, metric } = req.params;
+    const yoy = await snapshotManager.calculateYoY(symbol, metric);
+
+    if (!yoy) {
+      return res.status(404).json({ error: 'YoY data not available' });
+    }
+
+    res.json({
+      success: true,
+      yoy,
+      message: 'YoY calculation retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error calculating YoY:', error.message);
+    res.status(500).json({ error: 'Failed to calculate YoY' });
   }
 });
 
@@ -713,4 +861,12 @@ app.listen(PORT, () => {
   console.log(`   POST /api/paper-trading/order`);
   console.log(`   GET  /api/paper-trading/portfolio/:userId`);
   console.log(`   POST /api/paper-trading/portfolio/:userId/reset`);
+  console.log(`📸 Snapshot & Backtesting endpoints available:`);
+  console.log(`   GET  /api/snapshots/dates`);
+  console.log(`   GET  /api/snapshots/:date`);
+  console.log(`   GET  /api/snapshots/range/:startDate/:endDate`);
+  console.log(`   POST /api/snapshots/generate-history`);
+  console.log(`   GET  /api/quarterly/:symbol`);
+  console.log(`   GET  /api/quarterly/:symbol/qoq/:metric`);
+  console.log(`   GET  /api/quarterly/:symbol/yoy/:metric`);
 });

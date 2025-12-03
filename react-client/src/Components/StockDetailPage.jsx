@@ -1866,7 +1866,7 @@ const StockDetailPage = () => {
           );
         })()}
 
-        {/* Metrics Grid */}
+        {/* Real-Time Metrics Section */}
         <div
           style={{
             backgroundColor: '#ffffff',
@@ -1874,6 +1874,7 @@ const StockDetailPage = () => {
             border: '1px solid #e0e6ed',
             padding: '20px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            marginBottom: '20px'
           }}
         >
           <div
@@ -1885,7 +1886,7 @@ const StockDetailPage = () => {
             }}
           >
             <h3 style={{ margin: '0', color: '#2c3e50' }}>
-              Financial Metrics
+              📊 Real-Time Metrics
               <span
                 style={{
                   fontSize: '14px',
@@ -1894,7 +1895,7 @@ const StockDetailPage = () => {
                   marginLeft: '12px',
                 }}
               >
-                Color-coded vs. {currentStockList.name} peers
+                Updated daily • Color-coded vs. {currentStockList.name} peers
               </span>
             </h3>
             <div style={{ fontSize: '12px', color: '#6c757d' }}>
@@ -1916,7 +1917,209 @@ const StockDetailPage = () => {
                   key !== 'rank' &&
                   key !== 'ticker' &&
                   stockData[key] !== null &&
-                  stockData[key] !== undefined
+                  stockData[key] !== undefined &&
+                  TIME_SERIES_METRICS.includes(key)
+              )
+              .map(([key, param]) => {
+                const ranking = relativeRankings[key];
+                const color = getMetricColor(key);
+                const chartInfo = getMiniChartInfo(key); // Calculate once per metric
+
+                return (
+                  <div
+                    key={key}
+                    onClick={() => {
+                      setSelectedMetricChart(key);
+                      updateChartPreference('metric', key);
+                    }}
+                    style={{
+                      backgroundColor: color,
+                      border:
+                        selectedMetricChart === key
+                          ? '2px solid #007bff'
+                          : '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      padding: '16px',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                      transform:
+                        selectedMetricChart === key
+                          ? 'scale(1.02)'
+                          : 'scale(1)',
+                      boxShadow:
+                        selectedMetricChart === key
+                          ? '0 4px 12px rgba(0,123,255,0.2)'
+                          : '0 2px 4px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#2c3e50',
+                          }}
+                        >
+                          {param.label}
+                        </span>
+                        {/* Show validation badge if data is validated */}
+                        {stockData._validation?.metrics?.[key] && (
+                          <DataQualityBadge
+                            confidence={
+                              stockData._validation.metrics[key].confidence
+                            }
+                            status={stockData._validation.metrics[key].status}
+                            sources={stockData._validation.metrics[key].sources}
+                            size="small"
+                          />
+                        )}
+                      </div>
+                      {ranking && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: '#6c757d',
+                            backgroundColor: 'rgba(255,255,255,0.7)',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                          }}
+                        >
+                          #{ranking.rank}/{ranking.total}
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        color: '#2c3e50',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {formatValue(stockData[key], param.type)}
+                    </div>
+
+                    {/* Mini chart for the metric - only show for time-series appropriate metrics */}
+                    {TIME_SERIES_METRICS.includes(key) ? (
+                      <MiniChart
+                        data={chartInfo.data}
+                        selectedTimeframe={selectedTimeframe}
+                        metricKey={key}
+                        isRealData={chartInfo.isRealData}
+                      />
+                    ) : (
+                      <div style={{
+                        fontSize: '11px',
+                        color: '#6c757d',
+                        fontStyle: 'italic',
+                        marginTop: '4px',
+                        textAlign: 'center'
+                      }}>
+                        {STATIC_METRICS.includes(key) ? '(Snapshot value)' : '(Updated quarterly)'}
+                      </div>
+                    )}
+
+                    {ranking && (
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#495057',
+                        }}
+                      >
+                        {ranking.percentile.toFixed(0)}th percentile
+                        {ranking.isGood ? ' (Good)' : ' (Needs Improvement)'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Quarterly Financials Section */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e0e6ed',
+            padding: '20px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+            }}
+          >
+            <div>
+              <h3 style={{ margin: '0', color: '#2c3e50' }}>
+                📈 Quarterly Financials & Snapshot Metrics
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    color: '#6c757d',
+                    marginLeft: '12px',
+                  }}
+                >
+                  Updated quarterly • Color-coded vs. {currentStockList.name} peers
+                </span>
+              </h3>
+              <div style={{
+                fontSize: '12px',
+                color: '#95a5a6',
+                fontStyle: 'italic',
+                marginTop: '6px'
+              }}>
+                These metrics update with quarterly earnings reports (typically 4x per year)
+              </div>
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: '#6c757d',
+              backgroundColor: '#f8f9fa',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: '1px solid #e0e6ed'
+            }}>
+              Last Updated: Q4 2025
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '16px',
+            }}
+          >
+            {Object.entries(stockColumns)
+              .filter(
+                ([key, param]) =>
+                  param.multiplier !== 0 &&
+                  key !== 'rank' &&
+                  key !== 'ticker' &&
+                  stockData[key] !== null &&
+                  stockData[key] !== undefined &&
+                  STATIC_METRICS.includes(key)
               )
               .map(([key, param]) => {
                 const ranking = relativeRankings[key];
