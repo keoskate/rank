@@ -74,6 +74,32 @@ const NavBar = () => {
           </button>
           
           <button
+            onClick={() => navigate('/backtest')}
+            style={{
+              background: 'none',
+              border: '2px solid #9b59b6',
+              color: '#9b59b6',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+              marginRight: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#9b59b6';
+              e.target.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = '#9b59b6';
+            }}
+          >
+            🧪 Backtest
+          </button>
+
+          <button
             onClick={() => navigate('/invest')}
             style={{
               background: 'none',

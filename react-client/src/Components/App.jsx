@@ -17,6 +17,7 @@ import StockDetailPage from './StockDetailPage';
 import InvestTab from './InvestTab';
 import StockDataProvider from './StockDataProvider';
 import DataValidationTest from './DataValidationTest';
+import BacktestPage from './BacktestPage';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/invest" element={<InvestTab />} />
+            <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/stock/:ticker" element={<StockDetailPage />} />
             <Route path="/test-validation" element={<DataValidationTest />} />
           </Routes>
