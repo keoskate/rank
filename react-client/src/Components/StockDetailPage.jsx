@@ -14,15 +14,18 @@ import { useStockData } from './StockDataProvider';
 import { getCacheInfo } from '../utils/cacheManager';
 import {
   loadChartPreferences,
-  updateChartPreference
+  updateChartPreference,
 } from '../utils/chartPreferences';
 import { getStockHistoricalData } from './StockUtils';
 import {
   calculateRSI,
   calculateIntradayRSI,
   getCurrentRSI,
-  validateRSI
+  validateRSI,
 } from '../utils/technicalIndicators';
+import DataQualityBadge from './DataQualityBadge';
+import { getValidatedStockData } from '../api/unifiedAPI';
+import MetricCorrelationChart from './MetricCorrelationChart';
 
 // Mini chart component for metric cards
 const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
@@ -40,7 +43,11 @@ const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
 
   // Generate path for the mini line
   const pathData = data.map((value, index) => {
-    const x = padding + (data.length > 1 ? (index / (data.length - 1)) * plotWidth : plotWidth / 2);
+    const x =
+      padding +
+      (data.length > 1
+        ? (index / (data.length - 1)) * plotWidth
+        : plotWidth / 2);
     const y = padding + (1 - (value - minValue) / range) * plotHeight;
     return { x, y, value };
   });
@@ -54,7 +61,14 @@ const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
   const strokeColor = isPositive ? '#28a745' : '#dc3545';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '8px 0' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        margin: '8px 0',
+      }}
+    >
       <svg
         width={width}
         height={height}
@@ -72,7 +86,7 @@ const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
           strokeWidth="1.5"
           opacity="0.8"
         />
-        
+
         {/* Start and end points */}
         <circle
           cx={pathData[0]?.x}
@@ -87,7 +101,7 @@ const MiniChart = ({ data, selectedTimeframe, metricKey, isRealData }) => {
           r="1.5"
           fill={strokeColor}
         />
-        
+
         {/* Real data indicator */}
         {isRealData && (
           <circle
@@ -111,16 +125,18 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
 
   if (!data || !labels || data.length === 0 || labels.length === 0) {
     return (
-      <div style={{ 
-        width: '100%', 
-        height: '400px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f8f9fa',
-        border: '1px solid #dee2e6',
-        borderRadius: '4px'
-      }}>
+      <div
+        style={{
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #dee2e6',
+          borderRadius: '4px',
+        }}
+      >
         <div style={{ textAlign: 'center', color: '#6c757d' }}>
           <div>📊</div>
           <div>No chart data available</div>
@@ -130,19 +146,23 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
   }
 
   // Filter out invalid data points
-  const validData = data.filter(d => d !== null && d !== undefined && isFinite(d));
+  const validData = data.filter(
+    d => d !== null && d !== undefined && isFinite(d)
+  );
   if (validData.length === 0) {
     return (
-      <div style={{ 
-        width: '100%', 
-        height: '400px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f8f9fa',
-        border: '1px solid #dee2e6',
-        borderRadius: '4px'
-      }}>
+      <div
+        style={{
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #dee2e6',
+          borderRadius: '4px',
+        }}
+      >
         <div style={{ textAlign: 'center', color: '#6c757d' }}>
           <div>⚠️</div>
           <div>Invalid chart data</div>
@@ -161,31 +181,39 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
   const plotHeight = chartHeight - padding.top - padding.bottom;
 
   // Calculate path for the line with validation
-  const pathData = data.map((value, index) => {
-    // Ensure value is valid for calculations
-    const safeValue = (value !== null && value !== undefined && isFinite(value)) ? value : (minValue + maxValue) / 2;
-    
-    const x = padding.left + (index / Math.max(1, data.length - 1)) * plotWidth;
-    const y = padding.top + (1 - (safeValue - minValue) / range) * plotHeight;
-    return { 
-      x: isFinite(x) ? x : padding.left, 
-      y: isFinite(y) ? y : padding.top + plotHeight / 2, 
-      value: safeValue, 
-      label: labels[index] || new Date().toISOString(), 
-      index 
-    };
-  }).filter(point => point.x >= padding.left && point.x <= chartWidth - padding.right);
+  const pathData = data
+    .map((value, index) => {
+      // Ensure value is valid for calculations
+      const safeValue =
+        value !== null && value !== undefined && isFinite(value)
+          ? value
+          : (minValue + maxValue) / 2;
+
+      const x =
+        padding.left + (index / Math.max(1, data.length - 1)) * plotWidth;
+      const y = padding.top + (1 - (safeValue - minValue) / range) * plotHeight;
+      return {
+        x: isFinite(x) ? x : padding.left,
+        y: isFinite(y) ? y : padding.top + plotHeight / 2,
+        value: safeValue,
+        label: labels[index] || new Date().toISOString(),
+        index,
+      };
+    })
+    .filter(
+      point => point.x >= padding.left && point.x <= chartWidth - padding.right
+    );
 
   // Create a smooth curve using bezier curves
-  const createSmoothPath = (points) => {
+  const createSmoothPath = points => {
     if (points.length < 2) return '';
-    
+
     let path = `M ${points[0].x} ${points[0].y}`;
-    
+
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1];
       const curr = points[i];
-      
+
       if (i === 1) {
         // First segment - use quadratic curve
         const cpx = prev.x + (curr.x - prev.x) * 0.5;
@@ -195,17 +223,17 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
         // Smooth cubic bezier curves
         const prevPrev = points[i - 2];
         const next = points[i + 1] || curr;
-        
+
         // Control points for smooth curve
         const cp1x = prev.x + (curr.x - prevPrev.x) * 0.2;
         const cp1y = prev.y + (curr.y - prevPrev.y) * 0.2;
         const cp2x = curr.x - (next.x - prev.x) * 0.2;
         const cp2y = curr.y - (next.y - prev.y) * 0.2;
-        
+
         path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${curr.x} ${curr.y}`;
       }
     }
-    
+
     return path;
   };
 
@@ -235,26 +263,26 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
     if (value === null || value === undefined || value === '') {
       return 'N/A';
     }
-    
+
     const numValue = Number(value);
-    
+
     if (isNaN(numValue) || !isFinite(numValue)) {
       return 'N/A';
     }
-    
+
     // Handle extremely small numbers that might display as 0
     if (Math.abs(numValue) < 0.0001 && numValue !== 0) {
       return numValue.toExponential(2);
     }
-    
+
     if (selectedMetric === 'price') {
       return `$${numValue.toFixed(2)}`;
     }
-    
+
     if (selectedMetric.includes('Ratio') || selectedMetric === 'beta') {
       return numValue.toFixed(2);
     }
-    
+
     if (
       selectedMetric.includes('percentage') ||
       selectedMetric === 'roe' ||
@@ -262,11 +290,11 @@ const TimeSeriesChart = ({ data, labels, title, selectedMetric, onHover }) => {
     ) {
       return `${(numValue * 100).toFixed(2)}%`;
     }
-    
+
     if (typeof numValue === 'number' && numValue > 1000) {
       return numValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
     }
-    
+
     return numValue.toFixed(2);
   };
 
@@ -461,24 +489,71 @@ const StockDetailPage = () => {
   } = useStockData();
   const { ticker } = useParams();
   const navigate = useNavigate();
-  
+
+  // Define which metrics are time-series appropriate (change daily/frequently)
+  // vs. static/quarterly metrics that shouldn't be plotted over time
+  const TIME_SERIES_METRICS = ['price', 'rsi', 'impliedVolatility'];
+  const STATIC_METRICS = [
+    'yearHigh', 'yearLow', 'discount', // 52W data - staircase pattern
+    'peRatio', 'roe', 'priceToBook', // Quarterly updates
+    'debtEbitda', 'netDebt', 'quickRatio', 'evEbitda', // Quarterly financials
+    'freeCashFlowYield', 'ebitda', 'cash', // Quarterly financials
+    'beta', 'dividend', 'marketCap' // Slow-moving or quarterly
+  ];
+
   // Load saved chart preferences
   const savedPreferences = loadChartPreferences();
-  const [selectedTimeframe, setSelectedTimeframe] = useState(savedPreferences.timeframe);
-  const [selectedMetricChart, setSelectedMetricChart] = useState(savedPreferences.metric);
+  const [selectedTimeframe, setSelectedTimeframe] = useState(
+    savedPreferences.timeframe
+  );
+  const [selectedMetricChart, setSelectedMetricChart] = useState(
+    savedPreferences.metric
+  );
   const [loading, setLoading] = useState(true);
   const [historicalData, setHistoricalData] = useState(null);
   const [historicalLoading, setHistoricalLoading] = useState(false);
-  
+  const [validatedStockData, setValidatedStockData] = useState(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+
   // Get cache info for data freshness
   const cacheInfo = getCacheInfo();
-  const dataAge = cacheInfo?.lastFetched ? new Date(cacheInfo.lastFetched) : null;
-  const isDataStale = dataAge ? (Date.now() - dataAge.getTime()) > (30 * 60 * 1000) : false; // 30 minutes
+  const dataAge = cacheInfo?.lastFetched
+    ? new Date(cacheInfo.lastFetched)
+    : null;
+  const isDataStale = dataAge
+    ? Date.now() - dataAge.getTime() > 30 * 60 * 1000
+    : false; // 30 minutes
 
-  // Find the current stock data
-  const stockData = useMemo(() => {
+  // Find the current stock data from cache (fallback)
+  const cachedStockData = useMemo(() => {
     return allStockData.find(stock => stock.ticker === ticker);
   }, [allStockData, ticker]);
+
+  // Fetch validated stock data when ticker changes
+  useEffect(() => {
+    if (!ticker) return;
+
+    const fetchValidatedData = async () => {
+      setValidationLoading(true);
+      try {
+        console.log(`🔍 Fetching validated data for ${ticker}...`);
+        const validated = await getValidatedStockData(ticker);
+        if (validated) {
+          console.log(`✅ Validated data loaded for ${ticker}`);
+          setValidatedStockData(validated);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching validated data for ${ticker}:`, error);
+      } finally {
+        setValidationLoading(false);
+      }
+    };
+
+    fetchValidatedData();
+  }, [ticker]);
+
+  // Use validated data if available, otherwise fall back to cached data
+  const stockData = validatedStockData || cachedStockData;
 
   // Use real company data from stockData
   const companyMetadata = useMemo(() => {
@@ -492,7 +567,7 @@ const StockDetailPage = () => {
     const industry = stockData.subIndustry || stockData.industry || 'Software';
 
     // Calculate founded year from list date if available
-    const foundedYear = stockData?.listDate 
+    const foundedYear = stockData?.listDate
       ? new Date(stockData.listDate).getFullYear()
       : null;
 
@@ -500,16 +575,31 @@ const StockDetailPage = () => {
     const nextEarnings = new Date();
     const currentQuarter = Math.floor((nextEarnings.getMonth() + 3) / 3);
     const nextQuarter = currentQuarter === 4 ? 1 : currentQuarter + 1;
-    const nextYear = currentQuarter === 4 ? nextEarnings.getFullYear() + 1 : nextEarnings.getFullYear();
+    const nextYear =
+      currentQuarter === 4
+        ? nextEarnings.getFullYear() + 1
+        : nextEarnings.getFullYear();
     nextEarnings.setFullYear(nextYear);
     nextEarnings.setMonth((nextQuarter - 1) * 3 + 1); // Set to middle month of quarter
     nextEarnings.setDate(15); // Mid-month
 
     // Determine exchange from ticker (basic heuristics)
-    const getExchange = (ticker) => {
+    const getExchange = ticker => {
       // Some basic patterns - this is still estimated since exchange isn't in API
       if (ticker.length > 4) return 'NASDAQ';
-      if (['AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA'].includes(ticker)) return 'NASDAQ';
+      if (
+        [
+          'AAPL',
+          'MSFT',
+          'GOOGL',
+          'GOOG',
+          'AMZN',
+          'TSLA',
+          'META',
+          'NVDA',
+        ].includes(ticker)
+      )
+        return 'NASDAQ';
       return 'NYSE'; // Default assumption
     };
 
@@ -574,29 +664,32 @@ const StockDetailPage = () => {
     if (!stockData) return null;
 
     // Calculate trading days (excluding weekends)
-    const getTradingDays = (timeframe) => {
+    const getTradingDays = timeframe => {
       const tradingDaysPerWeek = 5; // Monday-Friday
       const totalWeeks = {
         '1W': 1,
         '1M': 4.33, // ~4.33 weeks in a month
-        '3M': 13,   // ~13 weeks in 3 months
-        '6M': 26,   // ~26 weeks in 6 months
-        '52W': 52,  // 52 weeks in a year
-        'YTD': Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24 * 7))
+        '3M': 13, // ~13 weeks in 3 months
+        '6M': 26, // ~26 weeks in 6 months
+        '52W': 52, // 52 weeks in a year
+        YTD: Math.floor(
+          (new Date() - new Date(new Date().getFullYear(), 0, 1)) /
+            (1000 * 60 * 60 * 24 * 7)
+        ),
       };
-      
+
       return Math.floor(totalWeeks[timeframe] * tradingDaysPerWeek);
     };
 
     const tradingDays = getTradingDays(selectedTimeframe);
     const currentValue = stockData[selectedMetricChart] || stockData.price;
-    
+
     // Safety checks for invalid data
     if (!currentValue || !isFinite(currentValue) || currentValue <= 0) {
       console.warn('Invalid current value for chart generation:', currentValue);
       return { labels: [], data: [] };
     }
-    
+
     if (!tradingDays || tradingDays <= 0) {
       console.warn('Invalid trading days for chart generation:', tradingDays);
       return { labels: [], data: [] };
@@ -606,37 +699,44 @@ const StockDetailPage = () => {
     const getGBMParameters = (timeframe, metricType) => {
       // Base parameters for different timeframes (annualized)
       const baseParams = {
-        '1W': { mu: 0.0, sigma: 0.15 },   // Weekly: neutral drift, moderate volatility
-        '1M': { mu: 0.05, sigma: 0.20 },  // Monthly: slight upward bias
-        '3M': { mu: 0.08, sigma: 0.25 },  // Quarterly: moderate upward bias
-        '6M': { mu: 0.10, sigma: 0.30 },  // Semi-annual: higher volatility
+        '1W': { mu: 0.0, sigma: 0.15 }, // Weekly: neutral drift, moderate volatility
+        '1M': { mu: 0.05, sigma: 0.2 }, // Monthly: slight upward bias
+        '3M': { mu: 0.08, sigma: 0.25 }, // Quarterly: moderate upward bias
+        '6M': { mu: 0.1, sigma: 0.3 }, // Semi-annual: higher volatility
         '52W': { mu: 0.12, sigma: 0.35 }, // Annual: strong trend potential
-        'YTD': { mu: 0.08, sigma: 0.25 }  // YTD: moderate parameters
+        YTD: { mu: 0.08, sigma: 0.25 }, // YTD: moderate parameters
       };
 
-      let params = baseParams[timeframe] || baseParams['3M'];
-      
+      const params = baseParams[timeframe] || baseParams['3M'];
+
       // Adjust parameters based on metric type
       if (metricType === 'price') {
         // Price data: standard GBM parameters
         return params;
       } else if (metricType === 'rsi') {
         // RSI: mean-reverting with bounds
-        return { mu: 0.0, sigma: 0.10 };
+        return { mu: 0.0, sigma: 0.1 };
       } else if (metricType === 'impliedVolatility') {
         // IV: high volatility with spikes
-        return { mu: 0.0, sigma: 0.40 };
+        return { mu: 0.0, sigma: 0.4 };
       } else {
         // Other financial metrics: lower volatility
         return { mu: params.mu * 0.5, sigma: params.sigma * 0.6 };
       }
     };
 
-    const { mu, sigma } = getGBMParameters(selectedTimeframe, selectedMetricChart);
-    
+    const { mu, sigma } = getGBMParameters(
+      selectedTimeframe,
+      selectedMetricChart
+    );
+
     // Generate deterministic but realistic random sequence
-    const tickerHash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const metricHash = selectedMetricChart.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const tickerHash = ticker
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const metricHash = selectedMetricChart
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const seed = (tickerHash + metricHash) % 10000;
 
     // Linear Congruential Generator for deterministic randomness
@@ -649,21 +749,21 @@ const StockDetailPage = () => {
     // Box-Muller transform for normal distribution
     let hasSpareGaussian = false;
     let spareGaussian = 0;
-    
+
     const generateGaussian = () => {
       if (hasSpareGaussian) {
         hasSpareGaussian = false;
         return spareGaussian;
       }
-      
+
       hasSpareGaussian = true;
-      
+
       const u = nextRandom();
       const v = nextRandom();
-      
+
       const mag = sigma * Math.sqrt(-2.0 * Math.log(u));
       spareGaussian = mag * Math.cos(2.0 * Math.PI * v);
-      
+
       return mag * Math.sin(2.0 * Math.PI * v);
     };
 
@@ -674,43 +774,46 @@ const StockDetailPage = () => {
       '3M': 90,
       '6M': 180,
       '52W': 365,
-      'YTD': Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24))
+      YTD: Math.floor(
+        (new Date() - new Date(new Date().getFullYear(), 0, 1)) /
+          (1000 * 60 * 60 * 24)
+      ),
     };
-    
+
     const totalDays = timeframeDays[selectedTimeframe] || 90;
     const dt = totalDays / 365.0 / tradingDays; // Time step in years
-    
+
     // Calculate starting value (reasonable historical range)
     const getStartingValue = (currentVal, timeframe) => {
       const typicalRanges = {
-        '1W': [0.95, 1.05],   // ±5% for 1 week
-        '1M': [0.90, 1.10],   // ±10% for 1 month
-        '3M': [0.85, 1.15],   // ±15% for 3 months
-        '6M': [0.80, 1.25],   // ±20% for 6 months
-        '52W': [0.70, 1.40],  // ±30% for 1 year
-        'YTD': [0.85, 1.15]   // ±15% for YTD
+        '1W': [0.95, 1.05], // ±5% for 1 week
+        '1M': [0.9, 1.1], // ±10% for 1 month
+        '3M': [0.85, 1.15], // ±15% for 3 months
+        '6M': [0.8, 1.25], // ±20% for 6 months
+        '52W': [0.7, 1.4], // ±30% for 1 year
+        YTD: [0.85, 1.15], // ±15% for YTD
       };
-      
+
       const [minFactor, maxFactor] = typicalRanges[timeframe] || [0.85, 1.15];
       const randomFactor = minFactor + nextRandom() * (maxFactor - minFactor);
       return currentVal * randomFactor;
     };
 
     const startingValue = getStartingValue(currentValue, selectedTimeframe);
-    
+
     // Generate data using Geometric Brownian Motion
     const data = [];
     const labels = [];
-    
+
     let currentPrice = startingValue;
-    
+
     for (let day = 0; day < tradingDays; day++) {
       // Calculate date for this trading day
       const daysAgo = tradingDays - day - 1;
       const currentDate = new Date();
-      let tradingDate = new Date(currentDate);
+      const tradingDate = new Date(currentDate);
       let skippedDays = 0;
-      
+
       for (let i = 0; i < daysAgo + skippedDays; i++) {
         tradingDate.setDate(tradingDate.getDate() - 1);
         // Skip weekends
@@ -719,7 +822,7 @@ const StockDetailPage = () => {
           skippedDays++;
         }
       }
-      
+
       if (selectedMetricChart === 'price' || selectedMetricChart === 'rsi') {
         // For price data and RSI, generate open and close prices
         const z1 = generateGaussian();
@@ -752,7 +855,6 @@ const StockDetailPage = () => {
 
         data.push(closePrice);
         labels.push(closeTimestamp.toISOString());
-
       } else {
         // For non-price, non-RSI metrics, generate single daily value
         tradingDate.setHours(16, 0, 0, 0);
@@ -771,7 +873,6 @@ const StockDetailPage = () => {
           currentPrice = currentPrice * Math.exp(drift + diffusion + spike);
           currentPrice = Math.max(0.05, Math.min(1.0, currentPrice)); // Bound IV between 5% and 100%
           dataPoint = currentPrice;
-
         } else {
           // Other financial metrics: Modified GBM with bounds
           const z = generateGaussian();
@@ -812,7 +913,7 @@ const StockDetailPage = () => {
   // Fetch real historical data when ticker, timeframe, or metric changes
   useEffect(() => {
     let isCancelled = false;
-    
+
     const fetchHistoricalData = async () => {
       if (!ticker || selectedMetricChart !== 'price') {
         // Only fetch historical data for price charts
@@ -823,21 +924,30 @@ const StockDetailPage = () => {
 
       setHistoricalLoading(true);
       try {
-        console.log(`🔄 Fetching real historical data for ${ticker} (${selectedTimeframe})`);
+        console.log(
+          `🔄 Fetching real historical data for ${ticker} (${selectedTimeframe})`
+        );
         const data = await getStockHistoricalData(ticker, selectedTimeframe);
-        
+
         if (!isCancelled) {
           if (data && data.labels && data.data && data.data.length > 0) {
-            console.log(`✅ Loaded ${data.data.length} historical data points for ${ticker}`);
+            console.log(
+              `✅ Loaded ${data.data.length} historical data points for ${ticker}`
+            );
             setHistoricalData(data);
           } else {
-            console.warn(`⚠️ No historical data available for ${ticker}, using generated data`);
+            console.warn(
+              `⚠️ No historical data available for ${ticker}, using generated data`
+            );
             setHistoricalData(null);
           }
         }
       } catch (error) {
         if (!isCancelled) {
-          console.error(`❌ Failed to fetch historical data for ${ticker}:`, error);
+          console.error(
+            `❌ Failed to fetch historical data for ${ticker}:`,
+            error
+          );
           setHistoricalData(null);
         }
       } finally {
@@ -850,7 +960,7 @@ const StockDetailPage = () => {
     if (ticker) {
       fetchHistoricalData();
     }
-    
+
     // Cleanup function to cancel pending requests
     return () => {
       isCancelled = true;
@@ -862,14 +972,23 @@ const StockDetailPage = () => {
     if (selectedMetricChart === 'price' && historicalData) {
       // Use real historical price data
       return historicalData;
-    } else if (selectedMetricChart === 'rsi' && historicalData && historicalData.data && historicalData.data.length > 15) {
+    } else if (
+      selectedMetricChart === 'rsi' &&
+      historicalData &&
+      historicalData.data &&
+      historicalData.data.length > 15
+    ) {
       // Calculate RSI from real historical price data
       console.log('📊 Calculating RSI from real historical price data...');
-      const rsiValues = calculateIntradayRSI(historicalData.data, historicalData.labels, 14);
+      const rsiValues = calculateIntradayRSI(
+        historicalData.data,
+        historicalData.labels,
+        14
+      );
       const validRSI = validateRSI(rsiValues);
       return {
         labels: historicalData.labels,
-        data: validRSI
+        data: validRSI,
       };
     } else {
       // Use generated data for other metrics or when real data unavailable
@@ -878,12 +997,18 @@ const StockDetailPage = () => {
   }, [selectedMetricChart, historicalData, generateHistoricalData]);
 
   // Smart mini chart data - real data for price and RSI, generated for others
-  const getMiniChartInfo = (metricKey) => {
+  const getMiniChartInfo = metricKey => {
     try {
-      if (metricKey === 'price' && historicalData && historicalData.data && historicalData.data.length > 0) {
+      if (
+        metricKey === 'price' &&
+        historicalData &&
+        historicalData.data &&
+        historicalData.data.length > 0
+      ) {
         // Use real historical data for price mini charts, but sample it down for performance
-        const realData = historicalData.data.filter(val =>
-          val !== null && val !== undefined && isFinite(val) && !isNaN(val)
+        const realData = historicalData.data.filter(
+          val =>
+            val !== null && val !== undefined && isFinite(val) && !isNaN(val)
         );
 
         if (realData.length === 0) {
@@ -899,7 +1024,12 @@ const StockDetailPage = () => {
           sampledData = realData.filter((_, index) => index % step === 0);
         }
         return { data: sampledData, isRealData: true };
-      } else if (metricKey === 'rsi' && historicalData && historicalData.data && historicalData.data.length > 15) {
+      } else if (
+        metricKey === 'rsi' &&
+        historicalData &&
+        historicalData.data &&
+        historicalData.data.length > 15
+      ) {
         // Calculate RSI from real historical price data for mini chart
         const rsiValues = calculateRSI(historicalData.data, 14);
         const validRSI = validateRSI(rsiValues).filter(val => val !== null);
@@ -923,7 +1053,10 @@ const StockDetailPage = () => {
         return { data: generatedData || [], isRealData: false };
       }
     } catch (error) {
-      console.error(`Error generating mini chart data for ${metricKey}:`, error);
+      console.error(
+        `Error generating mini chart data for ${metricKey}:`,
+        error
+      );
       return { data: [], isRealData: false };
     }
   };
@@ -1019,7 +1152,10 @@ const StockDetailPage = () => {
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
         <h2>Stock Not Found</h2>
-        <p>The stock ticker &quot;{ticker}&quot; was not found in the current dataset.</p>
+        <p>
+          The stock ticker &quot;{ticker}&quot; was not found in the current
+          dataset.
+        </p>
         <button
           onClick={() => navigate(-1)}
           style={{
@@ -1049,29 +1185,33 @@ const StockDetailPage = () => {
   };
 
   // Generate realistic mini chart data that matches the selected timeframe
-  const generateMiniChartData = (metricKey) => {
+  const generateMiniChartData = metricKey => {
     if (!stockData) return [];
 
     const currentValue = stockData[metricKey] || stockData.price;
-    
+
     // Use scaled-down version of selected timeframe for mini charts
-    const getMiniTradingDays = (timeframe) => {
+    const getMiniTradingDays = timeframe => {
       const tradingDaysMap = {
-        '1W': 5,    // 1 week
-        '1M': 10,   // 2 weeks of selected 1M
-        '3M': 15,   // 3 weeks of selected 3M
-        '6M': 20,   // 4 weeks of selected 6M
-        '52W': 30,  // 6 weeks of selected 52W
-        'YTD': 25,  // 5 weeks of selected YTD
+        '1W': 5, // 1 week
+        '1M': 10, // 2 weeks of selected 1M
+        '3M': 15, // 3 weeks of selected 3M
+        '6M': 20, // 4 weeks of selected 6M
+        '52W': 30, // 6 weeks of selected 52W
+        YTD: 25, // 5 weeks of selected YTD
       };
       return tradingDaysMap[timeframe] || 10;
     };
-    
+
     const tradingDays = getMiniTradingDays(selectedTimeframe);
-    
+
     // Create deterministic seed
-    const tickerHash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const metricHash = metricKey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const tickerHash = ticker
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const metricHash = metricKey
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const seed = (tickerHash + metricHash) % 10000;
 
     // Simple random generator for mini charts
@@ -1082,30 +1222,31 @@ const StockDetailPage = () => {
     };
 
     // Create realistic progression that ends at current value, scaled to timeframe
-    const getMiniTrend = (timeframe) => {
+    const getMiniTrend = timeframe => {
       const trendMap = {
-        '1W': metricKey === 'price' ? 0.01 : 0.003,   // 1% for 1 week
-        '1M': metricKey === 'price' ? 0.02 : 0.006,   // 2% for 2 weeks
-        '3M': metricKey === 'price' ? 0.03 : 0.010,   // 3% for 3 weeks  
-        '6M': metricKey === 'price' ? 0.04 : 0.013,   // 4% for 4 weeks
-        '52W': metricKey === 'price' ? 0.06 : 0.020,  // 6% for 6 weeks
-        'YTD': metricKey === 'price' ? 0.05 : 0.016,  // 5% for 5 weeks
+        '1W': metricKey === 'price' ? 0.01 : 0.003, // 1% for 1 week
+        '1M': metricKey === 'price' ? 0.02 : 0.006, // 2% for 2 weeks
+        '3M': metricKey === 'price' ? 0.03 : 0.01, // 3% for 3 weeks
+        '6M': metricKey === 'price' ? 0.04 : 0.013, // 4% for 4 weeks
+        '52W': metricKey === 'price' ? 0.06 : 0.02, // 6% for 6 weeks
+        YTD: metricKey === 'price' ? 0.05 : 0.016, // 5% for 5 weeks
       };
       return trendMap[timeframe] || 0.03;
     };
-    
+
     const miniTrend = getMiniTrend(selectedTimeframe);
-    const startValue = metricKey === 'price' 
-      ? currentValue / (1 + miniTrend)
-      : currentValue * (0.97 + nextRandom() * 0.06); // Smaller variation for non-price
+    const startValue =
+      metricKey === 'price'
+        ? currentValue / (1 + miniTrend)
+        : currentValue * (0.97 + nextRandom() * 0.06); // Smaller variation for non-price
 
     const prices = [];
-    
+
     // Generate realistic market movements for mini charts
     let currentPrice = startValue;
     const totalReturnNeeded = (currentValue - startValue) / startValue;
     const avgDailyReturn = totalReturnNeeded / tradingDays;
-    
+
     for (let day = 0; day < tradingDays; day++) {
       let dataPoint;
 
@@ -1114,56 +1255,63 @@ const StockDetailPage = () => {
         // (RSI will be calculated from prices after the loop)
         const random1 = nextRandom();
         const random2 = nextRandom();
-        const normalRandom = Math.sqrt(-2 * Math.log(random1)) * Math.cos(2 * Math.PI * random2);
+        const normalRandom =
+          Math.sqrt(-2 * Math.log(random1)) * Math.cos(2 * Math.PI * random2);
 
         const dailyVol = 0.015; // 1.5% daily volatility for mini charts
         const trendComponent = avgDailyReturn;
         const randomComponent = normalRandom * dailyVol;
 
-        const momentum = day > 0 ? (prices[day - 1] / (day > 1 ? prices[day - 2] : startValue) - 1) * 0.03 : 0;
+        const momentum =
+          day > 0
+            ? (prices[day - 1] / (day > 1 ? prices[day - 2] : startValue) - 1) *
+              0.03
+            : 0;
         const dailyReturn = trendComponent + randomComponent + momentum;
 
         currentPrice = currentPrice * (1 + dailyReturn);
         dataPoint = currentPrice;
-
       } else if (metricKey === 'impliedVolatility') {
         // IV with occasional spikes
         if (day === 0) {
-          dataPoint = Math.max(0.10, Math.min(0.60, startValue));
+          dataPoint = Math.max(0.1, Math.min(0.6, startValue));
         } else {
           const prevIV = prices[day - 1];
           let ivChange = (nextRandom() - 0.5) * 0.02; // Normal daily IV change
-          
+
           // Occasional volatility spikes
           if (nextRandom() > 0.9) {
             ivChange += (nextRandom() - 0.5) * 0.05;
           }
-          
+
           const trendToTarget = (currentValue - prevIV) * 0.03;
           dataPoint = prevIV + ivChange + trendToTarget;
-          dataPoint = Math.max(0.10, Math.min(0.60, dataPoint));
+          dataPoint = Math.max(0.1, Math.min(0.6, dataPoint));
         }
-        
       } else {
         // Other financial metrics with realistic movement
         if (day === 0) {
           dataPoint = startValue;
         } else {
           const prevValue = prices[day - 1];
-          const dailyChange = (nextRandom() - 0.5) * Math.abs(currentValue) * 0.01; // 1% daily change
+          const dailyChange =
+            (nextRandom() - 0.5) * Math.abs(currentValue) * 0.01; // 1% daily change
           const trendToTarget = (currentValue - prevValue) * 0.04;
-          
+
           dataPoint = prevValue + dailyChange + trendToTarget;
-          
+
           if (currentValue > 0) {
-            dataPoint = Math.max(currentValue * 0.7, Math.min(currentValue * 1.3, dataPoint));
+            dataPoint = Math.max(
+              currentValue * 0.7,
+              Math.min(currentValue * 1.3, dataPoint)
+            );
           }
         }
       }
-      
+
       prices.push(dataPoint);
     }
-    
+
     // REMOVED: No more forced ending values or adjustment periods
     // Mini charts now end naturally where the GBM process leads
     // This eliminates artificial drop-offs and creates more realistic chart behavior
@@ -1180,509 +1328,727 @@ const StockDetailPage = () => {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa'
-    }}>
-      <div style={{ 
-        padding: '24px' 
-      }}>
-        {/* Header */}
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#f8f9fa',
+      }}
+    >
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '30px',
-          borderBottom: '2px solid #e0e6ed',
-          paddingBottom: '20px',
+          padding: '24px',
         }}
       >
-        <div style={{ flex: 1 }}>
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: '30px',
+            borderBottom: '2px solid #e0e6ed',
+            paddingBottom: '20px',
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                marginBottom: '12px',
+              }}
+            >
+              <div>
+                <h1 style={{ margin: '0 0 4px 0', color: '#2c3e50' }}>
+                  {stockData.ticker}
+                </h1>
+                <h2
+                  style={{
+                    margin: '0',
+                    fontWeight: '400',
+                    color: '#6c757d',
+                    fontSize: '18px',
+                  }}
+                >
+                  {companyMetadata.name}
+                </h2>
+              </div>
+              <span
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: '#2c3e50',
+                }}
+              >
+                ${stockData.price?.toLocaleString()}
+              </span>
+              <span
+                style={{
+                  fontSize: '14px',
+                  color: '#6c757d',
+                  backgroundColor: '#f8f9fa',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                }}
+              >
+                Rank #{stockData.rank} of {allStockData.length}
+              </span>
+            </div>
+
+            {/* Company Metadata */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                marginBottom: '12px',
+                padding: '12px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '6px',
+                border: '1px solid #e9ecef',
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                  }}
+                >
+                  SECTOR
+                </span>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: '#2c3e50',
+                    fontWeight: '600',
+                  }}
+                >
+                  {companyMetadata.sector}
+                </div>
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                  }}
+                >
+                  INDUSTRY
+                </span>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: '#2c3e50',
+                    fontWeight: '600',
+                  }}
+                >
+                  {companyMetadata.industry}
+                </div>
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                  }}
+                >
+                  EXCHANGE
+                </span>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: '#2c3e50',
+                    fontWeight: '600',
+                  }}
+                >
+                  {companyMetadata.exchange}
+                </div>
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                  }}
+                >
+                  NEXT EARNINGS
+                </span>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: '#2c3e50',
+                    fontWeight: '600',
+                  }}
+                >
+                  {companyMetadata.earningsDate?.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </div>
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                  }}
+                >
+                  MARKET CAP
+                </span>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: '#2c3e50',
+                    fontWeight: '600',
+                  }}
+                >
+                  {companyMetadata.marketCap
+                    ? formatValue(companyMetadata.marketCap, 'money')
+                    : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    fontWeight: '500',
+                  }}
+                >
+                  EMPLOYEES
+                </span>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: '#2c3e50',
+                    fontWeight: '600',
+                  }}
+                >
+                  {companyMetadata.employees
+                    ? formatValue(companyMetadata.employees)
+                    : 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: currentStockList.color,
+                  fontWeight: '500',
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: `1px solid ${currentStockList.color}`,
+                }}
+              >
+                {currentStockList.name}
+              </span>
+
+              {/* Validation status indicator */}
+              {stockData._validation && (
+                <DataQualityBadge
+                  confidence={stockData._validation.overallConfidence}
+                  status={stockData._validation.status}
+                  sources={[]}
+                  showLabel={true}
+                  size="medium"
+                  style={{ fontSize: '11px' }}
+                />
+              )}
+
+              {/* Data freshness indicator */}
+              {dataAge && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: isDataStale ? '#dc3545' : '#28a745',
+                    fontWeight: '500',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    padding: '3px 6px',
+                    borderRadius: '3px',
+                    border: `1px solid ${isDataStale ? '#dc3545' : '#28a745'}`,
+                  }}
+                  title={`Data last updated: ${dataAge.toLocaleString()}`}
+                >
+                  {isDataStale ? '⚠️ ' : '✓ '}
+                  Data: {dataAge.toLocaleDateString()}{' '}
+                  {dataAge.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {isDataStale && ' (Stale)'}
+                </span>
+              )}
+
+              {isLoading && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: '#007bff',
+                    fontWeight: '500',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    padding: '3px 6px',
+                    borderRadius: '3px',
+                    border: '1px solid #007bff',
+                  }}
+                >
+                  🔄 Refreshing...
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            ← Back to Rankings
+          </button>
+        </div>
+
+        {/* Price Chart */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e0e6ed',
+            padding: '20px',
+            marginBottom: '30px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          }}
+        >
           <div
             style={{
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: '16px',
-              marginBottom: '12px',
+              marginBottom: '20px',
             }}
           >
-            <div>
-              <h1 style={{ margin: '0 0 4px 0', color: '#2c3e50' }}>
-                {stockData.ticker}
-              </h1>
-              <h2 style={{ 
-                margin: '0', 
-                fontWeight: '400', 
-                color: '#6c757d',
-                fontSize: '18px'
-              }}>
-                {companyMetadata.name}
-              </h2>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>{getChartTitle()}</h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {timeframes.map(tf => (
+                <button
+                  key={tf}
+                  onClick={() => {
+                    setSelectedTimeframe(tf);
+                    updateChartPreference('timeframe', tf);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor:
+                      selectedTimeframe === tf ? '#007bff' : '#f8f9fa',
+                    color: selectedTimeframe === tf ? 'white' : '#495057',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                  }}
+                >
+                  {tf}
+                </button>
+              ))}
             </div>
-            <span
-              style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: '#2c3e50',
-              }}
-            >
-              ${stockData.price?.toLocaleString()}
-            </span>
-            <span
-              style={{
-                fontSize: '14px',
-                color: '#6c757d',
-                backgroundColor: '#f8f9fa',
-                padding: '4px 8px',
-                borderRadius: '4px',
-              }}
-            >
-              Rank #{stockData.rank} of {allStockData.length}
-            </span>
           </div>
 
-          {/* Company Metadata */}
+          <div style={{ height: '400px' }}>
+            {historicalLoading && selectedMetricChart === 'price' ? (
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6c757d',
+                  fontSize: '16px',
+                }}
+              >
+                📈 Loading real historical data for {ticker}...
+              </div>
+            ) : chartData && !loading ? (
+              <TimeSeriesChart
+                data={chartData.data}
+                labels={chartData.labels}
+                title={`${ticker} - ${selectedTimeframe} ${selectedMetricChart === 'price' && historicalData ? '(Real Data)' : '(Generated Data)'}`}
+                selectedMetric={selectedMetricChart}
+              />
+            ) : (
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6c757d',
+                }}
+              >
+                Loading chart data...
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Metric Correlation Analysis - Only for time-series appropriate metrics */}
+        {historicalData && chartData && (() => {
+          // Calculate RSI from full dataset (including warmup periods)
+          const fullRSI = calculateIntradayRSI(historicalData.data, historicalData.labels, 14);
+
+          // Trim warmup data: RSI needs 14 periods, so first 14 values are invalid
+          // We added 20 warmup days, so we want to skip first 20 data points to show clean data
+          const RSI_WARMUP_DAYS = 20;
+          const skipPoints = Math.min(RSI_WARMUP_DAYS, Math.floor(historicalData.data.length * 0.3)); // Max 30% of data
+
+          // Create trimmed arrays (skip warmup periods)
+          const trimmedPrice = historicalData.data.slice(skipPoints);
+          const trimmedRSI = fullRSI.slice(skipPoints);
+          const trimmedLabels = historicalData.labels.slice(skipPoints);
+          const trimmedVolume = historicalData.volume ? historicalData.volume.slice(skipPoints) : null;
+
+          // Calculate derived metrics from trimmed data
+
+          // 1. Daily Price Change % (percent change from previous day)
+          const priceChange = trimmedPrice.map((price, i) => {
+            if (i === 0) return 0; // First day has no previous day
+            return ((price - trimmedPrice[i - 1]) / trimmedPrice[i - 1]) * 100;
+          });
+
+          // 2. 20-day Simple Moving Average
+          const calculateSMA = (data, period) => {
+            return data.map((_, i) => {
+              if (i < period - 1) return null; // Not enough data yet
+              const slice = data.slice(i - period + 1, i + 1);
+              const sum = slice.reduce((a, b) => a + b, 0);
+              return sum / period;
+            });
+          };
+          const sma20 = calculateSMA(trimmedPrice, 20);
+
+          // 3. 50-day Simple Moving Average
+          const sma50 = calculateSMA(trimmedPrice, 50);
+
+          // 4. Volatility (rolling 20-day standard deviation of daily returns)
+          const calculateVolatility = (prices, period = 20) => {
+            return prices.map((_, i) => {
+              if (i < period) return null; // Not enough data yet
+
+              // Calculate daily returns for the period
+              const returns = [];
+              for (let j = i - period + 1; j <= i; j++) {
+                if (j > 0) {
+                  returns.push((prices[j] - prices[j - 1]) / prices[j - 1]);
+                }
+              }
+
+              // Calculate standard deviation
+              const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+              const variance = returns.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / returns.length;
+              const stdDev = Math.sqrt(variance);
+
+              // Annualize (multiply by sqrt of trading days per year)
+              return stdDev * Math.sqrt(252) * 100; // Express as percentage
+            });
+          };
+          const volatility = calculateVolatility(trimmedPrice, 20);
+
+          console.log(`📊 Correlation data: ${historicalData.data.length} total → ${trimmedPrice.length} visible (skipped ${skipPoints} warmup)`);
+          console.log(`📊 Calculated metrics: Volume=${trimmedVolume ? 'Yes' : 'No'}, PriceChange=${priceChange.length}, SMA20=${sma20.filter(v => v !== null).length}, SMA50=${sma50.filter(v => v !== null).length}, Volatility=${volatility.filter(v => v !== null).length}`);
+
+          // Find first valid index where ALL metrics have non-null values
+          // This removes leading gaps in charts for metrics with warmup periods
+          let firstValidIndex = 0;
+          for (let i = 0; i < trimmedPrice.length; i++) {
+            const allValid = sma20[i] !== null && sma50[i] !== null && volatility[i] !== null;
+            if (allValid) {
+              firstValidIndex = i;
+              break;
+            }
+          }
+
+          // Trim all metrics to start from first valid index
+          const cleanPrice = trimmedPrice.slice(firstValidIndex);
+          const cleanRSI = trimmedRSI.slice(firstValidIndex);
+          const cleanPriceChange = priceChange.slice(firstValidIndex);
+          const cleanSMA20 = sma20.slice(firstValidIndex);
+          const cleanSMA50 = sma50.slice(firstValidIndex);
+          const cleanVolatility = volatility.slice(firstValidIndex);
+          const cleanLabels = trimmedLabels.slice(firstValidIndex);
+          const cleanVolume = trimmedVolume ? trimmedVolume.slice(firstValidIndex) : null;
+
+          console.log(`📊 Cleaned data: Removed ${firstValidIndex} leading null values → ${cleanPrice.length} data points`);
+
+          // Prepare metrics data object
+          const metricsData = {
+            price: cleanPrice,
+            rsi: cleanRSI,
+            priceChange: cleanPriceChange,
+            sma20: cleanSMA20,
+            sma50: cleanSMA50,
+            volatility: cleanVolatility
+          };
+
+          // Add volume if available
+          if (cleanVolume) {
+            metricsData.volume = cleanVolume;
+          }
+
+          const availableMetrics = {
+            price: 'Price ($)',
+            rsi: 'RSI (14-period)',
+            priceChange: 'Daily Change (%)',
+            sma20: '20-Day SMA ($)',
+            sma50: '50-Day SMA ($)',
+            volatility: 'Volatility (20-day, %)'
+          };
+
+          // Add volume if available
+          if (trimmedVolume) {
+            availableMetrics.volume = 'Volume';
+          }
+
+          return (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid #e0e6ed',
+              padding: '20px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              marginBottom: '30px'
+            }}>
+              <MetricCorrelationChart
+                metricsData={metricsData}
+                labels={cleanLabels}
+                availableMetrics={availableMetrics}
+                title={`${ticker} - Metric Correlation Analysis (${selectedTimeframe}) - Daily Metrics Only`}
+              />
+              <div style={{
+                marginTop: '10px',
+                padding: '10px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: '#6c757d',
+                fontStyle: 'italic'
+              }}>
+                ℹ️ <strong>Note:</strong> Only metrics that change daily are shown here.
+                Quarterly metrics (P/E, Debt/EBITDA, ROE) and static metrics (52W high/low)
+                require Phase 2 (ranking snapshots) for meaningful time-series analysis.
+                <br />
+                💡 <strong>Available Metrics:</strong> Price, RSI, Daily Change %, 20-Day SMA, 50-Day SMA, Volatility{trimmedVolume ? ', Volume' : ''}.
+                Select multiple metrics to see correlations!
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Metrics Grid */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e0e6ed',
+            padding: '20px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+            }}
+          >
+            <h3 style={{ margin: '0', color: '#2c3e50' }}>
+              Financial Metrics
+              <span
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  color: '#6c757d',
+                  marginLeft: '12px',
+                }}
+              >
+                Color-coded vs. {currentStockList.name} peers
+              </span>
+            </h3>
+            <div style={{ fontSize: '12px', color: '#6c757d' }}>
+              Click any metric to view its timeline in the chart above
+            </div>
+          </div>
+
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '12px',
-              marginBottom: '12px',
-              padding: '12px',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '6px',
-              border: '1px solid #e9ecef',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '16px',
             }}
           >
-            <div>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#6c757d',
-                  fontWeight: '500',
-                }}
-              >
-                SECTOR
-              </span>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#2c3e50',
-                  fontWeight: '600',
-                }}
-              >
-                {companyMetadata.sector}
-              </div>
-            </div>
-            <div>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#6c757d',
-                  fontWeight: '500',
-                }}
-              >
-                INDUSTRY
-              </span>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#2c3e50',
-                  fontWeight: '600',
-                }}
-              >
-                {companyMetadata.industry}
-              </div>
-            </div>
-            <div>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#6c757d',
-                  fontWeight: '500',
-                }}
-              >
-                EXCHANGE
-              </span>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#2c3e50',
-                  fontWeight: '600',
-                }}
-              >
-                {companyMetadata.exchange}
-              </div>
-            </div>
-            <div>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#6c757d',
-                  fontWeight: '500',
-                }}
-              >
-                NEXT EARNINGS
-              </span>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#2c3e50',
-                  fontWeight: '600',
-                }}
-              >
-                {companyMetadata.earningsDate?.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </div>
-            </div>
-            <div>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#6c757d',
-                  fontWeight: '500',
-                }}
-              >
-                MARKET CAP
-              </span>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#2c3e50',
-                  fontWeight: '600',
-                }}
-              >
-                {companyMetadata.marketCap ? formatValue(companyMetadata.marketCap, 'money') : 'N/A'}
-              </div>
-            </div>
-            <div>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#6c757d',
-                  fontWeight: '500',
-                }}
-              >
-                EMPLOYEES
-              </span>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#2c3e50',
-                  fontWeight: '600',
-                }}
-              >
-                {companyMetadata.employees ? formatValue(companyMetadata.employees) : 'N/A'}
-              </div>
-            </div>
-          </div>
+            {Object.entries(stockColumns)
+              .filter(
+                ([key, param]) =>
+                  param.multiplier !== 0 &&
+                  key !== 'rank' &&
+                  key !== 'ticker' &&
+                  stockData[key] !== null &&
+                  stockData[key] !== undefined
+              )
+              .map(([key, param]) => {
+                const ranking = relativeRankings[key];
+                const color = getMetricColor(key);
+                const chartInfo = getMiniChartInfo(key); // Calculate once per metric
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                color: currentStockList.color,
-                fontWeight: '500',
-                backgroundColor: 'rgba(255,255,255,0.8)',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: `1px solid ${currentStockList.color}`,
-              }}
-            >
-              {currentStockList.name}
-            </span>
-            
-            {/* Data freshness indicator */}
-            {dataAge && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: isDataStale ? '#dc3545' : '#28a745',
-                  fontWeight: '500',
-                  backgroundColor: 'rgba(255,255,255,0.9)',
-                  padding: '3px 6px',
-                  borderRadius: '3px',
-                  border: `1px solid ${isDataStale ? '#dc3545' : '#28a745'}`,
-                }}
-                title={`Data last updated: ${dataAge.toLocaleString()}`}
-              >
-                {isDataStale ? '⚠️ ' : '✓ '}
-                Data: {dataAge.toLocaleDateString()} {dataAge.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                {isDataStale && ' (Stale)'}
-              </span>
-            )}
-            
-            {isLoading && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: '#007bff',
-                  fontWeight: '500',
-                  backgroundColor: 'rgba(255,255,255,0.9)',
-                  padding: '3px 6px',
-                  borderRadius: '3px',
-                  border: '1px solid #007bff',
-                }}
-              >
-                🔄 Refreshing...
-              </span>
-            )}
-          </div>
-        </div>
-
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
-          ← Back to Rankings
-        </button>
-      </div>
-
-      {/* Price Chart */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '20px',
-          marginBottom: '30px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <h3 style={{ margin: 0, color: '#2c3e50' }}>{getChartTitle()}</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {timeframes.map(tf => (
-              <button
-                key={tf}
-                onClick={() => {
-                  setSelectedTimeframe(tf);
-                  updateChartPreference('timeframe', tf);
-                }}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor:
-                    selectedTimeframe === tf ? '#007bff' : '#f8f9fa',
-                  color: selectedTimeframe === tf ? 'white' : '#495057',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                }}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ height: '400px' }}>
-          {(historicalLoading && selectedMetricChart === 'price') ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#6c757d',
-                fontSize: '16px',
-              }}
-            >
-              📈 Loading real historical data for {ticker}...
-            </div>
-          ) : chartData && !loading ? (
-            <TimeSeriesChart
-              data={chartData.data}
-              labels={chartData.labels}
-              title={`${ticker} - ${selectedTimeframe} ${selectedMetricChart === 'price' && historicalData ? '(Real Data)' : '(Generated Data)'}`}
-              selectedMetric={selectedMetricChart}
-            />
-          ) : (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#6c757d',
-              }}
-            >
-              Loading chart data...
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Metrics Grid */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '20px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <h3 style={{ margin: '0', color: '#2c3e50' }}>
-            Financial Metrics
-            <span
-              style={{
-                fontSize: '14px',
-                fontWeight: '400',
-                color: '#6c757d',
-                marginLeft: '12px',
-              }}
-            >
-              Color-coded vs. {currentStockList.name} peers
-            </span>
-          </h3>
-          <div style={{ fontSize: '12px', color: '#6c757d' }}>
-            Click any metric to view its timeline in the chart above
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '16px',
-          }}
-        >
-          {Object.entries(stockColumns)
-            .filter(
-              ([key, param]) =>
-                param.multiplier !== 0 &&
-                key !== 'rank' &&
-                key !== 'ticker' &&
-                stockData[key] !== null &&
-                stockData[key] !== undefined
-            )
-            .map(([key, param]) => {
-              const ranking = relativeRankings[key];
-              const color = getMetricColor(key);
-              const chartInfo = getMiniChartInfo(key); // Calculate once per metric
-
-              return (
-                <div
-                  key={key}
-                  onClick={() => {
-                    setSelectedMetricChart(key);
-                    updateChartPreference('metric', key);
-                  }}
-                  style={{
-                    backgroundColor: color,
-                    border:
-                      selectedMetricChart === key
-                        ? '2px solid #007bff'
-                        : '1px solid #e9ecef',
-                    borderRadius: '6px',
-                    padding: '16px',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    transform:
-                      selectedMetricChart === key ? 'scale(1.02)' : 'scale(1)',
-                    boxShadow:
-                      selectedMetricChart === key
-                        ? '0 4px 12px rgba(0,123,255,0.2)'
-                        : '0 2px 4px rgba(0,0,0,0.1)',
-                  }}
-                >
+                return (
                   <div
+                    key={key}
+                    onClick={() => {
+                      setSelectedMetricChart(key);
+                      updateChartPreference('metric', key);
+                    }}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: '8px',
+                      backgroundColor: color,
+                      border:
+                        selectedMetricChart === key
+                          ? '2px solid #007bff'
+                          : '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      padding: '16px',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                      transform:
+                        selectedMetricChart === key
+                          ? 'scale(1.02)'
+                          : 'scale(1)',
+                      boxShadow:
+                        selectedMetricChart === key
+                          ? '0 4px 12px rgba(0,123,255,0.2)'
+                          : '0 2px 4px rgba(0,0,0,0.1)',
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#2c3e50',
-                      }}
-                    >
-                      {param.label}
-                    </span>
-                    {ranking && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          color: '#6c757d',
-                          backgroundColor: 'rgba(255,255,255,0.7)',
-                          padding: '2px 6px',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        #{ranking.rank}/{ranking.total}
-                      </span>
-                    )}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: '18px',
-                      fontWeight: 'bold',
-                      color: '#2c3e50',
-                      marginBottom: '4px',
-                    }}
-                  >
-                    {formatValue(stockData[key], param.type)}
-                  </div>
-
-                  {/* Mini chart for the metric */}
-                  <MiniChart 
-                    data={chartInfo.data}
-                    selectedTimeframe={selectedTimeframe}
-                    metricKey={key}
-                    isRealData={chartInfo.isRealData}
-                  />
-
-                  {ranking && (
                     <div
                       style={{
-                        fontSize: '12px',
-                        color: '#495057',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '8px',
                       }}
                     >
-                      {ranking.percentile.toFixed(0)}th percentile
-                      {ranking.isGood ? ' (Good)' : ' (Needs Improvement)'}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#2c3e50',
+                          }}
+                        >
+                          {param.label}
+                        </span>
+                        {/* Show validation badge if data is validated */}
+                        {stockData._validation?.metrics?.[key] && (
+                          <DataQualityBadge
+                            confidence={
+                              stockData._validation.metrics[key].confidence
+                            }
+                            status={stockData._validation.metrics[key].status}
+                            sources={stockData._validation.metrics[key].sources}
+                            size="small"
+                          />
+                        )}
+                      </div>
+                      {ranking && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: '#6c757d',
+                            backgroundColor: 'rgba(255,255,255,0.7)',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                          }}
+                        >
+                          #{ranking.rank}/{ranking.total}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+
+                    <div
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        color: '#2c3e50',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {formatValue(stockData[key], param.type)}
+                    </div>
+
+                    {/* Mini chart for the metric - only show for time-series appropriate metrics */}
+                    {TIME_SERIES_METRICS.includes(key) ? (
+                      <MiniChart
+                        data={chartInfo.data}
+                        selectedTimeframe={selectedTimeframe}
+                        metricKey={key}
+                        isRealData={chartInfo.isRealData}
+                      />
+                    ) : (
+                      <div style={{
+                        fontSize: '11px',
+                        color: '#6c757d',
+                        fontStyle: 'italic',
+                        marginTop: '4px',
+                        textAlign: 'center'
+                      }}>
+                        {STATIC_METRICS.includes(key) ? '(Snapshot value)' : '(Updated quarterly)'}
+                      </div>
+                    )}
+
+                    {ranking && (
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#495057',
+                        }}
+                      >
+                        {ranking.percentile.toFixed(0)}th percentile
+                        {ranking.isGood ? ' (Good)' : ' (Needs Improvement)'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 };

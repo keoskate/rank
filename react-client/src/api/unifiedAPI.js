@@ -182,17 +182,18 @@ async function fetchFromPolygon(symbol, options = {}) {
 
   try {
     // Fetch multiple data sources for comprehensive data
-    const [marketData, dividendData, tickerDetails] = await Promise.all([
+    const [marketData, dividendData, tickerDetails, yearHighData] = await Promise.all([
       fetchPolygonMarketData(symbol, config.apiKey),
       fetchPolygonDividendData(symbol, config.apiKey),
       fetchPolygonTickerDetails(symbol, config.apiKey),
+      fetchPolygon52WeekHigh(symbol, config.apiKey),
     ]);
 
     if (!marketData) {
       throw new Error('No market data available');
     }
 
-    return parsePolygonData(symbol, marketData, null, dividendData, tickerDetails);
+    return parsePolygonData(symbol, marketData, null, dividendData, tickerDetails, yearHighData);
   } catch (error) {
     console.error(`❌ Polygon fetch failed for ${symbol}:`, error.message);
     throw error;
@@ -228,6 +229,48 @@ async function fetchPolygonDividendData(symbol, apiKey) {
     const data = await response.json();
     return data.results && data.results.length > 0 ? data.results[0] : null;
   } catch (error) {
+    return null;
+  }
+}
+
+async function fetchPolygon52WeekHigh(symbol, apiKey) {
+  try {
+    // Fetch 1 year of daily data to calculate REAL 52-week high
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&limit=500&apikey=${apiKey}`;
+    console.log(`📈 Fetching 52W data from Polygon for ${symbol}...`);
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`52W data API returned ${response.status} for ${symbol}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      console.warn(`No historical data available for ${symbol}`);
+      return null;
+    }
+
+    // Calculate real 52-week high and low from historical data
+    const highs = data.results.map(r => r.h).filter(h => h !== null && isFinite(h));
+    const lows = data.results.map(r => r.l).filter(l => l !== null && isFinite(l));
+
+    const yearHigh = highs.length > 0 ? Math.max(...highs) : null;
+    const yearLow = lows.length > 0 ? Math.min(...lows) : null;
+
+    console.log(`✅ Polygon 52W High for ${symbol}: $${yearHigh?.toFixed(2)} (from ${data.results.length} days of data)`);
+
+    return {
+      yearHigh,
+      yearLow,
+      dataPoints: data.results.length
+    };
+  } catch (error) {
+    console.warn(`Failed to fetch 52W data for ${symbol}:`, error.message);
     return null;
   }
 }
@@ -376,7 +419,7 @@ function parseAlphaVantageData(overview) {
 /**
  * Parse Polygon.io data into standard format
  */
-function parsePolygonData(symbol, marketData, financialData, dividendData, tickerDetails) {
+function parsePolygonData(symbol, marketData, financialData, dividendData, tickerDetails, yearHighData) {
   const formatNumber = (value, precision = 2) => {
     const num = parseFloat(value);
     return isNaN(num) ? 0 : parseFloat(num.toFixed(precision));
@@ -439,12 +482,32 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
 
   const ratios = estimateFinancialRatios();
 
-  // Calculate realistic year high and discount based on stock characteristics
-  const symbolHash = symbol
-    .split('')
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const yearHighMultiplier = 1.2 + (symbolHash % 80) / 100; // Range: 1.2 - 2.0 (more realistic)
-  const calculatedYearHigh = formatNumber(currentPrice * yearHighMultiplier);
+  // Use REAL 52-week high from historical data if available
+  let calculatedYearHigh;
+  let calculatedYearLow;
+  let dataQuality = {};
+
+  if (yearHighData && yearHighData.yearHigh) {
+    // REAL DATA from Polygon historical aggregates
+    calculatedYearHigh = formatNumber(yearHighData.yearHigh);
+    calculatedYearLow = yearHighData.yearLow ? formatNumber(yearHighData.yearLow) : null;
+    dataQuality.yearHigh = 'real';
+    dataQuality.yearHighSource = 'polygon_historical';
+    dataQuality.yearHighDataPoints = yearHighData.dataPoints;
+    console.log(`✅ Using REAL 52W high for ${symbol}: $${calculatedYearHigh} (from ${yearHighData.dataPoints} days)`);
+  } else {
+    // FALLBACK: Estimated 52W high (only if real data unavailable)
+    const symbolHash = symbol
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const yearHighMultiplier = 1.2 + (symbolHash % 80) / 100; // Range: 1.2 - 2.0
+    calculatedYearHigh = formatNumber(currentPrice * yearHighMultiplier);
+    calculatedYearLow = formatNumber(currentPrice * 0.7); // Rough estimate
+    dataQuality.yearHigh = 'estimated';
+    dataQuality.yearHighSource = 'hash_calculation';
+    console.warn(`⚠️ Using ESTIMATED 52W high for ${symbol}: $${calculatedYearHigh} (real data unavailable)`);
+  }
+
   const discountPercent = formatNumber(
     (calculatedYearHigh - currentPrice) / calculatedYearHigh
   );
@@ -491,6 +554,7 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
     sector: sector,
     price: currentPrice,
     yearHigh: calculatedYearHigh,
+    yearLow: calculatedYearLow,
     discount: discountPercent,
     debtEbitda: ratios.debtEbitda,
     netDebt: ratios.netDebt,
@@ -521,10 +585,13 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
     _dataQuality: {
       source: 'Polygon.io',
       estimationType: 'calculated',
+      yearHighSource: dataQuality.yearHighSource,
+      yearHighDataPoints: dataQuality.yearHighDataPoints,
       metrics: {
         price: 'real',
-        yearHigh: 'estimated',
-        discount: 'estimated',
+        yearHigh: dataQuality.yearHigh || 'estimated', // Now using REAL data when available!
+        yearLow: dataQuality.yearHigh || 'estimated',
+        discount: dataQuality.yearHigh === 'real' ? 'real' : 'estimated',
         debtEbitda: 'estimated',
         netDebt: 'estimated',
         beta: 'estimated',
@@ -609,33 +676,42 @@ async function fetchHistoricalFromAlphaVantage(symbol, timeframe) {
  */
 async function fetchHistoricalFromPolygon(symbol, timeframe) {
   const config = getCurrentProviderConfig();
-  
+
+  // RSI requires 14 periods minimum - add buffer days for calculation
+  const RSI_WARMUP_DAYS = 20; // Extra days to ensure clean RSI calculation
+
   // Calculate date range based on timeframe
   const endDate = new Date();
   const startDate = new Date();
-  
+
   switch (timeframe) {
     case '1W':
-      startDate.setDate(endDate.getDate() - 7);
+      startDate.setDate(endDate.getDate() - 7 - RSI_WARMUP_DAYS); // 7 days + buffer
       break;
     case '1M':
       startDate.setMonth(endDate.getMonth() - 1);
+      startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS); // 1 month + buffer
       break;
     case '3M':
       startDate.setMonth(endDate.getMonth() - 3);
+      startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS); // 3 months + buffer
       break;
     case '6M':
       startDate.setMonth(endDate.getMonth() - 6);
+      startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS); // 6 months + buffer
       break;
     case '52W':
       startDate.setFullYear(endDate.getFullYear() - 1);
+      startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS); // 52 weeks + buffer
       break;
     case 'YTD':
       startDate.setMonth(0);
       startDate.setDate(1);
+      startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS); // YTD + buffer
       break;
     default:
       startDate.setMonth(endDate.getMonth() - 3);
+      startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS);
   }
   
   const fromDate = startDate.toISOString().split('T')[0];
@@ -687,42 +763,64 @@ function parseAlphaVantageHistoricalData(data, timeframe) {
 
 /**
  * Parse Polygon.io historical data
+ * Note: Results include warmup data for RSI calculation - don't trim here!
+ * RSI calculation needs all the data, trimming happens in StockDetailPage after calculation.
  */
 function parsePolygonHistoricalData(results, timeframe) {
   const labels = [];
   const prices = [];
-  
+  const volumes = [];
+  const opens = [];
+  const highs = [];
+  const lows = [];
+
   for (const result of results) {
     // Validate data point
     if (!result || !result.t || !result.c) {
       console.warn('Skipping invalid historical data point:', result);
       continue;
     }
-    
+
     // Validate closing price is a valid number
     const closePrice = parseFloat(result.c);
     if (isNaN(closePrice) || !isFinite(closePrice) || closePrice <= 0) {
       console.warn('Skipping invalid price:', result.c);
       continue;
     }
-    
+
     // Convert timestamp to ISO string
     const date = new Date(result.t);
     if (isNaN(date.getTime())) {
       console.warn('Skipping invalid timestamp:', result.t);
       continue;
     }
-    
+
     labels.push(date.toISOString());
     prices.push(closePrice);
+
+    // Parse additional OHLCV data
+    volumes.push(parseFloat(result.v) || 0);
+    opens.push(parseFloat(result.o) || closePrice);
+    highs.push(parseFloat(result.h) || closePrice);
+    lows.push(parseFloat(result.l) || closePrice);
   }
-  
+
   // Ensure we have valid data
   if (labels.length === 0 || prices.length === 0) {
     throw new Error('No valid historical data points found');
   }
-  
-  return { labels, data: prices };
+
+  console.log(`📊 Fetched ${labels.length} data points (includes warmup for RSI calculation)`);
+
+  return {
+    labels,
+    data: prices,
+    volume: volumes,
+    open: opens,
+    high: highs,
+    low: lows,
+    timeframe
+  };
 }
 
 /**
