@@ -14,6 +14,11 @@ import {
   API_PROVIDERS,
   getCurrentProviderConfig,
 } from '../config/apiConfig';
+import { fetchYahooFinanceData } from './yahooFinanceAPI';
+import {
+  validateStockData,
+  createValidatedStockData
+} from './dataValidator';
 
 /**
  * Get stock data from the configured API provider
@@ -770,4 +775,82 @@ export function getApiInfo() {
     features: config.features,
     cost: config.cost,
   };
+}
+
+/**
+ * Get VALIDATED stock data with multi-source verification
+ *
+ * This is the recommended way to fetch stock data as it:
+ * 1. Fetches from primary provider (Polygon/Alpha Vantage)
+ * 2. Cross-validates with Yahoo Finance
+ * 3. Returns consensus values with confidence scores
+ * 4. Fixes issues like incorrect 52-week highs
+ *
+ * @param {string} symbol - Stock symbol (e.g., 'AAPL')
+ * @param {Object} options - Additional options
+ * @returns {Promise<Object|null>} Validated stock data with confidence indicators
+ */
+export async function getValidatedStockData(symbol, options = {}) {
+  console.info(`🔍 Fetching VALIDATED data for ${symbol}...`);
+
+  try {
+    // Fetch from primary provider
+    const primaryData = await getStockData(symbol, options);
+
+    if (!primaryData) {
+      console.error(`❌ Could not fetch primary data for ${symbol}`);
+      return null;
+    }
+
+    // Fetch from Yahoo Finance for validation
+    const yahooData = await fetchYahooFinanceData(symbol);
+
+    // Validate across sources
+    const validation = await validateStockData(symbol, primaryData, null);
+
+    // Create merged, validated stock data
+    const validatedStock = createValidatedStockData(validation, primaryData, yahooData);
+
+    console.info(`✅ Validated data for ${symbol}:`);
+    console.info(`   Confidence: ${(validation.overallConfidence * 100).toFixed(1)}%`);
+    console.info(`   Status: ${validation.summary.overallStatus}`);
+    console.info(`   52W High: ${validatedStock.yearHigh?.toFixed(2)} (was ${primaryData.yearHigh?.toFixed(2)})`);
+
+    return validatedStock;
+  } catch (error) {
+    console.error(`❌ Failed to validate ${symbol}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Batch fetch validated stock data for multiple symbols
+ *
+ * @param {string[]} symbols - Array of stock symbols
+ * @param {Object} options - Additional options
+ * @returns {Promise<Object[]>} Array of validated stock data
+ */
+export async function batchFetchValidatedStocks(symbols, options = {}) {
+  console.info(`📦 Batch fetching VALIDATED data for ${symbols.length} stocks...`);
+
+  const results = [];
+
+  for (let i = 0; i < symbols.length; i++) {
+    const symbol = symbols[i];
+    console.info(`🔄 Validating ${symbol} (${i + 1}/${symbols.length})`);
+
+    const validatedStock = await getValidatedStockData(symbol, options);
+
+    if (validatedStock) {
+      results.push(validatedStock);
+    }
+
+    // Rate limiting delay
+    if (i < symbols.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  console.info(`✅ Successfully validated ${results.length}/${symbols.length} stocks`);
+  return results;
 }
