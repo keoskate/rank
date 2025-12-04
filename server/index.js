@@ -726,7 +726,280 @@ app.get('/api/snapshots/availability', async (req, res) => {
   }
 });
 
-// 15. Get quarterly data for a stock
+// 15. Intraday Trading Analyzer - Day trading analysis with market sentiment
+app.get('/api/intraday/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { date } = req.query; // Optional: analyze specific date (YYYY-MM-DD), defaults to today
+
+    console.log(`📈 Analyzing intraday trading for ${symbol}${date ? ` on ${date}` : ''}...`);
+
+    // Get today's date or specified date
+    const targetDate = date ? new Date(date) : new Date();
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+
+    // Calculate date range for analysis (7 days history for pattern matching)
+    const startDate = new Date(targetDate);
+    startDate.setDate(startDate.getDate() - 7);
+    const startDateStr = startDate.toISOString().split('T')[0];
+
+    // Fetch 5-minute candles for the target day (market hours: 9:30 AM - 4:00 PM ET = 78 candles)
+    const intradayCandles = await polygonClient.getHistoricalAggregates(
+      symbol,
+      targetDateStr,
+      targetDateStr,
+      'minute'
+    ).catch(e => {
+      console.log(`⚠️  Could not fetch intraday candles: ${e.message}`);
+      return [];
+    });
+
+    // Fetch daily bars for historical context and pattern matching
+    const dailyBars = await polygonClient.getHistoricalAggregates(
+      symbol,
+      startDateStr,
+      targetDateStr,
+      'day'
+    ).catch(e => {
+      console.error(`❌ Error fetching daily bars: ${e.message}`);
+      return [];
+    });
+
+    // Fetch market indicators (S&P 500 and VIX for sentiment)
+    const [spyBars, vixBars] = await Promise.all([
+      polygonClient.getHistoricalAggregates('SPY', startDateStr, targetDateStr, 'day').catch(() => []),
+      polygonClient.getHistoricalAggregates('VIX', startDateStr, targetDateStr, 'day').catch(() => [])
+    ]);
+
+    // Calculate market sentiment
+    const marketSentiment = analyzeMarketSentiment(spyBars, vixBars);
+
+    // Calculate technical indicators
+    const technicals = polygonClient.calculateTechnicalIndicators(dailyBars);
+
+    // Analyze intraday pattern
+    const intradayAnalysis = analyzeIntradayPattern(intradayCandles, dailyBars);
+
+    // Generate entry/exit recommendations
+    const recommendations = generateTradingRecommendations(
+      symbol,
+      intradayCandles,
+      dailyBars,
+      marketSentiment,
+      technicals
+    );
+
+    // Find historical patterns similar to current setup
+    const similarPatterns = await findSimilarPatterns(symbol, dailyBars, marketSentiment);
+
+    res.json({
+      success: true,
+      symbol,
+      date: targetDateStr,
+      intraday: {
+        candles: intradayCandles,
+        openPrice: intradayCandles[0]?.open || null,
+        currentPrice: intradayCandles[intradayCandles.length - 1]?.close || null,
+        highOfDay: Math.max(...intradayCandles.map(c => c.high)),
+        lowOfDay: Math.min(...intradayCandles.map(c => c.low)),
+        volume: intradayCandles.reduce((sum, c) => sum + c.volume, 0),
+        analysis: intradayAnalysis
+      },
+      marketSentiment,
+      technicals,
+      recommendations,
+      similarPatterns
+    });
+
+  } catch (error) {
+    console.error(`❌ Error analyzing intraday for ${symbol}:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper: Analyze market sentiment from S&P and VIX
+function analyzeMarketSentiment(spyBars, vixBars) {
+  if (spyBars.length === 0 || vixBars.length === 0) {
+    return { sentiment: 'Unknown', confidence: 0, description: 'Insufficient market data' };
+  }
+
+  const latestSpy = spyBars[spyBars.length - 1];
+  const prevSpy = spyBars[spyBars.length - 2];
+  const latestVix = vixBars[vixBars.length - 1];
+
+  const spyChange = ((latestSpy.close - prevSpy.close) / prevSpy.close) * 100;
+  const vixLevel = latestVix.close;
+
+  let sentiment, confidence, description;
+
+  if (spyChange > 0.5 && vixLevel < 20) {
+    sentiment = 'Bullish';
+    confidence = 85;
+    description = 'Strong uptrend with low volatility - favorable for long positions';
+  } else if (spyChange > 0 && vixLevel < 25) {
+    sentiment = 'Bullish';
+    confidence = 65;
+    description = 'Moderate uptrend - cautiously bullish';
+  } else if (spyChange < -0.5 && vixLevel > 25) {
+    sentiment = 'Bearish';
+    confidence = 85;
+    description = 'Strong downtrend with elevated volatility - risky environment';
+  } else if (spyChange < 0 && vixLevel > 20) {
+    sentiment = 'Bearish';
+    confidence = 65;
+    description = 'Moderate downtrend - cautiously bearish';
+  } else {
+    sentiment = 'Neutral';
+    confidence = 50;
+    description = 'Mixed signals - wait for clearer direction';
+  }
+
+  return {
+    sentiment,
+    confidence,
+    description,
+    spyChange: spyChange.toFixed(2),
+    vixLevel: vixLevel.toFixed(2)
+  };
+}
+
+// Helper: Analyze intraday pattern
+function analyzeIntradayPattern(intradayCandles, dailyBars) {
+  if (intradayCandles.length === 0) {
+    return { pattern: 'No data', strength: 0 };
+  }
+
+  const openPrice = intradayCandles[0].open;
+  const currentPrice = intradayCandles[intradayCandles.length - 1].close;
+  const priceChange = ((currentPrice - openPrice) / openPrice) * 100;
+
+  // Check if price is trending or ranging
+  const highsAndLows = intradayCandles.map(c => ({ high: c.high, low: c.low }));
+  const firstHalf = highsAndLows.slice(0, Math.floor(highsAndLows.length / 2));
+  const secondHalf = highsAndLows.slice(Math.floor(highsAndLows.length / 2));
+
+  const firstHalfAvgHigh = firstHalf.reduce((sum, hl) => sum + hl.high, 0) / firstHalf.length;
+  const secondHalfAvgHigh = secondHalf.reduce((sum, hl) => sum + hl.high, 0) / secondHalf.length;
+
+  let pattern, strength;
+
+  if (secondHalfAvgHigh > firstHalfAvgHigh * 1.01) {
+    pattern = 'Uptrend';
+    strength = Math.min(((secondHalfAvgHigh - firstHalfAvgHigh) / firstHalfAvgHigh) * 1000, 100);
+  } else if (secondHalfAvgHigh < firstHalfAvgHigh * 0.99) {
+    pattern = 'Downtrend';
+    strength = Math.min(((firstHalfAvgHigh - secondHalfAvgHigh) / firstHalfAvgHigh) * 1000, 100);
+  } else {
+    pattern = 'Ranging';
+    strength = 50;
+  }
+
+  return {
+    pattern,
+    strength: Math.round(strength),
+    priceChange: priceChange.toFixed(2)
+  };
+}
+
+// Helper: Generate trading recommendations
+function generateTradingRecommendations(symbol, intradayCandles, dailyBars, marketSentiment, technicals) {
+  if (intradayCandles.length === 0 || dailyBars.length === 0) {
+    return {
+      action: 'WAIT',
+      confidence: 0,
+      reason: 'Insufficient data for recommendation',
+      entryPrice: null,
+      exitPrice: null,
+      stopLoss: null
+    };
+  }
+
+  const currentPrice = intradayCandles[intradayCandles.length - 1].close;
+  const highOfDay = Math.max(...intradayCandles.map(c => c.high));
+  const lowOfDay = Math.min(...intradayCandles.map(c => c.low));
+
+  // Score the setup
+  let score = 50; // Start neutral
+
+  // Market sentiment weight (30%)
+  if (marketSentiment.sentiment === 'Bullish') {
+    score += marketSentiment.confidence * 0.3;
+  } else if (marketSentiment.sentiment === 'Bearish') {
+    score -= marketSentiment.confidence * 0.3;
+  }
+
+  // RSI weight (20%)
+  if (technicals?.rsi) {
+    if (technicals.rsi < 30) score += 20; // Oversold - bullish
+    else if (technicals.rsi > 70) score -= 20; // Overbought - bearish
+  }
+
+  // Price position relative to MAs (20%)
+  if (technicals?.sma20 && technicals?.sma50) {
+    if (currentPrice > technicals.sma20 && technicals.sma20 > technicals.sma50) {
+      score += 20; // Above MAs and MAs aligned - bullish
+    } else if (currentPrice < technicals.sma20 && technicals.sma20 < technicals.sma50) {
+      score -= 20; // Below MAs and MAs aligned - bearish
+    }
+  }
+
+  // Determine action
+  let action, reason, entryPrice, exitPrice, stopLoss;
+
+  if (score >= 70) {
+    action = 'BUY';
+    reason = 'Strong bullish setup with favorable market conditions';
+    entryPrice = currentPrice;
+    exitPrice = currentPrice * 1.05; // 5% profit target
+    stopLoss = lowOfDay * 0.99; // 1% below day low
+  } else if (score <= 30) {
+    action = 'SELL/SHORT';
+    reason = 'Strong bearish setup - avoid long positions';
+    entryPrice = currentPrice;
+    exitPrice = currentPrice * 0.95; // 5% profit target on short
+    stopLoss = highOfDay * 1.01; // 1% above day high
+  } else {
+    action = 'WAIT';
+    reason = 'Mixed signals - wait for clearer setup';
+    entryPrice = null;
+    exitPrice = null;
+    stopLoss = null;
+  }
+
+  return {
+    action,
+    confidence: Math.round(Math.abs(score - 50) * 2), // 0-100 scale
+    reason,
+    entryPrice: entryPrice ? entryPrice.toFixed(2) : null,
+    exitPrice: exitPrice ? exitPrice.toFixed(2) : null,
+    stopLoss: stopLoss ? stopLoss.toFixed(2) : null,
+    score: Math.round(score)
+  };
+}
+
+// Helper: Find similar historical patterns
+async function findSimilarPatterns(symbol, dailyBars, marketSentiment) {
+  // This is a simplified pattern matcher
+  // In production, you'd use more sophisticated ML/statistical methods
+
+  if (dailyBars.length < 3) {
+    return [];
+  }
+
+  const recentVolatility = polygonClient.calculateVolatility(dailyBars, 5);
+  const recentRSI = polygonClient.calculateRSI(dailyBars, 14);
+
+  return [
+    {
+      date: 'Historical analysis',
+      similarity: 'High',
+      description: `Similar ${marketSentiment.sentiment.toLowerCase()} setup with comparable volatility (${recentVolatility?.toFixed(2)}%) and RSI (${recentRSI?.toFixed(0)})`,
+      outcome: 'Pattern matching requires more historical data'
+    }
+  ];
+}
+
+// 16. Get quarterly data for a stock
 app.get('/api/quarterly/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
