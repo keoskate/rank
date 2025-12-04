@@ -1,0 +1,544 @@
+/**
+ * ALPACA API CLIENT - Paper/Live Trading Integration
+ *
+ * Integrates with Alpaca's API for both paper and live trading.
+ * Provides cross-validation with Polygon data for reliability checks.
+ *
+ * Features:
+ * - Paper and live trading account management
+ * - Order placement (market, limit, stop)
+ * - Position tracking
+ * - Trade history
+ * - Real-time quotes
+ * - Data validation against Polygon
+ * - Safety checks for live trading
+ */
+
+const axios = require('axios');
+const tradingModeManager = require('./tradingModeManager');
+
+// Rate limiting
+const RATE_LIMIT_DELAY = 100; // 100ms between requests
+let lastRequestTime = 0;
+
+/**
+ * Rate limiting helper
+ */
+async function rateLimit() {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+
+  if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
+  }
+
+  lastRequestTime = Date.now();
+}
+
+/**
+ * Make authenticated request to Alpaca API
+ * Automatically uses the correct endpoint and credentials based on current trading mode
+ */
+async function alpacaRequest(method, endpoint, data = null) {
+  await rateLimit();
+
+  // Get credentials and base URL from trading mode manager
+  const credentials = tradingModeManager.getCredentials();
+  const baseURL = tradingModeManager.getBaseURL();
+
+  const config = {
+    method,
+    url: `${baseURL}${endpoint}`,
+    headers: {
+      'APCA-API-KEY-ID': credentials.apiKey,
+      'APCA-API-SECRET-KEY': credentials.secretKey,
+      'Content-Type': 'application/json'
+    }
+  };
+
+  if (data) {
+    config.data = data;
+  }
+
+  try {
+    const response = await axios(config);
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      console.error(`❌ Alpaca API Error (${endpoint}):`, error.response.data);
+      throw new Error(error.response.data.message || 'Alpaca API request failed');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get account information
+ *
+ * @returns {Object} - Account details (equity, cash, buying_power, etc.)
+ */
+async function getAccount() {
+  const modeInfo = tradingModeManager.getModeInfo();
+  console.log(`📊 Fetching Alpaca account info (${modeInfo.statusText})...`);
+
+  const account = await alpacaRequest('GET', '/v2/account');
+
+  // Verify account number matches expected
+  const verification = tradingModeManager.verifyAccount(account.account_number);
+
+  console.log(`✅ Account Status: ${account.status}`);
+  console.log(`   Portfolio Value: $${parseFloat(account.portfolio_value).toLocaleString()}`);
+  console.log(`   Cash: $${parseFloat(account.cash).toLocaleString()}`);
+  console.log(`   Buying Power: $${parseFloat(account.buying_power).toLocaleString()}`);
+
+  if (!verification.matches) {
+    console.warn(`⚠️  WARNING: Account number mismatch!`);
+  }
+
+  return account;
+}
+
+/**
+ * Get all open positions
+ *
+ * @returns {Array} - Array of position objects
+ */
+async function getPositions() {
+  console.log('📊 Fetching Alpaca positions...');
+  const positions = await alpacaRequest('GET', '/v2/positions');
+
+  console.log(`✅ Found ${positions.length} open positions`);
+
+  return positions.map(pos => ({
+    symbol: pos.symbol,
+    quantity: parseInt(pos.qty),
+    side: pos.side,
+    avgEntryPrice: parseFloat(pos.avg_entry_price),
+    currentPrice: parseFloat(pos.current_price),
+    marketValue: parseFloat(pos.market_value),
+    costBasis: parseFloat(pos.cost_basis),
+    unrealizedPL: parseFloat(pos.unrealized_pl),
+    unrealizedPLPercent: parseFloat(pos.unrealized_plpc) * 100,
+    changeToday: parseFloat(pos.change_today) * 100
+  }));
+}
+
+/**
+ * Get position for a specific symbol
+ *
+ * @param {string} symbol - Stock symbol
+ * @returns {Object} - Position details or null
+ */
+async function getPosition(symbol) {
+  try {
+    const position = await alpacaRequest('GET', `/v2/positions/${symbol}`);
+
+    return {
+      symbol: position.symbol,
+      quantity: parseInt(position.qty),
+      side: position.side,
+      avgEntryPrice: parseFloat(position.avg_entry_price),
+      currentPrice: parseFloat(position.current_price),
+      marketValue: parseFloat(position.market_value),
+      costBasis: parseFloat(position.cost_basis),
+      unrealizedPL: parseFloat(position.unrealized_pl),
+      unrealizedPLPercent: parseFloat(position.unrealized_plpc) * 100
+    };
+  } catch (error) {
+    // Position doesn't exist
+    return null;
+  }
+}
+
+/**
+ * Place an order
+ *
+ * @param {Object} orderParams - Order parameters
+ * @param {string} orderParams.symbol - Stock symbol
+ * @param {number} orderParams.qty - Quantity
+ * @param {string} orderParams.side - 'buy' or 'sell'
+ * @param {string} orderParams.type - 'market', 'limit', 'stop', etc.
+ * @param {string} orderParams.time_in_force - 'day', 'gtc', etc.
+ * @param {number} orderParams.limit_price - Limit price (for limit orders)
+ * @param {number} orderParams.market_price - Estimated market price (for validation)
+ * @param {number} accountValue - Current account value (for validation)
+ * @returns {Object} - Order details
+ */
+async function placeOrder(orderParams, accountValue = null) {
+  const modeInfo = tradingModeManager.getModeInfo();
+
+  // Validate order before placing
+  const validation = tradingModeManager.validateOrder(orderParams, accountValue);
+
+  if (!validation.valid) {
+    console.error('❌ Order validation failed:');
+    validation.errors.forEach(err => console.error(`   - ${err}`));
+    throw new Error(`Order validation failed: ${validation.errors.join(', ')}`);
+  }
+
+  // Log warnings
+  if (validation.warnings.length > 0) {
+    validation.warnings.forEach(warn => console.warn(`⚠️  ${warn}`));
+  }
+
+  console.log(`📝 Placing ${orderParams.side} order: ${orderParams.qty} shares of ${orderParams.symbol} (${modeInfo.statusText})`);
+
+  const order = await alpacaRequest('POST', '/v2/orders', orderParams);
+
+  console.log(`✅ Order placed: ${order.id} (${order.status})`);
+
+  return {
+    id: order.id,
+    clientOrderId: order.client_order_id,
+    symbol: order.symbol,
+    side: order.side,
+    quantity: parseInt(order.qty),
+    type: order.type,
+    timeInForce: order.time_in_force,
+    status: order.status,
+    filledQty: parseInt(order.filled_qty || 0),
+    filledAvgPrice: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at,
+    submittedAt: order.submitted_at
+  };
+}
+
+/**
+ * Get all orders (optionally filtered)
+ *
+ * @param {Object} filters - Optional filters (status, limit, after, until, etc.)
+ * @returns {Array} - Array of orders
+ */
+async function getOrders(filters = {}) {
+  const params = new URLSearchParams(filters).toString();
+  const endpoint = params ? `/v2/orders?${params}` : '/v2/orders';
+
+  const orders = await alpacaRequest('GET', endpoint);
+
+  return orders.map(order => ({
+    id: order.id,
+    symbol: order.symbol,
+    side: order.side,
+    quantity: parseInt(order.qty),
+    filledQty: parseInt(order.filled_qty || 0),
+    type: order.type,
+    status: order.status,
+    filledAvgPrice: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
+    createdAt: order.created_at
+  }));
+}
+
+/**
+ * Cancel an order
+ *
+ * @param {string} orderId - Order ID to cancel
+ * @returns {boolean} - Success status
+ */
+async function cancelOrder(orderId) {
+  console.log(`❌ Cancelling order: ${orderId}`);
+  await alpacaRequest('DELETE', `/v2/orders/${orderId}`);
+  console.log(`✅ Order cancelled: ${orderId}`);
+  return true;
+}
+
+/**
+ * Cancel all open orders
+ *
+ * @returns {Array} - Array of cancelled order IDs
+ */
+async function cancelAllOrders() {
+  console.log('❌ Cancelling all open orders...');
+  const result = await alpacaRequest('DELETE', '/v2/orders');
+  console.log(`✅ Cancelled ${result.length} orders`);
+  return result.map(r => r.id);
+}
+
+/**
+ * Get latest quote for a symbol
+ *
+ * @param {string} symbol - Stock symbol
+ * @returns {Object} - Latest quote data
+ */
+async function getLatestQuote(symbol) {
+  const quote = await alpacaRequest('GET', `/v2/stocks/${symbol}/quotes/latest`);
+
+  return {
+    symbol: quote.symbol,
+    askPrice: parseFloat(quote.quote.ap),
+    askSize: quote.quote.as,
+    bidPrice: parseFloat(quote.quote.bp),
+    bidSize: quote.quote.bs,
+    timestamp: quote.quote.t
+  };
+}
+
+/**
+ * Get latest trade for a symbol
+ *
+ * @param {string} symbol - Stock symbol
+ * @returns {Object} - Latest trade data
+ */
+async function getLatestTrade(symbol) {
+  const trade = await alpacaRequest('GET', `/v2/stocks/${symbol}/trades/latest`);
+
+  return {
+    symbol: trade.symbol,
+    price: parseFloat(trade.trade.p),
+    size: trade.trade.s,
+    timestamp: trade.trade.t,
+    exchange: trade.trade.x
+  };
+}
+
+/**
+ * Get bars (OHLCV) data
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {string} timeframe - '1Min', '5Min', '1Hour', '1Day', etc.
+ * @param {string} start - Start date (RFC-3339 format or YYYY-MM-DD)
+ * @param {string} end - End date
+ * @param {number} limit - Max number of bars
+ * @returns {Array} - Array of bar data
+ */
+async function getBars(symbol, timeframe = '1Day', start = null, end = null, limit = 100) {
+  const params = new URLSearchParams({
+    timeframe,
+    limit: limit.toString()
+  });
+
+  if (start) params.append('start', start);
+  if (end) params.append('end', end);
+
+  const data = await alpacaRequest('GET', `/v2/stocks/${symbol}/bars?${params.toString()}`);
+
+  if (!data.bars || data.bars.length === 0) {
+    return [];
+  }
+
+  return data.bars.map(bar => ({
+    timestamp: bar.t,
+    open: parseFloat(bar.o),
+    high: parseFloat(bar.h),
+    low: parseFloat(bar.l),
+    close: parseFloat(bar.c),
+    volume: bar.v,
+    vwap: bar.vw ? parseFloat(bar.vw) : null,
+    tradeCount: bar.n
+  }));
+}
+
+/**
+ * CROSS-VALIDATION: Compare Alpaca and Polygon prices
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {Object} polygonClient - Polygon client instance
+ * @returns {Object} - Comparison results
+ */
+async function validatePriceWithPolygon(symbol, polygonClient) {
+  console.log(`\n🔍 Cross-validating ${symbol} prices between Alpaca and Polygon...`);
+
+  try {
+    // Get latest price from both sources
+    const alpacaTrade = await getLatestTrade(symbol);
+    const polygonQuote = await polygonClient.getLatestQuote(symbol);
+
+    const alpacaPrice = alpacaTrade.price;
+    const polygonPrice = polygonQuote.price;
+
+    const priceDiff = Math.abs(alpacaPrice - polygonPrice);
+    const priceDiffPercent = (priceDiff / polygonPrice) * 100;
+
+    console.log(`   Alpaca Price:  $${alpacaPrice.toFixed(2)}`);
+    console.log(`   Polygon Price: $${polygonPrice.toFixed(2)}`);
+    console.log(`   Difference:    $${priceDiff.toFixed(2)} (${priceDiffPercent.toFixed(2)}%)`);
+
+    // Flag if difference is > 0.5%
+    const isValid = priceDiffPercent < 0.5;
+
+    if (!isValid) {
+      console.warn(`   ⚠️  WARNING: Price difference exceeds 0.5% threshold!`);
+    } else {
+      console.log(`   ✅ Prices validated (within 0.5% tolerance)`);
+    }
+
+    return {
+      symbol,
+      alpacaPrice,
+      polygonPrice,
+      difference: priceDiff,
+      differencePercent: priceDiffPercent,
+      isValid,
+      timestamp: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error(`❌ Validation failed for ${symbol}:`, error.message);
+    return {
+      symbol,
+      error: error.message,
+      isValid: false,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * CROSS-VALIDATION: Compare historical bars between Alpaca and Polygon
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
+ * @param {Object} polygonClient - Polygon client instance
+ * @returns {Object} - Comparison results
+ */
+async function validateHistoricalDataWithPolygon(symbol, startDate, endDate, polygonClient) {
+  console.log(`\n🔍 Cross-validating ${symbol} historical data (${startDate} to ${endDate})...`);
+
+  try {
+    // Get bars from both sources
+    const alpacaBars = await getBars(symbol, '1Day', startDate, endDate);
+    const polygonBars = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate);
+
+    console.log(`   Alpaca bars:  ${alpacaBars.length}`);
+    console.log(`   Polygon bars: ${polygonBars.length}`);
+
+    // Compare overlapping dates
+    const comparisons = [];
+
+    for (const alpacaBar of alpacaBars) {
+      const alpacaDate = new Date(alpacaBar.timestamp).toISOString().split('T')[0];
+      const polygonBar = polygonBars.find(pb => pb.date === alpacaDate);
+
+      if (polygonBar) {
+        const closeDiff = Math.abs(alpacaBar.close - polygonBar.close);
+        const closeDiffPercent = (closeDiff / polygonBar.close) * 100;
+
+        comparisons.push({
+          date: alpacaDate,
+          alpacaClose: alpacaBar.close,
+          polygonClose: polygonBar.close,
+          difference: closeDiff,
+          differencePercent: closeDiffPercent,
+          isValid: closeDiffPercent < 0.5
+        });
+      }
+    }
+
+    const validCount = comparisons.filter(c => c.isValid).length;
+    const validPercent = (validCount / comparisons.length) * 100;
+
+    console.log(`   ✅ Validated ${validCount}/${comparisons.length} dates (${validPercent.toFixed(1)}%)`);
+
+    if (validPercent < 95) {
+      console.warn(`   ⚠️  WARNING: Less than 95% of data points validated!`);
+    }
+
+    return {
+      symbol,
+      dateRange: { start: startDate, end: endDate },
+      totalDates: comparisons.length,
+      validDates: validCount,
+      validPercent,
+      comparisons: comparisons.slice(0, 10), // Include first 10 for inspection
+      isValid: validPercent >= 95,
+      timestamp: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error(`❌ Historical validation failed for ${symbol}:`, error.message);
+    return {
+      symbol,
+      error: error.message,
+      isValid: false,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Execute market buy order
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {number} quantity - Number of shares
+ * @returns {Object} - Order details
+ */
+async function marketBuy(symbol, quantity) {
+  return await placeOrder({
+    symbol,
+    qty: quantity,
+    side: 'buy',
+    type: 'market',
+    time_in_force: 'day'
+  });
+}
+
+/**
+ * Execute market sell order
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {number} quantity - Number of shares
+ * @returns {Object} - Order details
+ */
+async function marketSell(symbol, quantity) {
+  return await placeOrder({
+    symbol,
+    qty: quantity,
+    side: 'sell',
+    type: 'market',
+    time_in_force: 'day'
+  });
+}
+
+/**
+ * Close a position (sell all shares)
+ *
+ * @param {string} symbol - Stock symbol
+ * @returns {Object} - Close result
+ */
+async function closePosition(symbol) {
+  console.log(`📤 Closing position: ${symbol}`);
+  const result = await alpacaRequest('DELETE', `/v2/positions/${symbol}`);
+  console.log(`✅ Position closed: ${symbol}`);
+  return result;
+}
+
+/**
+ * Close all positions
+ *
+ * @returns {Array} - Array of close results
+ */
+async function closeAllPositions() {
+  console.log('📤 Closing all positions...');
+  const result = await alpacaRequest('DELETE', '/v2/positions?cancel_orders=true');
+  console.log(`✅ All positions closed`);
+  return result;
+}
+
+module.exports = {
+  // Account management
+  getAccount,
+
+  // Positions
+  getPositions,
+  getPosition,
+  closePosition,
+  closeAllPositions,
+
+  // Orders
+  placeOrder,
+  getOrders,
+  cancelOrder,
+  cancelAllOrders,
+  marketBuy,
+  marketSell,
+
+  // Market data
+  getLatestQuote,
+  getLatestTrade,
+  getBars,
+
+  // Cross-validation
+  validatePriceWithPolygon,
+  validateHistoricalDataWithPolygon
+};

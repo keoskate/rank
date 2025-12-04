@@ -18,6 +18,8 @@ import InvestTab from './InvestTab';
 import StockDataProvider from './StockDataProvider';
 import DataValidationTest from './DataValidationTest';
 import BacktestPage from './BacktestPage';
+import PaperTradingPage from './PaperTradingPage';
+import AIResearchPage from './AIResearchPage';
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/invest" element={<InvestTab />} />
             <Route path="/backtest" element={<BacktestPage />} />
+            <Route path="/paper-trading" element={<PaperTradingPage />} />
+            <Route path="/ai-research" element={<AIResearchPage />} />
             <Route path="/stock/:ticker" element={<StockDetailPage />} />
             <Route path="/test-validation" element={<DataValidationTest />} />
           </Routes>

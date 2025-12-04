@@ -32,16 +32,21 @@ const InvestTab = () => {
     orderType: 'market',
     limitPrice: ''
   });
+  const [stockAnalysis, setStockAnalysis] = useState(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
-  // Check URL params for connection success
+  // Check URL params for connection success, or auto-connect for paper trading
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('connected') === 'true') {
       setConnectionStep('connected');
       // Remove the URL parameter
       window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (tradingMode === 'paper') {
+      // Auto-connect for paper trading - no Schwab connection needed
+      setConnectionStep('connected');
     }
-  }, []);
+  }, [tradingMode]);
 
   // Generate a unique user ID for demo purposes
   const generateUserId = () => {
@@ -309,6 +314,48 @@ const InvestTab = () => {
       console.error('Error fetching paper portfolio:', err);
     }
   };
+
+  // Fetch comprehensive stock analysis
+  const fetchStockAnalysis = async (symbol) => {
+    if (!symbol || symbol.length === 0) {
+      setStockAnalysis(null);
+      return;
+    }
+
+    setLoadingAnalysis(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/stock/analysis/${symbol}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch stock analysis');
+      }
+
+      setStockAnalysis(data.analysis);
+      console.log('✅ Stock analysis loaded:', data.analysis);
+    } catch (err) {
+      console.error('Error fetching stock analysis:', err);
+      setError(err.message);
+      setStockAnalysis(null);
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
+
+  // Auto-fetch analysis when symbol changes
+  useEffect(() => {
+    if (orderForm.symbol && orderForm.symbol.length >= 1) {
+      const timeoutId = setTimeout(() => {
+        fetchStockAnalysis(orderForm.symbol);
+      }, 500); // Debounce for 500ms
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setStockAnalysis(null);
+    }
+  }, [orderForm.symbol]);
 
   const executePaperTrade = async () => {
     try {
@@ -819,138 +866,311 @@ const InvestTab = () => {
                   </div>
                 )}
 
-                {/* Order Form */}
-                <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
-                  <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
-                    Place Order
-                  </h4>
-                  
-                  {error && (
-                    <div style={{ backgroundColor: '#ffebee', border: '1px solid #f44336', borderRadius: '6px', padding: '12px', marginBottom: '16px', color: '#c62828', fontSize: '14px' }}>
-                      {error}
-                    </div>
-                  )}
+                {/* Enhanced Order Form with Real-time Analysis */}
+                <div style={{ display: 'grid', gridTemplateColumns: stockAnalysis ? '1fr 400px' : '1fr', gap: '20px', marginBottom: '24px' }}>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600', color: '#495057' }}>
-                        Symbol
-                      </label>
-                      <input
-                        type="text"
-                        value={orderForm.symbol}
-                        onChange={(e) => setOrderForm({...orderForm, symbol: e.target.value.toUpperCase()})}
-                        placeholder="AAPL"
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid #ced4da',
-                          borderRadius: '4px',
-                          fontSize: '14px',
-                        }}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600', color: '#495057' }}>
-                        Side
-                      </label>
-                      <select
-                        value={orderForm.side}
-                        onChange={(e) => setOrderForm({...orderForm, side: e.target.value})}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid #ced4da',
-                          borderRadius: '4px',
-                          fontSize: '14px',
-                        }}
-                      >
-                        <option value="buy">Buy</option>
-                        <option value="sell">Sell</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600', color: '#495057' }}>
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        value={orderForm.quantity}
-                        onChange={(e) => setOrderForm({...orderForm, quantity: e.target.value})}
-                        placeholder="100"
-                        min="1"
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid #ced4da',
-                          borderRadius: '4px',
-                          fontSize: '14px',
-                        }}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600', color: '#495057' }}>
-                        Order Type
-                      </label>
-                      <select
-                        value={orderForm.orderType}
-                        onChange={(e) => setOrderForm({...orderForm, orderType: e.target.value})}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: '1px solid #ced4da',
-                          borderRadius: '4px',
-                          fontSize: '14px',
-                        }}
-                      >
-                        <option value="market">Market</option>
-                        <option value="limit">Limit</option>
-                      </select>
-                    </div>
-                    
-                    {orderForm.orderType === 'limit' && (
+                  {/* Left: Order Form */}
+                  <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <h4 style={{ margin: '0 0 20px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '700' }}>
+                      Place Order
+                    </h4>
+
+                    {error && (
+                      <div style={{ backgroundColor: '#ffebee', border: '1px solid #f44336', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#c62828', fontSize: '14px' }}>
+                        {error}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600', color: '#495057' }}>
-                          Limit Price
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Stock Symbol
+                        </label>
+                        <input
+                          type="text"
+                          value={orderForm.symbol}
+                          onChange={(e) => setOrderForm({...orderForm, symbol: e.target.value.toUpperCase()})}
+                          placeholder="Enter symbol (e.g., AAPL)"
+                          style={{
+                            width: '100%',
+                            padding: '14px 16px',
+                            border: '2px solid #e0e0e0',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            outline: 'none',
+                            transition: 'border-color 0.2s',
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = '#007bff'}
+                          onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                        />
+                        {loadingAnalysis && (
+                          <div style={{ marginTop: '8px', fontSize: '12px', color: '#007bff' }}>
+                            Loading analysis...
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Shares
                         </label>
                         <input
                           type="number"
-                          value={orderForm.limitPrice}
-                          onChange={(e) => setOrderForm({...orderForm, limitPrice: e.target.value})}
-                          placeholder="0.00"
-                          step="0.01"
+                          value={orderForm.quantity}
+                          onChange={(e) => setOrderForm({...orderForm, quantity: e.target.value})}
+                          placeholder="0"
+                          min="1"
                           style={{
                             width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #ced4da',
-                            borderRadius: '4px',
-                            fontSize: '14px',
+                            padding: '14px 16px',
+                            border: '2px solid #e0e0e0',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            outline: 'none',
                           }}
                         />
                       </div>
+                    </div>
+
+                    {/* Order Cost Summary */}
+                    {stockAnalysis && orderForm.quantity && (
+                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '14px', color: '#6c757d' }}>Market Price</span>
+                          <span style={{ fontSize: '14px', fontWeight: '600' }}>${parseFloat(stockAnalysis.price.current).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '14px', color: '#6c757d' }}>Shares</span>
+                          <span style={{ fontSize: '14px', fontWeight: '600' }}>{orderForm.quantity}</span>
+                        </div>
+                        <div style={{ borderTop: '1px solid #dee2e6', margin: '12px 0' }}></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '16px', fontWeight: '700', color: '#2c3e50' }}>Estimated Total</span>
+                          <span style={{ fontSize: '16px', fontWeight: '700', color: '#2c3e50' }}>
+                            ${(parseFloat(stockAnalysis.price.current) * parseFloat(orderForm.quantity)).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
                     )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Order Type
+                        </label>
+                        <select
+                          value={orderForm.orderType}
+                          onChange={(e) => setOrderForm({...orderForm, orderType: e.target.value})}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            border: '2px solid #e0e0e0',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            backgroundColor: '#fff',
+                          }}
+                        >
+                          <option value="market">Market Order</option>
+                          <option value="limit">Limit Order</option>
+                        </select>
+                      </div>
+
+                      {orderForm.orderType === 'limit' && (
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Limit Price
+                          </label>
+                          <input
+                            type="number"
+                            value={orderForm.limitPrice}
+                            onChange={(e) => setOrderForm({...orderForm, limitPrice: e.target.value})}
+                            placeholder="0.00"
+                            step="0.01"
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              border: '2px solid #e0e0e0',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <button
+                        onClick={() => { setOrderForm({...orderForm, side: 'buy'}); executePaperTrade(); }}
+                        disabled={!orderForm.symbol || !orderForm.quantity}
+                        style={{
+                          backgroundColor: (!orderForm.symbol || !orderForm.quantity) ? '#94d3a2' : '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          cursor: (!orderForm.symbol || !orderForm.quantity) ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        Buy {orderForm.symbol || 'Stock'}
+                      </button>
+
+                      <button
+                        onClick={() => { setOrderForm({...orderForm, side: 'sell'}); executePaperTrade(); }}
+                        disabled={!orderForm.symbol || !orderForm.quantity}
+                        style={{
+                          backgroundColor: (!orderForm.symbol || !orderForm.quantity) ? '#f5a3a3' : '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          cursor: (!orderForm.symbol || !orderForm.quantity) ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        Sell {orderForm.symbol || 'Stock'}
+                      </button>
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={executePaperTrade}
-                    disabled={!orderForm.symbol || !orderForm.quantity}
-                    style={{
-                      backgroundColor: orderForm.side === 'buy' ? '#28a745' : '#dc3545',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '12px 24px',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      cursor: !orderForm.symbol || !orderForm.quantity ? 'not-allowed' : 'pointer',
-                      opacity: !orderForm.symbol || !orderForm.quantity ? 0.6 : 1,
-                    }}
-                  >
-                    {orderForm.side === 'buy' ? '🛒 Place Buy Order' : '💰 Place Sell Order'}
-                  </button>
+
+                  {/* Right: Stock Analysis Panel */}
+                  {stockAnalysis && (
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxHeight: '700px', overflowY: 'auto' }}>
+                      <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '700' }}>
+                        {stockAnalysis.symbol} Analysis
+                      </h4>
+
+                      {/* Price Info */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '32px', fontWeight: '700', color: '#2c3e50', marginBottom: '4px' }}>
+                          ${parseFloat(stockAnalysis.price.current).toFixed(2)}
+                        </div>
+                        {stockAnalysis.price.change24h && (
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: parseFloat(stockAnalysis.price.change24h) >= 0 ? '#28a745' : '#dc3545' }}>
+                            {parseFloat(stockAnalysis.price.change24h) >= 0 ? '▲' : '▼'} {Math.abs(parseFloat(stockAnalysis.price.change24h)).toFixed(2)}% today
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Recommendation */}
+                      {stockAnalysis.recommendation && (
+                        <div style={{
+                          backgroundColor: stockAnalysis.recommendation.action.includes('Buy') ? '#d4edda' : stockAnalysis.recommendation.action.includes('Sell') ? '#f8d7da' : '#fff3cd',
+                          border: `2px solid ${stockAnalysis.recommendation.action.includes('Buy') ? '#28a745' : stockAnalysis.recommendation.action.includes('Sell') ? '#dc3545' : '#ffc107'}`,
+                          borderRadius: '8px',
+                          padding: '12px',
+                          marginBottom: '16px'
+                        }}>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '8px' }}>
+                            Recommendation: {stockAnalysis.recommendation.action}
+                          </div>
+                          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#495057' }}>
+                            {stockAnalysis.recommendation.reasons.map((reason, i) => (
+                              <li key={i} style={{ marginBottom: '4px' }}>{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Technical Indicators */}
+                      {stockAnalysis.technicals && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '12px' }}>Technical Indicators</h5>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                            <div style={{ backgroundColor: '#f8f9fa', borderRadius: '6px', padding: '10px' }}>
+                              <div style={{ fontSize: '11px', color: '#6c757d', marginBottom: '4px' }}>RSI (14)</div>
+                              <div style={{ fontSize: '16px', fontWeight: '700', color: '#2c3e50' }}>{stockAnalysis.technicals.rsi}</div>
+                              <div style={{ fontSize: '10px', fontWeight: '600', color: stockAnalysis.technicals.rsiSignal === 'Oversold' ? '#28a745' : stockAnalysis.technicals.rsiSignal === 'Overbought' ? '#dc3545' : '#6c757d' }}>
+                                {stockAnalysis.technicals.rsiSignal}
+                              </div>
+                            </div>
+
+                            <div style={{ backgroundColor: '#f8f9fa', borderRadius: '6px', padding: '10px' }}>
+                              <div style={{ fontSize: '11px', color: '#6c757d', marginBottom: '4px' }}>Trend</div>
+                              <div style={{ fontSize: '16px', fontWeight: '700', color: stockAnalysis.technicals.trendSignal === 'Bullish' ? '#28a745' : stockAnalysis.technicals.trendSignal === 'Bearish' ? '#dc3545' : '#6c757d' }}>
+                                {stockAnalysis.technicals.trendSignal}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#6c757d' }}>MA20/MA50</div>
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '12px', color: '#495057', marginBottom: '8px' }}>
+                            <strong>52-Week Range:</strong> ${stockAnalysis.technicals.low52w} - ${stockAnalysis.technicals.high52w}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#495057' }}>
+                            <strong>Distance from High:</strong> {stockAnalysis.technicals.distanceFromHigh}%
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Volume */}
+                      {stockAnalysis.volume && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '8px' }}>Volume</h5>
+                          <div style={{ fontSize: '12px', color: '#495057' }}>
+                            <div>Today: {stockAnalysis.volume.current?.toLocaleString()}</div>
+                            {stockAnalysis.volume.changePercent && (
+                              <div style={{ color: parseFloat(stockAnalysis.volume.changePercent) > 0 ? '#28a745' : '#dc3545', fontWeight: '600' }}>
+                                {parseFloat(stockAnalysis.volume.changePercent) > 0 ? '▲' : '▼'} {Math.abs(parseFloat(stockAnalysis.volume.changePercent)).toFixed(1)}% vs yesterday
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Projections */}
+                      {stockAnalysis.projections && (
+                        <div>
+                          <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '12px' }}>Expected Returns</h5>
+
+                          <div style={{ backgroundColor: '#e7f3ff', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#495057', marginBottom: '8px' }}>1 Week Projection</div>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#007bff', marginBottom: '4px' }}>
+                              ${stockAnalysis.projections.oneWeek.expectedPrice}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                              Expected return: {stockAnalysis.projections.oneWeek.expectedReturn}%
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                              Range: ${stockAnalysis.projections.oneWeek.range.low} - ${stockAnalysis.projections.oneWeek.range.high}
+                            </div>
+                            {orderForm.quantity && (
+                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#007bff', marginTop: '8px' }}>
+                                Your potential P/L: ${((parseFloat(stockAnalysis.projections.oneWeek.expectedPrice) - parseFloat(stockAnalysis.price.current)) * parseFloat(orderForm.quantity)).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ backgroundColor: '#e8f5e9', borderRadius: '8px', padding: '12px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#495057', marginBottom: '8px' }}>1 Month Projection</div>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
+                              ${stockAnalysis.projections.oneMonth.expectedPrice}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                              Expected return: {stockAnalysis.projections.oneMonth.expectedReturn}%
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                              Range: ${stockAnalysis.projections.oneMonth.range.low} - ${stockAnalysis.projections.oneMonth.range.high}
+                            </div>
+                            {orderForm.quantity && (
+                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#28a745', marginTop: '8px' }}>
+                                Your potential P/L: ${((parseFloat(stockAnalysis.projections.oneMonth.expectedPrice) - parseFloat(stockAnalysis.price.current)) * parseFloat(orderForm.quantity)).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Paper Trading Positions */}

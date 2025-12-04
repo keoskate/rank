@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/keoskate/rank#readme",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.10.0",
     "body-parser": "^1.18.2",

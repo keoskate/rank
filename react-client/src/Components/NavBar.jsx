@@ -100,6 +100,58 @@ const NavBar = () => {
           </button>
 
           <button
+            onClick={() => navigate('/paper-trading')}
+            style={{
+              background: 'none',
+              border: '2px solid #e67e22',
+              color: '#e67e22',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+              marginRight: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#e67e22';
+              e.target.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = '#e67e22';
+            }}
+          >
+            📝 Paper Trading
+          </button>
+
+          <button
+            onClick={() => navigate('/ai-research')}
+            style={{
+              background: 'none',
+              border: '2px solid #6f42c1',
+              color: '#6f42c1',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+              marginRight: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#6f42c1';
+              e.target.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = '#6f42c1';
+            }}
+          >
+            🤖 AI Research
+          </button>
+
+          <button
             onClick={() => navigate('/invest')}
             style={{
               background: 'none',
