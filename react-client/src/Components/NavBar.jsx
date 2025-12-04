@@ -152,6 +152,32 @@ const NavBar = () => {
           </button>
 
           <button
+            onClick={() => navigate('/day-trading')}
+            style={{
+              background: 'none',
+              border: '2px solid #fd7e14',
+              color: '#fd7e14',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+              marginRight: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#fd7e14';
+              e.target.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = '#fd7e14';
+            }}
+          >
+            📈 Day Trading
+          </button>
+
+          <button
             onClick={() => navigate('/invest')}
             style={{
               background: 'none',

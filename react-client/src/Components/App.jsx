@@ -20,6 +20,7 @@ import DataValidationTest from './DataValidationTest';
 import BacktestPage from './BacktestPage';
 import PaperTradingPage from './PaperTradingPage';
 import AIResearchPage from './AIResearchPage';
+import IntradayAnalyzerPage from './IntradayAnalyzerPage';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/paper-trading" element={<PaperTradingPage />} />
             <Route path="/ai-research" element={<AIResearchPage />} />
+            <Route path="/day-trading" element={<IntradayAnalyzerPage />} />
             <Route path="/stock/:ticker" element={<StockDetailPage />} />
             <Route path="/test-validation" element={<DataValidationTest />} />
           </Routes>
