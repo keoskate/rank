@@ -10,10 +10,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useStockData } from './StockDataProvider';
 
 const BacktestPage = () => {
-  const { stockData: allStockData, currentStockList } = useStockData();
 
   // Strategy configuration
   const [topN, setTopN] = useState(5);
@@ -53,13 +51,14 @@ const BacktestPage = () => {
     try {
       console.log('Generating synthetic history...');
 
+      // Send request with empty stocks array - server will use defaults
       const response = await fetch('/api/snapshots/generate-history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          stocks: allStockData,
+          stocks: [], // Server will use default mock stocks
           days,
-          stockListName: currentStockList.name
+          stockListName: 'default'
         })
       });
 

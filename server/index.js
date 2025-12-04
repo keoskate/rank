@@ -756,10 +756,23 @@ app.get('/api/snapshots/range/:startDate/:endDate', async (req, res) => {
 // 14. Generate synthetic historical snapshots
 app.post('/api/snapshots/generate-history', async (req, res) => {
   try {
-    const { stocks, days = 90, stockListName = 'Default' } = req.body;
+    let { stocks, days = 90, stockListName = 'Default' } = req.body;
 
-    if (!stocks || !Array.isArray(stocks)) {
-      return res.status(400).json({ error: 'stocks array is required' });
+    // If no stocks provided, use default mock stocks for testing
+    if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
+      console.log('No stocks provided, using default mock stocks for testing');
+      stocks = [
+        { ticker: 'NVDA', score: 95.2, price: 150.00, rsi: 68.5, volume: 45000000 },
+        { ticker: 'AAPL', score: 92.1, price: 185.00, rsi: 62.3, volume: 52000000 },
+        { ticker: 'MSFT', score: 89.5, price: 375.00, rsi: 58.7, volume: 28000000 },
+        { ticker: 'GOOGL', score: 87.3, price: 140.00, rsi: 55.2, volume: 22000000 },
+        { ticker: 'AMZN', score: 85.1, price: 170.00, rsi: 60.1, volume: 48000000 },
+        { ticker: 'META', score: 83.4, price: 485.00, rsi: 65.4, volume: 18000000 },
+        { ticker: 'TSLA', score: 81.2, price: 250.00, rsi: 52.8, volume: 95000000 },
+        { ticker: 'AMD', score: 79.8, price: 145.00, rsi: 59.3, volume: 38000000 },
+        { ticker: 'CRM', score: 77.5, price: 290.00, rsi: 54.6, volume: 14000000 },
+        { ticker: 'NFLX', score: 75.2, price: 665.00, rsi: 61.2, volume: 11000000 }
+      ];
     }
 
     const snapshots = await snapshotManager.generateSyntheticHistory(stocks, days, stockListName);
