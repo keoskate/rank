@@ -443,6 +443,89 @@ const BacktestPage = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Trade History */}
+          {results.allTrades && results.allTrades.length > 0 && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid #e0e6ed',
+              padding: '30px',
+              marginBottom: '30px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <h2 style={{ margin: '0 0 20px 0' }}>📋 Trade History</h2>
+              <p style={{ margin: '0 0 15px 0', color: '#6c757d' }}>
+                Showing all {results.allTrades.length} transactions ({results.trades.buys} buys, {results.trades.sells} sells)
+              </p>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '14px'
+                }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #e0e6ed' }}>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Date</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Type</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Symbol</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Qty</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Price</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Amount</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Return</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>P&L</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.allTrades.map((trade, index) => (
+                      <tr key={index} style={{ borderBottom: '1px solid #e0e6ed' }}>
+                        <td style={{ padding: '10px 8px' }}>{trade.date}</td>
+                        <td style={{ padding: '10px 8px' }}>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: trade.side === 'buy' ? '#d1ecf1' : '#f8d7da',
+                            color: trade.side === 'buy' ? '#0c5460' : '#721c24'
+                          }}>
+                            {trade.side.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 8px', fontWeight: '600' }}>{trade.symbol}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>{trade.quantity.toLocaleString()}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>${trade.price.toFixed(2)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                          ${trade.side === 'buy' ? trade.cost.toFixed(2) : trade.proceeds.toFixed(2)}
+                        </td>
+                        <td style={{
+                          padding: '10px 8px',
+                          textAlign: 'right',
+                          color: trade.side === 'sell' ? (trade.returnPct >= 0 ? '#28a745' : '#dc3545') : '#6c757d'
+                        }}>
+                          {trade.side === 'sell' ? `${trade.returnPct >= 0 ? '+' : ''}${trade.returnPct.toFixed(2)}%` : '-'}
+                        </td>
+                        <td style={{
+                          padding: '10px 8px',
+                          textAlign: 'right',
+                          fontWeight: '600',
+                          color: trade.side === 'sell' ? (trade.profit >= 0 ? '#28a745' : '#dc3545') : '#6c757d'
+                        }}>
+                          {trade.side === 'sell' ? `${trade.profit >= 0 ? '+' : ''}$${trade.profit.toFixed(2)}` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '6px', fontSize: '13px' }}>
+                <strong>Reading the table:</strong> BUY transactions show the cost, while SELL transactions show proceeds, return %, and profit/loss.
+                Each sell is matched to its corresponding buy to calculate returns.
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
