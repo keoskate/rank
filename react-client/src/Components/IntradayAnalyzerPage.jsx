@@ -13,8 +13,9 @@ import { useState, useEffect } from 'react';
 
 const IntradayAnalyzerPage = () => {
   const [symbol, setSymbol] = useState('RR');
-  const [date, setDate] = useState('2024-12-03');
+  const [date, setDate] = useState('2025-12-03'); // Fixed: default to 2025
   const [analysis, setAnalysis] = useState(null);
+  const [stockDetails, setStockDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,18 +31,29 @@ const IntradayAnalyzerPage = () => {
     setError(null);
 
     try {
-      const url = date
+      // Fetch intraday analysis
+      const intradayUrl = date
         ? `/api/intraday/${symbol}?date=${date}`
         : `/api/intraday/${symbol}`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+      const intradayResponse = await fetch(intradayUrl);
+      const intradayData = await intradayResponse.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch analysis');
+      if (!intradayResponse.ok) {
+        throw new Error(intradayData.error || 'Failed to fetch analysis');
       }
 
-      setAnalysis(data);
+      setAnalysis(intradayData);
+
+      // Also fetch stock details for additional context (fundamentals, technicals)
+      const detailsResponse = await fetch(`/api/stock/analysis/${symbol}`);
+      const detailsData = await detailsResponse.json();
+
+      if (detailsResponse.ok) {
+        setStockDetails(detailsData);
+      } else {
+        console.warn('Stock details not available:', detailsData.error);
+      }
     } catch (err) {
       console.error('Error fetching analysis:', err);
       setError(err.message);
@@ -422,6 +434,74 @@ const IntradayAnalyzerPage = () => {
               </div>
             </div>
           )}
+
+          {/* Stock Fundamentals from /api/stock/analysis */}
+          {stockDetails && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '20px',
+              border: '1px solid #dee2e6'
+            }}>
+              <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>
+                Stock Fundamentals & Longer-Term Trend
+              </h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '15px'
+              }}>
+                {stockDetails.currentPrice && (
+                  <TechnicalIndicator label="Current Price" value={`$${parseFloat(stockDetails.currentPrice).toFixed(2)}`} />
+                )}
+                {stockDetails.technicals?.rsiSignal && (
+                  <TechnicalIndicator label="RSI Signal" value={stockDetails.technicals.rsiSignal} />
+                )}
+                {stockDetails.technicals?.trendSignal && (
+                  <TechnicalIndicator label="Trend Signal" value={stockDetails.technicals.trendSignal} />
+                )}
+                {stockDetails.technicals?.priceChange1D && (
+                  <TechnicalIndicator label="1D Change" value={`${stockDetails.technicals.priceChange1D}%`} />
+                )}
+                {stockDetails.technicals?.priceChange1W && (
+                  <TechnicalIndicator label="1W Change" value={`${stockDetails.technicals.priceChange1W}%`} />
+                )}
+                {stockDetails.technicals?.priceChange1M && (
+                  <TechnicalIndicator label="1M Change" value={`${stockDetails.technicals.priceChange1M}%`} />
+                )}
+                {stockDetails.technicals?.distanceFromHigh && (
+                  <TechnicalIndicator label="From 52W High" value={`${stockDetails.technicals.distanceFromHigh}%`} />
+                )}
+                {stockDetails.recommendation && (
+                  <div style={{
+                    padding: '15px',
+                    backgroundColor: stockDetails.recommendation === 'Strong Buy' || stockDetails.recommendation === 'Buy' ? '#d4edda' :
+                                    stockDetails.recommendation === 'Sell' ? '#f8d7da' : '#fff3cd',
+                    borderRadius: '6px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '5px' }}>
+                      Longer-Term Rating
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                      {stockDetails.recommendation}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Profit Calculator */}
+          {analysis.recommendations?.entryPrice && (
+            <ProfitCalculator
+              entryPrice={parseFloat(analysis.recommendations.entryPrice)}
+              exitPrice={parseFloat(analysis.recommendations.exitPrice)}
+              stopLoss={parseFloat(analysis.recommendations.stopLoss)}
+              symbol={symbol}
+            />
+          )}
         </div>
       )}
 
@@ -447,6 +527,149 @@ const IntradayAnalyzerPage = () => {
 };
 
 // Helper Components
+const ProfitCalculator = ({ entryPrice, exitPrice, stopLoss, symbol }) => {
+  const [shares, setShares] = useState(1000);
+
+  const calculateProfit = () => {
+    const profitPerShare = exitPrice - entryPrice;
+    const totalProfit = profitPerShare * shares;
+    const profitPercent = ((profitPerShare / entryPrice) * 100).toFixed(2);
+    const totalInvestment = entryPrice * shares;
+
+    return { totalProfit, profitPercent, totalInvestment };
+  };
+
+  const calculateLoss = () => {
+    const lossPerShare = entryPrice - stopLoss;
+    const totalLoss = lossPerShare * shares;
+    const lossPercent = ((lossPerShare / entryPrice) * 100).toFixed(2);
+
+    return { totalLoss, lossPercent };
+  };
+
+  const { totalProfit, profitPercent, totalInvestment } = calculateProfit();
+  const { totalLoss, lossPercent } = calculateLoss();
+  const riskRewardRatio = (Math.abs(totalProfit) / Math.abs(totalLoss)).toFixed(2);
+
+  return (
+    <div style={{
+      backgroundColor: '#ffffff',
+      borderRadius: '8px',
+      padding: '20px',
+      marginBottom: '20px',
+      border: '1px solid #dee2e6'
+    }}>
+      <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>
+        Profit Calculator
+      </h3>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+          Number of Shares
+        </label>
+        <input
+          type="number"
+          value={shares}
+          onChange={(e) => setShares(Number(e.target.value))}
+          min="1"
+          step="100"
+          style={{
+            width: '200px',
+            padding: '10px',
+            fontSize: '14px',
+            border: '1px solid #ced4da',
+            borderRadius: '6px'
+          }}
+        />
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '15px',
+        marginBottom: '20px'
+      }}>
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '6px'
+        }}>
+          <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '5px' }}>
+            Total Investment
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: '600' }}>
+            ${totalInvestment.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+          </div>
+        </div>
+
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#d4edda',
+          borderRadius: '6px',
+          border: '1px solid #28a745'
+        }}>
+          <div style={{ fontSize: '12px', color: '#155724', marginBottom: '5px' }}>
+            Expected Profit (if target hit)
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: '#28a745' }}>
+            ${totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+          </div>
+          <div style={{ fontSize: '12px', color: '#155724', marginTop: '5px' }}>
+            +{profitPercent}% gain
+          </div>
+        </div>
+
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#f8d7da',
+          borderRadius: '6px',
+          border: '1px solid #dc3545'
+        }}>
+          <div style={{ fontSize: '12px', color: '#721c24', marginBottom: '5px' }}>
+            Max Loss (if stop-loss hit)
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: '#dc3545' }}>
+            -${totalLoss.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+          </div>
+          <div style={{ fontSize: '12px', color: '#721c24', marginTop: '5px' }}>
+            -{lossPercent}% loss
+          </div>
+        </div>
+
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#fff3cd',
+          borderRadius: '6px',
+          border: '1px solid #ffc107'
+        }}>
+          <div style={{ fontSize: '12px', color: '#856404', marginBottom: '5px' }}>
+            Risk/Reward Ratio
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: '#856404' }}>
+            1:{riskRewardRatio}
+          </div>
+          <div style={{ fontSize: '12px', color: '#856404', marginTop: '5px' }}>
+            {riskRewardRatio >= 2 ? 'Good R:R' : riskRewardRatio >= 1.5 ? 'Fair R:R' : 'Low R:R'}
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        padding: '15px',
+        backgroundColor: '#e7f3ff',
+        borderRadius: '6px',
+        fontSize: '13px',
+        color: '#004085',
+        lineHeight: '1.6'
+      }}>
+        <strong>Example Trade:</strong> Buy {shares.toLocaleString()} shares of {symbol} at ${entryPrice.toFixed(2)},
+        sell at ${exitPrice.toFixed(2)} (target) or ${stopLoss.toFixed(2)} (stop-loss).
+        Expected profit if target is hit: <strong style={{ color: '#28a745' }}>${totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (+{profitPercent}%)</strong>.
+      </div>
+    </div>
+  );
+};
+
 const StatCard = ({ title, value, color, subtitle }) => (
   <div style={{
     backgroundColor: '#ffffff',
