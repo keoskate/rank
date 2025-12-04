@@ -70,10 +70,47 @@ const BacktestPage = () => {
 
       console.log(`Generated ${data.snapshotsGenerated} snapshots`);
       setSnapshotsAvailable(true);
-      alert(`✅ Generated ${days} days of historical data for backtesting!`);
+      alert(`✅ Generated ${days} days of synthetic historical data!`);
     } catch (err) {
       console.error('Error generating history:', err);
       setError('Failed to generate historical data: ' + err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Backfill REAL historical data from Polygon API
+  const backfillRealData = async () => {
+    if (generating) return;
+
+    setGenerating(true);
+    setError(null);
+
+    try {
+      console.log('Backfilling real historical data from Polygon API...');
+
+      const response = await fetch('/api/snapshots/backfill-real-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbols: [], // Server will use default symbols
+          days,
+          stockListName: 'Real Data'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to backfill real data');
+      }
+
+      console.log(`Backfilled ${data.snapshotsGenerated} snapshots from ${data.dataSource}`);
+      setSnapshotsAvailable(true);
+      alert(`✅ Fetched ${days} days of REAL market data from ${data.dataSource}!`);
+    } catch (err) {
+      console.error('Error backfilling real data:', err);
+      setError('Failed to fetch real historical data: ' + err.message);
     } finally {
       setGenerating(false);
     }
@@ -142,24 +179,49 @@ const BacktestPage = () => {
             ⚠️ No Historical Data Available
           </h3>
           <p style={{ margin: '0 0 15px 0', color: '#856404' }}>
-            Generate synthetic historical snapshots to enable backtesting.
+            Choose a data source to enable backtesting:
           </p>
-          <button
-            onClick={generateHistory}
-            disabled={generating}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: generating ? 'not-allowed' : 'pointer',
-              opacity: generating ? 0.6 : 1
-            }}
-          >
-            {generating ? '⏳ Generating...' : `🔄 Generate ${days} Days of History`}
-          </button>
+          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <button
+              onClick={generateHistory}
+              disabled={generating}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: generating ? 'not-allowed' : 'pointer',
+                opacity: generating ? 0.6 : 1,
+                flex: '1',
+                minWidth: '200px'
+              }}
+            >
+              {generating ? '⏳ Generating...' : `🔄 Generate ${days} Days (Synthetic)`}
+            </button>
+            <button
+              onClick={backfillRealData}
+              disabled={generating}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: generating ? 'not-allowed' : 'pointer',
+                opacity: generating ? 0.6 : 1,
+                flex: '1',
+                minWidth: '200px'
+              }}
+            >
+              {generating ? '⏳ Fetching...' : `📊 Fetch ${days} Days (Real Data)`}
+            </button>
+          </div>
+          <p style={{ margin: '15px 0 0 0', fontSize: '14px', color: '#856404' }}>
+            <strong>Synthetic:</strong> Fast, random walk simulation • <strong>Real Data:</strong> Actual market data from Polygon API (~2 min)
+          </p>
         </div>
       )}
 

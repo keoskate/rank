@@ -17,6 +17,7 @@ const PORT = process.env.PORT || 8080;
 const path = require('path');
 const snapshotManager = require('./snapshotManager');
 const backtestEngine = require('./backtestEngine');
+const historicalDataManager = require('./historicalDataManager');
 
 const app = express();
 
@@ -789,6 +790,104 @@ app.post('/api/snapshots/generate-history', async (req, res) => {
   }
 });
 
+// 14b. Backfill REAL historical data from Polygon API
+app.post('/api/snapshots/backfill-real-history', async (req, res) => {
+  try {
+    let { symbols, days = 90, stockListName = 'Real Data' } = req.body;
+
+    // Use default symbols if none provided
+    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+      symbols = ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'AMD', 'CRM', 'NFLX'];
+      console.log(`No symbols provided, using defaults: ${symbols.join(', ')}`);
+    }
+
+    console.log(`\n🚀 Starting real data backfill for ${symbols.length} symbols, ${days} days...`);
+
+    const snapshots = await historicalDataManager.backfillRealHistory(symbols, days, stockListName);
+
+    res.json({
+      success: true,
+      snapshotsGenerated: snapshots.length,
+      symbols: symbols.length,
+      days,
+      dataSource: 'Polygon.io',
+      message: `Real historical data backfilled successfully from Polygon API`
+    });
+
+  } catch (error) {
+    console.error('❌ Error backfilling real history:', error.message);
+    res.status(500).json({
+      error: 'Failed to backfill real historical data',
+      details: error.message
+    });
+  }
+});
+
+// 14c. Get current rankings from live data
+app.get('/api/rankings/current', async (req, res) => {
+  try {
+    const symbols = req.query.symbols
+      ? req.query.symbols.split(',')
+      : ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'AMD', 'CRM', 'NFLX'];
+
+    const rankings = await historicalDataManager.getCurrentRankings(symbols);
+
+    res.json({
+      success: true,
+      rankings,
+      count: rankings.length,
+      message: 'Current rankings fetched successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching current rankings:', error.message);
+    res.status(500).json({ error: 'Failed to fetch current rankings' });
+  }
+});
+
+// 14d. Save today's snapshot from live data
+app.post('/api/snapshots/save-today', async (req, res) => {
+  try {
+    let { symbols, stockListName = 'Real Data' } = req.body;
+
+    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+      symbols = ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'AMD', 'CRM', 'NFLX'];
+    }
+
+    const snapshot = await historicalDataManager.saveTodaySnapshot(symbols, stockListName);
+
+    res.json({
+      success: true,
+      snapshot,
+      message: 'Today\'s snapshot saved successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error saving today\'s snapshot:', error.message);
+    res.status(500).json({ error: 'Failed to save today\'s snapshot' });
+  }
+});
+
+// 14e. Check historical data availability
+app.get('/api/snapshots/availability', async (req, res) => {
+  try {
+    const requiredDays = parseInt(req.query.days) || 90;
+    const availability = await historicalDataManager.checkHistoricalDataAvailability(requiredDays);
+
+    res.json({
+      success: true,
+      ...availability,
+      message: availability.available
+        ? 'Sufficient historical data available'
+        : 'Insufficient historical data - backfill recommended'
+    });
+
+  } catch (error) {
+    console.error('❌ Error checking availability:', error.message);
+    res.status(500).json({ error: 'Failed to check data availability' });
+  }
+});
+
 // 15. Get quarterly data for a stock
 app.get('/api/quarterly/:symbol', async (req, res) => {
   try {
@@ -918,6 +1017,10 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/snapshots/:date`);
   console.log(`   GET  /api/snapshots/range/:startDate/:endDate`);
   console.log(`   POST /api/snapshots/generate-history`);
+  console.log(`   POST /api/snapshots/backfill-real-history  🆕 Real Data`);
+  console.log(`   POST /api/snapshots/save-today`);
+  console.log(`   GET  /api/snapshots/availability`);
+  console.log(`   GET  /api/rankings/current  🆕 Live Rankings`);
   console.log(`   GET  /api/quarterly/:symbol`);
   console.log(`   GET  /api/quarterly/:symbol/qoq/:metric`);
   console.log(`   GET  /api/quarterly/:symbol/yoy/:metric`);
