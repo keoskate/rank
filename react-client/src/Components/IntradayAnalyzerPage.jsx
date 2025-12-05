@@ -302,7 +302,7 @@ const IntradayAnalyzerPage = () => {
               <h3 style={{ ...theme.typography.h3, margin: `0 0 ${theme.spacing.xs} 0` }}>
                 Active Position: {currentPosition.symbol}
               </h3>
-              <div style={{ ...theme.typography.body, color: theme.colors.textMuted }}>
+              <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textMuted }}>
                 {Math.abs(currentPosition.qty)} shares
               </div>
             </div>
@@ -365,8 +365,8 @@ const IntradayAnalyzerPage = () => {
           <div style={{
             marginTop: theme.spacing.md,
             padding: theme.spacing.sm,
-            backgroundColor: theme.colors.info.light,
-            borderRadius: theme.borderRadius.default,
+            backgroundColor: theme.colors.infoLight,
+            borderRadius: theme.borderRadius.md,
             fontSize: theme.typography.small.fontSize,
             color: theme.colors.info.dark,
             textAlign: 'center'
@@ -383,7 +383,7 @@ const IntradayAnalyzerPage = () => {
           gap: theme.spacing.md,
         }}>
           <div style={{ flex: '0 0 150px' }}>
-            <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.body.fontSize }}>
+            <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.fontSize.base }}>
               Stock Symbol
             </label>
             <input
@@ -394,15 +394,15 @@ const IntradayAnalyzerPage = () => {
               style={{
                 width: '100%',
                 padding: theme.spacing.sm,
-                fontSize: theme.typography.body.fontSize,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.borderRadius.default
+                fontSize: theme.typography.fontSize.base,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md
               }}
             />
           </div>
 
           <div style={{ flex: '0 0 200px' }}>
-            <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.body.fontSize }}>
+            <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.fontSize.base }}>
               Date (Optional)
             </label>
             <input
@@ -412,9 +412,9 @@ const IntradayAnalyzerPage = () => {
               style={{
                 width: '100%',
                 padding: theme.spacing.sm,
-                fontSize: theme.typography.body.fontSize,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.borderRadius.default
+                fontSize: theme.typography.fontSize.base,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md
               }}
             />
           </div>
@@ -525,7 +525,7 @@ const IntradayAnalyzerPage = () => {
                     <div style={{ ...theme.typography.h2, marginBottom: theme.spacing.xs }}>
                       {analysis.intraday.analysis?.pattern || 'Unknown'}
                     </div>
-                    <div style={{ color: theme.colors.textMuted, fontSize: theme.typography.body.fontSize }}>
+                    <div style={{ color: theme.colors.textMuted, fontSize: theme.typography.fontSize.base }}>
                       Strength: {analysis.intraday.analysis?.strength || 0}/100
                     </div>
                     <div style={{ marginTop: theme.spacing.sm }}>
@@ -562,13 +562,13 @@ const IntradayAnalyzerPage = () => {
                     gap: theme.spacing.sm,
                     marginBottom: theme.spacing.lg
                   }}>
-                    <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.info.light, borderRadius: theme.borderRadius.default, textAlign: 'center' }}>
+                    <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.infoLight, borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
                       <div style={{ ...theme.typography.small, color: theme.colors.info.dark, fontWeight: '600', marginBottom: theme.spacing.xxs }}>OPEN</div>
                       <div style={{ ...theme.typography.h4, color: theme.colors.info.dark }}>
                         ${analysis.intraday.swingAnalysis.openPrice}
                       </div>
                     </div>
-                    <div style={{ padding: theme.spacing.sm, backgroundColor: '#f3e5f5', borderRadius: theme.borderRadius.default, textAlign: 'center' }}>
+                    <div style={{ padding: theme.spacing.sm, backgroundColor: '#f3e5f5', borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
                       <div style={{ ...theme.typography.small, color: '#7b1fa2', fontWeight: '600', marginBottom: theme.spacing.xxs }}>+30 MIN</div>
                       <div style={{ ...theme.typography.h4, color: '#6a1b9a' }}>
                         ${analysis.intraday.swingAnalysis.price30min}
@@ -577,21 +577,21 @@ const IntradayAnalyzerPage = () => {
                         {analysis.intraday.swingAnalysis.change30min ? `${analysis.intraday.swingAnalysis.change30min > 0 ? '+' : ''}${analysis.intraday.swingAnalysis.change30min}%` : 'N/A'}
                       </div>
                     </div>
-                    <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.warning.light, borderRadius: theme.borderRadius.default, textAlign: 'center' }}>
-                      <div style={{ ...theme.typography.small, color: theme.colors.warning.dark, fontWeight: '600', marginBottom: theme.spacing.xxs }}>+3 HR</div>
-                      <div style={{ ...theme.typography.h4, color: theme.colors.warning.dark }}>
+                    <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.warningLight, borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
+                      <div style={{ ...theme.typography.small, color: theme.colors.warningDark, fontWeight: '600', marginBottom: theme.spacing.xxs }}>+3 HR</div>
+                      <div style={{ ...theme.typography.h4, color: theme.colors.warningDark }}>
                         ${analysis.intraday.swingAnalysis.price3hr}
                       </div>
-                      <div style={{ ...theme.typography.small, color: theme.colors.warning.dark, marginTop: '2px' }}>
+                      <div style={{ ...theme.typography.small, color: theme.colors.warningDark, marginTop: '2px' }}>
                         {analysis.intraday.swingAnalysis.change3hr ? `${analysis.intraday.swingAnalysis.change3hr > 0 ? '+' : ''}${analysis.intraday.swingAnalysis.change3hr}%` : 'N/A'}
                       </div>
                     </div>
-                    <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.success.light, borderRadius: theme.borderRadius.default, textAlign: 'center' }}>
-                      <div style={{ ...theme.typography.small, color: theme.colors.success.dark, fontWeight: '600', marginBottom: theme.spacing.xxs }}>CLOSE</div>
-                      <div style={{ ...theme.typography.h4, color: theme.colors.success.dark }}>
+                    <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.successLight, borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
+                      <div style={{ ...theme.typography.small, color: theme.colors.successDark, fontWeight: '600', marginBottom: theme.spacing.xxs }}>CLOSE</div>
+                      <div style={{ ...theme.typography.h4, color: theme.colors.successDark }}>
                         ${analysis.intraday.swingAnalysis.closePrice}
                       </div>
-                      <div style={{ ...theme.typography.small, color: theme.colors.success.dark, marginTop: '2px' }}>
+                      <div style={{ ...theme.typography.small, color: theme.colors.successDark, marginTop: '2px' }}>
                         {analysis.intraday.swingAnalysis.changeClose ? `${analysis.intraday.swingAnalysis.changeClose > 0 ? '+' : ''}${analysis.intraday.swingAnalysis.changeClose}%` : 'N/A'}
                       </div>
                     </div>
@@ -601,14 +601,14 @@ const IntradayAnalyzerPage = () => {
                   <div style={{
                     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                     backgroundColor: theme.colors.backgroundMuted,
-                    borderRadius: theme.borderRadius.default,
+                    borderRadius: theme.borderRadius.md,
                     marginBottom: theme.spacing.sm,
                     borderLeft: `4px solid ${theme.colors.primary}`
                   }}>
                     <div style={{ ...theme.typography.small, fontWeight: '600', color: theme.colors.text, marginBottom: theme.spacing.xxs }}>
                       Opening Behavior
                     </div>
-                    <div style={{ ...theme.typography.body, color: theme.colors.textMuted }}>
+                    <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textMuted }}>
                       {analysis.intraday.swingAnalysis.openingBehavior}
                     </div>
                   </div>
@@ -617,14 +617,14 @@ const IntradayAnalyzerPage = () => {
                   <div style={{
                     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                     backgroundColor: theme.colors.backgroundMuted,
-                    borderRadius: theme.borderRadius.default,
+                    borderRadius: theme.borderRadius.md,
                     marginBottom: theme.spacing.sm,
                     borderLeft: `4px solid ${theme.colors.warning.main}`
                   }}>
                     <div style={{ ...theme.typography.small, fontWeight: '600', color: theme.colors.text, marginBottom: theme.spacing.xxs }}>
                       Swing Pattern
                     </div>
-                    <div style={{ ...theme.typography.body, color: theme.colors.textMuted }}>
+                    <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textMuted }}>
                       {analysis.intraday.swingAnalysis.swingPattern}
                     </div>
                   </div>
@@ -633,13 +633,13 @@ const IntradayAnalyzerPage = () => {
                   <div style={{
                     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                     backgroundColor: theme.colors.backgroundMuted,
-                    borderRadius: theme.borderRadius.default,
+                    borderRadius: theme.borderRadius.md,
                     borderLeft: `4px solid ${theme.colors.success.main}`
                   }}>
                     <div style={{ ...theme.typography.small, fontWeight: '600', color: theme.colors.text, marginBottom: theme.spacing.xxs }}>
                       Trend Magnitude
                     </div>
-                    <div style={{ ...theme.typography.h3, color: theme.colors.success.dark }}>
+                    <div style={{ ...theme.typography.h3, color: theme.colors.successDark }}>
                       {analysis.intraday.swingAnalysis.trendMagnitude}%
                     </div>
                   </div>
@@ -671,7 +671,7 @@ const IntradayAnalyzerPage = () => {
                   }}>
                     {analysis.marketSentiment?.sentiment || 'Unknown'}
                   </div>
-                  <div style={{ ...theme.typography.body, color: theme.colors.textMuted, marginBottom: theme.spacing.md }}>
+                  <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textMuted, marginBottom: theme.spacing.md }}>
                     {analysis.marketSentiment?.confidence || 0}% confidence
                   </div>
                   <div style={{
@@ -680,7 +680,7 @@ const IntradayAnalyzerPage = () => {
                     lineHeight: '1.5',
                     padding: theme.spacing.sm,
                     backgroundColor: theme.colors.backgroundMuted,
-                    borderRadius: theme.borderRadius.default
+                    borderRadius: theme.borderRadius.md
                   }}>
                     {analysis.marketSentiment?.description || 'No market data available'}
                   </div>
@@ -707,7 +707,7 @@ const IntradayAnalyzerPage = () => {
                   }}>
                     {analysis.recommendations?.action || 'WAIT'}
                   </div>
-                  <div style={{ ...theme.typography.body, color: theme.colors.text, marginBottom: theme.spacing.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.text, marginBottom: theme.spacing.lg }}>
                     Confidence: {analysis.recommendations?.confidence || 0}%
                   </div>
                   <div style={{
@@ -852,8 +852,8 @@ const IntradayAnalyzerPage = () => {
                   <div key={idx} style={{
                     padding: theme.spacing.md,
                     backgroundColor: theme.colors.backgroundMuted,
-                    borderRadius: theme.borderRadius.default,
-                    border: `1px solid ${theme.colors.border}`
+                    borderRadius: theme.borderRadius.md,
+                    border: `1px solid ${theme.colors.gray400}`
                   }}>
                     <div style={{ fontWeight: '600', marginBottom: theme.spacing.xs }}>
                       {pattern.date}
@@ -903,7 +903,7 @@ const IntradayAnalyzerPage = () => {
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: theme.spacing.md, alignItems: 'end' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.body.fontSize }}>
+                      <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.fontSize.base }}>
                         Start Date
                       </label>
                       <input
@@ -913,14 +913,14 @@ const IntradayAnalyzerPage = () => {
                         style={{
                           width: '100%',
                           padding: theme.spacing.sm,
-                          fontSize: theme.typography.body.fontSize,
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.borderRadius.default
+                          fontSize: theme.typography.fontSize.base,
+                          border: `1px solid ${theme.colors.gray400}`,
+                          borderRadius: theme.borderRadius.md
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.body.fontSize }}>
+                      <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.fontSize.base }}>
                         End Date
                       </label>
                       <input
@@ -930,9 +930,9 @@ const IntradayAnalyzerPage = () => {
                         style={{
                           width: '100%',
                           padding: theme.spacing.sm,
-                          fontSize: theme.typography.body.fontSize,
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.borderRadius.default
+                          fontSize: theme.typography.fontSize.base,
+                          border: `1px solid ${theme.colors.gray400}`,
+                          borderRadius: theme.borderRadius.md
                         }}
                       />
                     </div>
@@ -947,8 +947,8 @@ const IntradayAnalyzerPage = () => {
                   <div style={{
                     marginTop: theme.spacing.md,
                     padding: theme.spacing.sm,
-                    backgroundColor: theme.colors.info.light,
-                    borderRadius: theme.borderRadius.default,
+                    backgroundColor: theme.colors.infoLight,
+                    borderRadius: theme.borderRadius.md,
                     fontSize: theme.typography.small.fontSize,
                     color: theme.colors.info.dark
                   }}>
@@ -978,7 +978,7 @@ const IntradayAnalyzerPage = () => {
                     {/* Optimal Strategy Card */}
                     {strategyResults.optimalStrategy && (
                       <Card variant="success" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
-                        <h4 style={{ ...theme.typography.h3, margin: `0 0 ${theme.spacing.md} 0`, color: theme.colors.success.dark }}>
+                        <h4 style={{ ...theme.typography.h3, margin: `0 0 ${theme.spacing.md} 0`, color: theme.colors.successDark }}>
                           ✅ Optimal Strategy Found
                         </h4>
 
@@ -989,12 +989,12 @@ const IntradayAnalyzerPage = () => {
                           alignItems: 'center',
                           padding: theme.spacing.md,
                           backgroundColor: theme.colors.background,
-                          borderRadius: theme.borderRadius.default,
+                          borderRadius: theme.borderRadius.md,
                           marginBottom: theme.spacing.lg,
                           border: `1px solid ${theme.colors.success.main}`
                         }}>
                           <div style={{ flex: '0 0 auto' }}>
-                            <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.body.fontSize, color: theme.colors.success.dark }}>
+                            <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.fontSize.base, color: theme.colors.successDark }}>
                               Profit Target ($)
                             </label>
                             <input
@@ -1006,9 +1006,9 @@ const IntradayAnalyzerPage = () => {
                               style={{
                                 width: '140px',
                                 padding: theme.spacing.sm,
-                                fontSize: theme.typography.body.fontSize,
+                                fontSize: theme.typography.fontSize.base,
                                 border: `1px solid ${theme.colors.success.main}`,
-                                borderRadius: theme.borderRadius.default
+                                borderRadius: theme.borderRadius.md
                               }}
                             />
                           </div>
@@ -1453,7 +1453,7 @@ const ProfitCalculator = ({ entryPrice, exitPrice, stopLoss, symbol }) => {
       </h3>
 
       <div style={{ marginBottom: theme.spacing.lg }}>
-        <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.body.fontSize }}>
+        <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: '600', fontSize: theme.typography.fontSize.base }}>
           Number of Shares
         </label>
         <input
@@ -1465,9 +1465,9 @@ const ProfitCalculator = ({ entryPrice, exitPrice, stopLoss, symbol }) => {
           style={{
             width: '200px',
             padding: theme.spacing.sm,
-            fontSize: theme.typography.body.fontSize,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.borderRadius.default
+            fontSize: theme.typography.fontSize.base,
+            border: `1px solid ${theme.colors.gray400}`,
+            borderRadius: theme.borderRadius.md
           }}
         />
       </div>
@@ -1507,8 +1507,8 @@ const ProfitCalculator = ({ entryPrice, exitPrice, stopLoss, symbol }) => {
 
       <div style={{
         padding: theme.spacing.md,
-        backgroundColor: theme.colors.info.light,
-        borderRadius: theme.borderRadius.default,
+        backgroundColor: theme.colors.infoLight,
+        borderRadius: theme.borderRadius.md,
         fontSize: theme.typography.small.fontSize,
         color: theme.colors.info.dark,
         lineHeight: '1.6'
@@ -1525,7 +1525,7 @@ const TechnicalIndicator = ({ label, value }) => (
   <div style={{
     padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundMuted,
-    borderRadius: theme.borderRadius.default,
+    borderRadius: theme.borderRadius.md,
     textAlign: 'center'
   }}>
     <div style={{ ...theme.typography.small, color: theme.colors.textMuted, marginBottom: theme.spacing.xs }}>
@@ -1581,9 +1581,9 @@ function getRecommendationColor(action) {
 }
 
 function getRecommendationBg(action) {
-  if (action?.includes('BUY')) return theme.colors.success.light;
+  if (action?.includes('BUY')) return theme.colors.successLight;
   if (action?.includes('SELL')) return theme.colors.error.light;
-  return theme.colors.warning.light;
+  return theme.colors.warningLight;
 }
 
 // Candlestick Chart Component
@@ -1596,7 +1596,7 @@ const CandlestickChart = ({ candles }) => {
       <div style={{
         height: '400px',
         backgroundColor: theme.colors.backgroundMuted,
-        borderRadius: theme.borderRadius.default,
+        borderRadius: theme.borderRadius.md,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1845,10 +1845,10 @@ const IntradayCorrelationChart = ({ stockSymbol, stockCandles, marketSentiment }
   if (Object.keys(metricsData).length <= 1) {
     return (
       <Card variant="warning" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
-        <h3 style={{ ...theme.typography.h3, margin: `0 0 ${theme.spacing.sm} 0`, color: theme.colors.warning.dark }}>
+        <h3 style={{ ...theme.typography.h3, margin: `0 0 ${theme.spacing.sm} 0`, color: theme.colors.warningDark }}>
           Market Correlation
         </h3>
-        <div style={{ ...theme.typography.body, color: theme.colors.warning.dark }}>
+        <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.warningDark }}>
           Market correlation data (SPY, VIX) not available for this date. Showing stock price only.
         </div>
       </Card>
@@ -1866,8 +1866,8 @@ const IntradayCorrelationChart = ({ stockSymbol, stockCandles, marketSentiment }
       <div style={{
         marginTop: theme.spacing.md,
         padding: theme.spacing.sm,
-        backgroundColor: theme.colors.info.light,
-        borderRadius: theme.borderRadius.default,
+        backgroundColor: theme.colors.infoLight,
+        borderRadius: theme.borderRadius.md,
         fontSize: theme.typography.small.fontSize,
         color: theme.colors.info.dark,
         lineHeight: '1.6'
