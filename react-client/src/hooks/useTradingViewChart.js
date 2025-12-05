@@ -69,60 +69,69 @@ export function useTradingViewChart(options = {}) {
   const markersRef = useRef([]);
   const [isReady, setIsReady] = useState(false);
 
-  // Initialize chart
+  // Initialize chart with retry logic for async library loading
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Check if createChart is available
-    if (typeof createChart !== 'function') {
-      console.error('TradingView lightweight-charts not loaded');
-      return;
-    }
+    let retryCount = 0;
+    const maxRetries = 10;
+    let timeoutId = null;
 
-    const chartOptions = {
-      ...defaultChartOptions,
-      width: chartContainerRef.current.clientWidth,
-      height: options.height || 400,
-      ...options.chartOptions
-    };
-
-    try {
-      // Create chart
-      chartRef.current = createChart(chartContainerRef.current, chartOptions);
-
-      // Verify chart was created successfully
-      if (!chartRef.current || typeof chartRef.current.addCandlestickSeries !== 'function') {
-        console.error('Chart creation failed or missing methods');
+    const initChart = () => {
+      // Check if lightweight-charts is loaded
+      const lwc = typeof window !== 'undefined' && window.LightweightCharts;
+      if (!lwc || typeof lwc.createChart !== 'function') {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          timeoutId = setTimeout(initChart, 200); // Retry after 200ms
+        } else {
+          console.error('TradingView lightweight-charts failed to load after retries');
+        }
         return;
       }
 
-      // Create candlestick series
-      candlestickSeriesRef.current = chartRef.current.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderUpColor: '#26a69a',
-        borderDownColor: '#ef5350',
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350'
-      });
+      const chartOptions = {
+        ...defaultChartOptions,
+        width: chartContainerRef.current.clientWidth,
+        height: options.height || 400,
+        ...options.chartOptions
+      };
 
-      // Create volume series
-      volumeSeriesRef.current = chartRef.current.addHistogramSeries({
-        color: '#26a69a',
-        priceFormat: {
-          type: 'volume'
-        },
-        priceScaleId: '',
-        scaleMargins: {
-          top: 0.8,
-          bottom: 0
-        }
-      });
+      try {
+        // Create chart directly using window.LightweightCharts
+        chartRef.current = lwc.createChart(chartContainerRef.current, chartOptions);
 
-      setIsReady(true);
-    } catch (err) {
-      console.error('Error initializing chart:', err);
-    }
+        // Create candlestick series
+        candlestickSeriesRef.current = chartRef.current.addCandlestickSeries({
+          upColor: '#26a69a',
+          downColor: '#ef5350',
+          borderUpColor: '#26a69a',
+          borderDownColor: '#ef5350',
+          wickUpColor: '#26a69a',
+          wickDownColor: '#ef5350'
+        });
+
+        // Create volume series
+        volumeSeriesRef.current = chartRef.current.addHistogramSeries({
+          color: '#26a69a',
+          priceFormat: {
+            type: 'volume'
+          },
+          priceScaleId: '',
+          scaleMargins: {
+            top: 0.8,
+            bottom: 0
+          }
+        });
+
+        setIsReady(true);
+      } catch (err) {
+        console.error('Error initializing chart:', err);
+      }
+    };
+
+    // Start initialization
+    initChart();
 
     // Handle resize
     const handleResize = () => {
@@ -136,6 +145,7 @@ export function useTradingViewChart(options = {}) {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
       if (chartRef.current) {
         chartRef.current.remove();
