@@ -11,7 +11,7 @@
  * UPDATED: React Router v6 + React 18 functional component
  */
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './HomePage';
+import RankingsPage from './RankingsPage';
 import NavBar from './NavBar';
 import StockDetailPage from './StockDetailPage';
 import InvestTab from './InvestTab';
@@ -31,7 +31,7 @@ function App() {
           <NavBar />
           {/* Main routes - using React Router v6 syntax */}
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<RankingsPage />} />
             <Route path="/invest" element={<InvestTab />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/paper-trading" element={<PaperTradingPage />} />
