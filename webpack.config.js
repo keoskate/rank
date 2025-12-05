@@ -50,6 +50,21 @@ module.exports = {
           loader: 'babel-loader',
         },
       },
+      {
+        // Transpile ES6+ syntax in these specific node_modules
+        test: /\.m?js$/,
+        include: [
+          path.resolve(__dirname, 'node_modules/chart.js'),
+          path.resolve(__dirname, 'node_modules/lightweight-charts'),
+        ],
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+            plugins: ['@babel/plugin-transform-class-properties'],
+          },
+        },
+      },
     ],
   },
   plugins: [

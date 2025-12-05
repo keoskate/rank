@@ -14,10 +14,12 @@ const NavBar = () => {
 
   const navItems = [
     { path: '/', label: 'Rankings', icon: '📊' },
-    { path: '/backtest', label: 'Backtest', icon: '🧪' },
+    { path: '/live-trading', label: 'Live AI', icon: '🤖' },
     { path: '/day-trading', label: 'Day Trading', icon: '📈' },
-    { path: '/paper-trading', label: 'Paper Trading', icon: '📝' },
-    { path: '/ai-research', label: 'AI Research', icon: '🤖' },
+    { path: '/backtest', label: 'Backtest', icon: '🧪' },
+    { path: '/import-trades', label: 'Import', icon: '📥' },
+    { path: '/analytics', label: 'Analytics', icon: '📉' },
+    { path: '/paper-trading', label: 'Paper', icon: '📝' },
     { path: '/invest', label: 'Brokerage', icon: '🏦' },
   ];
 

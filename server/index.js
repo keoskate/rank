@@ -26,8 +26,19 @@ const historicalDataManager = require('./historicalDataManager');
 const alpacaClient = require('./alpacaClient');
 const polygonClient = require('./polygonClient');
 const tradingModeManager = require('./tradingModeManager');
+const aiTradingEngine = require('./aiTradingEngine');
+const technicalIndicatorsService = require('./technicalIndicatorsService');
+const patternRecognitionService = require('./patternRecognitionService');
+const schwabImportService = require('./schwabImportService');
+const enhancedBacktestEngine = require('./enhancedBacktestEngine');
+const websocketServer = require('./websocketServer');
+const http = require('http');
+const multer = require('multer');
 
 const app = express();
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware for JSON parsing
 app.use(bodyParser.json());
@@ -2575,6 +2586,254 @@ Format your response in plain text with clear paragraphs. End with 2-3 specific 
   }
 });
 
+// ================================
+// AI TRADING ENGINE ENDPOINTS
+// ================================
+
+// Start AI trading session
+app.post('/api/ai/session/start', async (req, res) => {
+  try {
+    const { userId = 'default_user', config } = req.body;
+    const session = aiTradingEngine.startSession(userId, config);
+    res.json({ success: true, ...session });
+  } catch (error) {
+    console.error('Error starting AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stop AI trading session
+app.post('/api/ai/session/stop', async (req, res) => {
+  try {
+    const { userId = 'default_user' } = req.body;
+    const summary = aiTradingEngine.stopSession(userId);
+    res.json({ success: true, ...summary });
+  } catch (error) {
+    console.error('Error stopping AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get AI session status
+app.get('/api/ai/session/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const status = aiTradingEngine.getSessionStatus(userId);
+    if (!status) {
+      return res.json({ status: 'stopped' });
+    }
+    res.json(status);
+  } catch (error) {
+    console.error('Error getting AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update AI session config
+app.put('/api/ai/session/:userId/config', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const newConfig = req.body;
+    aiTradingEngine.updateConfig(userId, newConfig);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating AI config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get AI decision history
+app.get('/api/ai/decisions/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const limit = parseInt(req.query.limit) || 100;
+    const decisions = aiTradingEngine.getDecisionHistory(sessionId, limit);
+    res.json({ decisions });
+  } catch (error) {
+    console.error('Error getting AI decisions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Analyze patterns for a symbol
+app.post('/api/ai/patterns/analyze', async (req, res) => {
+  try {
+    const { symbol } = req.body;
+
+    // Get candles
+    const toDate = new Date();
+    const fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
+      from: fromDate.toISOString().split('T')[0],
+      to: toDate.toISOString().split('T')[0]
+    });
+
+    if (!candles || candles.length < 50) {
+      return res.status(400).json({ error: 'Insufficient data' });
+    }
+
+    const indicators = technicalIndicatorsService.getAllIndicators(candles);
+    const patterns = await patternRecognitionService.predictPattern(candles, indicators);
+
+    res.json({
+      symbol,
+      patterns,
+      indicators: indicators.signals,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error analyzing patterns:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// TECHNICAL INDICATORS ENDPOINTS
+// ================================
+
+// Get all indicators for a symbol
+app.get('/api/indicators/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const timeframe = req.query.timeframe || '5';
+    const unit = req.query.unit || 'minute';
+
+    const toDate = new Date();
+    const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const candles = await polygonClient.getAggregates(symbol, parseInt(timeframe), unit, {
+      from: fromDate.toISOString().split('T')[0],
+      to: toDate.toISOString().split('T')[0]
+    });
+
+    if (!candles || candles.length < 50) {
+      return res.status(400).json({ error: 'Insufficient data' });
+    }
+
+    const indicators = technicalIndicatorsService.getAllIndicators(candles);
+
+    res.json({
+      symbol,
+      candles: candles.slice(-200),
+      indicators,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting indicators:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// SCHWAB IMPORT ENDPOINTS
+// ================================
+
+// Upload and parse Schwab CSV
+app.post('/api/import/schwab', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const result = schwabImportService.parseCSV(req.file.buffer, 'default_user');
+    res.json(result);
+  } catch (error) {
+    console.error('Error importing Schwab CSV:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get imported trades for user
+app.get('/api/import/schwab/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const trades = schwabImportService.getTrades(userId);
+    const summary = trades.length > 0 ? schwabImportService.generateSummary(trades) : null;
+    res.json({ trades, summary });
+  } catch (error) {
+    console.error('Error getting imported trades:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Train AI model from imported trades
+app.post('/api/import/schwab/train', async (req, res) => {
+  try {
+    const { userId = 'default_user' } = req.body;
+    const trades = schwabImportService.getTrades(userId);
+
+    if (trades.length < 50) {
+      return res.status(400).json({
+        error: 'Need at least 50 trades for training',
+        currentCount: trades.length
+      });
+    }
+
+    // Create training dataset and train model
+    const trainingData = schwabImportService.createTrainingDataset(userId);
+    const result = await patternRecognitionService.trainModel(trainingData, {
+      epochs: 30,
+      batchSize: 16
+    });
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error training from trades:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// ENHANCED BACKTEST ENDPOINTS
+// ================================
+
+// Run enhanced backtest with what-if scenarios
+app.post('/api/backtest/enhanced', async (req, res) => {
+  try {
+    const result = await enhancedBacktestEngine.runEnhancedBacktest(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error running enhanced backtest:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Run what-if scenario
+app.post('/api/backtest/what-if', async (req, res) => {
+  try {
+    const result = await enhancedBacktestEngine.runEnhancedBacktest(req.body);
+    res.json({
+      whatIfResults: result.whatIfResults,
+      recommendations: result.recommendations
+    });
+  } catch (error) {
+    console.error('Error running what-if analysis:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Optimize strategy parameters
+app.post('/api/backtest/optimize', async (req, res) => {
+  try {
+    const result = await enhancedBacktestEngine.optimizeStrategy(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error optimizing strategy:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Run Monte Carlo simulation
+app.post('/api/backtest/monte-carlo', async (req, res) => {
+  try {
+    const { trades, simulations = 1000 } = req.body;
+    const result = enhancedBacktestEngine.runMonteCarloSimulation(trades, simulations);
+    res.json(result);
+  } catch (error) {
+    console.error('Error running Monte Carlo:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static files from React build
 app.use(express.static(`${__dirname}/../react-client/dist`));
 
@@ -2583,41 +2842,34 @@ app.get('*', (req, res) => {
   res.sendFile(path.resolve(`${__dirname}/../react-client/dist/index.html`));
 });
 
+// Create HTTP server and initialize WebSocket
+const server = http.createServer(app);
+websocketServer.initializeWebSocket(server);
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}!`);
-  console.log(`\n💰 Alpaca Paper Trading endpoints available:`);
+  console.log(`\n🤖 AI Trading Engine endpoints:`);
+  console.log(`   POST /api/ai/session/start`);
+  console.log(`   POST /api/ai/session/stop`);
+  console.log(`   GET  /api/ai/session/:userId`);
+  console.log(`   PUT  /api/ai/session/:userId/config`);
+  console.log(`   GET  /api/ai/decisions/:sessionId`);
+  console.log(`   POST /api/ai/patterns/analyze`);
+  console.log(`\n📈 Technical Indicators:`);
+  console.log(`   GET  /api/indicators/:symbol`);
+  console.log(`\n📥 Schwab Import:`);
+  console.log(`   POST /api/import/schwab`);
+  console.log(`   GET  /api/import/schwab/:userId`);
+  console.log(`   POST /api/import/schwab/train`);
+  console.log(`\n🧪 Enhanced Backtesting:`);
+  console.log(`   POST /api/backtest/enhanced`);
+  console.log(`   POST /api/backtest/what-if`);
+  console.log(`   POST /api/backtest/optimize`);
+  console.log(`   POST /api/backtest/monte-carlo`);
+  console.log(`\n💰 Alpaca Paper Trading:`);
   console.log(`   GET  /api/alpaca/account`);
   console.log(`   GET  /api/alpaca/positions`);
-  console.log(`   GET  /api/alpaca/positions/:symbol`);
   console.log(`   POST /api/alpaca/orders`);
-  console.log(`   GET  /api/alpaca/orders`);
-  console.log(`   DELETE /api/alpaca/orders/:orderId`);
-  console.log(`   DELETE /api/alpaca/positions/:symbol`);
-  console.log(`   GET  /api/alpaca/quotes/:symbol`);
-  console.log(`   GET  /api/alpaca/trades/:symbol`);
-  console.log(`\n🔍 Data Validation endpoints (Alpaca vs Polygon):`);
-  console.log(`   GET  /api/validate/price/:symbol`);
-  console.log(`   POST /api/validate/historical`);
-  console.log(`   POST /api/validate/prices/batch`);
-  console.log(`\n📊 SnapTrade API proxy endpoints available:`);
-  console.log(`   POST /api/snaptrade/users`);
-  console.log(`   POST /api/snaptrade/connection-portal`);
-  console.log(`   GET  /api/snaptrade/accounts/:userId`);
-  console.log(`   GET  /api/snaptrade/accounts/:accountId/positions`);
-  console.log(`   GET  /api/snaptrade/accounts/:accountId/trades`);
-  console.log(`   GET  /api/snaptrade/accounts/:accountId/trade-summary`);
-  console.log(`\n📸 Snapshot & Backtesting endpoints available:`);
-  console.log(`   GET  /api/snapshots/dates`);
-  console.log(`   GET  /api/snapshots/:date`);
-  console.log(`   GET  /api/snapshots/range/:startDate/:endDate`);
-  console.log(`   POST /api/snapshots/generate-history`);
-  console.log(`   POST /api/snapshots/backfill-real-history  🆕 Real Data`);
-  console.log(`   POST /api/snapshots/save-today`);
-  console.log(`   GET  /api/snapshots/availability`);
-  console.log(`   GET  /api/rankings/current  🆕 Live Rankings`);
-  console.log(`   GET  /api/quarterly/:symbol`);
-  console.log(`   GET  /api/quarterly/:symbol/qoq/:metric`);
-  console.log(`   GET  /api/quarterly/:symbol/yoy/:metric`);
-  console.log(`   POST /api/backtest/run`);
+  console.log(`\n🔌 WebSocket: ws://localhost:${PORT}`);
 });

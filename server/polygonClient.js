@@ -377,8 +377,88 @@ async function batchGetHistoricalData(symbols, startDate, endDate) {
   return results;
 }
 
+/**
+ * Wrapper for getAggregates with different API signature
+ * Used by AI trading engine and enhanced backtest engine
+ *
+ * @param {string} symbol - Stock ticker symbol
+ * @param {number} multiplier - Size of timespan multiplier (e.g., 5 for 5 minutes)
+ * @param {string} timespan - minute, hour, day, week, month
+ * @param {Object} options - Optional parameters { from, to }
+ * @returns {Array} - Array of OHLCV bars
+ */
+async function getAggregates(symbol, multiplier = 1, timespan = 'day', options = {}) {
+  await rateLimit();
+
+  // Helper to convert date to YYYY-MM-DD string
+  const toDateString = (d) => {
+    if (!d) return null;
+    if (typeof d === 'string') return d.split('T')[0]; // Handle ISO strings or YYYY-MM-DD
+    if (d instanceof Date) return d.toISOString().split('T')[0];
+    return String(d);
+  };
+
+  // Default to last 30 days if no dates specified
+  const endDate = toDateString(options.to) || new Date().toISOString().split('T')[0];
+  const startDate = toDateString(options.from) || (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  })();
+
+  try {
+    const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${startDate}/${endDate}`;
+
+    const response = await axios.get(url, {
+      params: {
+        adjusted: 'true',
+        sort: 'asc',
+        limit: options.limit || 50000,
+        apiKey: POLYGON_API_KEY
+      },
+      timeout: 30000
+    });
+
+    if (response.data.status === 'ERROR') {
+      throw new Error(response.data.error || 'Polygon API error');
+    }
+
+    if (!response.data.results || response.data.results.length === 0) {
+      console.warn(`⚠️ No aggregate data found for ${symbol}`);
+      return [];
+    }
+
+    // Transform Polygon format to our format
+    const bars = response.data.results.map(bar => ({
+      date: new Date(bar.t).toISOString().split('T')[0],
+      time: Math.floor(bar.t / 1000), // Unix timestamp for lightweight-charts
+      timestamp: bar.t,
+      open: bar.o,
+      high: bar.h,
+      low: bar.l,
+      close: bar.c,
+      volume: bar.v,
+      vwap: bar.vw,
+      transactions: bar.n
+    }));
+
+    console.log(`✅ Fetched ${bars.length} ${multiplier}${timespan} bars for ${symbol}`);
+    return bars;
+
+  } catch (error) {
+    if (error.response?.status === 429) {
+      console.error(`❌ Rate limit exceeded for ${symbol}`);
+      throw new Error('Rate limit exceeded - please wait before retrying');
+    }
+
+    console.error(`❌ Error fetching aggregates for ${symbol}:`, error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   getHistoricalAggregates,
+  getAggregates,
   getLatestQuote,
   getPreviousClose,
   getStockDetails,
