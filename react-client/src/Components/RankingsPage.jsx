@@ -1,22 +1,23 @@
 /**
- * HOME PAGE - Main Application View
+ * RANKINGS PAGE - Main Application View
  *
  * This component serves as the main dashboard and handles:
- * - Board type selection (CEF vs Stock rankings)
- * - Renders either Scoreboard (CEF data) or ModernStonkBoard (Stock data)
+ * - Board type selection (Stock vs Crypto rankings)
+ * - Renders either ModernStonkBoard (Stock data) or Crypto view
  * - Contains the primary user interface logic
  *
  * CRITICAL PATH: This is the main view users see. Changes here directly
  * impact the user experience and board switching functionality.
  *
- * UPDATED: Converted to React 18 functional component with hooks
- * MODERN: Uses ModernStonkBoard with TanStack Table
+ * UPDATED: Uses design system components for consistent styling
  */
 import { useState } from 'react';
-// import Scoreboard from './Scoreboard'; // TODO: Modernize Scoreboard with TanStack Table
 import ModernStonkBoard from './ModernStonkBoard';
+import Button from './common/Button';
+import Card from './common/Card';
+import theme from '../theme';
 
-function HomePage() {
+function RankingsPage() {
   const [currentBoard, setCurrentBoard] = useState('stock');
 
   const handleBoardToggle = () => {
@@ -24,98 +25,96 @@ function HomePage() {
   };
 
   return (
-    <div style={{ 
+    <div style={{
       minHeight: '100vh',
-      backgroundColor: '#f8f9fa'
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.lg,
     }}>
-      <div style={{ 
-        padding: '24px'
+      {/* Board Selection */}
+      <div style={{
+        marginBottom: theme.spacing.lg,
+        display: 'flex',
+        alignItems: 'center',
+        gap: theme.spacing.md,
+        flexWrap: 'wrap',
       }}>
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <button
-              onClick={handleBoardToggle}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: currentBoard === 'stock' ? '#007bff' : '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                marginRight: '12px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-              }}
-            >
-              {currentBoard === 'stock' ? 'Switch to Crypto' : 'Switch to Stocks'}
-            </button>
-            <span style={{ 
-              color: '#6c757d', 
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              Currently viewing:{' '}
-              <span style={{ color: '#2c3e50', fontWeight: '600' }}>
-                {currentBoard === 'stock' ? 'Stock Rankings' : 'Crypto Rankings'}
-              </span>
-            </span>
-          </div>
-        </div>
+        <Button
+          variant="primary"
+          onClick={handleBoardToggle}
+        >
+          {currentBoard === 'stock' ? 'Switch to Crypto' : 'Switch to Stocks'}
+        </Button>
+        <span style={{
+          color: theme.colors.textLight,
+          fontSize: theme.typography.fontSize.base,
+          fontWeight: theme.typography.fontWeight.medium,
+        }}>
+          Currently viewing:{' '}
+          <span style={{
+            color: theme.colors.text,
+            fontWeight: theme.typography.fontWeight.bold,
+          }}>
+            {currentBoard === 'stock' ? 'Stock Rankings' : 'Crypto Rankings'}
+          </span>
+        </span>
+      </div>
 
+      {/* Main Content */}
       {currentBoard === 'stock' ? (
         <ModernStonkBoard />
       ) : (
-        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-          <h3>Crypto Scoreboard</h3>
-          <p>
-            Coming soon! The Crypto scoreboard will be modernized with the new
-            table system.
+        <Card padding="large" style={{ textAlign: 'center' }}>
+          <h3 style={{
+            margin: `0 0 ${theme.spacing.md} 0`,
+            color: theme.colors.text,
+            fontSize: theme.typography.fontSize.xl,
+            fontWeight: theme.typography.fontWeight.bold,
+          }}>
+            Crypto Scoreboard
+          </h3>
+          <p style={{
+            margin: `0 0 ${theme.spacing.sm} 0`,
+            color: theme.colors.textLight,
+            fontSize: theme.typography.fontSize.base,
+          }}>
+            Coming soon! The Crypto scoreboard will be modernized with the new table system.
           </p>
-          <p>For now, please use the Stock Rankings.</p>
-        </div>
+          <p style={{
+            margin: 0,
+            color: theme.colors.textLight,
+            fontSize: theme.typography.fontSize.base,
+          }}>
+            For now, please use the Stock Rankings.
+          </p>
+        </Card>
       )}
 
-        <div
-          style={{
-            marginTop: '40px',
-            padding: '24px',
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{
-            fontSize: '14px',
-            color: '#6c757d',
-            fontWeight: '500',
-            marginBottom: '8px'
-          }}>
-            KEO STONKS V2 • React 18 • Modern Security • TanStack Table
-          </div>
-          <div style={{
-            fontSize: '12px',
-            color: '#95a5a6',
-            lineHeight: '1.5'
-          }}>
-            Investment rankings are calculated using dual algorithms: relative
-            position ranking and statistical deviation analysis
-          </div>
+      {/* Footer Info Card */}
+      <Card
+        style={{
+          marginTop: theme.spacing.xl,
+          textAlign: 'center',
+        }}
+      >
+        <div style={{
+          fontSize: theme.typography.fontSize.base,
+          color: theme.colors.textLight,
+          fontWeight: theme.typography.fontWeight.medium,
+          marginBottom: theme.spacing.xs,
+        }}>
+          KEO STONKS V2 • React 18 • Modern Security • TanStack Table
         </div>
-      </div>
+        <div style={{
+          fontSize: theme.typography.fontSize.sm,
+          color: theme.colors.textMuted,
+          lineHeight: '1.5',
+        }}>
+          Investment rankings are calculated using dual algorithms: relative
+          position ranking and statistical deviation analysis
+        </div>
+      </Card>
     </div>
   );
 }
 
-export default HomePage;
+export default RankingsPage;
