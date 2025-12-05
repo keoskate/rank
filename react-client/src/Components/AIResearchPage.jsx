@@ -15,6 +15,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import Button from './common/Button';
+import Card from './common/Card';
+import theme from '../theme';
 
 const AIResearchPage = () => {
   // Chat state
@@ -186,68 +189,48 @@ const AIResearchPage = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', height: 'calc(100vh - 100px)' }}>
+    <div style={{ padding: theme.spacing.md, maxWidth: '1400px', margin: '0 auto', height: 'calc(100vh - 100px)' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
         <div>
-          <h1 style={{ margin: '0 0 5px 0' }}>🤖 AI Research Assistant</h1>
-          <p style={{ margin: 0, color: '#6c757d' }}>
+          <h1 style={{ margin: `0 0 ${theme.spacing.xs} 0`, fontFamily: theme.typography.fontFamily }}>🤖 AI Research Assistant</h1>
+          <p style={{ margin: 0, color: theme.colors.textLight, fontSize: theme.typography.fontSize.base }}>
             Powered by Claude API • {tradingMode ? `${tradingMode.statusEmoji} ${tradingMode.mode.toUpperCase()} Mode` : 'Loading...'}
           </p>
         </div>
-        <button
-          onClick={clearChat}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }}
-        >
+        <Button variant="ghost" size="medium" onClick={clearChat}>
           🗑️ Clear Chat
-        </button>
+        </Button>
       </div>
 
       {/* Cost Warning Banner */}
-      <div style={{
-        backgroundColor: '#fff3cd',
-        border: '2px solid #ffc107',
-        borderRadius: '8px',
-        padding: '16px 20px',
-        marginBottom: '20px',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px'
-      }}>
-        <div style={{ fontSize: '24px', flexShrink: 0 }}>💰</div>
+      <Card variant="warning" padding="medium" style={{ marginBottom: theme.spacing.md, display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+        <div style={{ fontSize: theme.typography.fontSize.xxl, flexShrink: 0 }}>💰</div>
         <div>
-          <h3 style={{ margin: '0 0 8px 0', color: '#856404', fontSize: '16px', fontWeight: '600' }}>
+          <h3 style={{ margin: `0 0 ${theme.spacing.sm} 0`, color: theme.colors.warningDark, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium }}>
             API Usage Notice
           </h3>
-          <p style={{ margin: 0, color: '#856404', fontSize: '14px', lineHeight: '1.5' }}>
+          <p style={{ margin: 0, color: theme.colors.warningDark, fontSize: theme.typography.fontSize.base, lineHeight: '1.5' }}>
             This feature uses the Claude API and costs approximately <strong>$0.01-0.05 per message</strong> depending on complexity.
             Each question you ask incurs API costs. Use thoughtfully for valuable insights about your portfolio and trading strategy.
           </p>
         </div>
-      </div>
+      </Card>
 
       {/* Main Layout: Chat + Sidebar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '20px', height: 'calc(100% - 80px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: theme.spacing.md, height: 'calc(100% - 80px)' }}>
 
         {/* Chat Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: theme.colors.gray100, borderRadius: theme.borderRadius.lg, overflow: 'hidden' }}>
 
           {/* Messages */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '20px',
+            padding: theme.spacing.md,
             display: 'flex',
             flexDirection: 'column',
-            gap: '15px'
+            gap: theme.spacing.sm
           }}>
             {messages.map((msg, idx) => (
               <div
@@ -258,20 +241,20 @@ const AIResearchPage = () => {
                 }}
               >
                 <div style={{
-                  backgroundColor: msg.role === 'user' ? '#007bff' : msg.isError ? '#dc3545' : '#ffffff',
-                  color: msg.role === 'user' ? '#ffffff' : '#212529',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  backgroundColor: msg.role === 'user' ? theme.colors.info : msg.isError ? theme.colors.error : theme.colors.surface,
+                  color: msg.role === 'user' ? theme.colors.surface : theme.colors.text,
+                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                  borderRadius: theme.borderRadius.xl,
+                  boxShadow: theme.shadows.md,
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word'
                 }}>
-                  <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                  <div style={{ fontSize: theme.typography.fontSize.base, lineHeight: '1.6' }}>
                     {msg.content}
                   </div>
                   <div style={{
-                    fontSize: '11px',
-                    marginTop: '6px',
+                    fontSize: theme.typography.fontSize.xs,
+                    marginTop: theme.spacing.xs,
                     opacity: 0.7,
                     textAlign: 'right'
                   }}>
@@ -281,23 +264,22 @@ const AIResearchPage = () => {
 
                 {/* Suggestions */}
                 {msg.suggestions && msg.suggestions.length > 0 && (
-                  <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ marginTop: theme.spacing.sm, display: 'flex', flexWrap: 'wrap', gap: theme.spacing.xs }}>
                     {msg.suggestions.map((suggestion, i) => (
-                      <button
+                      <Button
                         key={i}
+                        variant="ghost"
+                        size="small"
                         onClick={() => handleExampleClick(suggestion)}
                         style={{
-                          padding: '4px 10px',
-                          fontSize: '12px',
-                          backgroundColor: '#e9ecef',
-                          border: '1px solid #dee2e6',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          color: '#495057'
+                          borderRadius: theme.borderRadius.xl,
+                          backgroundColor: theme.colors.gray200,
+                          border: `1px solid ${theme.colors.gray300}`,
+                          color: theme.colors.gray700
                         }}
                       >
                         {suggestion}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 )}
@@ -307,16 +289,16 @@ const AIResearchPage = () => {
             {isLoading && (
               <div style={{ alignSelf: 'flex-start', maxWidth: '80%' }}>
                 <div style={{
-                  backgroundColor: '#ffffff',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  backgroundColor: theme.colors.surface,
+                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                  borderRadius: theme.borderRadius.xl,
+                  boxShadow: theme.shadows.md,
                   display: 'flex',
-                  gap: '8px',
+                  gap: theme.spacing.sm,
                   alignItems: 'center'
                 }}>
                   <div className="spinner"></div>
-                  <span style={{ color: '#6c757d' }}>AI is thinking...</span>
+                  <span style={{ color: theme.colors.textLight }}>AI is thinking...</span>
                 </div>
               </div>
             )}
@@ -326,11 +308,11 @@ const AIResearchPage = () => {
 
           {/* Input Area */}
           <div style={{
-            padding: '16px',
-            backgroundColor: '#ffffff',
-            borderTop: '1px solid #dee2e6'
+            padding: theme.spacing.md,
+            backgroundColor: theme.colors.surface,
+            borderTop: `1px solid ${theme.colors.gray300}`
           }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: theme.spacing.sm }}>
               <textarea
                 ref={inputRef}
                 value={inputMessage}
@@ -340,86 +322,59 @@ const AIResearchPage = () => {
                 disabled={isLoading}
                 style={{
                   flex: 1,
-                  padding: '12px',
-                  fontSize: '14px',
-                  border: '1px solid #ced4da',
-                  borderRadius: '6px',
+                  padding: theme.spacing.sm,
+                  fontSize: theme.typography.fontSize.base,
+                  border: `1px solid ${theme.colors.gray400}`,
+                  borderRadius: theme.borderRadius.md,
                   resize: 'none',
                   minHeight: '60px',
-                  fontFamily: 'inherit'
+                  fontFamily: theme.typography.fontFamily
                 }}
               />
-              <button
+              <Button
+                variant="primary"
+                size="medium"
                 onClick={sendMessage}
                 disabled={isLoading || !inputMessage.trim()}
-                style={{
-                  padding: '12px 24px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  backgroundColor: isLoading || !inputMessage.trim() ? '#6c757d' : '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: isLoading || !inputMessage.trim() ? 'not-allowed' : 'pointer',
-                  opacity: isLoading || !inputMessage.trim() ? 0.6 : 1
-                }}
               >
                 {isLoading ? '⏳' : '📤'} Send
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
 
           {/* Example Prompts */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            padding: '20px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>💡 Try asking:</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <Card padding="medium">
+            <h3 style={{ margin: `0 0 ${theme.spacing.sm} 0`, fontSize: theme.typography.fontSize.md, fontFamily: theme.typography.fontFamily }}>💡 Try asking:</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
               {examplePrompts.map((prompt, idx) => (
-                <button
+                <Button
                   key={idx}
+                  variant="ghost"
+                  size="small"
                   onClick={() => handleExampleClick(prompt)}
                   style={{
-                    padding: '10px 12px',
-                    fontSize: '13px',
                     textAlign: 'left',
-                    backgroundColor: '#f8f9fa',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#e9ecef';
-                    e.target.style.borderColor = '#007bff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#f8f9fa';
-                    e.target.style.borderColor = '#dee2e6';
+                    backgroundColor: theme.colors.gray100,
+                    border: `1px solid ${theme.colors.gray300}`,
+                    whiteSpace: 'normal',
+                    height: 'auto',
+                    lineHeight: '1.4'
                   }}
                 >
                   {prompt}
-                </button>
+                </Button>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Context Info */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            padding: '20px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>📊 Current Context</h3>
-            <div style={{ fontSize: '13px', color: '#495057', lineHeight: '1.8' }}>
+          <Card padding="medium">
+            <h3 style={{ margin: `0 0 ${theme.spacing.sm} 0`, fontSize: theme.typography.fontSize.md, fontFamily: theme.typography.fontFamily }}>📊 Current Context</h3>
+            <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray700, lineHeight: '1.8' }}>
               <div><strong>Mode:</strong> {tradingMode?.mode || 'Loading...'}</div>
               <div><strong>Account:</strong> {tradingMode?.accountNumber || 'N/A'}</div>
               {account && (
@@ -427,61 +382,36 @@ const AIResearchPage = () => {
               )}
               <div><strong>Rankings:</strong> {rankings.length} stocks tracked</div>
             </div>
-          </div>
+          </Card>
 
           {/* Quick Actions */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            padding: '20px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>⚡ Quick Actions</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
+          <Card padding="medium">
+            <h3 style={{ margin: `0 0 ${theme.spacing.sm} 0`, fontSize: theme.typography.fontSize.md, fontFamily: theme.typography.fontFamily }}>⚡ Quick Actions</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+              <Button
+                variant="primary"
+                size="small"
                 onClick={() => handleExampleClick('What are my current positions?')}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
               >
                 📊 View Positions
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="success"
+                size="small"
                 onClick={() => handleExampleClick('Show me today\'s top performers')}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
               >
                 📈 Top Performers
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="small"
                 onClick={() => handleExampleClick('Give me a market summary')}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  backgroundColor: '#17a2b8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
+                style={{ backgroundColor: theme.colors.navBacktest }}
               >
                 🌐 Market Summary
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
@@ -490,8 +420,8 @@ const AIResearchPage = () => {
         .spinner {
           width: 16px;
           height: 16px;
-          border: 2px solid #f3f3f3;
-          border-top: 2px solid #007bff;
+          border: 2px solid ${theme.colors.gray200};
+          border-top: 2px solid ${theme.colors.info};
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
