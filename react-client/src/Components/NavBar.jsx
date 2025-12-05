@@ -1,80 +1,164 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Button from './common/Button';
 import theme from '../theme';
 
 /**
- * NAVIGATION BAR COMPONENT
+ * NavBar - Clean, minimal navigation
  *
- * Clean, simplified navigation using design system.
- * Groups related features for better UX.
+ * Primary: Rankings, Portfolio
+ * Tools menu: Advanced features for power users
  */
 const NavBar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [showTools, setShowTools] = useState(false);
 
-  const navItems = [
-    { path: '/', label: 'Rankings', icon: '📊' },
-    { path: '/live-trading', label: 'Live AI', icon: '🤖' },
-    { path: '/day-trading', label: 'Day Trading', icon: '📈' },
-    { path: '/backtest', label: 'Backtest', icon: '🧪' },
-    { path: '/import-trades', label: 'Import', icon: '📥' },
-    { path: '/analytics', label: 'Analytics', icon: '📉' },
-    { path: '/paper-trading', label: 'Paper', icon: '📝' },
-    { path: '/invest', label: 'Brokerage', icon: '🏦' },
+  const primaryNav = [
+    { path: '/', label: 'Rankings' },
+    { path: '/portfolio', label: 'Portfolio' }
   ];
+
+  const toolsNav = [
+    { path: '/backtest', label: 'Backtesting' },
+    { path: '/day-trading', label: 'Day Trading Lab' },
+    { path: '/live-trading', label: 'AI Trading' },
+    { path: '/import-trades', label: 'Import Trades' },
+    { path: '/analytics', label: 'Analytics' }
+  ];
+
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <header style={{
       backgroundColor: theme.colors.primary,
-      padding: theme.spacing.md + ' ' + theme.spacing.lg,
-      boxShadow: theme.shadows.md,
-      borderBottom: `1px solid ${theme.colors.primaryLight}`,
+      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+      boxShadow: theme.shadows.md
     }}>
       <div style={{
         maxWidth: theme.layout.maxWidthWide,
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: theme.spacing.lg,
+        justifyContent: 'space-between'
       }}>
-        {/* Logo/Brand */}
-        <Button
-          variant="ghost"
+        {/* Logo */}
+        <button
           onClick={() => navigate('/')}
           style={{
-            color: theme.colors.surface,
-            fontSize: theme.typography.fontSize.xxl,
+            background: 'none',
+            border: 'none',
+            color: theme.colors.white,
+            fontSize: theme.typography.fontSize.xl,
             fontWeight: theme.typography.fontWeight.bold,
-            letterSpacing: '1px',
-            padding: theme.spacing.sm + ' ' + theme.spacing.md,
+            cursor: 'pointer',
+            padding: theme.spacing.sm
           }}
         >
-          KEO STONKS V2
-        </Button>
+          STONKS
+        </button>
 
-        {/* Navigation Links */}
+        {/* Navigation */}
         <nav style={{
           display: 'flex',
           alignItems: 'center',
-          gap: theme.spacing.sm,
-          flexWrap: 'wrap',
+          gap: theme.spacing.sm
         }}>
-          {navItems.map((item) => (
-            <Button
+          {/* Primary Nav */}
+          {primaryNav.map((item) => (
+            <button
               key={item.path}
-              variant="outline"
-              size="small"
               onClick={() => navigate(item.path)}
               style={{
-                borderColor: theme.colors.surface,
-                color: theme.colors.surface,
-                backgroundColor: 'transparent',
+                background: isActive(item.path) ? 'rgba(255,255,255,0.2)' : 'none',
+                border: 'none',
+                color: theme.colors.white,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                borderRadius: theme.borderRadius.md,
+                cursor: 'pointer',
+                fontSize: theme.typography.fontSize.md,
+                fontWeight: isActive(item.path)
+                  ? theme.typography.fontWeight.bold
+                  : theme.typography.fontWeight.normal
               }}
             >
-              {item.icon} {item.label}
-            </Button>
+              {item.label}
+            </button>
           ))}
+
+          {/* Tools Dropdown */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowTools(!showTools)}
+              style={{
+                background: showTools ? 'rgba(255,255,255,0.2)' : 'none',
+                border: 'none',
+                color: theme.colors.white,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                borderRadius: theme.borderRadius.md,
+                cursor: 'pointer',
+                fontSize: theme.typography.fontSize.md,
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.xs
+              }}
+            >
+              Tools
+              <span style={{
+                fontSize: '10px',
+                transform: showTools ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s'
+              }}>
+                ▼
+              </span>
+            </button>
+
+            {showTools && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: theme.spacing.xs,
+                  backgroundColor: theme.colors.surface,
+                  borderRadius: theme.borderRadius.md,
+                  boxShadow: theme.shadows.lg,
+                  minWidth: '180px',
+                  overflow: 'hidden',
+                  zIndex: 1000
+                }}
+                onMouseLeave={() => setShowTools(false)}
+              >
+                {toolsNav.map((item) => (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      setShowTools(false);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                      border: 'none',
+                      background: isActive(item.path)
+                        ? theme.colors.gray100
+                        : theme.colors.surface,
+                      color: theme.colors.text,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: theme.typography.fontSize.sm
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
       </div>
     </header>

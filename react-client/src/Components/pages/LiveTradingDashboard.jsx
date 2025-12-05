@@ -8,11 +8,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
-import TradingViewChart from './TradingViewChart';
-import Button from './common/Button';
-import Card from './common/Card';
-import MetricCard from './common/MetricCard';
-import theme from '../theme';
+import TradingViewChart from '../TradingViewChart';
+import Button from '../common/Button';
+import Card from '../common/Card';
+import MetricCard from '../common/MetricCard';
+import theme from '../../theme';
 
 // Socket connection
 let socket = null;

@@ -32,7 +32,7 @@ import WeightSlider from './WeightSlider';
 import TabNavigation from './TabNavigation';
 import RankingDashboard from './RankingDashboard';
 import ConfigPanel from './ConfigPanel';
-import InvestTab from './InvestTab';
+import InvestTab from './pages/InvestTab';
 import * as Utils from './StockUtils';
 import {
   cacheOrFetch,

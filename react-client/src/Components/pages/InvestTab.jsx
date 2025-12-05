@@ -9,10 +9,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Button from './common/Button';
-import Card from './common/Card';
-import MetricCard from './common/MetricCard';
-import theme from '../theme';
+import Button from '../common/Button';
+import Card from '../common/Card';
+import MetricCard from '../common/MetricCard';
+import theme from '../../theme';
 
 const InvestTab = () => {
   const [user, setUser] = useState(null);

@@ -11,11 +11,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import MetricCorrelationChart from './MetricCorrelationChart';
-import Button from './common/Button';
-import Card from './common/Card';
-import MetricCard from './common/MetricCard';
-import theme from '../theme';
+import MetricCorrelationChart from '../MetricCorrelationChart';
+import Button from '../common/Button';
+import Card from '../common/Card';
+import MetricCard from '../common/MetricCard';
+import theme from '../../theme';
 
 const IntradayAnalyzerPage = () => {
   const location = useLocation();

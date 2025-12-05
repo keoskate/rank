@@ -1,30 +1,31 @@
 /**
  * ROOT COMPONENT - Application Shell
  *
- * This is the main application container that handles:
- * - React Router setup for navigation
- * - Layout structure (NavBar + main content)
- * - Route definitions
- *
- * CRITICAL PATH: This component defines the overall app structure
- * and routing. Changes here affect the entire application layout.
- * UPDATED: React Router v6 + React 18 functional component
+ * MVP Flow: Rankings → Stock Detail → Trade
+ * Clean navigation with primary nav + Tools dropdown
  */
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import RankingsPage from './RankingsPage';
 import NavBar from './NavBar';
-import StockDetailPage from './StockDetailPage';
-import InvestTab from './InvestTab';
 import StockDataProvider from './StockDataProvider';
-import DataValidationTest from './DataValidationTest';
-import BacktestPage from './BacktestPage';
-import PaperTradingPage from './PaperTradingPage';
-import AIResearchPage from './AIResearchPage';
-import IntradayAnalyzerPage from './IntradayAnalyzerPage';
-import LiveTradingDashboard from './LiveTradingDashboard';
-import TradeImportPage from './TradeImportPage';
-import PerformanceAnalytics from './PerformanceAnalytics';
 import ErrorBoundary from './common/ErrorBoundary';
+
+// Primary Pages (MVP flow)
+import RankingsPage from './RankingsPage';
+import StockDetailPage from './pages/StockDetailPage';
+import PortfolioPage from './pages/PortfolioPage';
+
+// Tools (advanced features)
+import BacktestPage from './pages/BacktestPage';
+import IntradayAnalyzerPage from './pages/IntradayAnalyzerPage';
+import LiveTradingDashboard from './pages/LiveTradingDashboard';
+import TradeImportPage from './pages/TradeImportPage';
+import PerformanceAnalytics from './pages/PerformanceAnalytics';
+
+// Legacy pages (keep for now)
+import InvestTab from './pages/InvestTab';
+import PaperTradingPage from './pages/PaperTradingPage';
+import AIResearchPage from './pages/AIResearchPage';
+import DataValidationTest from './DataValidationTest';
 
 function App() {
   return (
@@ -37,16 +38,22 @@ function App() {
             {/* Main routes - using React Router v6 syntax */}
             <ErrorBoundary message="This page encountered an error. Try navigating to a different page.">
               <Routes>
+                {/* MVP Primary Routes */}
                 <Route path="/" element={<RankingsPage />} />
-                <Route path="/invest" element={<InvestTab />} />
+                <Route path="/portfolio" element={<PortfolioPage />} />
+                <Route path="/stock/:ticker" element={<StockDetailPage />} />
+
+                {/* Tools */}
                 <Route path="/backtest" element={<BacktestPage />} />
-                <Route path="/paper-trading" element={<PaperTradingPage />} />
-                <Route path="/ai-research" element={<AIResearchPage />} />
                 <Route path="/day-trading" element={<IntradayAnalyzerPage />} />
                 <Route path="/live-trading" element={<LiveTradingDashboard />} />
                 <Route path="/import-trades" element={<TradeImportPage />} />
                 <Route path="/analytics" element={<PerformanceAnalytics />} />
-                <Route path="/stock/:ticker" element={<StockDetailPage />} />
+
+                {/* Legacy routes (keep accessible) */}
+                <Route path="/invest" element={<InvestTab />} />
+                <Route path="/paper-trading" element={<PaperTradingPage />} />
+                <Route path="/ai-research" element={<AIResearchPage />} />
                 <Route path="/test-validation" element={<DataValidationTest />} />
               </Routes>
             </ErrorBoundary>

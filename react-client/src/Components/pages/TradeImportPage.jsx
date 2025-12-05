@@ -6,10 +6,10 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import Button from './common/Button';
-import Card from './common/Card';
-import MetricCard from './common/MetricCard';
-import theme from '../theme';
+import Button from '../common/Button';
+import Card from '../common/Card';
+import MetricCard from '../common/MetricCard';
+import theme from '../../theme';
 
 const TradeImportPage = () => {
   const [file, setFile] = useState(null);

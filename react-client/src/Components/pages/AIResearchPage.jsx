@@ -15,9 +15,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import Button from './common/Button';
-import Card from './common/Card';
-import theme from '../theme';
+import Button from '../common/Button';
+import Card from '../common/Card';
+import theme from '../../theme';
 
 const AIResearchPage = () => {
   // Chat state
