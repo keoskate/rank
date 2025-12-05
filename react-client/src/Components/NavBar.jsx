@@ -51,14 +51,15 @@ const NavBar = () => {
           style={{
             background: 'none',
             border: 'none',
-            color: theme.colors.white,
-            fontSize: theme.typography.fontSize.xl,
-            fontWeight: theme.typography.fontWeight.bold,
+            color: '#ffffff',
+            fontSize: '20px',
+            fontWeight: 700,
             cursor: 'pointer',
-            padding: theme.spacing.sm
+            padding: '8px 12px',
+            whiteSpace: 'nowrap'
           }}
         >
-          STONKS
+          Keo Stonks
         </button>
 
         {/* Navigation */}
