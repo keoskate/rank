@@ -13,6 +13,10 @@
  */
 
 import { useState, useEffect } from 'react';
+import Button from './common/Button';
+import Card from './common/Card';
+import MetricCard from './common/MetricCard';
+import theme from '../theme';
 
 const PaperTradingPage = () => {
   // Account state
@@ -317,140 +321,181 @@ const PaperTradingPage = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2>🔄 Loading Alpaca Paper Trading Account...</h2>
-        <p style={{ color: '#6c757d' }}>Connecting to your account...</p>
+      <div style={{
+        padding: theme.spacing.xxl,
+        textAlign: 'center'
+      }}>
+        <h2 style={{
+          fontSize: theme.typography.fontSize.xxl,
+          fontWeight: theme.typography.fontWeight.medium,
+          margin: `0 0 ${theme.spacing.md} 0`
+        }}>
+          🔄 Loading Alpaca Paper Trading Account...
+        </h2>
+        <p style={{
+          color: theme.colors.textLight,
+          fontSize: theme.typography.fontSize.base
+        }}>
+          Connecting to your account...
+        </p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1600px', margin: '0 auto' }}>
+    <div style={{
+      padding: theme.spacing.lg,
+      maxWidth: theme.layout.maxWidthWide,
+      margin: '0 auto'
+    }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.lg
+      }}>
         <div>
-          <h1 style={{ margin: '0 0 5px 0' }}>💰 Alpaca Paper Trading</h1>
-          <p style={{ margin: 0, color: '#6c757d' }}>
+          <h1 style={{
+            margin: `0 0 ${theme.spacing.xs} 0`,
+            fontSize: theme.typography.fontSize.xxl,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text
+          }}>
+            💰 Alpaca Paper Trading
+          </h1>
+          <p style={{
+            margin: 0,
+            color: theme.colors.textLight,
+            fontSize: theme.typography.fontSize.sm
+          }}>
             Real Alpaca paper account • Account #{account?.account_number}
           </p>
         </div>
-        <button
-          onClick={() => loadAllData()}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }}
-        >
+        <Button variant="primary" onClick={() => loadAllData()}>
           🔄 Refresh
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div style={{
-          backgroundColor: '#f8d7da',
-          border: '1px solid #f5c6cb',
-          borderRadius: '8px',
-          padding: '15px',
-          marginBottom: '20px',
-          color: '#721c24'
-        }}>
-          ❌ {error}
-        </div>
+        <Card
+          variant="error"
+          padding="medium"
+          style={{ marginBottom: theme.spacing.lg }}
+        >
+          <span style={{
+            color: theme.colors.errorDark,
+            fontSize: theme.typography.fontSize.base
+          }}>
+            ❌ {error}
+          </span>
+        </Card>
       )}
 
       {/* Trading Mode Toggle */}
       {tradingMode && (
-        <div style={{
-          backgroundColor: tradingMode.isLive ? '#fff3cd' : '#d4edda',
-          border: `2px solid ${tradingMode.isLive ? '#ffc107' : '#28a745'}`,
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '20px'
-        }}>
+        <Card
+          variant={tradingMode.isLive ? "warning" : "success"}
+          padding="large"
+          style={{ marginBottom: theme.spacing.lg }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ margin: '0 0 10px 0', color: tradingMode.isLive ? '#856404' : '#155724' }}>
+              <h3 style={{
+                margin: `0 0 ${theme.spacing.sm} 0`,
+                color: tradingMode.isLive ? theme.colors.warningDark : theme.colors.successDark,
+                fontSize: theme.typography.fontSize.lg,
+                fontWeight: theme.typography.fontWeight.bold
+              }}>
                 {tradingMode.statusEmoji} {tradingMode.statusText}
               </h3>
-              <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: tradingMode.isLive ? '#856404' : '#155724' }}>
+              <p style={{
+                margin: `0 0 ${theme.spacing.sm} 0`,
+                fontSize: theme.typography.fontSize.sm,
+                color: tradingMode.isLive ? theme.colors.warningDark : theme.colors.successDark
+              }}>
                 {tradingMode.description}
               </p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#6c757d' }}>
+              <p style={{
+                margin: 0,
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.textLight
+              }}>
                 <strong>Account:</strong> {tradingMode.accountNumber} • <strong>Mode:</strong> {tradingMode.mode.toUpperCase()}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
+            <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+              <Button
+                variant={!tradingMode.isLive ? "success" : "ghost"}
                 onClick={() => switchTradingMode('paper')}
                 disabled={!tradingMode.isLive || modeLoading}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  backgroundColor: !tradingMode.isLive ? '#28a745' : '#e9ecef',
-                  color: !tradingMode.isLive ? 'white' : '#6c757d',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: !tradingMode.isLive || modeLoading ? 'not-allowed' : 'pointer',
-                  opacity: !tradingMode.isLive || modeLoading ? 0.6 : 1
-                }}
               >
                 📝 Paper Mode
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={tradingMode.isLive ? "danger" : "ghost"}
                 onClick={() => switchTradingMode('live')}
                 disabled={tradingMode.isLive || modeLoading}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  backgroundColor: tradingMode.isLive ? '#dc3545' : '#e9ecef',
-                  color: tradingMode.isLive ? 'white' : '#6c757d',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: tradingMode.isLive || modeLoading ? 'not-allowed' : 'pointer',
-                  opacity: tradingMode.isLive || modeLoading ? 0.6 : 1
-                }}
               >
                 💰 Live Mode
-              </button>
+              </Button>
             </div>
           </div>
           {tradingMode.isLive && tradingMode.safetyConfig && (
-            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(255,0,0,0.1)', borderRadius: '6px' }}>
-              <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '600', color: '#721c24' }}>
+            <div style={{
+              marginTop: theme.spacing.md,
+              padding: theme.spacing.sm,
+              backgroundColor: 'rgba(255,0,0,0.1)',
+              borderRadius: theme.borderRadius.md
+            }}>
+              <p style={{
+                margin: `0 0 ${theme.spacing.xs} 0`,
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: theme.typography.fontWeight.medium,
+                color: theme.colors.errorDark
+              }}>
                 ⚠️ SAFETY LIMITS ACTIVE:
               </p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#721c24' }}>
+              <p style={{
+                margin: 0,
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.errorDark
+              }}>
                 Max Order: ${tradingMode.safetyConfig.maxOrderValue.toLocaleString()} •
                 Max Daily Trades: {tradingMode.safetyConfig.maxDailyTrades} •
                 Confirmation Required: {tradingMode.safetyConfig.requireDoubleConfirm ? 'YES' : 'NO'}
               </p>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Account Verification Section */}
       {account && (
-        <div style={{
-          backgroundColor: '#d1ecf1',
-          border: '1px solid #bee5eb',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '20px'
-        }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#0c5460' }}>✅ Connected to Real Alpaca Account</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', fontSize: '14px', color: '#0c5460' }}>
+        <Card
+          variant="info"
+          padding="large"
+          style={{ marginBottom: theme.spacing.lg }}
+        >
+          <h3 style={{
+            margin: `0 0 ${theme.spacing.md} 0`,
+            color: theme.colors.infoDark,
+            fontSize: theme.typography.fontSize.lg,
+            fontWeight: theme.typography.fontWeight.bold
+          }}>
+            ✅ Connected to Real Alpaca Account
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: theme.spacing.md,
+            fontSize: theme.typography.fontSize.sm,
+            color: theme.colors.infoDark
+          }}>
             <div>
               <strong>Account ID:</strong><br />
-              <code style={{ fontSize: '12px' }}>{account.id}</code>
+              <code style={{ fontSize: theme.typography.fontSize.xs }}>{account.id}</code>
             </div>
             <div>
               <strong>Account Number:</strong><br />
@@ -460,11 +505,11 @@ const PaperTradingPage = () => {
               <strong>Status:</strong><br />
               <span style={{
                 padding: '2px 8px',
-                backgroundColor: account.status === 'ACTIVE' ? '#28a745' : '#ffc107',
-                color: 'white',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: '600'
+                backgroundColor: account.status === 'ACTIVE' ? theme.colors.success : theme.colors.warning,
+                color: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: theme.typography.fontWeight.medium
               }}>
                 {account.status}
               </span>
@@ -482,79 +527,110 @@ const PaperTradingPage = () => {
               {account.daytrade_count}
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Portfolio Summary */}
       {account && (
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '30px',
-          marginBottom: '30px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0' }}>📊 Portfolio Summary</h2>
+        <Card padding="large" style={{ marginBottom: theme.spacing.xl }}>
+          <h2 style={{
+            margin: `0 0 ${theme.spacing.lg} 0`,
+            fontSize: theme.typography.fontSize.xl,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text
+          }}>
+            📊 Portfolio Summary
+          </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            <MetricCard
-              label="Portfolio Value"
-              value={`$${parseFloat(account.portfolio_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              color="#17a2b8"
-            />
-            <MetricCard
-              label="Cash"
-              value={`$${parseFloat(account.cash).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              color="#6c757d"
-            />
-            <MetricCard
-              label="Buying Power"
-              value={`$${parseFloat(account.buying_power).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              color="#28a745"
-              subtitle={`${account.multiplier}x leverage`}
-            />
-            <MetricCard
-              label="Equity"
-              value={`$${parseFloat(account.equity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              color="#fd7e14"
-            />
-            <MetricCard
-              label="Long Positions"
-              value={`$${parseFloat(account.long_market_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              color="#007bff"
-            />
-            <MetricCard
-              label="Open Positions"
-              value={positions.length.toString()}
-              color="#6610f2"
-            />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: theme.spacing.lg
+          }}>
+            <Card variant="default" padding="medium">
+              <MetricCard
+                label="Portfolio Value"
+                value={`$${parseFloat(account.portfolio_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                variant="info"
+              />
+            </Card>
+            <Card variant="default" padding="medium">
+              <MetricCard
+                label="Cash"
+                value={`$${parseFloat(account.cash).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                variant="default"
+              />
+            </Card>
+            <Card variant="default" padding="medium">
+              <MetricCard
+                label="Buying Power"
+                value={`$${parseFloat(account.buying_power).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subtext={`${account.multiplier}x leverage`}
+                variant="success"
+              />
+            </Card>
+            <Card variant="default" padding="medium">
+              <MetricCard
+                label="Equity"
+                value={`$${parseFloat(account.equity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                variant="warning"
+              />
+            </Card>
+            <Card variant="default" padding="medium">
+              <MetricCard
+                label="Long Positions"
+                value={`$${parseFloat(account.long_market_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                variant="info"
+              />
+            </Card>
+            <Card variant="default" padding="medium">
+              <MetricCard
+                label="Open Positions"
+                value={positions.length.toString()}
+                variant="info"
+              />
+            </Card>
           </div>
-        </div>
+        </Card>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: theme.spacing.xl,
+        marginBottom: theme.spacing.xl
+      }}>
         {/* Manual Trading */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '30px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0' }}>🎯 Manual Trading</h2>
+        <Card padding="large">
+          <h2 style={{
+            margin: `0 0 ${theme.spacing.lg} 0`,
+            fontSize: theme.typography.fontSize.xl,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text
+          }}>
+            🎯 Manual Trading
+          </h2>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Symbol</label>
+          <div style={{ marginBottom: theme.spacing.md }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
+              Symbol
+            </label>
             <select
               value={selectedSymbol}
               onChange={(e) => setSelectedSymbol(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.md,
+                fontFamily: theme.typography.fontFamily
               }}
             >
               <option value="">Select a stock...</option>
@@ -566,44 +642,44 @@ const PaperTradingPage = () => {
             </select>
           </div>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Order Type</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
+          <div style={{ marginBottom: theme.spacing.md }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
+              Order Type
+            </label>
+            <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+              <Button
+                variant={orderType === 'buy' ? "success" : "outline"}
                 onClick={() => setOrderType('buy')}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  backgroundColor: orderType === 'buy' ? '#28a745' : '#f8f9fa',
-                  color: orderType === 'buy' ? 'white' : '#495057',
-                  border: '1px solid #28a745',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
+                style={{ flex: 1 }}
               >
                 BUY
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={orderType === 'sell' ? "danger" : "outline"}
                 onClick={() => setOrderType('sell')}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  backgroundColor: orderType === 'sell' ? '#dc3545' : '#f8f9fa',
-                  color: orderType === 'sell' ? 'white' : '#495057',
-                  border: '1px solid #dc3545',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
+                style={{ flex: 1 }}
               >
                 SELL
-              </button>
+              </Button>
             </div>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Quantity</label>
+          <div style={{ marginBottom: theme.spacing.lg }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
+              Quantity
+            </label>
             <input
               type="number"
               value={quantity}
@@ -611,50 +687,60 @@ const PaperTradingPage = () => {
               min="1"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.md,
+                fontFamily: theme.typography.fontFamily
               }}
             />
           </div>
 
-          <button
+          <Button
+            variant={orderType === 'buy' ? "success" : "danger"}
             onClick={placeOrder}
             disabled={orderLoading || !selectedSymbol}
-            style={{
-              width: '100%',
-              padding: '15px',
-              fontSize: '16px',
-              fontWeight: '600',
-              backgroundColor: orderType === 'buy' ? '#28a745' : '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: orderLoading || !selectedSymbol ? 'not-allowed' : 'pointer',
-              opacity: orderLoading || !selectedSymbol ? 0.6 : 1
-            }}
+            size="large"
+            style={{ width: '100%' }}
           >
             {orderLoading ? '⏳ Placing Order...' : `${orderType.toUpperCase()} ${quantity} Shares`}
-          </button>
+          </Button>
 
-          <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', fontSize: '13px' }}>
-            💡 <strong>Note:</strong> Market is {new Date().getDay() >= 1 && new Date().getDay() <= 5 && new Date().getHours() >= 9 && new Date().getHours() < 16 ? 'OPEN' : 'CLOSED'}. Orders will execute when market opens.
-          </div>
-        </div>
+          <Card
+            variant="info"
+            padding="small"
+            style={{
+              marginTop: theme.spacing.md,
+              fontSize: theme.typography.fontSize.sm
+            }}
+          >
+            <span style={{ color: theme.colors.infoDark }}>
+              💡 <strong>Note:</strong> Market is {new Date().getDay() >= 1 && new Date().getDay() <= 5 && new Date().getHours() >= 9 && new Date().getHours() < 16 ? 'OPEN' : 'CLOSED'}. Orders will execute when market opens.
+            </span>
+          </Card>
+        </Card>
 
         {/* Auto-Trading */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '30px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0' }}>🤖 Auto-Trading</h2>
+        <Card padding="large">
+          <h2 style={{
+            margin: `0 0 ${theme.spacing.lg} 0`,
+            fontSize: theme.typography.fontSize.xl,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text
+          }}>
+            🤖 Auto-Trading
+          </h2>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Top N Stocks</label>
+          <div style={{ marginBottom: theme.spacing.md }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
+              Top N Stocks
+            </label>
             <input
               type="number"
               value={autoConfig.topN}
@@ -663,17 +749,31 @@ const PaperTradingPage = () => {
               max="20"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.md,
+                fontFamily: theme.typography.fontFamily
               }}
             />
-            <small style={{ color: '#6c757d' }}>Buy the top {autoConfig.topN} ranked stocks</small>
+            <small style={{
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.sm
+            }}>
+              Buy the top {autoConfig.topN} ranked stocks
+            </small>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Position Size (%)</label>
+          <div style={{ marginBottom: theme.spacing.lg }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
+              Position Size (%)
+            </label>
             <input
               type="number"
               value={autoConfig.positionSize}
@@ -682,100 +782,155 @@ const PaperTradingPage = () => {
               max="100"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.md,
+                fontFamily: theme.typography.fontFamily
               }}
             />
-            <small style={{ color: '#6c757d' }}>
+            <small style={{
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.sm
+            }}>
               {autoConfig.positionSize}% of portfolio per stock (~${account ? ((parseFloat(account.portfolio_value) * (autoConfig.positionSize / 100)).toLocaleString()) : '0'} each)
             </small>
           </div>
 
-          <button
+          <Button
+            variant="primary"
             onClick={executeAutoTrade}
             disabled={autoTrading}
-            style={{
-              width: '100%',
-              padding: '15px',
-              fontSize: '16px',
-              fontWeight: '600',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: autoTrading ? 'not-allowed' : 'pointer',
-              opacity: autoTrading ? 0.6 : 1
-            }}
+            size="large"
+            style={{ width: '100%' }}
           >
             {autoTrading ? '⏳ Executing...' : `🚀 Buy Top ${autoConfig.topN} Stocks`}
-          </button>
+          </Button>
 
-          <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#d1ecf1', borderRadius: '6px', fontSize: '13px', color: '#0c5460' }}>
-            <strong>Auto-Trade Preview:</strong> Will buy equal $ amounts of top {autoConfig.topN} stocks using {autoConfig.positionSize}% position sizing.
-          </div>
-        </div>
+          <Card
+            variant="info"
+            padding="small"
+            style={{
+              marginTop: theme.spacing.md,
+              fontSize: theme.typography.fontSize.sm
+            }}
+          >
+            <span style={{ color: theme.colors.infoDark }}>
+              <strong>Auto-Trade Preview:</strong> Will buy equal $ amounts of top {autoConfig.topN} stocks using {autoConfig.positionSize}% position sizing.
+            </span>
+          </Card>
+        </Card>
       </div>
 
       {/* Current Positions */}
       {positions && positions.length > 0 && (
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '30px',
-          marginBottom: '30px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0' }}>📈 Current Positions</h2>
+        <Card padding="large" style={{ marginBottom: theme.spacing.xl }}>
+          <h2 style={{
+            margin: `0 0 ${theme.spacing.lg} 0`,
+            fontSize: theme.typography.fontSize.xl,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text
+          }}>
+            📈 Current Positions
+          </h2>
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontSize: '14px'
+              fontSize: theme.typography.fontSize.sm,
+              fontFamily: theme.typography.fontFamily
             }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #e0e6ed' }}>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Symbol</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Qty</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Avg Entry</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Current</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Market Value</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Unrealized P&L</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Return %</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Today %</th>
+                <tr style={{
+                  backgroundColor: theme.colors.gray100,
+                  borderBottom: `2px solid ${theme.colors.gray300}`
+                }}>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'left',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Symbol</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Qty</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Avg Entry</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Current</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Market Value</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Unrealized P&L</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Return %</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Today %</th>
                 </tr>
               </thead>
               <tbody>
                 {positions.map((pos, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #e0e6ed' }}>
-                    <td style={{ padding: '10px 8px', fontWeight: '600' }}>{pos.symbol}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>{pos.quantity.toLocaleString()}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>${pos.avgEntryPrice.toFixed(2)}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>${pos.currentPrice.toFixed(2)}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>${pos.marketValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <tr key={index} style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
                     <td style={{
-                      padding: '10px 8px',
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      fontWeight: theme.typography.fontWeight.medium
+                    }}>{pos.symbol}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>{pos.quantity.toLocaleString()}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>${pos.avgEntryPrice.toFixed(2)}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>${pos.currentPrice.toFixed(2)}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>${pos.marketValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
                       textAlign: 'right',
-                      fontWeight: '600',
-                      color: pos.unrealizedPL >= 0 ? '#28a745' : '#dc3545'
+                      fontWeight: theme.typography.fontWeight.medium,
+                      color: pos.unrealizedPL >= 0 ? theme.colors.success : theme.colors.error
                     }}>
                       {pos.unrealizedPL >= 0 ? '+' : ''}${pos.unrealizedPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style={{
-                      padding: '10px 8px',
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
                       textAlign: 'right',
-                      fontWeight: '600',
-                      color: pos.unrealizedPLPercent >= 0 ? '#28a745' : '#dc3545'
+                      fontWeight: theme.typography.fontWeight.medium,
+                      color: pos.unrealizedPLPercent >= 0 ? theme.colors.success : theme.colors.error
                     }}>
                       {pos.unrealizedPLPercent >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
                     </td>
                     <td style={{
-                      padding: '10px 8px',
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
                       textAlign: 'right',
-                      color: pos.changeToday >= 0 ? '#28a745' : '#dc3545'
+                      color: pos.changeToday >= 0 ? theme.colors.success : theme.colors.error
                     }}>
                       {pos.changeToday >= 0 ? '+' : ''}{pos.changeToday.toFixed(2)}%
                     </td>
@@ -784,79 +939,138 @@ const PaperTradingPage = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Order History */}
       {orders && orders.length > 0 && (
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          border: '1px solid #e0e6ed',
-          padding: '30px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0' }}>📋 Order History (Last {orders.length})</h2>
+        <Card padding="large">
+          <h2 style={{
+            margin: `0 0 ${theme.spacing.lg} 0`,
+            fontSize: theme.typography.fontSize.xl,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text
+          }}>
+            📋 Order History (Last {orders.length})
+          </h2>
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontSize: '14px'
+              fontSize: theme.typography.fontSize.sm,
+              fontFamily: theme.typography.fontFamily
             }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #e0e6ed' }}>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Time</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Type</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Symbol</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Qty</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Filled</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Avg Price</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Status</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Order ID</th>
+                <tr style={{
+                  backgroundColor: theme.colors.gray100,
+                  borderBottom: `2px solid ${theme.colors.gray300}`
+                }}>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'left',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Time</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'left',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Type</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'left',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Symbol</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Qty</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Filled</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'right',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Avg Price</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'left',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Status</th>
+                  <th style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                    textAlign: 'left',
+                    fontWeight: theme.typography.fontWeight.medium
+                  }}>Order ID</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((order, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #e0e6ed' }}>
-                    <td style={{ padding: '10px 8px' }}>{new Date(order.createdAt).toLocaleString()}</td>
-                    <td style={{ padding: '10px 8px' }}>
+                  <tr key={index} style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`
+                    }}>{new Date(order.createdAt).toLocaleString()}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`
+                    }}>
                       <span style={{
                         padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: order.side === 'buy' ? '#d1ecf1' : '#f8d7da',
-                        color: order.side === 'buy' ? '#0c5460' : '#721c24'
+                        borderRadius: theme.borderRadius.sm,
+                        fontSize: theme.typography.fontSize.xs,
+                        fontWeight: theme.typography.fontWeight.medium,
+                        backgroundColor: order.side === 'buy' ? theme.colors.infoLight : theme.colors.errorLight,
+                        color: order.side === 'buy' ? theme.colors.infoDark : theme.colors.errorDark
                       }}>
                         {order.side.toUpperCase()}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 8px', fontWeight: '600' }}>{order.symbol}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>{order.quantity.toLocaleString()}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>{order.filledQty}/{order.quantity}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      fontWeight: theme.typography.fontWeight.medium
+                    }}>{order.symbol}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>{order.quantity.toLocaleString()}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>{order.filledQty}/{order.quantity}</td>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      textAlign: 'right'
+                    }}>
                       {order.filledAvgPrice ? `$${order.filledAvgPrice.toFixed(2)}` : '-'}
                     </td>
-                    <td style={{ padding: '10px 8px' }}>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`
+                    }}>
                       <span style={{
                         padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: '600',
+                        borderRadius: theme.borderRadius.sm,
+                        fontSize: theme.typography.fontSize.xs,
+                        fontWeight: theme.typography.fontWeight.medium,
                         backgroundColor:
-                          order.status === 'filled' ? '#d4edda' :
-                          order.status === 'accepted' ? '#d1ecf1' :
-                          order.status === 'pending_new' ? '#fff3cd' : '#f8d7da',
+                          order.status === 'filled' ? theme.colors.successLight :
+                          order.status === 'accepted' ? theme.colors.infoLight :
+                          order.status === 'pending_new' ? theme.colors.warningLight : theme.colors.errorLight,
                         color:
-                          order.status === 'filled' ? '#155724' :
-                          order.status === 'accepted' ? '#0c5460' :
-                          order.status === 'pending_new' ? '#856404' : '#721c24'
+                          order.status === 'filled' ? theme.colors.successDark :
+                          order.status === 'accepted' ? theme.colors.infoDark :
+                          order.status === 'pending_new' ? theme.colors.warningDark : theme.colors.errorDark
                       }}>
                         {order.status.toUpperCase()}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 8px', fontSize: '11px', fontFamily: 'monospace' }}>
+                    <td style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                      fontSize: theme.typography.fontSize.xs,
+                      fontFamily: 'monospace'
+                    }}>
                       {order.id.substring(0, 8)}...
                     </td>
                   </tr>
@@ -864,32 +1078,10 @@ const PaperTradingPage = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );
 };
-
-// Metric card component
-const MetricCard = ({ label, value, color, subtitle }) => (
-  <div style={{
-    border: '1px solid #e0e6ed',
-    borderRadius: '6px',
-    padding: '20px',
-    textAlign: 'center'
-  }}>
-    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '8px' }}>
-      {label}
-    </div>
-    <div style={{ fontSize: '24px', fontWeight: '700', color }}>
-      {value}
-    </div>
-    {subtitle && (
-      <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '5px' }}>
-        {subtitle}
-      </div>
-    )}
-  </div>
-);
 
 export default PaperTradingPage;

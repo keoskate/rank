@@ -9,6 +9,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import Button from './common/Button';
+import Card from './common/Card';
+import MetricCard from './common/MetricCard';
+import theme from '../theme';
 
 const InvestTab = () => {
   const [user, setUser] = useState(null);
@@ -259,10 +263,10 @@ const InvestTab = () => {
   // Get trade side styling
   const getTradeSideStyle = (side) => {
     return {
-      color: side === 'buy' ? '#28a745' : '#dc3545',
-      fontWeight: '600',
+      color: side === 'buy' ? theme.colors.success : theme.colors.error,
+      fontWeight: theme.typography.fontWeight.medium,
       textTransform: 'uppercase',
-      fontSize: '12px'
+      fontSize: theme.typography.fontSize.sm
     };
   };
 
@@ -445,57 +449,48 @@ const InvestTab = () => {
   // Render connection step
   if (connectionStep === 'connect') {
     return (
-      <div style={{ padding: '40px 20px', textAlign: 'center', backgroundColor: '#f8f9fa', minHeight: '400px' }}>
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '40px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏦</div>
-          <h2 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '28px', fontWeight: '600' }}>
+      <div style={{ padding: theme.spacing.xxl + ' ' + theme.spacing.md, textAlign: 'center', backgroundColor: theme.colors.background, minHeight: '400px' }}>
+        <Card padding="large" style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ fontSize: '48px', marginBottom: theme.spacing.md }}>🏦</div>
+          <h2 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: '28px', fontWeight: theme.typography.fontWeight.medium }}>
             Connect Your Brokerage Account
           </h2>
-          <p style={{ fontSize: '16px', color: '#6c757d', marginBottom: '32px', lineHeight: '1.5' }}>
+          <p style={{ fontSize: theme.typography.fontSize.md, color: theme.colors.textLight, marginBottom: theme.spacing.xl, lineHeight: '1.5' }}>
             Connect your Charles Schwab account via SnapTrade to view your balance, positions, and enable trading functionality.
           </p>
 
-          <div style={{ backgroundColor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: '8px', padding: '20px', marginBottom: '32px', textAlign: 'left' }}>
-            <h4 style={{ margin: '0 0 12px 0', color: '#1976d2', fontSize: '16px' }}>What you'll get:</h4>
-            <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#1976d2' }}>
-              <li style={{ marginBottom: '6px' }}>View account balance and information</li>
-              <li style={{ marginBottom: '6px' }}>See your current stock positions</li>
-              <li style={{ marginBottom: '6px' }}>Portfolio performance tracking</li>
-              <li style={{ marginBottom: '6px' }}>Future: Direct trading capabilities</li>
+          <Card variant="info" padding="medium" style={{ marginBottom: theme.spacing.xl, textAlign: 'left' }}>
+            <h4 style={{ margin: '0 0 ' + theme.spacing.sm + ' 0', color: theme.colors.infoDark, fontSize: theme.typography.fontSize.md }}>What you'll get:</h4>
+            <ul style={{ margin: 0, paddingLeft: theme.spacing.md, fontSize: theme.typography.fontSize.base, color: theme.colors.infoDark }}>
+              <li style={{ marginBottom: theme.spacing.xs }}>View account balance and information</li>
+              <li style={{ marginBottom: theme.spacing.xs }}>See your current stock positions</li>
+              <li style={{ marginBottom: theme.spacing.xs }}>Portfolio performance tracking</li>
+              <li style={{ marginBottom: theme.spacing.xs }}>Future: Direct trading capabilities</li>
             </ul>
-          </div>
+          </Card>
 
           {error && (
-            <div style={{ backgroundColor: '#ffebee', border: '1px solid #f44336', borderRadius: '6px', padding: '16px', marginBottom: '24px', color: '#c62828' }}>
-              <strong>Error:</strong> {error}
-            </div>
+            <Card variant="error" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
+              <strong style={{ color: theme.colors.errorDark }}>Error:</strong> <span style={{ color: theme.colors.errorDark }}>{error}</span>
+            </Card>
           )}
 
-          <button
+          <Button
+            variant="success"
+            size="large"
             onClick={createSnapTradeUser}
             disabled={isLoading}
-            style={{
-              backgroundColor: isLoading ? '#6c757d' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '16px 32px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.2s',
-              minWidth: '200px',
-            }}
+            style={{ minWidth: '200px' }}
           >
             {isLoading ? '🔄 Connecting...' : '🔗 Connect Schwab Account'}
-          </button>
+          </Button>
 
-          <div style={{ marginTop: '24px', fontSize: '12px', color: '#6c757d' }}>
+          <div style={{ marginTop: theme.spacing.lg, fontSize: theme.typography.fontSize.sm, color: theme.colors.textLight }}>
             This demo uses SnapTrade's unified API to securely connect to your brokerage account.
             <br />
             Your credentials are never stored and are handled securely by SnapTrade.
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -503,57 +498,57 @@ const InvestTab = () => {
   // Render connecting step
   if (connectionStep === 'connecting') {
     return (
-      <div style={{ padding: '40px 20px', textAlign: 'center', backgroundColor: '#f8f9fa', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '40px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'pulse 2s infinite' }}>🔄</div>
-          <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '24px' }}>Connecting to Schwab...</h3>
-          <p style={{ color: '#6c757d', margin: '0' }}>Please wait while we establish a secure connection to your account.</p>
-        </div>
+      <div style={{ padding: theme.spacing.xxl + ' ' + theme.spacing.md, textAlign: 'center', backgroundColor: theme.colors.background, minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Card padding="large" style={{ maxWidth: '500px' }}>
+          <div style={{ fontSize: '48px', marginBottom: theme.spacing.md, animation: 'pulse 2s infinite' }}>🔄</div>
+          <h3 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xxl }}>Connecting to Schwab...</h3>
+          <p style={{ color: theme.colors.textLight, margin: '0' }}>Please wait while we establish a secure connection to your account.</p>
+        </Card>
       </div>
     );
   }
 
   // Render connected state with account data
   return (
-    <div style={{ padding: '20px', backgroundColor: '#f8f9fa', minHeight: '600px' }}>
+    <div style={{ padding: theme.spacing.md, backgroundColor: theme.colors.background, minHeight: '600px' }}>
       <div>
-        <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-          <h2 style={{ margin: '0 0 8px 0', color: '#2c3e50', fontSize: '28px', fontWeight: '600' }}>
+        <div style={{ marginBottom: theme.spacing.lg, textAlign: 'center' }}>
+          <h2 style={{ margin: '0 0 ' + theme.spacing.sm + ' 0', color: theme.colors.primary, fontSize: '28px', fontWeight: theme.typography.fontWeight.medium }}>
             🎉 Account Connected Successfully!
           </h2>
-          <p style={{ color: '#6c757d', margin: '0', fontSize: '16px' }}>
+          <p style={{ color: theme.colors.textLight, margin: '0', fontSize: theme.typography.fontSize.md }}>
             Your Charles Schwab account is now connected via SnapTrade
           </p>
         </div>
 
         {/* Quick Account Summary */}
         {accounts.length > 0 && (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '20px', marginBottom: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+          <Card padding="medium" style={{ marginBottom: theme.spacing.lg }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h4 style={{ margin: '0 0 4px 0', color: '#2c3e50', fontSize: '18px' }}>
+                <h4 style={{ margin: '0 0 ' + theme.spacing.xs + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.lg }}>
                   🏦 {accounts[0].institution.name}
                 </h4>
-                <p style={{ margin: '0', color: '#6c757d', fontSize: '14px' }}>
+                <p style={{ margin: '0', color: theme.colors.textLight, fontSize: theme.typography.fontSize.base }}>
                   Account {accounts[0].number} • {accounts[0].type}
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
+                <div style={{ fontSize: theme.typography.fontSize.xxl, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.success, marginBottom: theme.spacing.xs }}>
                   {formatCurrency(accounts[0].balance.total)}
                 </div>
-                <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textLight }}>
                   Cash: {formatCurrency(accounts[0].balance.cash)}
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Tab Navigation */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
-          <div style={{ borderBottom: '1px solid #e9ecef', padding: '0 24px' }}>
-            <div style={{ display: 'flex', gap: '32px' }}>
+        <Card padding="none" style={{ marginBottom: theme.spacing.lg }}>
+          <div style={{ borderBottom: `1px solid ${theme.colors.gray300}`, padding: '0 ' + theme.spacing.lg }}>
+            <div style={{ display: 'flex', gap: theme.spacing.xl }}>
               {[
                 { id: 'overview', label: '📊 Overview', icon: '📊' },
                 { id: 'positions', label: '💼 Positions', icon: '💼' },
@@ -566,13 +561,13 @@ const InvestTab = () => {
                   style={{
                     background: 'none',
                     border: 'none',
-                    padding: '16px 0',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: activeTab === tab.id ? '#007bff' : '#6c757d',
-                    borderBottom: activeTab === tab.id ? '3px solid #007bff' : '3px solid transparent',
+                    padding: theme.spacing.md + ' 0',
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: activeTab === tab.id ? theme.colors.info : theme.colors.textLight,
+                    borderBottom: activeTab === tab.id ? `3px solid ${theme.colors.info}` : '3px solid transparent',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: theme.transitions.normal,
                   }}
                 >
                   {tab.label}
@@ -582,106 +577,102 @@ const InvestTab = () => {
           </div>
 
           {/* Tab Content */}
-          <div style={{ padding: '24px' }}>
+          <div style={{ padding: theme.spacing.lg }}>
             {/* Trading Mode Toggle */}
             {activeTab === 'trading' && (
-              <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <h4 style={{ margin: '0', color: '#2c3e50', fontSize: '16px', fontWeight: '600' }}>
+              <Card variant="default" padding="medium" style={{ marginBottom: theme.spacing.lg, backgroundColor: theme.colors.gray100 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+                  <h4 style={{ margin: '0', color: theme.colors.primary, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium }}>
                     Trading Mode
                   </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '14px', color: '#6c757d', fontWeight: '500' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <span style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textLight, fontWeight: theme.typography.fontWeight.normal }}>
                       {tradingMode === 'paper' ? '📄 Paper Trading' : '💰 Live Trading'}
                     </span>
-                    <button
+                    <Button
+                      variant={tradingMode === 'paper' ? 'primary' : 'success'}
+                      size="small"
                       onClick={() => setTradingMode(tradingMode === 'paper' ? 'live' : 'paper')}
                       style={{
-                        backgroundColor: tradingMode === 'paper' ? '#ffc107' : '#28a745',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '20px',
-                        padding: '6px 16px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
+                        borderRadius: theme.borderRadius.full,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
                       }}
                     >
                       Switch to {tradingMode === 'paper' ? 'Live' : 'Paper'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
-                <div style={{ fontSize: '13px', color: '#6c757d', lineHeight: '1.4' }}>
+                <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textLight, lineHeight: '1.4' }}>
                   {tradingMode === 'paper' ? (
                     <>
-                      <strong>Paper Trading Mode:</strong> Practice with virtual money ($100,000 starting balance) using real stock prices. 
+                      <strong>Paper Trading Mode:</strong> Practice with virtual money ($100,000 starting balance) using real stock prices.
                       Perfect for testing strategies without financial risk.
                     </>
                   ) : (
                     <>
-                      <strong>Live Trading Mode:</strong> Execute real trades with your connected Schwab account. 
-                      <span style={{ color: '#dc3545', fontWeight: '600' }}>Use real money with caution.</span>
+                      <strong>Live Trading Mode:</strong> Execute real trades with your connected Schwab account.
+                      <span style={{ color: theme.colors.error, fontWeight: theme.typography.fontWeight.medium }}>Use real money with caution.</span>
                     </>
                   )}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Overview Tab */}
             {activeTab === 'overview' && tradeSummary && (
               <div>
-                <h3 style={{ margin: '0 0 20px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
+                <h3 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.medium }}>
                   Trading Summary (Last 30 Days)
                 </h3>
-                
+
                 {/* Summary Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#2c3e50', marginBottom: '4px' }}>
-                      {tradeSummary.totalTrades}
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#6c757d' }}>Total Trades</div>
-                  </div>
-                  <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
-                      {formatCurrency(tradeSummary.totalVolume)}
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#6c757d' }}>Total Volume</div>
-                  </div>
-                  <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#007bff', marginBottom: '4px' }}>
-                      {formatCurrency(tradeSummary.averageTradeSize)}
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#6c757d' }}>Avg Trade Size</div>
-                  </div>
-                  <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: tradeSummary.netCashFlow < 0 ? '#dc3545' : '#28a745', marginBottom: '4px' }}>
-                      {formatCurrency(Math.abs(tradeSummary.netCashFlow))}
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#6c757d' }}>
-                      Net {tradeSummary.netCashFlow < 0 ? 'Invested' : 'Withdrawn'}
-                    </div>
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+                  <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                    <MetricCard
+                      label="Total Trades"
+                      value={tradeSummary.totalTrades}
+                      variant="default"
+                    />
+                  </Card>
+                  <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                    <MetricCard
+                      label="Total Volume"
+                      value={formatCurrency(tradeSummary.totalVolume)}
+                      variant="success"
+                    />
+                  </Card>
+                  <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                    <MetricCard
+                      label="Avg Trade Size"
+                      value={formatCurrency(tradeSummary.averageTradeSize)}
+                      variant="info"
+                    />
+                  </Card>
+                  <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                    <MetricCard
+                      label={`Net ${tradeSummary.netCashFlow < 0 ? 'Invested' : 'Withdrawn'}`}
+                      value={formatCurrency(Math.abs(tradeSummary.netCashFlow))}
+                      variant={tradeSummary.netCashFlow < 0 ? 'error' : 'success'}
+                    />
+                  </Card>
                 </div>
 
                 {/* Top Symbols */}
                 <div>
-                  <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
+                  <h4 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.medium }}>
                     Most Traded Symbols
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: theme.spacing.sm }}>
                     {tradeSummary.topSymbols.slice(0, 5).map((symbol, index) => (
-                      <div key={index} style={{ backgroundColor: '#e3f2fd', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#1976d2', marginBottom: '4px' }}>
+                      <Card key={index} variant="info" padding="small" style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.infoDark, marginBottom: theme.spacing.xs }}>
                           {symbol.symbol}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#1976d2' }}>
+                        <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.infoDark }}>
                           {formatCurrency(symbol.volume)}
                         </div>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                 </div>
@@ -691,43 +682,43 @@ const InvestTab = () => {
             {/* Positions Tab */}
             {activeTab === 'positions' && positions.length > 0 && (
               <div>
-                <h3 style={{ margin: '0 0 20px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
+                <h3 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.medium }}>
                   Current Holdings
                 </h3>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f8f9fa' }}>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Symbol</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Quantity</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Avg Price</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Current Price</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Market Value</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Gain/Loss</th>
+                      <tr style={{ backgroundColor: theme.colors.gray100 }}>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Symbol</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Quantity</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Avg Price</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Current Price</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Market Value</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Gain/Loss</th>
                       </tr>
                     </thead>
                     <tbody>
                       {positions.map((position, index) => (
                         <tr key={index}>
-                          <td style={{ padding: '12px', borderBottom: '1px solid #f1f3f4', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                          <td style={{ padding: theme.spacing.sm, borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                             {position.symbol}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', color: '#495057' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                             {position.quantity}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', color: '#495057' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                             {formatCurrency(position.averagePrice)}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', color: '#495057' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                             {formatCurrency(position.currentPrice)}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                             {formatCurrency(position.marketValue)}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', fontWeight: '600', color: position.unrealizedGainLoss >= 0 ? '#28a745' : '#dc3545' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: position.unrealizedGainLoss >= 0 ? theme.colors.success : theme.colors.error }}>
                             {formatCurrency(position.unrealizedGainLoss)}
                             <br />
-                            <span style={{ fontSize: '12px' }}>
+                            <span style={{ fontSize: theme.typography.fontSize.sm }}>
                               ({formatPercent(position.unrealizedGainLossPercent)})
                             </span>
                           </td>
@@ -742,57 +733,57 @@ const InvestTab = () => {
             {/* Trades Tab */}
             {activeTab === 'trades' && trades.length > 0 && (
               <div>
-                <h3 style={{ margin: '0 0 20px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
+                <h3 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.medium }}>
                   Recent Trades
                 </h3>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f8f9fa' }}>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Date</th>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Symbol</th>
-                        <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Side</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Quantity</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Price</th>
-                        <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Total Value</th>
-                        <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Type</th>
-                        <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Status</th>
+                      <tr style={{ backgroundColor: theme.colors.gray100 }}>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Date</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Symbol</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'center', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Side</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Quantity</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Price</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Total Value</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'center', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Type</th>
+                        <th style={{ padding: theme.spacing.sm, textAlign: 'center', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {trades.map((trade, index) => (
-                        <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
-                          <td style={{ padding: '12px', fontSize: '14px', color: '#495057' }}>
+                        <tr key={index} style={{ borderBottom: `1px solid ${theme.colors.gray200}` }}>
+                          <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                             {formatDate(trade.executedAt)}
                           </td>
-                          <td style={{ padding: '12px', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                          <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                             {trade.symbol}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'center' }}>
                             <span style={getTradeSideStyle(trade.side)}>
                               {trade.side}
                             </span>
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#495057' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                             {trade.quantity}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#495057' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                             {formatCurrency(trade.price)}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                             {formatCurrency(trade.totalValue)}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#6c757d', textTransform: 'capitalize' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'center', fontSize: theme.typography.fontSize.sm, color: theme.colors.textLight, textTransform: 'capitalize' }}>
                             {trade.orderType}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <td style={{ padding: theme.spacing.sm, textAlign: 'center' }}>
                             <span style={{
-                              backgroundColor: trade.status === 'filled' ? '#d4edda' : '#fff3cd',
-                              color: trade.status === 'filled' ? '#155724' : '#856404',
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
+                              backgroundColor: trade.status === 'filled' ? theme.colors.successLight : theme.colors.warningLight,
+                              color: trade.status === 'filled' ? theme.colors.successDark : theme.colors.warningDark,
+                              padding: theme.spacing.xs + ' ' + theme.spacing.sm,
+                              borderRadius: theme.borderRadius.full,
+                              fontSize: theme.typography.fontSize.sm,
+                              fontWeight: theme.typography.fontWeight.medium,
                               textTransform: 'capitalize'
                             }}>
                               {trade.status}
@@ -809,81 +800,76 @@ const InvestTab = () => {
             {/* Trading Tab */}
             {activeTab === 'trading' && tradingMode === 'paper' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                  <h3 style={{ margin: '0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.medium }}>
                     Paper Trading Simulation
                   </h3>
                   {paperPortfolio && (
-                    <button
+                    <Button
+                      variant="danger"
+                      size="small"
                       onClick={resetPaperPortfolio}
-                      style={{
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '8px 16px',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                      }}
                     >
                       Reset Portfolio
-                    </button>
+                    </Button>
                   )}
                 </div>
 
                 {/* Portfolio Summary */}
                 {paperPortfolio && (
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
-                          {formatCurrency(paperPortfolio.totalPortfolioValue || 0)}
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Total Value</div>
-                      </div>
-                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#007bff', marginBottom: '4px' }}>
-                          {formatCurrency(paperPortfolio.cash || 0)}
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Cash</div>
-                      </div>
-                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#6c757d', marginBottom: '4px' }}>
-                          {formatCurrency(paperPortfolio.totalMarketValue || 0)}
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Positions</div>
-                      </div>
-                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '700', color: (paperPortfolio.totalGainLoss || 0) >= 0 ? '#28a745' : '#dc3545', marginBottom: '4px' }}>
-                          {formatCurrency(paperPortfolio.totalGainLoss || 0)}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#6c757d' }}>
-                          ({formatPercent(paperPortfolio.totalGainLossPercent || 0)})
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>P&L</div>
-                      </div>
+                  <div style={{ marginBottom: theme.spacing.lg }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
+                      <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                        <MetricCard
+                          label="Total Value"
+                          value={formatCurrency(paperPortfolio.totalPortfolioValue || 0)}
+                          variant="success"
+                        />
+                      </Card>
+                      <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                        <MetricCard
+                          label="Cash"
+                          value={formatCurrency(paperPortfolio.cash || 0)}
+                          variant="info"
+                        />
+                      </Card>
+                      <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                        <MetricCard
+                          label="Positions"
+                          value={formatCurrency(paperPortfolio.totalMarketValue || 0)}
+                          variant="default"
+                        />
+                      </Card>
+                      <Card variant="default" padding="medium" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                        <MetricCard
+                          label="P&L"
+                          value={formatCurrency(paperPortfolio.totalGainLoss || 0)}
+                          subtext={`(${formatPercent(paperPortfolio.totalGainLossPercent || 0)})`}
+                          variant={(paperPortfolio.totalGainLoss || 0) >= 0 ? 'success' : 'error'}
+                        />
+                      </Card>
                     </div>
                   </div>
                 )}
 
                 {/* Enhanced Order Form with Real-time Analysis */}
-                <div style={{ display: 'grid', gridTemplateColumns: stockAnalysis ? '1fr 400px' : '1fr', gap: '20px', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: stockAnalysis ? '1fr 400px' : '1fr', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
 
                   {/* Left: Order Form */}
-                  <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                    <h4 style={{ margin: '0 0 20px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '700' }}>
+                  <Card padding="large">
+                    <h4 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>
                       Place Order
                     </h4>
 
                     {error && (
-                      <div style={{ backgroundColor: '#ffebee', border: '1px solid #f44336', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#c62828', fontSize: '14px' }}>
-                        {error}
-                      </div>
+                      <Card variant="error" padding="small" style={{ marginBottom: theme.spacing.md }}>
+                        <span style={{ color: theme.colors.errorDark, fontSize: theme.typography.fontSize.base }}>{error}</span>
+                      </Card>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <label style={{ display: 'block', marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Stock Symbol
                         </label>
                         <input
@@ -893,26 +879,26 @@ const InvestTab = () => {
                           placeholder="Enter symbol (e.g., AAPL)"
                           style={{
                             width: '100%',
-                            padding: '14px 16px',
-                            border: '2px solid #e0e0e0',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            fontWeight: '600',
+                            padding: theme.spacing.sm + ' ' + theme.spacing.md,
+                            border: `2px solid ${theme.colors.gray400}`,
+                            borderRadius: theme.borderRadius.lg,
+                            fontSize: theme.typography.fontSize.md,
+                            fontWeight: theme.typography.fontWeight.medium,
                             outline: 'none',
-                            transition: 'border-color 0.2s',
+                            transition: theme.transitions.normal,
                           }}
-                          onFocus={(e) => e.target.style.borderColor = '#007bff'}
-                          onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                          onFocus={(e) => e.target.style.borderColor = theme.colors.info}
+                          onBlur={(e) => e.target.style.borderColor = theme.colors.gray400}
                         />
                         {loadingAnalysis && (
-                          <div style={{ marginTop: '8px', fontSize: '12px', color: '#007bff' }}>
+                          <div style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, color: theme.colors.info }}>
                             Loading analysis...
                           </div>
                         )}
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <label style={{ display: 'block', marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Shares
                         </label>
                         <input
@@ -923,11 +909,11 @@ const InvestTab = () => {
                           min="1"
                           style={{
                             width: '100%',
-                            padding: '14px 16px',
-                            border: '2px solid #e0e0e0',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            fontWeight: '600',
+                            padding: theme.spacing.sm + ' ' + theme.spacing.md,
+                            border: `2px solid ${theme.colors.gray400}`,
+                            borderRadius: theme.borderRadius.lg,
+                            fontSize: theme.typography.fontSize.md,
+                            fontWeight: theme.typography.fontWeight.medium,
                             outline: 'none',
                           }}
                         />
@@ -936,28 +922,28 @@ const InvestTab = () => {
 
                     {/* Order Cost Summary */}
                     {stockAnalysis && orderForm.quantity && (
-                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '14px', color: '#6c757d' }}>Market Price</span>
-                          <span style={{ fontSize: '14px', fontWeight: '600' }}>${parseFloat(stockAnalysis.price.current).toFixed(2)}</span>
+                      <Card variant="default" padding="medium" style={{ backgroundColor: theme.colors.gray100, marginBottom: theme.spacing.md }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+                          <span style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textLight }}>Market Price</span>
+                          <span style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium }}>${parseFloat(stockAnalysis.price.current).toFixed(2)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '14px', color: '#6c757d' }}>Shares</span>
-                          <span style={{ fontSize: '14px', fontWeight: '600' }}>{orderForm.quantity}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+                          <span style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textLight }}>Shares</span>
+                          <span style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium }}>{orderForm.quantity}</span>
                         </div>
-                        <div style={{ borderTop: '1px solid #dee2e6', margin: '12px 0' }}></div>
+                        <div style={{ borderTop: `1px solid ${theme.colors.gray300}`, margin: theme.spacing.sm + ' 0' }}></div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '16px', fontWeight: '700', color: '#2c3e50' }}>Estimated Total</span>
-                          <span style={{ fontSize: '16px', fontWeight: '700', color: '#2c3e50' }}>
+                          <span style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary }}>Estimated Total</span>
+                          <span style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary }}>
                             ${(parseFloat(stockAnalysis.price.current) * parseFloat(orderForm.quantity)).toFixed(2)}
                           </span>
                         </div>
-                      </div>
+                      </Card>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.sm, marginBottom: theme.spacing.md }}>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <label style={{ display: 'block', marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Order Type
                         </label>
                         <select
@@ -965,12 +951,12 @@ const InvestTab = () => {
                           onChange={(e) => setOrderForm({...orderForm, orderType: e.target.value})}
                           style={{
                             width: '100%',
-                            padding: '12px',
-                            border: '2px solid #e0e0e0',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            backgroundColor: '#fff',
+                            padding: theme.spacing.sm,
+                            border: `2px solid ${theme.colors.gray400}`,
+                            borderRadius: theme.borderRadius.lg,
+                            fontSize: theme.typography.fontSize.base,
+                            fontWeight: theme.typography.fontWeight.medium,
+                            backgroundColor: theme.colors.surface,
                           }}
                         >
                           <option value="market">Market Order</option>
@@ -980,7 +966,7 @@ const InvestTab = () => {
 
                       {orderForm.orderType === 'limit' && (
                         <div>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          <label style={{ display: 'block', marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                             Limit Price
                           </label>
                           <input
@@ -991,70 +977,52 @@ const InvestTab = () => {
                             step="0.01"
                             style={{
                               width: '100%',
-                              padding: '12px',
-                              border: '2px solid #e0e0e0',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontWeight: '600',
+                              padding: theme.spacing.sm,
+                              border: `2px solid ${theme.colors.gray400}`,
+                              borderRadius: theme.borderRadius.lg,
+                              fontSize: theme.typography.fontSize.base,
+                              fontWeight: theme.typography.fontWeight.medium,
                             }}
                           />
                         </div>
                       )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <button
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.sm }}>
+                      <Button
+                        variant="success"
+                        size="large"
                         onClick={() => { setOrderForm({...orderForm, side: 'buy'}); executePaperTrade(); }}
                         disabled={!orderForm.symbol || !orderForm.quantity}
-                        style={{
-                          backgroundColor: (!orderForm.symbol || !orderForm.quantity) ? '#94d3a2' : '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '16px',
-                          fontSize: '16px',
-                          fontWeight: '700',
-                          cursor: (!orderForm.symbol || !orderForm.quantity) ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s',
-                        }}
                       >
                         Buy {orderForm.symbol || 'Stock'}
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
+                        variant="danger"
+                        size="large"
                         onClick={() => { setOrderForm({...orderForm, side: 'sell'}); executePaperTrade(); }}
                         disabled={!orderForm.symbol || !orderForm.quantity}
-                        style={{
-                          backgroundColor: (!orderForm.symbol || !orderForm.quantity) ? '#f5a3a3' : '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '16px',
-                          fontSize: '16px',
-                          fontWeight: '700',
-                          cursor: (!orderForm.symbol || !orderForm.quantity) ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s',
-                        }}
                       >
                         Sell {orderForm.symbol || 'Stock'}
-                      </button>
+                      </Button>
                     </div>
-                  </div>
+                  </Card>
 
                   {/* Right: Stock Analysis Panel */}
                   {stockAnalysis && (
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxHeight: '700px', overflowY: 'auto' }}>
-                      <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '700' }}>
+                    <Card padding="medium" style={{ maxHeight: '700px', overflowY: 'auto' }}>
+                      <h4 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold }}>
                         {stockAnalysis.symbol} Analysis
                       </h4>
 
                       {/* Price Info */}
-                      <div style={{ marginBottom: '20px' }}>
-                        <div style={{ fontSize: '32px', fontWeight: '700', color: '#2c3e50', marginBottom: '4px' }}>
+                      <div style={{ marginBottom: theme.spacing.md }}>
+                        <div style={{ fontSize: '32px', fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary, marginBottom: theme.spacing.xs }}>
                           ${parseFloat(stockAnalysis.price.current).toFixed(2)}
                         </div>
                         {stockAnalysis.price.change24h && (
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: parseFloat(stockAnalysis.price.change24h) >= 0 ? '#28a745' : '#dc3545' }}>
+                          <div style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: parseFloat(stockAnalysis.price.change24h) >= 0 ? theme.colors.success : theme.colors.error }}>
                             {parseFloat(stockAnalysis.price.change24h) >= 0 ? '▲' : '▼'} {Math.abs(parseFloat(stockAnalysis.price.change24h)).toFixed(2)}% today
                           </div>
                         )}
@@ -1062,51 +1030,49 @@ const InvestTab = () => {
 
                       {/* Recommendation */}
                       {stockAnalysis.recommendation && (
-                        <div style={{
-                          backgroundColor: stockAnalysis.recommendation.action.includes('Buy') ? '#d4edda' : stockAnalysis.recommendation.action.includes('Sell') ? '#f8d7da' : '#fff3cd',
-                          border: `2px solid ${stockAnalysis.recommendation.action.includes('Buy') ? '#28a745' : stockAnalysis.recommendation.action.includes('Sell') ? '#dc3545' : '#ffc107'}`,
-                          borderRadius: '8px',
-                          padding: '12px',
-                          marginBottom: '16px'
-                        }}>
-                          <div style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '8px' }}>
+                        <Card
+                          variant={stockAnalysis.recommendation.action.includes('Buy') ? 'success' : stockAnalysis.recommendation.action.includes('Sell') ? 'error' : 'warning'}
+                          padding="small"
+                          style={{ marginBottom: theme.spacing.md }}
+                        >
+                          <div style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary, marginBottom: theme.spacing.sm }}>
                             Recommendation: {stockAnalysis.recommendation.action}
                           </div>
-                          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#495057' }}>
+                          <ul style={{ margin: 0, paddingLeft: theme.spacing.md, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray700 }}>
                             {stockAnalysis.recommendation.reasons.map((reason, i) => (
-                              <li key={i} style={{ marginBottom: '4px' }}>{reason}</li>
+                              <li key={i} style={{ marginBottom: theme.spacing.xs }}>{reason}</li>
                             ))}
                           </ul>
-                        </div>
+                        </Card>
                       )}
 
                       {/* Technical Indicators */}
                       {stockAnalysis.technicals && (
-                        <div style={{ marginBottom: '16px' }}>
-                          <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '12px' }}>Technical Indicators</h5>
+                        <div style={{ marginBottom: theme.spacing.md }}>
+                          <h5 style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary, marginBottom: theme.spacing.sm }}>Technical Indicators</h5>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-                            <div style={{ backgroundColor: '#f8f9fa', borderRadius: '6px', padding: '10px' }}>
-                              <div style={{ fontSize: '11px', color: '#6c757d', marginBottom: '4px' }}>RSI (14)</div>
-                              <div style={{ fontSize: '16px', fontWeight: '700', color: '#2c3e50' }}>{stockAnalysis.technicals.rsi}</div>
-                              <div style={{ fontSize: '10px', fontWeight: '600', color: stockAnalysis.technicals.rsiSignal === 'Oversold' ? '#28a745' : stockAnalysis.technicals.rsiSignal === 'Overbought' ? '#dc3545' : '#6c757d' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                            <Card variant="default" padding="small" style={{ backgroundColor: theme.colors.gray100 }}>
+                              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight, marginBottom: theme.spacing.xs }}>RSI (14)</div>
+                              <div style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary }}>{stockAnalysis.technicals.rsi}</div>
+                              <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.medium, color: stockAnalysis.technicals.rsiSignal === 'Oversold' ? theme.colors.success : stockAnalysis.technicals.rsiSignal === 'Overbought' ? theme.colors.error : theme.colors.textLight }}>
                                 {stockAnalysis.technicals.rsiSignal}
                               </div>
-                            </div>
+                            </Card>
 
-                            <div style={{ backgroundColor: '#f8f9fa', borderRadius: '6px', padding: '10px' }}>
-                              <div style={{ fontSize: '11px', color: '#6c757d', marginBottom: '4px' }}>Trend</div>
-                              <div style={{ fontSize: '16px', fontWeight: '700', color: stockAnalysis.technicals.trendSignal === 'Bullish' ? '#28a745' : stockAnalysis.technicals.trendSignal === 'Bearish' ? '#dc3545' : '#6c757d' }}>
+                            <Card variant="default" padding="small" style={{ backgroundColor: theme.colors.gray100 }}>
+                              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight, marginBottom: theme.spacing.xs }}>Trend</div>
+                              <div style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: stockAnalysis.technicals.trendSignal === 'Bullish' ? theme.colors.success : stockAnalysis.technicals.trendSignal === 'Bearish' ? theme.colors.error : theme.colors.textLight }}>
                                 {stockAnalysis.technicals.trendSignal}
                               </div>
-                              <div style={{ fontSize: '10px', color: '#6c757d' }}>MA20/MA50</div>
-                            </div>
+                              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight }}>MA20/MA50</div>
+                            </Card>
                           </div>
 
-                          <div style={{ fontSize: '12px', color: '#495057', marginBottom: '8px' }}>
+                          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray700, marginBottom: theme.spacing.sm }}>
                             <strong>52-Week Range:</strong> ${stockAnalysis.technicals.low52w} - ${stockAnalysis.technicals.high52w}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#495057' }}>
+                          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray700 }}>
                             <strong>Distance from High:</strong> {stockAnalysis.technicals.distanceFromHigh}%
                           </div>
                         </div>
@@ -1114,12 +1080,12 @@ const InvestTab = () => {
 
                       {/* Volume */}
                       {stockAnalysis.volume && (
-                        <div style={{ marginBottom: '16px' }}>
-                          <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '8px' }}>Volume</h5>
-                          <div style={{ fontSize: '12px', color: '#495057' }}>
+                        <div style={{ marginBottom: theme.spacing.md }}>
+                          <h5 style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary, marginBottom: theme.spacing.sm }}>Volume</h5>
+                          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray700 }}>
                             <div>Today: {stockAnalysis.volume.current?.toLocaleString()}</div>
                             {stockAnalysis.volume.changePercent && (
-                              <div style={{ color: parseFloat(stockAnalysis.volume.changePercent) > 0 ? '#28a745' : '#dc3545', fontWeight: '600' }}>
+                              <div style={{ color: parseFloat(stockAnalysis.volume.changePercent) > 0 ? theme.colors.success : theme.colors.error, fontWeight: theme.typography.fontWeight.medium }}>
                                 {parseFloat(stockAnalysis.volume.changePercent) > 0 ? '▲' : '▼'} {Math.abs(parseFloat(stockAnalysis.volume.changePercent)).toFixed(1)}% vs yesterday
                               </div>
                             )}
@@ -1130,89 +1096,89 @@ const InvestTab = () => {
                       {/* Projections */}
                       {stockAnalysis.projections && (
                         <div>
-                          <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#2c3e50', marginBottom: '12px' }}>Expected Returns</h5>
+                          <h5 style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary, marginBottom: theme.spacing.sm }}>Expected Returns</h5>
 
-                          <div style={{ backgroundColor: '#e7f3ff', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#495057', marginBottom: '8px' }}>1 Week Projection</div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#007bff', marginBottom: '4px' }}>
+                          <Card variant="info" padding="small" style={{ marginBottom: theme.spacing.sm }}>
+                            <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray700, marginBottom: theme.spacing.sm }}>1 Week Projection</div>
+                            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.infoDark, marginBottom: theme.spacing.xs }}>
                               ${stockAnalysis.projections.oneWeek.expectedPrice}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight }}>
                               Expected return: {stockAnalysis.projections.oneWeek.expectedReturn}%
                             </div>
-                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight }}>
                               Range: ${stockAnalysis.projections.oneWeek.range.low} - ${stockAnalysis.projections.oneWeek.range.high}
                             </div>
                             {orderForm.quantity && (
-                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#007bff', marginTop: '8px' }}>
+                              <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.infoDark, marginTop: theme.spacing.sm }}>
                                 Your potential P/L: ${((parseFloat(stockAnalysis.projections.oneWeek.expectedPrice) - parseFloat(stockAnalysis.price.current)) * parseFloat(orderForm.quantity)).toFixed(2)}
                               </div>
                             )}
-                          </div>
+                          </Card>
 
-                          <div style={{ backgroundColor: '#e8f5e9', borderRadius: '8px', padding: '12px' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#495057', marginBottom: '8px' }}>1 Month Projection</div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
+                          <Card variant="success" padding="small">
+                            <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray700, marginBottom: theme.spacing.sm }}>1 Month Projection</div>
+                            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.successDark, marginBottom: theme.spacing.xs }}>
                               ${stockAnalysis.projections.oneMonth.expectedPrice}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight }}>
                               Expected return: {stockAnalysis.projections.oneMonth.expectedReturn}%
                             </div>
-                            <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textLight }}>
                               Range: ${stockAnalysis.projections.oneMonth.range.low} - ${stockAnalysis.projections.oneMonth.range.high}
                             </div>
                             {orderForm.quantity && (
-                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#28a745', marginTop: '8px' }}>
+                              <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.successDark, marginTop: theme.spacing.sm }}>
                                 Your potential P/L: ${((parseFloat(stockAnalysis.projections.oneMonth.expectedPrice) - parseFloat(stockAnalysis.price.current)) * parseFloat(orderForm.quantity)).toFixed(2)}
                               </div>
                             )}
-                          </div>
+                          </Card>
                         </div>
                       )}
-                    </div>
+                    </Card>
                   )}
                 </div>
 
                 {/* Paper Trading Positions */}
                 {paperPortfolio && paperPortfolio.positions && paperPortfolio.positions.length > 0 && (
-                  <div style={{ marginBottom: '24px' }}>
-                    <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
+                  <div style={{ marginBottom: theme.spacing.lg }}>
+                    <h4 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.medium }}>
                       Paper Trading Positions
                     </h4>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ backgroundColor: '#f8f9fa' }}>
-                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Symbol</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Quantity</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Avg Price</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Current Price</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Market Value</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Gain/Loss</th>
+                          <tr style={{ backgroundColor: theme.colors.gray100 }}>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Symbol</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Quantity</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Avg Price</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Current Price</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Market Value</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Gain/Loss</th>
                           </tr>
                         </thead>
                         <tbody>
                           {paperPortfolio.positions.map((position, index) => (
                             <tr key={index}>
-                              <td style={{ padding: '12px', borderBottom: '1px solid #f1f3f4', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                              <td style={{ padding: theme.spacing.sm, borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                                 {position.symbol}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', color: '#495057' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                                 {position.quantity}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', color: '#495057' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                                 {formatCurrency(position.averagePrice)}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', color: '#495057' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                                 {formatCurrency(position.currentPrice)}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                                 {formatCurrency(position.marketValue)}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #f1f3f4', fontSize: '14px', fontWeight: '600', color: position.unrealizedGainLoss >= 0 ? '#28a745' : '#dc3545' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray200}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: position.unrealizedGainLoss >= 0 ? theme.colors.success : theme.colors.error }}>
                                 {formatCurrency(position.unrealizedGainLoss)}
                                 <br />
-                                <span style={{ fontSize: '12px' }}>
+                                <span style={{ fontSize: theme.typography.fontSize.sm }}>
                                   ({formatPercent(position.unrealizedGainLossPercent)})
                                 </span>
                               </td>
@@ -1227,46 +1193,46 @@ const InvestTab = () => {
                 {/* Paper Trading History */}
                 {paperTrades.length > 0 && (
                   <div>
-                    <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
+                    <h4 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.medium }}>
                       Paper Trading History
                     </h4>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ backgroundColor: '#f8f9fa' }}>
-                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Date</th>
-                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Symbol</th>
-                            <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Side</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Quantity</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Price</th>
-                            <th style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Total Value</th>
-                            <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e9ecef', fontSize: '14px', fontWeight: '600', color: '#495057' }}>Type</th>
+                          <tr style={{ backgroundColor: theme.colors.gray100 }}>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Date</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Symbol</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'center', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Side</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Quantity</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Price</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Total Value</th>
+                            <th style={{ padding: theme.spacing.sm, textAlign: 'center', borderBottom: `1px solid ${theme.colors.gray300}`, fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.gray700 }}>Type</th>
                           </tr>
                         </thead>
                         <tbody>
                           {paperTrades.slice().reverse().slice(0, 10).map((trade, index) => (
-                            <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
-                              <td style={{ padding: '12px', fontSize: '14px', color: '#495057' }}>
+                            <tr key={index} style={{ borderBottom: `1px solid ${theme.colors.gray200}` }}>
+                              <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                                 {formatDate(trade.executedAt)}
                               </td>
-                              <td style={{ padding: '12px', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                              <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                                 {trade.symbol}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'center' }}>
                                 <span style={getTradeSideStyle(trade.side)}>
                                   {trade.side}
                                 </span>
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#495057' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                                 {trade.quantity}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#495057' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: theme.typography.fontSize.base, color: theme.colors.gray700 }}>
                                 {formatCurrency(trade.price)}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'right', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.medium, color: theme.colors.primary }}>
                                 {formatCurrency(trade.totalValue)}
                               </td>
-                              <td style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#6c757d', textTransform: 'capitalize' }}>
+                              <td style={{ padding: theme.spacing.sm, textAlign: 'center', fontSize: theme.typography.fontSize.sm, color: theme.colors.textLight, textTransform: 'capitalize' }}>
                                 {trade.orderType}
                               </td>
                             </tr>
@@ -1279,32 +1245,24 @@ const InvestTab = () => {
 
                 {/* Getting Started Message */}
                 {!paperPortfolio && (
-                  <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
-                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50', fontSize: '20px' }}>
+                  <Card variant="default" padding="large" style={{ textAlign: 'center', backgroundColor: theme.colors.gray100 }}>
+                    <div style={{ fontSize: '48px', marginBottom: theme.spacing.md }}>📄</div>
+                    <h4 style={{ margin: '0 0 ' + theme.spacing.sm + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl }}>
                       Welcome to Paper Trading
                     </h4>
-                    <p style={{ color: '#6c757d', margin: '0 0 20px 0', fontSize: '16px' }}>
+                    <p style={{ color: theme.colors.textLight, margin: '0 0 ' + theme.spacing.md + ' 0', fontSize: theme.typography.fontSize.md }}>
                       Test your investment strategies with virtual money and real stock prices.
                       <br />
                       Start with $100,000 in simulated cash.
                     </p>
-                    <button
+                    <Button
+                      variant="success"
+                      size="large"
                       onClick={() => createPaperPortfolio(100000)}
-                      style={{
-                        backgroundColor: '#28a745',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '12px 24px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                      }}
                     >
                       Create Paper Trading Portfolio
-                    </button>
-                  </div>
+                    </Button>
+                  </Card>
                 )}
               </div>
             )}
@@ -1312,80 +1270,83 @@ const InvestTab = () => {
             {/* Live Trading Tab */}
             {activeTab === 'trading' && tradingMode === 'live' && (
               <div>
-                <div style={{ marginBottom: '20px' }}>
-                  <h3 style={{ margin: '0 0 12px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '600' }}>
+                <div style={{ marginBottom: theme.spacing.md }}>
+                  <h3 style={{ margin: '0 0 ' + theme.spacing.sm + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.medium }}>
                     Live Trading - Charles Schwab
                   </h3>
-                  <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '8px', padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Card variant="warning" padding="medium">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                       <span style={{ fontSize: '20px' }}>⚠️</span>
-                      <strong style={{ color: '#856404', fontSize: '16px' }}>Live Trading Mode</strong>
+                      <strong style={{ color: theme.colors.warningDark, fontSize: theme.typography.fontSize.md }}>Live Trading Mode</strong>
                     </div>
-                    <p style={{ color: '#856404', margin: '0', fontSize: '14px', lineHeight: '1.4' }}>
-                      You are now in <strong>Live Trading Mode</strong> using your connected Charles Schwab account. 
+                    <p style={{ color: theme.colors.warningDark, margin: '0', fontSize: theme.typography.fontSize.base, lineHeight: '1.4' }}>
+                      You are now in <strong>Live Trading Mode</strong> using your connected Charles Schwab account.
                       All trades will use real money and execute on live markets. Please trade responsibly.
                     </p>
-                  </div>
+                  </Card>
                 </div>
 
                 {/* Account Summary for Live Trading */}
                 {accounts.length > 0 && (
-                  <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
-                    <h4 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
+                  <Card variant="default" padding="medium" style={{ backgroundColor: theme.colors.gray100, marginBottom: theme.spacing.lg }}>
+                    <h4 style={{ margin: '0 0 ' + theme.spacing.md + ' 0', color: theme.colors.primary, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.medium }}>
                       Account Overview
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing.md }}>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#28a745', marginBottom: '4px' }}>
-                          {formatCurrency(accounts[0].balance.total)}
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Total Balance</div>
+                        <MetricCard
+                          label="Total Balance"
+                          value={formatCurrency(accounts[0].balance.total)}
+                          variant="success"
+                        />
                       </div>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#007bff', marginBottom: '4px' }}>
-                          {formatCurrency(accounts[0].balance.cash)}
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Available Cash</div>
+                        <MetricCard
+                          label="Available Cash"
+                          value={formatCurrency(accounts[0].balance.cash)}
+                          variant="info"
+                        />
                       </div>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#6c757d', marginBottom: '4px' }}>
-                          {formatCurrency(accounts[0].balance.total - accounts[0].balance.cash)}
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#6c757d' }}>Invested</div>
+                        <MetricCard
+                          label="Invested"
+                          value={formatCurrency(accounts[0].balance.total - accounts[0].balance.cash)}
+                          variant="default"
+                        />
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 )}
 
                 {/* Live Trading Notice */}
-                <div style={{ backgroundColor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
-                  <h4 style={{ margin: '0 0 12px 0', color: '#1976d2', fontSize: '20px' }}>
+                <Card variant="info" padding="large" style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: theme.spacing.md }}>🚧</div>
+                  <h4 style={{ margin: '0 0 ' + theme.spacing.sm + ' 0', color: theme.colors.infoDark, fontSize: theme.typography.fontSize.xl }}>
                     Live Trading Interface Coming Soon
                   </h4>
-                  <p style={{ color: '#1976d2', margin: '0 0 16px 0', fontSize: '16px', lineHeight: '1.5' }}>
+                  <p style={{ color: theme.colors.infoDark, margin: '0 0 ' + theme.spacing.md + ' 0', fontSize: theme.typography.fontSize.md, lineHeight: '1.5' }}>
                     Direct trading functionality through SnapTrade API is currently under development.
                     <br />
                     For now, you can view your account data, positions, and trade history in the other tabs.
                   </p>
-                  <div style={{ fontSize: '14px', color: '#1976d2', fontWeight: '500' }}>
+                  <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.infoDark, fontWeight: theme.typography.fontWeight.normal }}>
                     💡 <strong>Tip:</strong> Use Paper Trading mode to test strategies while we complete the live trading integration.
                   </div>
-                </div>
+                </Card>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Success Banner */}
-        <div style={{ backgroundColor: '#d4edda', border: '1px solid #c3e6cb', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-          <strong style={{ color: '#155724' }}>✅ Complete Trading Solution!</strong>
-          <div style={{ color: '#155724', fontSize: '14px', marginTop: '8px' }}>
+        <Card variant="success" padding="medium" style={{ textAlign: 'center' }}>
+          <strong style={{ color: theme.colors.successDark }}>✅ Complete Trading Solution!</strong>
+          <div style={{ color: theme.colors.successDark, fontSize: theme.typography.fontSize.base, marginTop: theme.spacing.sm }}>
             Successfully implemented: SnapTrade brokerage connectivity, account information, trade history, and paper trading simulation.
             <br />
             Ready for both real and simulated trading strategies with live market data.
           </div>
-        </div>
+        </Card>
       </div>
 
       <style jsx>{`
