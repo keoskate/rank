@@ -2834,6 +2834,94 @@ app.post('/api/backtest/monte-carlo', async (req, res) => {
   }
 });
 
+// ===================
+// Polygon API Routes
+// ===================
+
+// Get latest quote for a symbol
+app.get('/api/polygon/quote/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+
+    // Try getLatestQuote first, fallback to getPreviousClose
+    let quote = await polygonClient.getLatestQuote(symbol).catch(e => {
+      console.log(`Real-time quote unavailable for ${symbol}, trying previous close`);
+      return null;
+    });
+
+    if (!quote) {
+      // Fallback to previous close (works with free Polygon API)
+      const prevClose = await polygonClient.getPreviousClose(symbol).catch(e => {
+        console.error(`Error fetching previous close for ${symbol}:`, e.message);
+        return null;
+      });
+
+      if (prevClose) {
+        quote = {
+          last: prevClose.close,
+          close: prevClose.close,
+          open: prevClose.open,
+          high: prevClose.high,
+          low: prevClose.low,
+          volume: prevClose.volume,
+          prevClose: prevClose.close,
+          timestamp: prevClose.timestamp
+        };
+      }
+    }
+
+    if (!quote) {
+      return res.status(404).json({ error: 'Quote not found' });
+    }
+
+    res.json(quote);
+  } catch (error) {
+    console.error('Error fetching quote:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get company details
+app.get('/api/polygon/details/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const details = await polygonClient.getStockDetails(symbol).catch(e => {
+      console.error(`Error fetching details for ${symbol}:`, e.message);
+      return null;
+    });
+
+    if (!details) {
+      return res.status(404).json({ error: 'Details not found' });
+    }
+
+    res.json(details);
+  } catch (error) {
+    console.error('Error fetching details:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get aggregates (OHLCV bars)
+app.get('/api/polygon/aggregates/:symbol/:multiplier/:timespan', async (req, res) => {
+  try {
+    const { symbol, multiplier, timespan } = req.params;
+    const { from, to } = req.query;
+
+    const bars = await polygonClient.getAggregates(symbol, parseInt(multiplier), timespan, {
+      from,
+      to
+    }).catch(e => {
+      console.error(`Error fetching aggregates for ${symbol}:`, e.message);
+      return [];
+    });
+
+    res.json({ results: bars });
+  } catch (error) {
+    console.error('Error fetching aggregates:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static files from React build
 app.use(express.static(`${__dirname}/../react-client/dist`));
 
