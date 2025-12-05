@@ -73,6 +73,12 @@ export function useTradingViewChart(options = {}) {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    // Check if createChart is available
+    if (typeof createChart !== 'function') {
+      console.error('TradingView lightweight-charts not loaded');
+      return;
+    }
+
     const chartOptions = {
       ...defaultChartOptions,
       width: chartContainerRef.current.clientWidth,
@@ -80,33 +86,43 @@ export function useTradingViewChart(options = {}) {
       ...options.chartOptions
     };
 
-    // Create chart
-    chartRef.current = createChart(chartContainerRef.current, chartOptions);
+    try {
+      // Create chart
+      chartRef.current = createChart(chartContainerRef.current, chartOptions);
 
-    // Create candlestick series
-    candlestickSeriesRef.current = chartRef.current.addCandlestickSeries({
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderUpColor: '#26a69a',
-      borderDownColor: '#ef5350',
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350'
-    });
-
-    // Create volume series
-    volumeSeriesRef.current = chartRef.current.addHistogramSeries({
-      color: '#26a69a',
-      priceFormat: {
-        type: 'volume'
-      },
-      priceScaleId: '',
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0
+      // Verify chart was created successfully
+      if (!chartRef.current || typeof chartRef.current.addCandlestickSeries !== 'function') {
+        console.error('Chart creation failed or missing methods');
+        return;
       }
-    });
 
-    setIsReady(true);
+      // Create candlestick series
+      candlestickSeriesRef.current = chartRef.current.addCandlestickSeries({
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderUpColor: '#26a69a',
+        borderDownColor: '#ef5350',
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350'
+      });
+
+      // Create volume series
+      volumeSeriesRef.current = chartRef.current.addHistogramSeries({
+        color: '#26a69a',
+        priceFormat: {
+          type: 'volume'
+        },
+        priceScaleId: '',
+        scaleMargins: {
+          top: 0.8,
+          bottom: 0
+        }
+      });
+
+      setIsReady(true);
+    } catch (err) {
+      console.error('Error initializing chart:', err);
+    }
 
     // Handle resize
     const handleResize = () => {

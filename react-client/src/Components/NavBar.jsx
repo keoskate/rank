@@ -73,9 +73,10 @@ const NavBar = () => {
               key={item.path}
               onClick={() => navigate(item.path)}
               style={{
-                background: isActive(item.path) ? 'rgba(255,255,255,0.2)' : 'none',
+                background: isActive(item.path) ? 'rgba(255,255,255,0.2)' : 'transparent',
                 border: 'none',
-                color: theme.colors.white,
+                color: '#ffffff',
+                opacity: 1,
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                 borderRadius: theme.borderRadius.md,
                 cursor: 'pointer',
@@ -94,9 +95,10 @@ const NavBar = () => {
             <button
               onClick={() => setShowTools(!showTools)}
               style={{
-                background: showTools ? 'rgba(255,255,255,0.2)' : 'none',
+                background: showTools ? 'rgba(255,255,255,0.2)' : 'transparent',
                 border: 'none',
-                color: theme.colors.white,
+                color: '#ffffff',
+                opacity: 1,
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                 borderRadius: theme.borderRadius.md,
                 cursor: 'pointer',

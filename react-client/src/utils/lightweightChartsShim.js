@@ -5,13 +5,29 @@
  * which doesn't export properly for webpack 4.
  */
 
-// Import the standalone build
+// Import the standalone build - this attaches to window.LightweightCharts
 import 'lightweight-charts/dist/lightweight-charts.standalone.production.js';
 
-// The standalone build attaches to window.LightweightCharts
-const LightweightCharts = window.LightweightCharts || {};
+// Get reference after import
+const getLightweightCharts = () => {
+  if (typeof window !== 'undefined' && window.LightweightCharts) {
+    return window.LightweightCharts;
+  }
+  return {};
+};
 
-export const createChart = LightweightCharts.createChart;
+const LightweightCharts = getLightweightCharts();
+
+// Export createChart as a function that retrieves from window at call time
+// This ensures it's available even if the script loads async
+export const createChart = (...args) => {
+  const lwc = typeof window !== 'undefined' && window.LightweightCharts;
+  if (lwc && typeof lwc.createChart === 'function') {
+    return lwc.createChart(...args);
+  }
+  throw new Error('lightweight-charts not loaded');
+};
+
 export const ColorType = LightweightCharts.ColorType;
 export const CrosshairMode = LightweightCharts.CrosshairMode;
 export const LineStyle = LightweightCharts.LineStyle;
