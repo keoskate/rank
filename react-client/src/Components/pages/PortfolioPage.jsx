@@ -32,13 +32,16 @@ const PortfolioPage = () => {
       ]);
 
       if (accountRes.ok) {
-        const accountData = await accountRes.json();
-        setAccount(accountData);
+        const data = await accountRes.json();
+        // API returns { success: true, account: {...} }
+        setAccount(data.account || data);
       }
 
       if (positionsRes.ok) {
-        const positionsData = await positionsRes.json();
-        setPositions(Array.isArray(positionsData) ? positionsData : []);
+        const data = await positionsRes.json();
+        // API returns { success: true, positions: [...] }
+        const positionsArray = data.positions || data;
+        setPositions(Array.isArray(positionsArray) ? positionsArray : []);
       }
 
       // TODO: Fetch recent trades from trade history API
@@ -64,10 +67,13 @@ const PortfolioPage = () => {
   };
 
   const totalPnL = positions.reduce((sum, pos) =>
-    sum + parseFloat(pos.unrealized_pl || 0), 0);
+    sum + parseFloat(pos.unrealizedPL || pos.unrealized_pl || 0), 0);
 
-  const totalPnLPercent = account?.equity && account?.last_equity
-    ? ((account.equity - account.last_equity) / account.last_equity)
+  // Handle both camelCase and snake_case for account fields
+  const equity = parseFloat(account?.equity || account?.portfolio_value || 0);
+  const lastEquity = parseFloat(account?.last_equity || account?.lastEquity || 0);
+  const totalPnLPercent = equity && lastEquity
+    ? ((equity - lastEquity) / lastEquity)
     : 0;
 
   return (
@@ -184,8 +190,12 @@ const PortfolioPage = () => {
               </thead>
               <tbody>
                 {positions.map((pos) => {
-                  const pnl = parseFloat(pos.unrealized_pl || 0);
-                  const pnlPercent = parseFloat(pos.unrealized_plpc || 0) * 100;
+                  // Handle both camelCase (API) and snake_case field names
+                  const pnl = parseFloat(pos.unrealizedPL || pos.unrealized_pl || 0);
+                  const pnlPercent = parseFloat(pos.unrealizedPLPercent || pos.unrealized_plpc || 0) * 100;
+                  const qty = pos.quantity || pos.qty;
+                  const avgPrice = pos.avgEntryPrice || pos.avg_entry_price;
+                  const currentPrice = pos.currentPrice || pos.current_price;
                   const isPositive = pnl >= 0;
 
                   return (
@@ -204,13 +214,13 @@ const PortfolioPage = () => {
                         {pos.symbol}
                       </td>
                       <td style={{ padding: theme.spacing.sm, textAlign: 'right' }}>
-                        {pos.qty}
+                        {qty}
                       </td>
                       <td style={{ padding: theme.spacing.sm, textAlign: 'right' }}>
-                        {formatCurrency(pos.avg_entry_price)}
+                        {formatCurrency(avgPrice)}
                       </td>
                       <td style={{ padding: theme.spacing.sm, textAlign: 'right' }}>
-                        {formatCurrency(pos.current_price)}
+                        {formatCurrency(currentPrice)}
                       </td>
                       <td style={{
                         padding: theme.spacing.sm,
