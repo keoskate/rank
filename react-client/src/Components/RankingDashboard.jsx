@@ -25,6 +25,7 @@ const RankingDashboard = ({
   onWeightChange,
   onMultiplierClick,
   onResetWeights,
+  onApplyPreset,
   onStockListChange,
   columnVisibility,
   onColumnVisibilityChange,
@@ -62,6 +63,7 @@ const RankingDashboard = ({
         onWeightChange={onWeightChange}
         onMultiplierClick={onMultiplierClick}
         onResetWeights={onResetWeights}
+        onApplyPreset={onApplyPreset}
       />
 
       {/* Column Visibility Controls */}

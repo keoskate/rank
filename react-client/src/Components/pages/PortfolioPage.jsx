@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import theme from '../../theme';
 import Card from '../common/Card';
 import Button from '../common/Button';
@@ -15,36 +15,46 @@ const PortfolioPage = () => {
   const navigate = useNavigate();
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
-  const [recentTrades, setRecentTrades] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [aiSession, setAiSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchPortfolioData();
-    const interval = setInterval(fetchPortfolioData, 30000); // Refresh every 30s
+    const interval = setInterval(fetchPortfolioData, 10000); // Refresh every 10s for live updates
     return () => clearInterval(interval);
   }, []);
 
   const fetchPortfolioData = async () => {
     try {
-      const [accountRes, positionsRes] = await Promise.all([
+      const [accountRes, positionsRes, ordersRes, sessionRes] = await Promise.all([
         fetch('/api/alpaca/account'),
-        fetch('/api/alpaca/positions')
+        fetch('/api/alpaca/positions'),
+        fetch('/api/alpaca/orders?status=all&limit=10'),
+        fetch('/api/ai/session/default_user')
       ]);
 
       if (accountRes.ok) {
         const data = await accountRes.json();
-        // API returns { success: true, account: {...} }
         setAccount(data.account || data);
       }
 
       if (positionsRes.ok) {
         const data = await positionsRes.json();
-        // API returns { success: true, positions: [...] }
         const positionsArray = data.positions || data;
         setPositions(Array.isArray(positionsArray) ? positionsArray : []);
       }
 
-      // TODO: Fetch recent trades from trade history API
+      if (ordersRes.ok) {
+        const data = await ordersRes.json();
+        const ordersArray = data.orders || data;
+        setRecentOrders(Array.isArray(ordersArray) ? ordersArray : []);
+      }
+
+      if (sessionRes.ok) {
+        const data = await sessionRes.json();
+        setAiSession(data);
+      }
     } catch (err) {
       console.error('Failed to fetch portfolio:', err);
     } finally {
@@ -202,16 +212,23 @@ const PortfolioPage = () => {
                     <tr
                       key={pos.symbol}
                       style={{
-                        borderBottom: `1px solid ${theme.colors.gray100}`,
-                        cursor: 'pointer'
+                        borderBottom: `1px solid ${theme.colors.gray100}`
                       }}
-                      onClick={() => navigate(`/stock/${pos.symbol}`)}
                     >
                       <td style={{
                         padding: theme.spacing.sm,
                         fontWeight: theme.typography.fontWeight.bold
                       }}>
-                        {pos.symbol}
+                        <Link
+                          to={`/stock/${pos.symbol}`}
+                          style={{
+                            color: theme.colors.primary,
+                            textDecoration: 'none',
+                            fontWeight: theme.typography.fontWeight.bold
+                          }}
+                        >
+                          {pos.symbol}
+                        </Link>
                       </td>
                       <td style={{ padding: theme.spacing.sm, textAlign: 'right' }}>
                         {qty}
@@ -238,16 +255,11 @@ const PortfolioPage = () => {
                         {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
                       </td>
                       <td style={{ padding: theme.spacing.sm, textAlign: 'center' }}>
-                        <Button
-                          variant="outline"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/stock/${pos.symbol}`);
-                          }}
-                        >
-                          Trade
-                        </Button>
+                        <Link to={`/stock/${pos.symbol}`}>
+                          <Button variant="outline" size="small">
+                            Trade
+                          </Button>
+                        </Link>
                       </td>
                     </tr>
                   );
@@ -264,32 +276,99 @@ const PortfolioPage = () => {
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: theme.spacing.md
       }}>
-        {/* Active Auto-Trades */}
+        {/* AI Trading Session Status */}
         <Card>
           <h3 style={{
             margin: 0,
             marginBottom: theme.spacing.md,
             fontSize: theme.typography.fontSize.md,
-            fontWeight: theme.typography.fontWeight.bold
+            fontWeight: theme.typography.fontWeight.bold,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
           }}>
-            Auto-Trading
+            <span>AI Trading</span>
+            {aiSession && aiSession.status !== 'stopped' && (
+              <span style={{
+                fontSize: theme.typography.fontSize.xs,
+                padding: '2px 8px',
+                borderRadius: theme.borderRadius.sm,
+                backgroundColor: aiSession.status === 'running' ? theme.colors.success : theme.colors.warning,
+                color: 'white'
+              }}>
+                {aiSession.status === 'running' ? 'Active' : 'Paused'}
+              </span>
+            )}
           </h3>
-          <div style={{
-            padding: theme.spacing.lg,
-            textAlign: 'center',
-            color: theme.colors.gray500
-          }}>
-            No active auto-trades.
-            <div style={{
-              fontSize: theme.typography.fontSize.xs,
-              marginTop: theme.spacing.sm
-            }}>
-              Enable auto-trading from any stock detail page.
+          {aiSession && aiSession.status !== 'stopped' ? (
+            <div style={{ fontSize: theme.typography.fontSize.sm }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: theme.spacing.sm,
+                marginBottom: theme.spacing.md
+              }}>
+                <div>
+                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                    Trades Today
+                  </div>
+                  <div style={{ fontWeight: theme.typography.fontWeight.bold }}>
+                    {aiSession.stats?.totalTrades || 0}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                    Win Rate
+                  </div>
+                  <div style={{ fontWeight: theme.typography.fontWeight.bold }}>
+                    {aiSession.stats?.winRate?.toFixed(1) || 0}%
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                    Session P&L
+                  </div>
+                  <div style={{
+                    fontWeight: theme.typography.fontWeight.bold,
+                    color: (aiSession.stats?.totalPnL || 0) >= 0 ? theme.colors.success : theme.colors.error
+                  }}>
+                    {formatCurrency(aiSession.stats?.totalPnL || 0)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                    Positions
+                  </div>
+                  <div style={{ fontWeight: theme.typography.fontWeight.bold }}>
+                    {aiSession.positions?.length || 0}
+                  </div>
+                </div>
+              </div>
+              <Link to="/live-trading">
+                <Button variant="outline" size="small" style={{ width: '100%' }}>
+                  View Trading Dashboard
+                </Button>
+              </Link>
             </div>
-          </div>
+          ) : (
+            <div style={{
+              padding: theme.spacing.lg,
+              textAlign: 'center',
+              color: theme.colors.gray500
+            }}>
+              No active AI trading session.
+              <div style={{ marginTop: theme.spacing.md }}>
+                <Link to="/live-trading">
+                  <Button variant="primary" size="small">
+                    Start AI Trading
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </Card>
 
-        {/* Recent Activity */}
+        {/* Recent Orders */}
         <Card>
           <h3 style={{
             margin: 0,
@@ -297,15 +376,84 @@ const PortfolioPage = () => {
             fontSize: theme.typography.fontSize.md,
             fontWeight: theme.typography.fontWeight.bold
           }}>
-            Recent Activity
+            Recent Orders
           </h3>
-          <div style={{
-            padding: theme.spacing.lg,
-            textAlign: 'center',
-            color: theme.colors.gray500
-          }}>
-            No recent trades.
-          </div>
+          {recentOrders.length > 0 ? (
+            <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+              {recentOrders.slice(0, 8).map((order, idx) => (
+                <div
+                  key={order.id || idx}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: `${theme.spacing.sm} 0`,
+                    borderBottom: idx < recentOrders.length - 1 ? `1px solid ${theme.colors.gray100}` : 'none',
+                    fontSize: theme.typography.fontSize.sm
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <span style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      padding: '2px 6px',
+                      borderRadius: theme.borderRadius.sm,
+                      backgroundColor: order.side === 'buy' ? theme.colors.success + '20' : theme.colors.error + '20',
+                      color: order.side === 'buy' ? theme.colors.success : theme.colors.error,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      textTransform: 'uppercase'
+                    }}>
+                      {order.side}
+                    </span>
+                    <span style={{ fontWeight: theme.typography.fontWeight.bold }}>
+                      {order.symbol}
+                    </span>
+                    <span style={{ color: theme.colors.gray500 }}>
+                      x{order.quantity || order.qty}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {/* P/L for sell orders */}
+                    {order.side === 'sell' && order.pnl !== undefined && order.pnl !== null && (
+                      <div style={{
+                        fontSize: theme.typography.fontSize.sm,
+                        fontWeight: theme.typography.fontWeight.bold,
+                        color: parseFloat(order.pnl) >= 0 ? theme.colors.success : theme.colors.error,
+                        marginBottom: '2px'
+                      }}>
+                        {parseFloat(order.pnl) >= 0 ? '+' : ''}{formatCurrency(order.pnl)}
+                      </div>
+                    )}
+                    <div style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      padding: '2px 6px',
+                      borderRadius: theme.borderRadius.sm,
+                      backgroundColor: order.status === 'filled' ? theme.colors.success + '20' :
+                                      order.status === 'canceled' ? theme.colors.gray200 :
+                                      theme.colors.warning + '20',
+                      color: order.status === 'filled' ? theme.colors.success :
+                             order.status === 'canceled' ? theme.colors.gray500 :
+                             theme.colors.warning
+                    }}>
+                      {order.status}
+                    </div>
+                    {order.filledAvgPrice && (
+                      <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs, marginTop: '2px' }}>
+                        @ {formatCurrency(order.filledAvgPrice)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              padding: theme.spacing.lg,
+              textAlign: 'center',
+              color: theme.colors.gray500
+            }}>
+              No recent orders.
+            </div>
+          )}
         </Card>
       </div>
     </div>

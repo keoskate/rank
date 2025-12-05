@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import Button from './common/Button';
+import { Link, useLocation } from 'react-router-dom';
 import theme from '../theme';
 
 /**
@@ -10,19 +9,18 @@ import theme from '../theme';
  * Tools menu: Advanced features for power users
  */
 const NavBar = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [showTools, setShowTools] = useState(false);
 
   const primaryNav = [
     { path: '/', label: 'Rankings' },
-    { path: '/portfolio', label: 'Portfolio' }
+    { path: '/portfolio', label: 'Portfolio' },
+    { path: '/live-trading', label: 'Trading' }
   ];
 
   const toolsNav = [
     { path: '/backtest', label: 'Backtesting' },
     { path: '/day-trading', label: 'Day Trading Lab' },
-    { path: '/live-trading', label: 'AI Trading' },
     { path: '/import-trades', label: 'Import Trades' },
     { path: '/analytics', label: 'Analytics' }
   ];
@@ -46,21 +44,19 @@ const NavBar = () => {
         justifyContent: 'space-between'
       }}>
         {/* Logo */}
-        <button
-          onClick={() => navigate('/')}
+        <Link
+          to="/"
           style={{
-            background: 'none',
-            border: 'none',
             color: '#ffffff',
             fontSize: '20px',
             fontWeight: 700,
-            cursor: 'pointer',
+            textDecoration: 'none',
             padding: '8px 12px',
             whiteSpace: 'nowrap'
           }}
         >
           Keo Stonks
-        </button>
+        </Link>
 
         {/* Navigation */}
         <nav style={{
@@ -70,17 +66,15 @@ const NavBar = () => {
         }}>
           {/* Primary Nav */}
           {primaryNav.map((item) => (
-            <button
+            <Link
               key={item.path}
-              onClick={() => navigate(item.path)}
+              to={item.path}
               style={{
                 background: isActive(item.path) ? 'rgba(255,255,255,0.2)' : 'transparent',
-                border: 'none',
                 color: '#ffffff',
-                opacity: 1,
+                textDecoration: 'none',
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                 borderRadius: theme.borderRadius.md,
-                cursor: 'pointer',
                 fontSize: theme.typography.fontSize.md,
                 fontWeight: isActive(item.path)
                   ? theme.typography.fontWeight.bold
@@ -88,7 +82,7 @@ const NavBar = () => {
               }}
             >
               {item.label}
-            </button>
+            </Link>
           ))}
 
           {/* Tools Dropdown */}
@@ -136,28 +130,25 @@ const NavBar = () => {
                 onMouseLeave={() => setShowTools(false)}
               >
                 {toolsNav.map((item) => (
-                  <button
+                  <Link
                     key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      setShowTools(false);
-                    }}
+                    to={item.path}
+                    onClick={() => setShowTools(false)}
                     style={{
                       display: 'block',
                       width: '100%',
                       padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                      border: 'none',
                       background: isActive(item.path)
                         ? theme.colors.gray100
                         : theme.colors.surface,
                       color: theme.colors.text,
+                      textDecoration: 'none',
                       textAlign: 'left',
-                      cursor: 'pointer',
                       fontSize: theme.typography.fontSize.sm
                     }}
                   >
                     {item.label}
-                  </button>
+                  </Link>
                 ))}
               </div>
             )}

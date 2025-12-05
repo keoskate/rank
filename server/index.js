@@ -1964,7 +1964,7 @@ app.post('/api/alpaca/orders', async (req, res) => {
   }
 });
 
-// 22. Get Alpaca orders
+// 22. Get Alpaca orders (with P/L for sell orders)
 app.get('/api/alpaca/orders', async (req, res) => {
   try {
     const filters = {};
@@ -1972,7 +1972,72 @@ app.get('/api/alpaca/orders', async (req, res) => {
     if (req.query.limit) filters.limit = req.query.limit;
 
     const orders = await alpacaClient.getOrders(filters);
-    res.json({ success: true, orders });
+
+    // Get recent trade activities to enrich sell orders with P/L
+    // Activities contain per_share_profit for closed trades
+    let activities = [];
+    try {
+      activities = await alpacaClient.getAccountActivities({
+        activity_types: 'FILL',
+        page_size: 100
+      });
+    } catch (err) {
+      console.warn('Could not fetch activities for P/L enrichment:', err.message);
+    }
+
+    // Create a map of order_id -> activity for quick lookup
+    const activityByOrderId = {};
+    if (Array.isArray(activities)) {
+      activities.forEach(activity => {
+        if (activity.order_id) {
+          // Store the activity, keyed by order_id
+          // Note: There may be multiple fills for a single order (partial fills)
+          if (!activityByOrderId[activity.order_id]) {
+            activityByOrderId[activity.order_id] = [];
+          }
+          activityByOrderId[activity.order_id].push(activity);
+        }
+      });
+    }
+
+    // Enrich orders with P/L data for filled sell orders
+    const enrichedOrders = orders.map(order => {
+      const enriched = { ...order };
+
+      // For sell orders that are filled, calculate P/L from activities
+      if (order.side === 'sell' && order.status === 'filled') {
+        const fills = activityByOrderId[order.id];
+        if (fills && fills.length > 0) {
+          // Sum up P/L from all fills for this order
+          let totalPnL = 0;
+          let hasValidPnL = false;
+
+          fills.forEach(fill => {
+            // Alpaca activities may have per_share_profit or we calculate from price/cost_basis
+            if (fill.per_share_profit !== undefined && fill.per_share_profit !== null) {
+              const qty = parseFloat(fill.qty) || 0;
+              totalPnL += parseFloat(fill.per_share_profit) * qty;
+              hasValidPnL = true;
+            } else if (fill.price && fill.cost_basis) {
+              // Fallback: calculate from fill price - cost_basis
+              const qty = parseFloat(fill.qty) || 0;
+              const fillPrice = parseFloat(fill.price) || 0;
+              const costBasisPerShare = parseFloat(fill.cost_basis) / qty;
+              totalPnL += (fillPrice - costBasisPerShare) * qty;
+              hasValidPnL = true;
+            }
+          });
+
+          if (hasValidPnL) {
+            enriched.pnl = totalPnL;
+          }
+        }
+      }
+
+      return enriched;
+    });
+
+    res.json({ success: true, orders: enrichedOrders });
   } catch (error) {
     console.error('❌ Error fetching orders:', error.message);
     res.status(500).json({ error: error.message });
@@ -2117,49 +2182,279 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       };
     }
 
-    // Generate buy/sell recommendation
+    // ============================================
+    // ENHANCED AI ANALYSIS WITH FULL TRANSPARENCY
+    // ============================================
+    // This shows exactly how each signal contributes to the final recommendation
+
     let recommendation = 'Neutral';
     let reasons = [];
-    let score = 0;
+    let totalScore = 0;
+    const maxPossibleScore = 10; // Maximum possible positive/negative score
+
+    // Signal breakdown for transparency
+    const signalBreakdown = [];
 
     if (technicals) {
-      // RSI analysis
-      if (technicals.rsi < 30) {
-        score += 2;
-        reasons.push('RSI indicates oversold conditions');
-      } else if (technicals.rsi > 70) {
-        score -= 2;
-        reasons.push('RSI indicates overbought conditions');
+      // ---- RSI SIGNAL (Weight: 25%) ----
+      const rsiValue = parseFloat(technicals.rsi);
+      let rsiScore = 0;
+      let rsiSignal = 'Neutral';
+      let rsiExplanation = '';
+
+      if (rsiValue < 30) {
+        rsiScore = 2.5;
+        rsiSignal = 'Bullish';
+        rsiExplanation = `RSI at ${rsiValue.toFixed(1)} indicates oversold conditions - historically a buying opportunity`;
+      } else if (rsiValue < 40) {
+        rsiScore = 1;
+        rsiSignal = 'Slightly Bullish';
+        rsiExplanation = `RSI at ${rsiValue.toFixed(1)} is approaching oversold territory`;
+      } else if (rsiValue > 70) {
+        rsiScore = -2.5;
+        rsiSignal = 'Bearish';
+        rsiExplanation = `RSI at ${rsiValue.toFixed(1)} indicates overbought conditions - may see pullback`;
+      } else if (rsiValue > 60) {
+        rsiScore = -1;
+        rsiSignal = 'Slightly Bearish';
+        rsiExplanation = `RSI at ${rsiValue.toFixed(1)} is approaching overbought territory`;
+      } else {
+        rsiExplanation = `RSI at ${rsiValue.toFixed(1)} is in neutral range (30-70)`;
       }
 
-      // Trend analysis
+      signalBreakdown.push({
+        indicator: 'RSI (14)',
+        value: rsiValue.toFixed(1),
+        signal: rsiSignal,
+        score: rsiScore,
+        maxScore: 2.5,
+        weight: '25%',
+        explanation: rsiExplanation,
+        formula: 'RSI = 100 - (100 / (1 + RS)), where RS = Avg Gain / Avg Loss over 14 periods'
+      });
+      totalScore += rsiScore;
+      if (rsiScore !== 0) reasons.push(rsiExplanation);
+
+      // ---- TREND SIGNAL (Weight: 20%) ----
+      let trendScore = 0;
+      let trendExplanation = '';
+
       if (technicals.trendSignal === 'Bullish') {
-        score += 1;
-        reasons.push('Price above both 20 and 50-day moving averages');
+        trendScore = 2;
+        trendExplanation = `Price ($${currentPrice.toFixed(2)}) > SMA20 ($${technicals.sma20}) > SMA50 ($${technicals.sma50}) - Strong uptrend`;
       } else if (technicals.trendSignal === 'Bearish') {
-        score -= 1;
-        reasons.push('Price below both 20 and 50-day moving averages');
+        trendScore = -2;
+        trendExplanation = `Price ($${currentPrice.toFixed(2)}) < SMA20 ($${technicals.sma20}) < SMA50 ($${technicals.sma50}) - Downtrend`;
+      } else {
+        trendExplanation = `Mixed signals: Price/MA alignment unclear - sideways market`;
       }
 
-      // Distance from 52-week high/low
-      if (parseFloat(technicals.distanceFromHigh) > -5) {
-        score -= 1;
-        reasons.push('Trading near 52-week high');
-      } else if (parseFloat(technicals.distanceFromLow) < 10) {
-        score += 1;
-        reasons.push('Trading near 52-week low');
+      signalBreakdown.push({
+        indicator: 'Trend (MA Cross)',
+        value: technicals.trendSignal,
+        signal: technicals.trendSignal,
+        score: trendScore,
+        maxScore: 2,
+        weight: '20%',
+        explanation: trendExplanation,
+        formula: 'Bullish if Price > SMA20 > SMA50; Bearish if Price < SMA20 < SMA50',
+        details: {
+          price: currentPrice.toFixed(2),
+          sma20: technicals.sma20,
+          sma50: technicals.sma50
+        }
+      });
+      totalScore += trendScore;
+      if (trendScore !== 0) reasons.push(trendExplanation);
+
+      // ---- 52-WEEK POSITION (Weight: 15%) ----
+      const distFromHigh = parseFloat(technicals.distanceFromHigh);
+      const distFromLow = parseFloat(technicals.distanceFromLow);
+      let positionScore = 0;
+      let positionSignal = 'Neutral';
+      let positionExplanation = '';
+
+      if (distFromHigh > -10) {
+        positionScore = -1.5;
+        positionSignal = 'Bearish';
+        positionExplanation = `Trading ${Math.abs(distFromHigh).toFixed(1)}% from 52-week high ($${technicals.high52w}) - limited upside`;
+      } else if (distFromHigh < -30) {
+        positionScore = 1.5;
+        positionSignal = 'Bullish';
+        positionExplanation = `Trading ${Math.abs(distFromHigh).toFixed(1)}% below 52-week high - significant discount`;
+      } else {
+        positionExplanation = `Trading in middle of 52-week range (${distFromHigh.toFixed(1)}% from high)`;
       }
 
-      // Volume analysis
-      if (volumeChange > 50) {
-        reasons.push(`Volume up ${volumeChange.toFixed(0)}% - increased interest`);
+      signalBreakdown.push({
+        indicator: '52-Week Position',
+        value: `${distFromHigh.toFixed(1)}% from high`,
+        signal: positionSignal,
+        score: positionScore,
+        maxScore: 1.5,
+        weight: '15%',
+        explanation: positionExplanation,
+        details: {
+          high52w: technicals.high52w,
+          low52w: technicals.low52w,
+          distanceFromHigh: distFromHigh.toFixed(2) + '%',
+          distanceFromLow: distFromLow.toFixed(2) + '%'
+        }
+      });
+      totalScore += positionScore;
+      if (positionScore !== 0) reasons.push(positionExplanation);
+
+      // ---- MOMENTUM (Weight: 15%) ----
+      const priceChange1W = parseFloat(technicals.priceChange1W || 0);
+      const priceChange1M = parseFloat(technicals.priceChange1M || 0);
+      let momentumScore = 0;
+      let momentumSignal = 'Neutral';
+      let momentumExplanation = '';
+
+      if (priceChange1W > 5 && priceChange1M > 10) {
+        momentumScore = 1.5;
+        momentumSignal = 'Strong Bullish';
+        momentumExplanation = `Strong momentum: +${priceChange1W.toFixed(1)}% (1W), +${priceChange1M.toFixed(1)}% (1M)`;
+      } else if (priceChange1W > 2) {
+        momentumScore = 0.75;
+        momentumSignal = 'Bullish';
+        momentumExplanation = `Positive momentum: +${priceChange1W.toFixed(1)}% this week`;
+      } else if (priceChange1W < -5 && priceChange1M < -10) {
+        momentumScore = -1.5;
+        momentumSignal = 'Strong Bearish';
+        momentumExplanation = `Negative momentum: ${priceChange1W.toFixed(1)}% (1W), ${priceChange1M.toFixed(1)}% (1M)`;
+      } else if (priceChange1W < -2) {
+        momentumScore = -0.75;
+        momentumSignal = 'Bearish';
+        momentumExplanation = `Weak momentum: ${priceChange1W.toFixed(1)}% this week`;
+      } else {
+        momentumExplanation = `Flat momentum: ${priceChange1W.toFixed(1)}% (1W)`;
       }
 
-      // Determine recommendation
-      if (score >= 2) recommendation = 'Strong Buy';
-      else if (score === 1) recommendation = 'Buy';
-      else if (score === -1) recommendation = 'Sell';
-      else if (score <= -2) recommendation = 'Strong Sell';
+      signalBreakdown.push({
+        indicator: 'Price Momentum',
+        value: `${priceChange1W >= 0 ? '+' : ''}${priceChange1W.toFixed(1)}% (1W)`,
+        signal: momentumSignal,
+        score: momentumScore,
+        maxScore: 1.5,
+        weight: '15%',
+        explanation: momentumExplanation,
+        details: {
+          change1D: technicals.priceChange1D + '%',
+          change1W: technicals.priceChange1W + '%',
+          change1M: technicals.priceChange1M + '%'
+        }
+      });
+      totalScore += momentumScore;
+      if (momentumScore !== 0) reasons.push(momentumExplanation);
+
+      // ---- VOLUME SIGNAL (Weight: 15%) ----
+      let volumeScore = 0;
+      let volumeSignal = 'Neutral';
+      let volumeExplanation = '';
+
+      if (volumeChange !== null) {
+        if (volumeChange > 100) {
+          volumeScore = 1.5;
+          volumeSignal = 'High Interest';
+          volumeExplanation = `Volume surged +${volumeChange.toFixed(0)}% vs yesterday - significant market interest`;
+        } else if (volumeChange > 50) {
+          volumeScore = 0.75;
+          volumeSignal = 'Elevated';
+          volumeExplanation = `Volume up +${volumeChange.toFixed(0)}% - above average activity`;
+        } else if (volumeChange < -50) {
+          volumeScore = -0.5;
+          volumeSignal = 'Low';
+          volumeExplanation = `Volume down ${volumeChange.toFixed(0)}% - lack of conviction`;
+        } else {
+          volumeExplanation = `Volume change ${volumeChange >= 0 ? '+' : ''}${volumeChange.toFixed(0)}% - normal activity`;
+        }
+      } else {
+        volumeExplanation = 'Volume data unavailable';
+      }
+
+      signalBreakdown.push({
+        indicator: 'Volume',
+        value: dailyVolume ? dailyVolume.toLocaleString() : 'N/A',
+        signal: volumeSignal,
+        score: volumeScore,
+        maxScore: 1.5,
+        weight: '15%',
+        explanation: volumeExplanation,
+        details: {
+          current: dailyVolume,
+          previous: prevVolume,
+          changePercent: volumeChange ? volumeChange.toFixed(1) + '%' : 'N/A'
+        }
+      });
+      totalScore += volumeScore;
+      if (volumeScore !== 0) reasons.push(volumeExplanation);
+
+      // ---- VOLATILITY ASSESSMENT (Weight: 10%) ----
+      // Calculate recent volatility from price swings
+      let volatilityScore = 0;
+      let volatilitySignal = 'Normal';
+      let volatilityExplanation = '';
+
+      if (bars.length >= 20) {
+        const recentBars = bars.slice(-20);
+        const dailyReturns = recentBars.slice(1).map((b, i) =>
+          Math.abs((b.close - recentBars[i].close) / recentBars[i].close) * 100
+        );
+        const avgDailySwing = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+
+        if (avgDailySwing > 3) {
+          volatilityScore = -1;
+          volatilitySignal = 'High Risk';
+          volatilityExplanation = `High volatility: avg daily swing ${avgDailySwing.toFixed(1)}% - increased risk`;
+        } else if (avgDailySwing < 1) {
+          volatilityScore = 0.5;
+          volatilitySignal = 'Low Risk';
+          volatilityExplanation = `Low volatility: avg daily swing ${avgDailySwing.toFixed(1)}% - stable`;
+        } else {
+          volatilityExplanation = `Normal volatility: avg daily swing ${avgDailySwing.toFixed(1)}%`;
+        }
+
+        signalBreakdown.push({
+          indicator: 'Volatility',
+          value: avgDailySwing.toFixed(1) + '%',
+          signal: volatilitySignal,
+          score: volatilityScore,
+          maxScore: 1,
+          weight: '10%',
+          explanation: volatilityExplanation
+        });
+        totalScore += volatilityScore;
+      }
+
+      // ============================================
+      // FINAL RECOMMENDATION CALCULATION
+      // ============================================
+      const normalizedScore = (totalScore / maxPossibleScore) * 100; // -100 to +100 scale
+      const confidence = Math.min(95, Math.max(30, 50 + Math.abs(normalizedScore) / 2));
+
+      if (totalScore >= 5) recommendation = 'Strong Buy';
+      else if (totalScore >= 2.5) recommendation = 'Buy';
+      else if (totalScore >= 0.5) recommendation = 'Lean Buy';
+      else if (totalScore <= -5) recommendation = 'Strong Sell';
+      else if (totalScore <= -2.5) recommendation = 'Sell';
+      else if (totalScore <= -0.5) recommendation = 'Lean Sell';
+      else recommendation = 'Neutral';
+
+      // Add confidence explanation
+      const confidenceExplanation = totalScore > 0
+        ? `${signalBreakdown.filter(s => s.score > 0).length} of ${signalBreakdown.length} signals are bullish`
+        : totalScore < 0
+        ? `${signalBreakdown.filter(s => s.score < 0).length} of ${signalBreakdown.length} signals are bearish`
+        : 'Signals are mixed - no clear direction';
+
+      // Store enhanced analysis data
+      technicals.signalBreakdown = signalBreakdown;
+      technicals.totalScore = totalScore.toFixed(2);
+      technicals.maxPossibleScore = maxPossibleScore;
+      technicals.normalizedScore = normalizedScore.toFixed(1);
+      technicals.confidence = confidence.toFixed(0);
+      technicals.confidenceExplanation = confidenceExplanation;
     }
 
     // Calculate expected returns (simple projections based on historical volatility)
@@ -2222,8 +2517,13 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       technicals,
       recommendation: {
         action: recommendation,
-        score,
-        reasons
+        score: totalScore,
+        maxScore: maxPossibleScore,
+        normalizedScore: technicals?.normalizedScore || 0,
+        confidence: technicals?.confidence || 50,
+        confidenceExplanation: technicals?.confidenceExplanation || '',
+        reasons,
+        signalBreakdown: technicals?.signalBreakdown || []
       },
       projections
     };
@@ -2590,7 +2890,7 @@ Format your response in plain text with clear paragraphs. End with 2-3 specific 
 // AI TRADING ENGINE ENDPOINTS
 // ================================
 
-// Start AI trading session
+// Start AI trading session (creates a new session)
 app.post('/api/ai/session/start', async (req, res) => {
   try {
     const { userId = 'default_user', config } = req.body;
@@ -2602,11 +2902,13 @@ app.post('/api/ai/session/start', async (req, res) => {
   }
 });
 
-// Stop AI trading session
+// Stop AI trading session (by sessionId)
 app.post('/api/ai/session/stop', async (req, res) => {
   try {
-    const { userId = 'default_user' } = req.body;
-    const summary = aiTradingEngine.stopSession(userId);
+    const { sessionId, userId } = req.body;
+    // Support both sessionId and userId for backwards compatibility
+    const id = sessionId || userId || 'default_user';
+    const summary = aiTradingEngine.stopSession(id);
     res.json({ success: true, ...summary });
   } catch (error) {
     console.error('Error stopping AI session:', error);
@@ -2614,7 +2916,64 @@ app.post('/api/ai/session/stop', async (req, res) => {
   }
 });
 
-// Get AI session status
+// Pause AI trading session
+app.post('/api/ai/session/pause', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    aiTradingEngine.pauseSession(sessionId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error pausing AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Resume AI trading session
+app.post('/api/ai/session/resume', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    aiTradingEngine.resumeSession(sessionId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error resuming AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all sessions for a user
+app.get('/api/ai/sessions/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const sessions = aiTradingEngine.getAllUserSessions(userId);
+    res.json({ sessions });
+  } catch (error) {
+    console.error('Error getting AI sessions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get specific session by sessionId
+app.get('/api/ai/session/detail/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = aiTradingEngine.getSession(sessionId);
+    if (!session) {
+      return res.json({ status: 'not_found' });
+    }
+    res.json(session);
+  } catch (error) {
+    console.error('Error getting AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get AI session status (backwards compatible - returns first active session for user)
 app.get('/api/ai/session/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -2629,12 +2988,12 @@ app.get('/api/ai/session/:userId', async (req, res) => {
   }
 });
 
-// Update AI session config
-app.put('/api/ai/session/:userId/config', async (req, res) => {
+// Update AI session config (by sessionId)
+app.put('/api/ai/session/:sessionId/config', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { sessionId } = req.params;
     const newConfig = req.body;
-    aiTradingEngine.updateConfig(userId, newConfig);
+    aiTradingEngine.updateConfig(sessionId, newConfig);
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating AI config:', error);
@@ -2778,6 +3137,171 @@ app.post('/api/import/schwab/train', async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('Error training from trades:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// SIMULATION RESULTS STORAGE
+// ================================
+
+// In-memory storage for simulation results (in production, use database)
+const simulationResults = new Map();
+
+// Save simulation results for learning/analysis
+app.post('/api/simulation/results', async (req, res) => {
+  try {
+    const { analysis, aiDecisions, events, config, savedAt } = req.body;
+
+    if (!analysis) {
+      return res.status(400).json({ error: 'Analysis data required' });
+    }
+
+    const resultId = `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const result = {
+      id: resultId,
+      analysis,
+      aiDecisions: aiDecisions || [],
+      events: events || [],
+      config: config || {},
+      savedAt: savedAt || new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+
+    // Store result
+    const userId = 'default_user';
+    if (!simulationResults.has(userId)) {
+      simulationResults.set(userId, []);
+    }
+    simulationResults.get(userId).push(result);
+
+    // Keep only last 100 simulations per user
+    const userResults = simulationResults.get(userId);
+    if (userResults.length > 100) {
+      simulationResults.set(userId, userResults.slice(-100));
+    }
+
+    console.log(`✅ Saved simulation result: ${resultId} for ${analysis.symbol} on ${analysis.date}`);
+
+    res.json({
+      success: true,
+      resultId,
+      message: 'Simulation results saved for learning'
+    });
+  } catch (error) {
+    console.error('Error saving simulation results:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all simulation results for a user
+app.get('/api/simulation/results', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'default_user';
+    const results = simulationResults.get(userId) || [];
+
+    // Return summary without full decision data
+    const summaries = results.map(r => ({
+      id: r.id,
+      date: r.analysis.date,
+      symbol: r.analysis.symbol,
+      returnPercent: r.analysis.returnPercent,
+      winRate: r.analysis.winRate,
+      totalTrades: r.analysis.totalTrades,
+      savedAt: r.savedAt
+    }));
+
+    res.json({ results: summaries, total: summaries.length });
+  } catch (error) {
+    console.error('Error getting simulation results:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific simulation result by ID
+app.get('/api/simulation/results/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.query.userId || 'default_user';
+    const results = simulationResults.get(userId) || [];
+
+    const result = results.find(r => r.id === id);
+
+    if (!result) {
+      return res.status(404).json({ error: 'Simulation result not found' });
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting simulation result:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Aggregate learning from all simulations
+app.get('/api/simulation/insights', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'default_user';
+    const results = simulationResults.get(userId) || [];
+
+    if (results.length === 0) {
+      return res.json({
+        message: 'No simulation data yet',
+        insights: null
+      });
+    }
+
+    // Calculate aggregate stats
+    const totalSimulations = results.length;
+    const avgReturn = results.reduce((s, r) => s + r.analysis.returnPercent, 0) / totalSimulations;
+    const avgWinRate = results.reduce((s, r) => s + r.analysis.winRate, 0) / totalSimulations;
+    const avgTrades = results.reduce((s, r) => s + r.analysis.totalTrades, 0) / totalSimulations;
+
+    const profitableSimulations = results.filter(r => r.analysis.returnPercent > 0).length;
+    const profitabilityRate = (profitableSimulations / totalSimulations) * 100;
+
+    // Find best and worst days
+    const bestDay = results.reduce((best, r) =>
+      r.analysis.returnPercent > best.analysis.returnPercent ? r : best
+    );
+    const worstDay = results.reduce((worst, r) =>
+      r.analysis.returnPercent < worst.analysis.returnPercent ? r : worst
+    );
+
+    // Collect all improvements mentioned
+    const allImprovements = results.flatMap(r => r.analysis.improvements || []);
+    const improvementCounts = {};
+    allImprovements.forEach(imp => {
+      improvementCounts[imp] = (improvementCounts[imp] || 0) + 1;
+    });
+    const topImprovements = Object.entries(improvementCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([improvement, count]) => ({ improvement, count }));
+
+    res.json({
+      insights: {
+        totalSimulations,
+        avgReturn: avgReturn.toFixed(2),
+        avgWinRate: avgWinRate.toFixed(1),
+        avgTradesPerDay: avgTrades.toFixed(1),
+        profitabilityRate: profitabilityRate.toFixed(1),
+        bestDay: {
+          date: bestDay.analysis.date,
+          symbol: bestDay.analysis.symbol,
+          return: bestDay.analysis.returnPercent.toFixed(2)
+        },
+        worstDay: {
+          date: worstDay.analysis.date,
+          symbol: worstDay.analysis.symbol,
+          return: worstDay.analysis.returnPercent.toFixed(2)
+        },
+        topImprovements
+      }
+    });
+  } catch (error) {
+    console.error('Error getting simulation insights:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -2938,10 +3462,14 @@ websocketServer.initializeWebSocket(server);
 server.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}!`);
   console.log(`\n🤖 AI Trading Engine endpoints:`);
-  console.log(`   POST /api/ai/session/start`);
-  console.log(`   POST /api/ai/session/stop`);
-  console.log(`   GET  /api/ai/session/:userId`);
-  console.log(`   PUT  /api/ai/session/:userId/config`);
+  console.log(`   POST /api/ai/session/start     - Create new AI trading session`);
+  console.log(`   POST /api/ai/session/stop      - Stop a session`);
+  console.log(`   POST /api/ai/session/pause     - Pause a session`);
+  console.log(`   POST /api/ai/session/resume    - Resume a paused session`);
+  console.log(`   GET  /api/ai/sessions/:userId  - Get all sessions for user`);
+  console.log(`   GET  /api/ai/session/detail/:sessionId - Get specific session`);
+  console.log(`   GET  /api/ai/session/:userId   - Get first active session (legacy)`);
+  console.log(`   PUT  /api/ai/session/:sessionId/config - Update session config`);
   console.log(`   GET  /api/ai/decisions/:sessionId`);
   console.log(`   POST /api/ai/patterns/analyze`);
   console.log(`\n📈 Technical Indicators:`);

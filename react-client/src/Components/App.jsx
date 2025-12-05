@@ -17,6 +17,7 @@ import PortfolioPage from './pages/PortfolioPage';
 // Tools (advanced features)
 import BacktestPage from './pages/BacktestPage';
 import IntradayAnalyzerPage from './pages/IntradayAnalyzerPage';
+import TradingSessionsList from './pages/TradingSessionsList';
 import LiveTradingDashboard from './pages/LiveTradingDashboard';
 import TradeImportPage from './pages/TradeImportPage';
 import PerformanceAnalytics from './pages/PerformanceAnalytics';
@@ -46,7 +47,8 @@ function App() {
                 {/* Tools */}
                 <Route path="/backtest" element={<BacktestPage />} />
                 <Route path="/day-trading" element={<IntradayAnalyzerPage />} />
-                <Route path="/live-trading" element={<LiveTradingDashboard />} />
+                <Route path="/live-trading" element={<TradingSessionsList />} />
+                <Route path="/live-trading/:sessionId" element={<LiveTradingDashboard />} />
                 <Route path="/import-trades" element={<TradeImportPage />} />
                 <Route path="/analytics" element={<PerformanceAnalytics />} />
 

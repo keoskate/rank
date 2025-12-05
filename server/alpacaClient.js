@@ -167,6 +167,18 @@ async function getPosition(symbol) {
 async function placeOrder(orderParams, accountValue = null) {
   const modeInfo = tradingModeManager.getModeInfo();
 
+  // Ensure qty is a valid positive integer
+  if (orderParams.qty !== undefined) {
+    orderParams.qty = parseInt(orderParams.qty, 10);
+    if (isNaN(orderParams.qty) || orderParams.qty < 1) {
+      throw new Error(`Invalid quantity: ${orderParams.qty}. qty must be a positive integer.`);
+    }
+    // Convert to string as Alpaca API expects string for qty
+    orderParams.qty = String(orderParams.qty);
+  } else if (!orderParams.notional) {
+    throw new Error('Order must have either qty or notional specified');
+  }
+
   // Validate order before placing
   const validation = tradingModeManager.validateOrder(orderParams, accountValue);
 
@@ -515,9 +527,36 @@ async function closeAllPositions() {
   return result;
 }
 
+/**
+ * Get account activities (trades, fills, etc.)
+ * Used for P/L calculation on sell orders
+ *
+ * @param {Object} filters - { activity_types, date, until, after, direction, page_size }
+ * @returns {Array} - Array of activities
+ */
+async function getAccountActivities(filters = {}) {
+  let queryParams = [];
+
+  // Default to FILL activities (completed trades)
+  const activityTypes = filters.activity_types || 'FILL';
+  queryParams.push(`activity_types=${activityTypes}`);
+
+  if (filters.date) queryParams.push(`date=${filters.date}`);
+  if (filters.until) queryParams.push(`until=${filters.until}`);
+  if (filters.after) queryParams.push(`after=${filters.after}`);
+  if (filters.direction) queryParams.push(`direction=${filters.direction}`);
+  if (filters.page_size) queryParams.push(`page_size=${filters.page_size}`);
+
+  const queryString = queryParams.length ? `?${queryParams.join('&')}` : '';
+  const activities = await alpacaRequest('GET', `/v2/account/activities${queryString}`);
+
+  return activities;
+}
+
 module.exports = {
   // Account management
   getAccount,
+  getAccountActivities,
 
   // Positions
   getPositions,

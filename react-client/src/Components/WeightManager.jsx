@@ -15,6 +15,10 @@ import {
   DEFAULT_WEIGHTS,
   isUsingDefaultWeights,
   resetToDefaultWeights,
+  STRATEGY_PRESETS,
+  applyStrategyPreset,
+  getActivePreset,
+  getPresetList,
 } from '../config/stockColumns';
 import {
   saveWeightPreferences,
@@ -29,10 +33,12 @@ const WeightManager = ({
   onWeightChange,
   onMultiplierClick,
   onResetWeights,
+  onApplyPreset, // New prop for applying presets
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
   const [lastSaved, setLastSaved] = useState(null);
+  const [showPresets, setShowPresets] = useState(false);
 
   // Calculate current state
   const totalWeight = Object.values(params).reduce(
@@ -42,6 +48,8 @@ const WeightManager = ({
   const isUsingDefaults = isUsingDefaultWeights(params);
   const isValid = totalWeight <= 1.0;
   const preferencesInfo = getWeightPreferencesInfo();
+  const activePreset = getActivePreset(params);
+  const presetList = getPresetList();
 
   // Auto-save weights when they change (fixed)
   useEffect(() => {
@@ -111,13 +119,21 @@ const WeightManager = ({
     return '#c3e6cb';
   };
 
+  const handleApplyPreset = useCallback((presetId) => {
+    if (onApplyPreset) {
+      onApplyPreset(presetId);
+    }
+    setShowPresets(false);
+    setLastSaved(new Date());
+  }, [onApplyPreset]);
+
   const getStatusInfo = () => {
-    if (isUsingDefaults) {
+    if (activePreset) {
       return {
-        icon: '🎯',
-        text: 'Default Strategy',
-        subtext: 'Value investing approach',
-        color: '#28a745',
+        icon: activePreset.icon,
+        text: activePreset.name,
+        subtext: activePreset.description,
+        color: activePreset.id === 'aiMomentum' ? '#9c27b0' : '#28a745',
       };
     } else if (preferencesInfo.exists) {
       return {
@@ -249,6 +265,53 @@ const WeightManager = ({
           </div>
         </div>
 
+        {/* Strategy Presets Row */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          {presetList.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => handleApplyPreset(preset.id)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: activePreset?.id === preset.id ? '#007bff' : '#f8f9fa',
+                color: activePreset?.id === preset.id ? 'white' : '#495057',
+                border: `1px solid ${activePreset?.id === preset.id ? '#007bff' : '#dee2e6'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s ease',
+              }}
+              title={preset.description}
+            >
+              <span>{preset.icon}</span>
+              <span>{preset.name}</span>
+              {preset.id === 'aiMomentum' && (
+                <span style={{
+                  fontSize: '9px',
+                  backgroundColor: activePreset?.id === preset.id ? 'rgba(255,255,255,0.3)' : '#9c27b0',
+                  color: 'white',
+                  padding: '1px 4px',
+                  borderRadius: '3px',
+                  marginLeft: '2px',
+                }}>
+                  AI
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Quick Actions Row */}
         <div
           style={{
@@ -258,7 +321,7 @@ const WeightManager = ({
           }}
         >
           <div style={{ display: 'flex', gap: '8px' }}>
-            {!isUsingDefaults && (
+            {!activePreset && (
               <>
                 <button
                   onClick={handleManualSave}
@@ -295,7 +358,7 @@ const WeightManager = ({
               </>
             )}
 
-            {preferencesInfo.exists && (
+            {preferencesInfo.exists && !activePreset && (
               <button
                 onClick={handleClearSaved}
                 style={{

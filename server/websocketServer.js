@@ -324,7 +324,9 @@ function sendTradeExecution(userId, trade) {
     quantity: trade.quantity,
     price: trade.price,
     totalValue: trade.totalValue,
+    pnl: trade.pnl, // Include profit/loss for sell announcements
     status: trade.status,
+    sessionName: trade.sessionName,
     timestamp: new Date().toISOString()
   });
 }

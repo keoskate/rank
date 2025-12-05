@@ -52,12 +52,13 @@ import {
   setDebugPreference,
   getDebugModeInfo,
 } from '../utils/debugPreference';
-import { resetToDefaultWeights } from '../config/stockColumns';
+import { resetToDefaultWeights, applyStrategyPreset } from '../config/stockColumns';
 import {
   loadWeightPreferences,
   applyWeightPreferences,
+  saveWeightPreferences,
 } from '../utils/weightPreferences';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   loadStockListPreference,
   saveStockListPreference,
@@ -716,6 +717,15 @@ function ModernStonkBoard() {
     console.info('🔄 Weights reset to default configuration');
   };
 
+  // Apply a strategy preset
+  const handleApplyPreset = useCallback((presetId) => {
+    const updatedParams = applyStrategyPreset(params, presetId);
+    setParams(updatedParams);
+    // Save to localStorage immediately
+    saveWeightPreferences(updatedParams);
+    console.info(`📊 Applied and saved strategy preset: ${presetId}`);
+  }, [params]);
+
   // Cache refresh handler
   const handleCacheRefresh = async (forceRefresh = false) => {
     console.info(
@@ -793,32 +803,19 @@ function ModernStonkBoard() {
             cell: info => {
               const ticker = info.getValue() ?? '';
               return (
-                <button
-                  onClick={() => {
-                    // Navigate to stock detail page
-                    navigate(`/stock/${ticker}`);
-                  }}
+                <Link
+                  to={`/stock/${ticker}`}
                   style={{
-                    background: 'none',
-                    border: 'none',
                     color: '#007bff',
-                    cursor: 'pointer',
                     fontSize: 'inherit',
                     fontWeight: '600',
                     textDecoration: 'underline',
-                    padding: '0',
                     textAlign: 'left',
-                  }}
-                  onMouseEnter={e => {
-                    e.target.style.color = '#0056b3';
-                  }}
-                  onMouseLeave={e => {
-                    e.target.style.color = '#007bff';
                   }}
                   title={`View detailed analysis for ${ticker}`}
                 >
                   {ticker}
-                </button>
+                </Link>
               );
             },
             size: 60,
@@ -963,6 +960,7 @@ function ModernStonkBoard() {
             onWeightChange={handleWeightChange}
             onMultiplierClick={handleMultiplierClick}
             onResetWeights={handleResetWeights}
+            onApplyPreset={handleApplyPreset}
             onStockListChange={handleStockListChange}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={handleColumnVisibilityChange}

@@ -19,7 +19,9 @@ const INDICATORS = [
   { id: 'ema9', label: 'EMA 9', color: '#2196F3' },
   { id: 'ema21', label: 'EMA 21', color: '#FF9800' },
   { id: 'ema50', label: 'EMA 50', color: '#9C27B0' },
-  { id: 'vwap', label: 'VWAP', color: '#E91E63' }
+  { id: 'vwap', label: 'VWAP', color: '#E91E63' },
+  { id: 'bollinger', label: 'BB', color: '#00BCD4' },
+  { id: 'rsi', label: 'RSI', color: '#4CAF50', subPane: true }
 ];
 
 const PriceChart = ({ symbol, height = 400, showControls = true }) => {
@@ -28,12 +30,15 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [rsiData, setRsiData] = useState([]);
+
   const {
     chartContainerRef,
     isReady,
     setCandlestickData,
     addEMALine,
     addVWAP,
+    addBollingerBands,
     removeIndicator,
     fitContent
   } = useTradingViewChart({ height });
@@ -62,12 +67,13 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
 
       if (data.results && data.results.length > 0) {
         const candles = data.results.map(bar => ({
-          time: Math.floor(bar.t / 1000),
-          open: bar.o,
-          high: bar.h,
-          low: bar.l,
-          close: bar.c,
-          volume: bar.v
+          // Handle both raw Polygon format (t, o, h, l, c, v) and transformed format
+          time: bar.time || Math.floor((bar.t || bar.timestamp) / 1000),
+          open: bar.open ?? bar.o,
+          high: bar.high ?? bar.h,
+          low: bar.low ?? bar.l,
+          close: bar.close ?? bar.c,
+          volume: bar.volume ?? bar.v
         }));
 
         setCandlestickData(candles);
@@ -77,6 +83,8 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
         if (activeIndicators.ema21) calculateAndAddEMA(candles, 21, 'ema21', '#FF9800');
         if (activeIndicators.ema50) calculateAndAddEMA(candles, 50, 'ema50', '#9C27B0');
         if (activeIndicators.vwap) calculateAndAddVWAP(candles);
+        if (activeIndicators.bollinger) calculateAndAddBollinger(candles);
+        if (activeIndicators.rsi) calculateRSI(candles);
 
         fitContent();
       }
@@ -134,12 +142,117 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
     addVWAP(vwapData);
   };
 
+  // Calculate Bollinger Bands (20-period SMA with 2 standard deviations)
+  const calculateAndAddBollinger = (candles, period = 20, stdDev = 2) => {
+    if (candles.length < period) return;
+
+    const closes = candles.map(c => c.close);
+    const bbData = [];
+
+    for (let i = period - 1; i < closes.length; i++) {
+      // Calculate SMA for the period
+      const slice = closes.slice(i - period + 1, i + 1);
+      const sma = slice.reduce((sum, val) => sum + val, 0) / period;
+
+      // Calculate standard deviation
+      const squaredDiffs = slice.map(val => Math.pow(val - sma, 2));
+      const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / period;
+      const std = Math.sqrt(variance);
+
+      bbData.push({
+        time: candles[i].time,
+        upper: sma + (stdDev * std),
+        middle: sma,
+        lower: sma - (stdDev * std)
+      });
+    }
+
+    addBollingerBands(bbData);
+  };
+
+  // Calculate RSI (14-period by default)
+  const calculateRSI = (candles, period = 14) => {
+    if (candles.length < period + 1) return;
+
+    const closes = candles.map(c => c.close);
+    const rsi = [];
+    let gains = 0;
+    let losses = 0;
+
+    // Calculate initial average gain/loss
+    for (let i = 1; i <= period; i++) {
+      const change = closes[i] - closes[i - 1];
+      if (change >= 0) {
+        gains += change;
+      } else {
+        losses += Math.abs(change);
+      }
+    }
+
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+
+    // First RSI value
+    const firstRS = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    rsi.push({
+      time: candles[period].time,
+      value: 100 - (100 / (1 + firstRS))
+    });
+
+    // Calculate remaining RSI values using smoothed averages
+    for (let i = period + 1; i < closes.length; i++) {
+      const change = closes[i] - closes[i - 1];
+      const currentGain = change >= 0 ? change : 0;
+      const currentLoss = change < 0 ? Math.abs(change) : 0;
+
+      avgGain = (avgGain * (period - 1) + currentGain) / period;
+      avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
+
+      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+      rsi.push({
+        time: candles[i].time,
+        value: 100 - (100 / (1 + rs))
+      });
+    }
+
+    // Store RSI data for display (could add to a separate pane in future)
+    setRsiData(rsi);
+
+    // For now, we'll display RSI as a line on the main chart (scaled to price range)
+    // This is a simplified approach - ideally RSI would be in a separate pane
+    if (candles.length > 0) {
+      const prices = candles.map(c => c.close);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const priceRange = maxPrice - minPrice;
+
+      // Scale RSI (0-100) to fit within the lower portion of the chart
+      const scaledRsi = rsi.map(r => ({
+        time: r.time,
+        value: minPrice + (r.value / 100) * priceRange * 0.3 // Scale to 30% of price range from bottom
+      }));
+
+      addEMALine('rsi', scaledRsi, {
+        color: '#4CAF50',
+        lineWidth: 1,
+        title: 'RSI (scaled)'
+      });
+    }
+  };
+
   // Toggle indicator
   const toggleIndicator = (id) => {
     setActiveIndicators(prev => {
       const newState = { ...prev, [id]: !prev[id] };
       if (!newState[id]) {
-        removeIndicator(id);
+        // Bollinger bands creates multiple series
+        if (id === 'bollinger') {
+          removeIndicator('bb_upper');
+          removeIndicator('bb_middle');
+          removeIndicator('bb_lower');
+        } else {
+          removeIndicator(id);
+        }
       }
       return newState;
     });

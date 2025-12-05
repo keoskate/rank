@@ -6,17 +6,80 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
 const { differenceInMinutes, format, isWithinInterval, parseISO } = require('date-fns');
 const technicalIndicators = require('./technicalIndicatorsService');
 const alpacaClient = require('./alpacaClient');
 const polygonClient = require('./polygonClient');
 const websocketServer = require('./websocketServer');
 
+// Session persistence file
+const SESSION_FILE = path.join(__dirname, '../data/ai-sessions.json');
+
+// Ensure data directory exists
+const dataDir = path.join(__dirname, '../data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
 // Active trading sessions
 const sessions = new Map();
 
 // Decision history for audit
 const decisionHistory = new Map();
+
+/**
+ * Save sessions to file for persistence
+ */
+function saveSessions() {
+  try {
+    const sessionsData = {};
+    sessions.forEach((session, sessionId) => {
+      sessionsData[sessionId] = {
+        ...session,
+        portfolio: {
+          ...session.portfolio,
+          positions: Array.from(session.portfolio.positions.entries())
+        }
+      };
+    });
+    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionsData, null, 2));
+  } catch (err) {
+    console.error('[AI Engine] Failed to save sessions:', err.message);
+  }
+}
+
+/**
+ * Load sessions from file on startup
+ */
+function loadSessions() {
+  try {
+    if (fs.existsSync(SESSION_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'));
+      Object.entries(data).forEach(([sessionId, session]) => {
+        // Restore Map from array
+        session.portfolio.positions = new Map(session.portfolio.positions || []);
+        // Convert dates
+        session.startTime = new Date(session.startTime);
+        if (session.endTime) session.endTime = new Date(session.endTime);
+        sessions.set(sessionId, session);
+
+        // Restart trading loop if session was running
+        if (session.status === 'running') {
+          console.log(`[AI Engine] Restoring running session "${session.name}" (${sessionId})`);
+          startTradingLoop(sessionId);
+        }
+      });
+      console.log(`[AI Engine] Loaded ${sessions.size} session(s) from disk`);
+    }
+  } catch (err) {
+    console.error('[AI Engine] Failed to load sessions:', err.message);
+  }
+}
+
+// Load sessions on module initialization
+loadSessions();
 
 // Trading hours (Eastern Time)
 const MARKET_OPEN_HOUR = 9;
@@ -26,6 +89,7 @@ const MARKET_CLOSE_MINUTE = 0;
 
 // Default configuration
 const DEFAULT_CONFIG = {
+  name: 'Default Strategy',
   timeframes: ['scalping', 'dayTrading', 'swing'],
   maxPositions: 5,
   maxPositionSizePercent: 10,
@@ -36,11 +100,13 @@ const DEFAULT_CONFIG = {
   stopLossMultiplier: 1.5, // 1.5x ATR
   minConfidence: 70,
   watchlist: [],
-  autoTrade: false // Safety: manual confirmation by default
+  autoTrade: false, // Safety: manual confirmation by default
+  simulationMode: true // Tracks virtual P&L without real trades
 };
 
 /**
  * Initialize a new trading session
+ * Now supports multiple sessions per user by using sessionId as the key
  * @param {string} userId - User identifier
  * @param {object} config - Session configuration
  * @returns {object} Session info
@@ -49,14 +115,21 @@ function startSession(userId, config = {}) {
   const sessionId = uuidv4();
   const sessionConfig = { ...DEFAULT_CONFIG, ...config };
 
+  // Generate a unique name if not provided
+  if (!sessionConfig.name || sessionConfig.name === 'Default Strategy') {
+    const existingSessions = getAllUserSessions(userId);
+    sessionConfig.name = `Strategy ${existingSessions.length + 1}`;
+  }
+
   const session = {
     sessionId,
     userId,
+    name: sessionConfig.name,
     status: 'running',
     startTime: new Date(),
     config: sessionConfig,
     portfolio: {
-      cash: 100000, // Will be updated from Alpaca
+      cash: 100000, // Virtual cash for simulation
       positions: new Map(),
       initialValue: 100000
     },
@@ -67,23 +140,29 @@ function startSession(userId, config = {}) {
       totalPnL: 0,
       consecutiveLosses: 0,
       peakValue: 100000,
-      maxDrawdown: 0
+      maxDrawdown: 0,
+      winRate: 0
     },
     decisions: [],
     alerts: [],
     circuitBreakerTriggered: false
   };
 
-  sessions.set(userId, session);
+  // Use sessionId as the key to allow multiple sessions
+  sessions.set(sessionId, session);
   decisionHistory.set(sessionId, []);
 
-  console.log(`[AI Engine] Session started for user ${userId}: ${sessionId}`);
+  console.log(`[AI Engine] Session "${sessionConfig.name}" started for user ${userId}: ${sessionId}`);
+
+  // Save to disk for persistence
+  saveSessions();
 
   // Start the trading loop
-  startTradingLoop(userId);
+  startTradingLoop(sessionId);
 
   return {
     sessionId,
+    name: sessionConfig.name,
     status: 'running',
     config: sessionConfig,
     startTime: session.startTime
@@ -91,12 +170,47 @@ function startSession(userId, config = {}) {
 }
 
 /**
- * Stop a trading session
+ * Get all sessions for a user
  * @param {string} userId - User identifier
+ * @returns {Array} Array of session summaries
+ */
+function getAllUserSessions(userId) {
+  const userSessions = [];
+  sessions.forEach((session, sessionId) => {
+    if (session.userId === userId) {
+      userSessions.push({
+        sessionId,
+        name: session.name || session.config?.name || 'Unnamed',
+        status: session.status,
+        startTime: session.startTime,
+        stats: session.stats,
+        config: session.config,
+        watchlistCount: session.config?.watchlist?.length || 0,
+        positionCount: session.portfolio?.positions?.size || 0
+      });
+    }
+  });
+  return userSessions;
+}
+
+/**
+ * Stop a trading session
+ * @param {string} sessionId - Session identifier (or legacy userId)
  * @returns {object} Session summary
  */
-function stopSession(userId) {
-  const session = sessions.get(userId);
+function stopSession(sessionId) {
+  // Support both sessionId and legacy userId lookup
+  let session = sessions.get(sessionId);
+  if (!session) {
+    // Try to find by userId for backwards compatibility
+    sessions.forEach((s, id) => {
+      if (s.userId === sessionId && s.status !== 'stopped') {
+        session = s;
+        sessionId = id;
+      }
+    });
+  }
+
   if (!session) {
     return { error: 'No active session found' };
   }
@@ -106,77 +220,123 @@ function stopSession(userId) {
 
   const summary = {
     sessionId: session.sessionId,
+    name: session.name,
     duration: differenceInMinutes(session.endTime, session.startTime),
     stats: session.stats,
     totalDecisions: session.decisions.length,
     finalPositions: Array.from(session.portfolio.positions.values())
   };
 
-  console.log(`[AI Engine] Session stopped for user ${userId}`);
+  console.log(`[AI Engine] Session "${session.name}" stopped: ${sessionId}`);
+
+  // Save to disk
+  saveSessions();
 
   return summary;
 }
 
 /**
  * Pause a trading session
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  */
-function pauseSession(userId) {
-  const session = sessions.get(userId);
+function pauseSession(sessionId) {
+  const session = sessions.get(sessionId);
   if (session) {
     session.status = 'paused';
-    console.log(`[AI Engine] Session paused for user ${userId}`);
+    console.log(`[AI Engine] Session "${session.name}" paused: ${sessionId}`);
+    saveSessions();
   }
 }
 
 /**
  * Resume a trading session
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  */
-function resumeSession(userId) {
-  const session = sessions.get(userId);
+function resumeSession(sessionId) {
+  const session = sessions.get(sessionId);
   if (session && session.status === 'paused') {
     session.status = 'running';
     session.circuitBreakerTriggered = false;
     session.stats.consecutiveLosses = 0;
-    console.log(`[AI Engine] Session resumed for user ${userId}`);
+    console.log(`[AI Engine] Session "${session.name}" resumed: ${sessionId}`);
+    saveSessions();
+    // Restart trading loop
+    startTradingLoop(sessionId);
   }
 }
 
 /**
- * Get session status
- * @param {string} userId - User identifier
- * @returns {object} Session status
+ * Get session status - supports both sessionId and userId
+ * @param {string} id - Session ID or User ID
+ * @returns {object} Session status or array of sessions
  */
-function getSessionStatus(userId) {
-  const session = sessions.get(userId);
+function getSessionStatus(id) {
+  // First try to get by sessionId
+  let session = sessions.get(id);
+
+  // If not found, try to find first active session for userId (backwards compatibility)
+  if (!session) {
+    sessions.forEach((s) => {
+      if (s.userId === id && s.status !== 'stopped' && !session) {
+        session = s;
+      }
+    });
+  }
+
   if (!session) return null;
 
   return {
     sessionId: session.sessionId,
+    name: session.name,
     status: session.status,
     startTime: session.startTime,
+    config: session.config,
     stats: session.stats,
     positions: Array.from(session.portfolio.positions.values()),
     recentDecisions: session.decisions.slice(-10),
-    circuitBreakerTriggered: session.circuitBreakerTriggered
+    circuitBreakerTriggered: session.circuitBreakerTriggered,
+    alerts: session.alerts.slice(-10)
+  };
+}
+
+/**
+ * Get specific session by ID
+ * @param {string} sessionId - Session identifier
+ * @returns {object} Session status
+ */
+function getSession(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) return null;
+
+  return {
+    sessionId: session.sessionId,
+    name: session.name,
+    userId: session.userId,
+    status: session.status,
+    startTime: session.startTime,
+    config: session.config,
+    stats: session.stats,
+    positions: Array.from(session.portfolio.positions.values()),
+    recentDecisions: session.decisions.slice(-10),
+    circuitBreakerTriggered: session.circuitBreakerTriggered,
+    alerts: session.alerts.slice(-10)
   };
 }
 
 /**
  * Main trading loop
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  */
-async function startTradingLoop(userId) {
-  const session = sessions.get(userId);
+async function startTradingLoop(sessionId) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   // Sync portfolio with Alpaca
-  await syncPortfolio(userId);
+  await syncPortfolio(sessionId);
 
   // Trading interval (check every 30 seconds)
   const interval = setInterval(async () => {
-    const currentSession = sessions.get(userId);
+    const currentSession = sessions.get(sessionId);
 
     if (!currentSession || currentSession.status !== 'running') {
       clearInterval(interval);
@@ -186,10 +346,10 @@ async function startTradingLoop(userId) {
     // Check if market is open
     if (!isMarketOpen()) {
       // Send status update
-      websocketServer.sendAlert(userId, {
+      websocketServer.sendAlert(currentSession.userId, {
         type: 'info',
         title: 'Market Closed',
-        message: 'Waiting for market to open...',
+        message: `[${currentSession.name}] Waiting for market to open...`,
         severity: 'low'
       });
       return;
@@ -202,13 +362,13 @@ async function startTradingLoop(userId) {
 
     try {
       // Analyze watchlist and make decisions
-      await analyzeAndTrade(userId);
+      await analyzeAndTrade(sessionId);
     } catch (error) {
       console.error(`[AI Engine] Error in trading loop:`, error);
-      websocketServer.sendAlert(userId, {
+      websocketServer.sendAlert(currentSession.userId, {
         type: 'error',
         title: 'Trading Error',
-        message: error.message,
+        message: `[${currentSession.name}] ${error.message}`,
         severity: 'high'
       });
     }
@@ -244,10 +404,10 @@ function isMarketOpen() {
 
 /**
  * Sync portfolio with Alpaca account
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  */
-async function syncPortfolio(userId) {
-  const session = sessions.get(userId);
+async function syncPortfolio(sessionId) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   try {
@@ -261,24 +421,32 @@ async function syncPortfolio(userId) {
       parseFloat(account.portfolio_value)
     );
 
-    // Update positions
+    // Update positions (preserve entryTime from existing positions if available)
+    // Note: alpacaClient.getPositions() returns camelCase fields (quantity, avgEntryPrice, etc.)
+    const existingPositions = new Map(session.portfolio.positions);
     session.portfolio.positions.clear();
     positions.forEach((pos) => {
+      const existing = existingPositions.get(pos.symbol);
       session.portfolio.positions.set(pos.symbol, {
         symbol: pos.symbol,
-        quantity: parseInt(pos.qty),
-        averageCost: parseFloat(pos.avg_entry_price),
-        currentPrice: parseFloat(pos.current_price),
-        marketValue: parseFloat(pos.market_value),
-        unrealizedPnL: parseFloat(pos.unrealized_pl),
-        unrealizedPnLPercent: parseFloat(pos.unrealized_plpc) * 100,
-        side: pos.side
+        quantity: pos.quantity || parseInt(pos.qty) || 0,
+        averageCost: pos.avgEntryPrice || parseFloat(pos.avg_entry_price) || 0,
+        currentPrice: pos.currentPrice || parseFloat(pos.current_price) || 0,
+        marketValue: pos.marketValue || parseFloat(pos.market_value) || 0,
+        unrealizedPnL: pos.unrealizedPL || parseFloat(pos.unrealized_pl) || 0,
+        unrealizedPnLPercent: pos.unrealizedPLPercent || (parseFloat(pos.unrealized_plpc) * 100) || 0,
+        side: pos.side,
+        // Preserve entry time from previous sync, or use created_at from Alpaca
+        entryTime: existing?.entryTime || pos.created_at || new Date().toISOString()
       });
     });
 
     console.log(
       `[AI Engine] Portfolio synced: $${session.portfolio.cash.toFixed(2)} cash, ${session.portfolio.positions.size} positions`
     );
+
+    // Periodically save session state
+    saveSessions();
   } catch (error) {
     console.error('[AI Engine] Failed to sync portfolio:', error);
   }
@@ -286,10 +454,10 @@ async function syncPortfolio(userId) {
 
 /**
  * Analyze watchlist and execute trades
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  */
-async function analyzeAndTrade(userId) {
-  const session = sessions.get(userId);
+async function analyzeAndTrade(sessionId) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   const { watchlist, maxPositions, minConfidence } = session.config;
@@ -299,9 +467,9 @@ async function analyzeAndTrade(userId) {
 
   // First, check existing positions for exit signals
   for (const symbol of currentPositions) {
-    const exitDecision = await evaluateExit(userId, symbol);
+    const exitDecision = await evaluateExit(sessionId, symbol);
     if (exitDecision.shouldExit) {
-      await executeExit(userId, symbol, exitDecision);
+      await executeExit(sessionId, symbol, exitDecision);
     }
   }
 
@@ -310,9 +478,9 @@ async function analyzeAndTrade(userId) {
     for (const symbol of watchlist) {
       if (currentPositions.includes(symbol)) continue;
 
-      const entryDecision = await evaluateEntry(userId, symbol);
+      const entryDecision = await evaluateEntry(sessionId, symbol);
       if (entryDecision.shouldEnter && entryDecision.confidence >= minConfidence) {
-        await executeEntry(userId, symbol, entryDecision);
+        await executeEntry(sessionId, symbol, entryDecision);
 
         // Don't exceed max positions
         if (session.portfolio.positions.size >= maxPositions) break;
@@ -323,12 +491,12 @@ async function analyzeAndTrade(userId) {
 
 /**
  * Evaluate entry conditions for a symbol
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {string} symbol - Stock symbol
  * @returns {object} Entry decision
  */
-async function evaluateEntry(userId, symbol) {
-  const session = sessions.get(userId);
+async function evaluateEntry(sessionId, symbol) {
+  const session = sessions.get(sessionId);
   if (!session) return { shouldEnter: false };
 
   try {
@@ -452,11 +620,14 @@ async function evaluateEntry(userId, symbol) {
     };
 
     // Log decision
-    logDecision(userId, decision);
+    logDecision(sessionId, decision);
 
-    // Send to websocket
+    // Send to websocket (use userId for notifications)
     if (shouldEnter) {
-      websocketServer.sendAIDecision(userId, decision);
+      websocketServer.sendAIDecision(session.userId, {
+        ...decision,
+        sessionName: session.name
+      });
     }
 
     return decision;
@@ -468,16 +639,28 @@ async function evaluateEntry(userId, symbol) {
 
 /**
  * Evaluate exit conditions for a position
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {string} symbol - Stock symbol
  * @returns {object} Exit decision
  */
-async function evaluateExit(userId, symbol) {
-  const session = sessions.get(userId);
+async function evaluateExit(sessionId, symbol) {
+  const session = sessions.get(sessionId);
   if (!session) return { shouldExit: false };
 
   const position = session.portfolio.positions.get(symbol);
   if (!position) return { shouldExit: false };
+
+  // Minimum hold time - don't evaluate exit within first 5 minutes of entry
+  const MIN_HOLD_MINUTES = 5;
+  const entryTime = position.entryTime || position.createdAt;
+  if (entryTime) {
+    const holdDuration = Date.now() - new Date(entryTime).getTime();
+    const holdMinutes = holdDuration / (1000 * 60);
+    if (holdMinutes < MIN_HOLD_MINUTES) {
+      console.log(`[AI Engine] ${symbol}: Holding for ${holdMinutes.toFixed(1)} min (min: ${MIN_HOLD_MINUTES} min)`);
+      return { shouldExit: false, reason: 'Minimum hold time not reached' };
+    }
+  }
 
   try {
     // Get recent candles
@@ -599,11 +782,14 @@ async function evaluateExit(userId, symbol) {
 
     // Log decision
     if (factors.length > 0) {
-      logDecision(userId, decision);
+      logDecision(sessionId, decision);
     }
 
     if (shouldExit) {
-      websocketServer.sendAIDecision(userId, decision);
+      websocketServer.sendAIDecision(session.userId, {
+        ...decision,
+        sessionName: session.name
+      });
     }
 
     return decision;
@@ -615,20 +801,20 @@ async function evaluateExit(userId, symbol) {
 
 /**
  * Execute entry trade
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {string} symbol - Stock symbol
  * @param {object} decision - Entry decision
  */
-async function executeEntry(userId, symbol, decision) {
-  const session = sessions.get(userId);
+async function executeEntry(sessionId, symbol, decision) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   // Check if auto-trade is enabled
   if (!session.config.autoTrade) {
-    websocketServer.sendAlert(userId, {
+    websocketServer.sendAlert(session.userId, {
       type: 'info',
       title: 'Trade Signal',
-      message: `BUY signal for ${symbol} (${decision.confidence}% confidence). Enable auto-trade to execute.`,
+      message: `[${session.name}] BUY signal for ${symbol} (${decision.confidence}% confidence). Enable auto-trade to execute.`,
       severity: 'medium',
       actionRequired: true
     });
@@ -639,19 +825,54 @@ async function executeEntry(userId, symbol, decision) {
     // Calculate position size
     const portfolioValue = session.portfolio.cash +
       Array.from(session.portfolio.positions.values()).reduce((sum, p) => sum + p.marketValue, 0);
-    const maxPositionValue = portfolioValue * (session.config.maxPositionSizePercent / 100);
-    const riskAmount = portfolioValue * (session.config.riskPerTradePercent / 100);
 
-    // Position size based on ATR/risk
-    const riskPerShare = decision.currentPrice - decision.stopLoss;
-    const sharesFromRisk = Math.floor(riskAmount / riskPerShare);
-    const sharesFromMaxSize = Math.floor(maxPositionValue / decision.currentPrice);
-    const quantity = Math.min(sharesFromRisk, sharesFromMaxSize);
+    // Ensure we have valid portfolio value (fetch from Alpaca if needed)
+    let effectivePortfolioValue = portfolioValue;
+    if (!effectivePortfolioValue || effectivePortfolioValue < 1000) {
+      // Fallback: fetch from Alpaca directly
+      try {
+        const account = await alpacaClient.getAccount();
+        effectivePortfolioValue = parseFloat(account.equity) || parseFloat(account.portfolio_value) || 100000;
+        session.portfolio.cash = parseFloat(account.cash) || 0;
+        console.log(`[AI Engine] Fetched account value: $${effectivePortfolioValue.toFixed(2)}`);
+      } catch (e) {
+        effectivePortfolioValue = 100000; // Default fallback
+        console.warn(`[AI Engine] Using default portfolio value: $100,000`);
+      }
+    }
 
-    if (quantity < 1) {
-      console.log(`[AI Engine] Position size too small for ${symbol}`);
+    const maxPositionValue = effectivePortfolioValue * (session.config.maxPositionSizePercent / 100);
+    const riskAmount = effectivePortfolioValue * (session.config.riskPerTradePercent / 100);
+
+    // Position size based on ATR/risk (with fallback if stopLoss not set)
+    let quantity;
+    const currentPrice = parseFloat(decision.currentPrice);
+
+    if (!currentPrice || currentPrice <= 0) {
+      console.log(`[AI Engine] Invalid price for ${symbol}: ${decision.currentPrice}`);
       return;
     }
+
+    if (decision.stopLoss && decision.stopLoss > 0 && decision.stopLoss < currentPrice) {
+      // Risk-based position sizing
+      const riskPerShare = currentPrice - decision.stopLoss;
+      const sharesFromRisk = Math.floor(riskAmount / riskPerShare);
+      const sharesFromMaxSize = Math.floor(maxPositionValue / currentPrice);
+      quantity = Math.min(sharesFromRisk, sharesFromMaxSize);
+    } else {
+      // Fallback: simple max position size based sizing
+      quantity = Math.floor(maxPositionValue / currentPrice);
+    }
+
+    // Ensure minimum of 1 share, maximum reasonable amount
+    quantity = Math.max(1, Math.min(quantity, 1000));
+
+    if (quantity < 1 || isNaN(quantity)) {
+      console.log(`[AI Engine] Invalid position size for ${symbol}: ${quantity}`);
+      return;
+    }
+
+    console.log(`[AI Engine] Calculated position: ${quantity} shares of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)})`);
 
     // Place order via Alpaca
     const order = await alpacaClient.placeOrder({
@@ -665,27 +886,28 @@ async function executeEntry(userId, symbol, decision) {
     console.log(`[AI Engine] Entry order placed: ${quantity} ${symbol} @ market`);
 
     // Send notification
-    websocketServer.sendTradeExecution(userId, {
+    websocketServer.sendTradeExecution(session.userId, {
       tradeId: order.id,
       symbol,
       side: 'buy',
       quantity,
       price: decision.currentPrice,
       totalValue: quantity * decision.currentPrice,
-      status: 'submitted'
+      status: 'submitted',
+      sessionName: session.name
     });
 
     // Update stats
     session.stats.totalTrades++;
 
     // Sync portfolio after trade
-    setTimeout(() => syncPortfolio(userId), 2000);
+    setTimeout(() => syncPortfolio(sessionId), 2000);
   } catch (error) {
     console.error(`[AI Engine] Failed to execute entry for ${symbol}:`, error);
-    websocketServer.sendAlert(userId, {
+    websocketServer.sendAlert(session.userId, {
       type: 'error',
       title: 'Order Failed',
-      message: `Failed to buy ${symbol}: ${error.message}`,
+      message: `[${session.name}] Failed to buy ${symbol}: ${error.message}`,
       severity: 'high'
     });
   }
@@ -693,17 +915,17 @@ async function executeEntry(userId, symbol, decision) {
 
 /**
  * Execute exit trade
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {string} symbol - Stock symbol
  * @param {object} decision - Exit decision
  */
-async function executeExit(userId, symbol, decision) {
-  const session = sessions.get(userId);
+async function executeExit(sessionId, symbol, decision) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   // Check if auto-trade is enabled
   if (!session.config.autoTrade) {
-    websocketServer.sendAlert(userId, {
+    websocketServer.sendAlert(session.userId, {
       type: 'warning',
       title: 'Exit Signal',
       message: `SELL signal for ${symbol}: ${decision.exitReason}. Enable auto-trade to execute.`,
@@ -714,13 +936,32 @@ async function executeExit(userId, symbol, decision) {
   }
 
   try {
+    // Get the actual position from Alpaca to get accurate quantity
+    let quantity = decision.quantity;
+    if (!quantity || quantity <= 0) {
+      // Fetch position from Alpaca directly
+      try {
+        const alpacaPosition = await alpacaClient.getPosition(symbol);
+        quantity = parseInt(alpacaPosition.qty) || parseInt(alpacaPosition.quantity);
+      } catch (e) {
+        console.error(`[AI Engine] Could not get position for ${symbol}:`, e.message);
+        return;
+      }
+    }
+
+    if (!quantity || quantity <= 0) {
+      console.log(`[AI Engine] No valid quantity to sell for ${symbol}`);
+      return;
+    }
+
     // Close position via Alpaca
     const result = await alpacaClient.closePosition(symbol);
 
-    console.log(`[AI Engine] Exit order placed for ${symbol}`);
+    console.log(`[AI Engine] Exit order placed for ${symbol} (${quantity} shares)`);
 
     // Update stats
-    if (decision.pnl > 0) {
+    const pnl = decision.pnl || 0;
+    if (pnl > 0) {
       session.stats.wins++;
       session.stats.consecutiveLosses = 0;
     } else {
@@ -729,37 +970,38 @@ async function executeExit(userId, symbol, decision) {
 
       // Check circuit breaker
       if (session.stats.consecutiveLosses >= session.config.consecutiveLossLimit) {
-        triggerCircuitBreaker(userId, 'Consecutive loss limit reached');
+        triggerCircuitBreaker(sessionId, 'Consecutive loss limit reached');
       }
     }
-    session.stats.totalPnL += decision.pnl;
+    session.stats.totalPnL += pnl;
 
     // Check daily loss limit
     const dailyPnLPercent = (session.stats.totalPnL / session.portfolio.initialValue) * 100;
     if (dailyPnLPercent <= -session.config.dailyLossLimitPercent) {
-      triggerCircuitBreaker(userId, 'Daily loss limit reached');
+      triggerCircuitBreaker(sessionId, 'Daily loss limit reached');
     }
 
     // Send notification
-    websocketServer.sendTradeExecution(userId, {
+    websocketServer.sendTradeExecution(session.userId, {
       tradeId: result.id || uuidv4(),
       symbol,
       side: 'sell',
-      quantity: decision.quantity,
+      quantity: quantity,
       price: decision.currentPrice,
-      totalValue: decision.quantity * decision.currentPrice,
-      pnl: decision.pnl,
-      status: 'submitted'
+      totalValue: quantity * decision.currentPrice,
+      pnl: pnl,
+      status: 'submitted',
+      sessionName: session.name
     });
 
     // Sync portfolio after trade
-    setTimeout(() => syncPortfolio(userId), 2000);
+    setTimeout(() => syncPortfolio(sessionId), 2000);
   } catch (error) {
     console.error(`[AI Engine] Failed to execute exit for ${symbol}:`, error);
-    websocketServer.sendAlert(userId, {
+    websocketServer.sendAlert(session.userId, {
       type: 'error',
       title: 'Exit Failed',
-      message: `Failed to sell ${symbol}: ${error.message}`,
+      message: `[${session.name}] Failed to sell ${symbol}: ${error.message}`,
       severity: 'high'
     });
   }
@@ -767,34 +1009,36 @@ async function executeExit(userId, symbol, decision) {
 
 /**
  * Trigger circuit breaker
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {string} reason - Reason for triggering
  */
-function triggerCircuitBreaker(userId, reason) {
-  const session = sessions.get(userId);
+function triggerCircuitBreaker(sessionId, reason) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   session.circuitBreakerTriggered = true;
   session.status = 'paused';
 
-  console.log(`[AI Engine] Circuit breaker triggered for ${userId}: ${reason}`);
+  console.log(`[AI Engine] Circuit breaker triggered for ${session.name}: ${reason}`);
 
-  websocketServer.sendAlert(userId, {
+  websocketServer.sendAlert(session.userId, {
     type: 'error',
     title: 'Circuit Breaker Triggered',
-    message: `Trading paused: ${reason}. Review positions and resume manually.`,
+    message: `[${session.name}] Trading paused: ${reason}. Review positions and resume manually.`,
     severity: 'critical',
     actionRequired: true
   });
+
+  saveSessions();
 }
 
 /**
  * Log decision for audit trail
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {object} decision - Decision to log
  */
-function logDecision(userId, decision) {
-  const session = sessions.get(userId);
+function logDecision(sessionId, decision) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   session.decisions.push({
@@ -809,9 +1053,9 @@ function logDecision(userId, decision) {
   }
 
   // Also store in decision history
-  const history = decisionHistory.get(session.sessionId) || [];
+  const history = decisionHistory.get(sessionId) || [];
   history.push(decision);
-  decisionHistory.set(session.sessionId, history);
+  decisionHistory.set(sessionId, history);
 }
 
 /**
@@ -827,26 +1071,30 @@ function getDecisionHistory(sessionId, limit = 100) {
 
 /**
  * Update session configuration
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {object} newConfig - New configuration
  */
-function updateConfig(userId, newConfig) {
-  const session = sessions.get(userId);
+function updateConfig(sessionId, newConfig) {
+  const session = sessions.get(sessionId);
   if (!session) return;
 
   session.config = { ...session.config, ...newConfig };
-  console.log(`[AI Engine] Config updated for ${userId}`);
+  if (newConfig.name) {
+    session.name = newConfig.name;
+  }
+  console.log(`[AI Engine] Config updated for ${session.name}`);
+  saveSessions();
 }
 
 /**
  * Manual trade override
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @param {string} symbol - Stock symbol
  * @param {string} action - 'buy' or 'sell'
  * @param {number} quantity - Quantity to trade
  */
-async function manualOverride(userId, symbol, action, quantity) {
-  const session = sessions.get(userId);
+async function manualOverride(sessionId, symbol, action, quantity) {
+  const session = sessions.get(sessionId);
   if (!session) return { error: 'No active session' };
 
   try {
@@ -859,7 +1107,7 @@ async function manualOverride(userId, symbol, action, quantity) {
         time_in_force: 'day'
       });
 
-      logDecision(userId, {
+      logDecision(sessionId, {
         symbol,
         action: 'MANUAL_BUY',
         quantity,
@@ -870,7 +1118,7 @@ async function manualOverride(userId, symbol, action, quantity) {
     } else if (action === 'sell') {
       const result = await alpacaClient.closePosition(symbol);
 
-      logDecision(userId, {
+      logDecision(sessionId, {
         symbol,
         action: 'MANUAL_SELL',
         quantity,
@@ -886,11 +1134,11 @@ async function manualOverride(userId, symbol, action, quantity) {
 
 /**
  * Get daily performance summary
- * @param {string} userId - User identifier
+ * @param {string} sessionId - Session identifier
  * @returns {object} Performance summary
  */
-function getDailySummary(userId) {
-  const session = sessions.get(userId);
+function getDailySummary(sessionId) {
+  const session = sessions.get(sessionId);
   if (!session) return null;
 
   const winRate =
@@ -899,6 +1147,8 @@ function getDailySummary(userId) {
       : 0;
 
   return {
+    sessionId: session.sessionId,
+    name: session.name,
     totalTrades: session.stats.totalTrades,
     wins: session.stats.wins,
     losses: session.stats.losses,
@@ -916,6 +1166,8 @@ module.exports = {
   pauseSession,
   resumeSession,
   getSessionStatus,
+  getSession,
+  getAllUserSessions,
   evaluateEntry,
   evaluateExit,
   updateConfig,
