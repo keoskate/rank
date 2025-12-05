@@ -514,6 +514,8 @@ const StockDetailPage = () => {
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [validatedStockData, setValidatedStockData] = useState(null);
   const [validationLoading, setValidationLoading] = useState(false);
+  const [intradayData, setIntradayData] = useState(null);
+  const [intradayLoading, setIntradayLoading] = useState(false);
 
   // Get cache info for data freshness
   const cacheInfo = getCacheInfo();
@@ -909,6 +911,83 @@ const StockDetailPage = () => {
 
     return { labels, data };
   }, [stockData, selectedTimeframe, selectedMetricChart, ticker]);
+
+  // Fetch today's intraday data (for live chart)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchIntradayData = async () => {
+      if (!ticker) return;
+
+      setIntradayLoading(true);
+      try {
+        // Try today first, then fall back to most recent trading day
+        const today = new Date();
+        let targetDate = today.toISOString().split('T')[0];
+
+        console.log(`📊 Fetching intraday data for ${ticker} on ${targetDate}`);
+
+        let response = await fetch(`/api/polygon/aggregates/${ticker}/${targetDate}/${targetDate}/minute`);
+        let data = await response.json();
+
+        // If no data for today, try previous trading days (up to 7 days back)
+        if (!data.success || !data.aggregates || data.aggregates.length === 0) {
+          console.log(`⚠️ No data for ${targetDate}, checking recent trading days...`);
+
+          for (let daysBack = 1; daysBack <= 7; daysBack++) {
+            const checkDate = new Date(today);
+            checkDate.setDate(checkDate.getDate() - daysBack);
+            const dayOfWeek = checkDate.getDay();
+
+            // Skip weekends
+            if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+            targetDate = checkDate.toISOString().split('T')[0];
+            console.log(`🔍 Trying ${targetDate}...`);
+
+            response = await fetch(`/api/polygon/aggregates/${ticker}/${targetDate}/${targetDate}/minute`);
+            data = await response.json();
+
+            if (data.success && data.aggregates && data.aggregates.length > 0) {
+              console.log(`✅ Found data for ${targetDate}`);
+              break;
+            }
+          }
+        }
+
+        if (!isCancelled && data.success && data.aggregates && data.aggregates.length > 0) {
+          const candles = data.aggregates;
+          const labels = candles.map(c => new Date(c.t).toISOString());
+          const prices = candles.map(c => c.c); // Close prices
+
+          console.log(`✅ Loaded ${prices.length} intraday data points for ${ticker} on ${targetDate}`);
+          setIntradayData({ labels, data: prices, candles, date: targetDate });
+        } else {
+          console.warn(`⚠️ No intraday data available for ${ticker} in the last 7 days`);
+          setIntradayData(null);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error(`❌ Failed to fetch intraday data for ${ticker}:`, error);
+          setIntradayData(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIntradayLoading(false);
+        }
+      }
+    };
+
+    fetchIntradayData();
+
+    // Refresh intraday data every 1 minute during market hours
+    const interval = setInterval(fetchIntradayData, 60000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [ticker]);
 
   // Fetch real historical data when ticker, timeframe, or metric changes
   useEffect(() => {
@@ -1615,20 +1694,115 @@ const StockDetailPage = () => {
             </div>
           </div>
 
-          <button
-            onClick={() => navigate(-1)}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => navigate('/day-trading', { state: { ticker } })}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#fd7e14',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+              }}
+            >
+              📈 Intraday Trading Analyzer
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              ← Back to Rankings
+            </button>
+          </div>
+        </div>
+
+        {/* Live Intraday Chart */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e0e6ed',
+            padding: '20px',
+            marginBottom: '30px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          }}
+        >
+          <div
             style={{
-              padding: '10px 20px',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
             }}
           >
-            ← Back to Rankings
-          </button>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>
+              📊 Intraday Price Action
+              <span
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  color: '#6c757d',
+                  marginLeft: '12px',
+                }}
+              >
+                {intradayData?.date ? `${intradayData.date} • Minute-by-minute data` : 'Loading...'}
+              </span>
+            </h3>
+          </div>
+
+          <div style={{ height: '400px' }}>
+            {intradayLoading ? (
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6c757d',
+                  fontSize: '16px',
+                }}
+              >
+                📈 Loading today's live data for {ticker}...
+              </div>
+            ) : intradayData && intradayData.data && intradayData.data.length > 0 ? (
+              <TimeSeriesChart
+                data={intradayData.data}
+                labels={intradayData.labels}
+                title={`${ticker} - Today's Intraday Price (${intradayData.data.length} minutes)`}
+                selectedMetric="price"
+              />
+            ) : (
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6c757d',
+                }}
+              >
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
+                <div style={{ fontSize: '16px', marginBottom: '8px' }}>
+                  No intraday data available for today
+                </div>
+                <div style={{ fontSize: '14px', color: '#95a5a6' }}>
+                  Market may be closed or data not yet available
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Price Chart */}
