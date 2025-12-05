@@ -95,6 +95,7 @@ const StockDetailPage = () => {
   const [currentPrice, setCurrentPrice] = useState(0);
   const [priceChange, setPriceChange] = useState(0);
   const [priceChangePercent, setPriceChangePercent] = useState(0);
+  const [periodLabel, setPeriodLabel] = useState('today');
   const [autoTradeEnabled, setAutoTradeEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -319,6 +320,12 @@ const StockDetailPage = () => {
         companyName={companyInfo?.name || stock?.companyName}
         onToggleAutoTrade={handleToggleAutoTrade}
         autoTradeEnabled={autoTradeEnabled}
+        periodChange={{
+          price: currentPrice,
+          change: priceChange,
+          changePercent: priceChangePercent,
+          periodLabel,
+        }}
       />
 
       {/* Main Content Grid */}
@@ -333,7 +340,16 @@ const StockDetailPage = () => {
         {/* Left Column: Chart + Tabs */}
         <div>
           {/* Price Chart */}
-          <PriceChart symbol={ticker} height={400} />
+          <PriceChart
+            symbol={ticker}
+            height={400}
+            onPeriodChange={data => {
+              setCurrentPrice(data.price);
+              setPriceChange(data.change);
+              setPriceChangePercent(data.changePercent);
+              setPeriodLabel(data.periodLabel);
+            }}
+          />
 
           {/* Tab Navigation */}
           <div

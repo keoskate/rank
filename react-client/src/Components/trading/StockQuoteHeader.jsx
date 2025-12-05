@@ -11,6 +11,7 @@ const StockQuoteHeader = ({
   companyName,
   onToggleAutoTrade,
   autoTradeEnabled,
+  periodChange, // { price, change, changePercent, periodLabel }
 }) => {
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,10 +61,13 @@ const StockQuoteHeader = ({
     return vol.toString();
   };
 
-  const price = quote?.last || quote?.close || 0;
+  const price = periodChange?.price || quote?.last || quote?.close || 0;
   const prevClose = quote?.prevClose || quote?.previousClose || price;
-  const change = price - prevClose;
-  const changePercent = prevClose ? (change / prevClose) * 100 : 0;
+
+  // Use period-based change if available (from chart), otherwise fall back to daily change
+  const change = periodChange?.change ?? (price - prevClose);
+  const changePercent = periodChange?.changePercent ?? (prevClose ? ((price - prevClose) / prevClose) * 100 : 0);
+  const periodLabel = periodChange?.periodLabel || 'today';
   const changeInfo = formatChange(change, changePercent);
 
   return (
@@ -158,6 +162,17 @@ const StockQuoteHeader = ({
         >
           {loading ? '' : changeInfo.text}
         </span>
+        {periodLabel && periodLabel !== 'today' && (
+          <span
+            style={{
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.gray500,
+              marginLeft: theme.spacing.xs,
+            }}
+          >
+            ({periodLabel})
+          </span>
+        )}
       </div>
 
       {/* Stats Row */}

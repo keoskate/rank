@@ -24,7 +24,12 @@ const INDICATORS = [
   { id: 'rsi', label: 'RSI', color: '#4CAF50', subPane: true },
 ];
 
-const PriceChart = ({ symbol, height = 400, showControls = true }) => {
+const PriceChart = ({
+  symbol,
+  height = 400,
+  showControls = true,
+  onPeriodChange,
+}) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1]); // Default 1W
   const [activeIndicators, setActiveIndicators] = useState({});
   const [loading, setLoading] = useState(false);
@@ -77,6 +82,24 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
         }));
 
         setCandlestickData(candles);
+
+        // Calculate period change for parent component
+        if (onPeriodChange && candles.length > 0) {
+          const firstCandle = candles[0];
+          const lastCandle = candles[candles.length - 1];
+          const periodOpen = firstCandle.open;
+          const currentPrice = lastCandle.close;
+          const change = currentPrice - periodOpen;
+          const changePercent = periodOpen
+            ? (change / periodOpen) * 100
+            : 0;
+          onPeriodChange({
+            price: currentPrice,
+            change,
+            changePercent,
+            periodLabel: selectedTimeframe.label,
+          });
+        }
 
         // Calculate and add active indicators
         if (activeIndicators.ema9)
@@ -297,19 +320,25 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
                 onClick={() => setSelectedTimeframe(tf)}
                 style={{
                   padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                  border: 'none',
+                  border:
+                    selectedTimeframe.label === tf.label
+                      ? `1px solid ${theme.colors.primary}`
+                      : '1px solid transparent',
                   backgroundColor:
                     selectedTimeframe.label === tf.label
-                      ? theme.colors.primary
+                      ? `${theme.colors.primary}15`
                       : 'transparent',
                   color:
                     selectedTimeframe.label === tf.label
-                      ? theme.colors.white
+                      ? theme.colors.primary
                       : theme.colors.gray600,
                   borderRadius: theme.borderRadius.sm,
                   cursor: 'pointer',
                   fontSize: theme.typography.fontSize.sm,
-                  fontWeight: theme.typography.fontWeight.medium,
+                  fontWeight:
+                    selectedTimeframe.label === tf.label
+                      ? theme.typography.fontWeight.bold
+                      : theme.typography.fontWeight.medium,
                 }}
               >
                 {tf.label}
