@@ -10,6 +10,10 @@
  */
 
 import { useState, useEffect } from 'react';
+import Button from './common/Button';
+import Card from './common/Card';
+import MetricCard from './common/MetricCard';
+import theme from '../theme';
 
 const BacktestPage = () => {
 
@@ -160,85 +164,103 @@ const BacktestPage = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '10px' }}>📈 Strategy Backtesting</h1>
-      <p style={{ color: '#6c757d', marginBottom: '30px' }}>
+    <div style={{
+      padding: theme.spacing.lg,
+      maxWidth: theme.layout.maxWidthMedium,
+      margin: '0 auto'
+    }}>
+      <h1 style={{
+        marginBottom: theme.spacing.sm,
+        color: theme.colors.text,
+        fontSize: theme.typography.fontSize.xxl,
+        fontWeight: theme.typography.fontWeight.bold
+      }}>
+        📈 Strategy Backtesting
+      </h1>
+      <p style={{
+        color: theme.colors.textLight,
+        marginBottom: theme.spacing.xl,
+        fontSize: theme.typography.fontSize.base
+      }}>
         Test your ranking strategies with historical data
       </p>
 
       {/* Setup Section */}
       {!snapshotsAvailable && (
-        <div style={{
-          backgroundColor: '#fff3cd',
-          border: '1px solid #ffc107',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '30px'
-        }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#856404' }}>
+        <Card
+          variant="warning"
+          style={{ marginBottom: theme.spacing.xl }}
+        >
+          <h3 style={{
+            margin: `0 0 ${theme.spacing.sm} 0`,
+            color: theme.colors.warningDark,
+            fontSize: theme.typography.fontSize.lg,
+            fontWeight: theme.typography.fontWeight.medium
+          }}>
             ⚠️ No Historical Data Available
           </h3>
-          <p style={{ margin: '0 0 15px 0', color: '#856404' }}>
+          <p style={{
+            margin: `0 0 ${theme.spacing.md} 0`,
+            color: theme.colors.warningDark,
+            fontSize: theme.typography.fontSize.base
+          }}>
             Choose a data source to enable backtesting:
           </p>
-          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-            <button
+          <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+            <Button
+              variant="primary"
+              size="large"
               onClick={generateHistory}
               disabled={generating}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: generating ? 'not-allowed' : 'pointer',
-                opacity: generating ? 0.6 : 1,
-                flex: '1',
-                minWidth: '200px'
-              }}
+              style={{ flex: '1', minWidth: '200px' }}
             >
               {generating ? '⏳ Generating...' : `🔄 Generate ${days} Days (Synthetic)`}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="success"
+              size="large"
               onClick={backfillRealData}
               disabled={generating}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: generating ? 'not-allowed' : 'pointer',
-                opacity: generating ? 0.6 : 1,
-                flex: '1',
-                minWidth: '200px'
-              }}
+              style={{ flex: '1', minWidth: '200px' }}
             >
               {generating ? '⏳ Fetching...' : `📊 Fetch ${days} Days (Real Data)`}
-            </button>
+            </Button>
           </div>
-          <p style={{ margin: '15px 0 0 0', fontSize: '14px', color: '#856404' }}>
+          <p style={{
+            margin: `${theme.spacing.md} 0 0 0`,
+            fontSize: theme.typography.fontSize.sm,
+            color: theme.colors.warningDark
+          }}>
             <strong>Synthetic:</strong> Fast, random walk simulation • <strong>Real Data:</strong> Actual market data from Polygon API (~2 min)
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Strategy Configuration */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '8px',
-        border: '1px solid #e0e6ed',
-        padding: '30px',
-        marginBottom: '30px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <h2 style={{ margin: '0 0 20px 0' }}>Strategy Configuration</h2>
+      <Card style={{ marginBottom: theme.spacing.xl }}>
+        <h2 style={{
+          margin: `0 0 ${theme.spacing.lg} 0`,
+          color: theme.colors.text,
+          fontSize: theme.typography.fontSize.xl,
+          fontWeight: theme.typography.fontWeight.medium
+        }}>
+          Strategy Configuration
+        </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: theme.spacing.lg,
+          marginBottom: theme.spacing.lg
+        }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
               Top N Stocks
             </label>
             <input
@@ -249,17 +271,29 @@ const BacktestPage = () => {
               max="20"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.base,
+                fontFamily: theme.typography.fontFamily
               }}
             />
-            <small style={{ color: '#6c757d' }}>Buy the top {topN} ranked stocks</small>
+            <small style={{
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.sm
+            }}>
+              Buy the top {topN} ranked stocks
+            </small>
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
               Rebalance Frequency
             </label>
             <select
@@ -267,21 +301,33 @@ const BacktestPage = () => {
               onChange={(e) => setRebalanceFrequency(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.base,
+                fontFamily: theme.typography.fontFamily
               }}
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
-            <small style={{ color: '#6c757d' }}>How often to rebalance portfolio</small>
+            <small style={{
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.sm
+            }}>
+              How often to rebalance portfolio
+            </small>
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
               Backtest Period (Days)
             </label>
             <input
@@ -292,17 +338,29 @@ const BacktestPage = () => {
               max="365"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.base,
+                fontFamily: theme.typography.fontFamily
               }}
             />
-            <small style={{ color: '#6c757d' }}>Number of days to test</small>
+            <small style={{
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.sm
+            }}>
+              Number of days to test
+            </small>
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.text
+            }}>
               Initial Capital ($)
             </label>
             <input
@@ -313,149 +371,217 @@ const BacktestPage = () => {
               step="1000"
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ced4da',
-                borderRadius: '6px',
-                fontSize: '16px'
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray400}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.base,
+                fontFamily: theme.typography.fontFamily
               }}
             />
-            <small style={{ color: '#6c757d' }}>Starting portfolio value</small>
+            <small style={{
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.sm
+            }}>
+              Starting portfolio value
+            </small>
           </div>
         </div>
 
-        <button
+        <Button
+          variant={snapshotsAvailable ? 'success' : 'primary'}
+          size="large"
           onClick={runBacktest}
           disabled={loading || !snapshotsAvailable}
           style={{
-            padding: '15px 40px',
-            fontSize: '18px',
-            backgroundColor: snapshotsAvailable ? '#28a745' : '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: (loading || !snapshotsAvailable) ? 'not-allowed' : 'pointer',
-            opacity: (loading || !snapshotsAvailable) ? 0.6 : 1,
-            fontWeight: '600',
-            width: '100%'
+            width: '100%',
+            fontSize: theme.typography.fontSize.lg
           }}
         >
           {loading ? '⏳ Running Backtest...' : '🧪 Run Backtest'}
-        </button>
-      </div>
+        </Button>
+      </Card>
 
       {/* Error Display */}
       {error && (
-        <div style={{
-          backgroundColor: '#f8d7da',
-          border: '1px solid #f5c6cb',
-          borderRadius: '8px',
-          padding: '15px',
-          marginBottom: '30px',
-          color: '#721c24'
-        }}>
-          ❌ {error}
-        </div>
+        <Card
+          variant="error"
+          style={{ marginBottom: theme.spacing.xl }}
+        >
+          <span style={{
+            color: theme.colors.errorDark,
+            fontSize: theme.typography.fontSize.base
+          }}>
+            ❌ {error}
+          </span>
+        </Card>
       )}
 
       {/* Results Display */}
       {results && (
         <div>
           {/* Performance Summary */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #e0e6ed',
-            padding: '30px',
-            marginBottom: '30px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ margin: '0 0 20px 0' }}>📊 Performance Summary</h2>
+          <Card style={{ marginBottom: theme.spacing.xl }}>
+            <h2 style={{
+              margin: `0 0 ${theme.spacing.lg} 0`,
+              color: theme.colors.text,
+              fontSize: theme.typography.fontSize.xl,
+              fontWeight: theme.typography.fontWeight.medium
+            }}>
+              📊 Performance Summary
+            </h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-              <MetricCard
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: theme.spacing.lg
+            }}>
+              <PerformanceMetricCard
                 label="Total Return"
                 value={`${results.performance.totalReturn >= 0 ? '+' : ''}${results.performance.totalReturn.toFixed(2)}%`}
-                color={results.performance.totalReturn >= 0 ? '#28a745' : '#dc3545'}
+                variant={results.performance.totalReturn >= 0 ? 'success' : 'error'}
               />
-              <MetricCard
+              <PerformanceMetricCard
                 label="Annualized Return"
                 value={`${results.performance.annualizedReturn >= 0 ? '+' : ''}${results.performance.annualizedReturn.toFixed(2)}%`}
-                color={results.performance.annualizedReturn >= 0 ? '#28a745' : '#dc3545'}
+                variant={results.performance.annualizedReturn >= 0 ? 'success' : 'error'}
               />
-              <MetricCard
+              <PerformanceMetricCard
                 label="Win Rate"
                 value={`${results.trades.winRate.toFixed(1)}%`}
-                color={results.trades.winRate >= 50 ? '#28a745' : '#dc3545'}
+                variant={results.trades.winRate >= 50 ? 'success' : 'error'}
               />
-              <MetricCard
+              <PerformanceMetricCard
                 label="Sharpe Ratio"
                 value={results.risk.sharpeRatio.toFixed(2)}
-                color={results.risk.sharpeRatio >= 1 ? '#28a745' : results.risk.sharpeRatio >= 0.5 ? '#ffc107' : '#dc3545'}
+                variant={results.risk.sharpeRatio >= 1 ? 'success' : results.risk.sharpeRatio >= 0.5 ? 'warning' : 'error'}
               />
-              <MetricCard
+              <PerformanceMetricCard
                 label="Max Drawdown"
                 value={`-${results.risk.maxDrawdownPercent.toFixed(2)}%`}
-                color={results.risk.maxDrawdownPercent <= 10 ? '#28a745' : results.risk.maxDrawdownPercent <= 20 ? '#ffc107' : '#dc3545'}
+                variant={results.risk.maxDrawdownPercent <= 10 ? 'success' : results.risk.maxDrawdownPercent <= 20 ? 'warning' : 'error'}
               />
-              <MetricCard
+              <PerformanceMetricCard
                 label="Total Trades"
                 value={results.trades.sells.toString()}
-                color="#17a2b8"
+                variant="info"
               />
             </div>
-          </div>
+          </Card>
 
           {/* Trade Statistics */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #e0e6ed',
-            padding: '30px',
-            marginBottom: '30px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ margin: '0 0 20px 0' }}>💹 Trade Statistics</h2>
+          <Card style={{ marginBottom: theme.spacing.xl }}>
+            <h2 style={{
+              margin: `0 0 ${theme.spacing.lg} 0`,
+              color: theme.colors.text,
+              fontSize: theme.typography.fontSize.xl,
+              fontWeight: theme.typography.fontWeight.medium
+            }}>
+              💹 Trade Statistics
+            </h2>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: theme.typography.fontSize.base
+            }}>
               <tbody>
-                <tr style={{ borderBottom: '1px solid #e0e6ed' }}>
-                  <td style={{ padding: '12px 0', fontWeight: '600' }}>Profitable Trades:</td>
-                  <td style={{ padding: '12px 0', color: '#28a745' }}>{results.trades.profitableTrades}</td>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.text
+                  }}>
+                    Profitable Trades:
+                  </td>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    color: theme.colors.success
+                  }}>
+                    {results.trades.profitableTrades}
+                  </td>
                 </tr>
-                <tr style={{ borderBottom: '1px solid #e0e6ed' }}>
-                  <td style={{ padding: '12px 0', fontWeight: '600' }}>Losing Trades:</td>
-                  <td style={{ padding: '12px 0', color: '#dc3545' }}>{results.trades.losingTrades}</td>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.text
+                  }}>
+                    Losing Trades:
+                  </td>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    color: theme.colors.error
+                  }}>
+                    {results.trades.losingTrades}
+                  </td>
                 </tr>
-                <tr style={{ borderBottom: '1px solid #e0e6ed' }}>
-                  <td style={{ padding: '12px 0', fontWeight: '600' }}>Average Return per Trade:</td>
-                  <td style={{ padding: '12px 0' }}>{results.trades.avgReturn.toFixed(2)}%</td>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.text
+                  }}>
+                    Average Return per Trade:
+                  </td>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    color: theme.colors.text
+                  }}>
+                    {results.trades.avgReturn.toFixed(2)}%
+                  </td>
                 </tr>
-                <tr style={{ borderBottom: '1px solid #e0e6ed' }}>
-                  <td style={{ padding: '12px 0', fontWeight: '600' }}>Average Profit per Trade:</td>
-                  <td style={{ padding: '12px 0' }}>${results.trades.avgProfit.toFixed(2)}</td>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.text
+                  }}>
+                    Average Profit per Trade:
+                  </td>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    color: theme.colors.text
+                  }}>
+                    ${results.trades.avgProfit.toFixed(2)}
+                  </td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '12px 0', fontWeight: '600' }}>Total Profit:</td>
-                  <td style={{ padding: '12px 0', fontSize: '18px', fontWeight: '600', color: results.performance.totalProfit >= 0 ? '#28a745' : '#dc3545' }}>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.text
+                  }}>
+                    Total Profit:
+                  </td>
+                  <td style={{
+                    padding: `${theme.spacing.sm} 0`,
+                    fontSize: theme.typography.fontSize.lg,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: results.performance.totalProfit >= 0 ? theme.colors.success : theme.colors.error
+                  }}>
                     ${results.performance.totalProfit.toFixed(2)}
                   </td>
                 </tr>
               </tbody>
             </table>
-          </div>
+          </Card>
 
           {/* Trade History */}
           {results.allTrades && results.allTrades.length > 0 && (
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              border: '1px solid #e0e6ed',
-              padding: '30px',
-              marginBottom: '30px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <h2 style={{ margin: '0 0 20px 0' }}>📋 Trade History</h2>
-              <p style={{ margin: '0 0 15px 0', color: '#6c757d' }}>
+            <Card style={{ marginBottom: theme.spacing.xl }}>
+              <h2 style={{
+                margin: `0 0 ${theme.spacing.lg} 0`,
+                color: theme.colors.text,
+                fontSize: theme.typography.fontSize.xl,
+                fontWeight: theme.typography.fontWeight.medium
+              }}>
+                📋 Trade History
+              </h2>
+              <p style={{
+                margin: `0 0 ${theme.spacing.md} 0`,
+                color: theme.colors.textLight,
+                fontSize: theme.typography.fontSize.base
+              }}>
                 Showing all {results.allTrades.length} transactions ({results.trades.buys} buys, {results.trades.sells} sells)
               </p>
 
@@ -463,54 +589,140 @@ const BacktestPage = () => {
                 <table style={{
                   width: '100%',
                   borderCollapse: 'collapse',
-                  fontSize: '14px'
+                  fontSize: theme.typography.fontSize.sm
                 }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #e0e6ed' }}>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Date</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Type</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600' }}>Symbol</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Qty</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Price</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Amount</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>Return</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>P&L</th>
+                    <tr style={{
+                      backgroundColor: theme.colors.gray100,
+                      borderBottom: `2px solid ${theme.colors.gray300}`
+                    }}>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'left',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Date
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'left',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Type
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'left',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Symbol
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'right',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Qty
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'right',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Price
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'right',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Amount
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'right',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        Return
+                      </th>
+                      <th style={{
+                        padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                        textAlign: 'right',
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: theme.colors.text
+                      }}>
+                        P&L
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.allTrades.map((trade, index) => (
-                      <tr key={index} style={{ borderBottom: '1px solid #e0e6ed' }}>
-                        <td style={{ padding: '10px 8px' }}>{trade.date}</td>
-                        <td style={{ padding: '10px 8px' }}>
+                      <tr key={index} style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}>
+                        <td style={{
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                          color: theme.colors.text
+                        }}>
+                          {trade.date}
+                        </td>
+                        <td style={{ padding: `${theme.spacing.sm} ${theme.spacing.xs}` }}>
                           <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            backgroundColor: trade.side === 'buy' ? '#d1ecf1' : '#f8d7da',
-                            color: trade.side === 'buy' ? '#0c5460' : '#721c24'
+                            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                            borderRadius: theme.borderRadius.sm,
+                            fontSize: theme.typography.fontSize.xs,
+                            fontWeight: theme.typography.fontWeight.medium,
+                            backgroundColor: trade.side === 'buy' ? theme.colors.infoLight : theme.colors.errorLight,
+                            color: trade.side === 'buy' ? theme.colors.infoDark : theme.colors.errorDark
                           }}>
                             {trade.side.toUpperCase()}
                           </span>
                         </td>
-                        <td style={{ padding: '10px 8px', fontWeight: '600' }}>{trade.symbol}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>{trade.quantity.toLocaleString()}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>${trade.price.toFixed(2)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                        <td style={{
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                          fontWeight: theme.typography.fontWeight.medium,
+                          color: theme.colors.text
+                        }}>
+                          {trade.symbol}
+                        </td>
+                        <td style={{
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                          textAlign: 'right',
+                          color: theme.colors.text
+                        }}>
+                          {trade.quantity.toLocaleString()}
+                        </td>
+                        <td style={{
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                          textAlign: 'right',
+                          color: theme.colors.text
+                        }}>
+                          ${trade.price.toFixed(2)}
+                        </td>
+                        <td style={{
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
+                          textAlign: 'right',
+                          color: theme.colors.text
+                        }}>
                           ${trade.side === 'buy' ? trade.cost.toFixed(2) : trade.proceeds.toFixed(2)}
                         </td>
                         <td style={{
-                          padding: '10px 8px',
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
                           textAlign: 'right',
-                          color: trade.side === 'sell' ? (trade.returnPct >= 0 ? '#28a745' : '#dc3545') : '#6c757d'
+                          color: trade.side === 'sell' ? (trade.returnPct >= 0 ? theme.colors.success : theme.colors.error) : theme.colors.textLight
                         }}>
                           {trade.side === 'sell' ? `${trade.returnPct >= 0 ? '+' : ''}${trade.returnPct.toFixed(2)}%` : '-'}
                         </td>
                         <td style={{
-                          padding: '10px 8px',
+                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
                           textAlign: 'right',
-                          fontWeight: '600',
-                          color: trade.side === 'sell' ? (trade.profit >= 0 ? '#28a745' : '#dc3545') : '#6c757d'
+                          fontWeight: theme.typography.fontWeight.medium,
+                          color: trade.side === 'sell' ? (trade.profit >= 0 ? theme.colors.success : theme.colors.error) : theme.colors.textLight
                         }}>
                           {trade.side === 'sell' ? `${trade.profit >= 0 ? '+' : ''}$${trade.profit.toFixed(2)}` : '-'}
                         </td>
@@ -520,11 +732,18 @@ const BacktestPage = () => {
                 </table>
               </div>
 
-              <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '6px', fontSize: '13px' }}>
+              <div style={{
+                marginTop: theme.spacing.md,
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.gray100,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.text
+              }}>
                 <strong>Reading the table:</strong> BUY transactions show the cost, while SELL transactions show proceeds, return %, and profit/loss.
                 Each sell is matched to its corresponding buy to calculate returns.
               </div>
-            </div>
+            </Card>
           )}
         </div>
       )}
@@ -532,20 +751,19 @@ const BacktestPage = () => {
   );
 };
 
-// Simple metric card component
-const MetricCard = ({ label, value, color }) => (
+// Wrapper component for metric cards with border styling
+const PerformanceMetricCard = ({ label, value, variant }) => (
   <div style={{
-    border: '1px solid #e0e6ed',
-    borderRadius: '6px',
-    padding: '20px',
+    border: `1px solid ${theme.colors.gray300}`,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
     textAlign: 'center'
   }}>
-    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '8px' }}>
-      {label}
-    </div>
-    <div style={{ fontSize: '24px', fontWeight: '700', color }}>
-      {value}
-    </div>
+    <MetricCard
+      label={label}
+      value={value}
+      variant={variant}
+    />
   </div>
 );
 
