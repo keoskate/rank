@@ -101,7 +101,7 @@ export function useTradingViewChart(options = {}) {
         // Create chart directly using window.LightweightCharts
         chartRef.current = lwc.createChart(chartContainerRef.current, chartOptions);
 
-        // Create candlestick series
+        // Create candlestick series (v3 API)
         candlestickSeriesRef.current = chartRef.current.addCandlestickSeries({
           upColor: '#26a69a',
           downColor: '#ef5350',
@@ -114,14 +114,9 @@ export function useTradingViewChart(options = {}) {
         // Create volume series
         volumeSeriesRef.current = chartRef.current.addHistogramSeries({
           color: '#26a69a',
-          priceFormat: {
-            type: 'volume'
-          },
+          priceFormat: { type: 'volume' },
           priceScaleId: '',
-          scaleMargins: {
-            top: 0.8,
-            bottom: 0
-          }
+          scaleMargins: { top: 0.8, bottom: 0 }
         });
 
         setIsReady(true);
