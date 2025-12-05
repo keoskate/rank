@@ -52,7 +52,8 @@ export async function fetchYahooFinanceData(symbol) {
     const yearLow = validLows.length > 0 ? Math.min(...validLows) : null;
 
     // Get current price
-    const currentPrice = meta.regularMarketPrice || validCloses[validCloses.length - 1];
+    const currentPrice =
+      meta.regularMarketPrice || validCloses[validCloses.length - 1];
 
     // Fetch detailed statistics and financials
     const statsUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=defaultKeyStatistics,financialData,summaryDetail`;
@@ -65,7 +66,10 @@ export async function fetchYahooFinanceData(symbol) {
         statsData = json.quoteSummary?.result?.[0];
       }
     } catch (error) {
-      console.warn(`⚠️ Could not fetch detailed stats for ${symbol}:`, error.message);
+      console.warn(
+        `⚠️ Could not fetch detailed stats for ${symbol}:`,
+        error.message
+      );
     }
 
     // Extract financial metrics
@@ -74,9 +78,8 @@ export async function fetchYahooFinanceData(symbol) {
     const summaryDetail = statsData?.summaryDetail || {};
 
     // Calculate discount from 52-week high
-    const discount = yearHigh && currentPrice
-      ? (yearHigh - currentPrice) / yearHigh
-      : null;
+    const discount =
+      yearHigh && currentPrice ? (yearHigh - currentPrice) / yearHigh : null;
 
     return {
       symbol: meta.symbol,
@@ -88,7 +91,10 @@ export async function fetchYahooFinanceData(symbol) {
       // Real 52-week data
       fiftyTwoWeekHigh: yearHigh,
       fiftyTwoWeekLow: yearLow,
-      fiftyTwoWeekRange: yearHigh && yearLow ? `${yearLow.toFixed(2)} - ${yearHigh.toFixed(2)}` : null,
+      fiftyTwoWeekRange:
+        yearHigh && yearLow
+          ? `${yearLow.toFixed(2)} - ${yearHigh.toFixed(2)}`
+          : null,
       discount: discount,
 
       // Volume and trading
@@ -145,10 +151,13 @@ export async function fetchYahooFinanceData(symbol) {
 
       // Timestamp
       timestamp: Date.now(),
-      source: 'Yahoo Finance'
+      source: 'Yahoo Finance',
     };
   } catch (error) {
-    console.error(`❌ Yahoo Finance fetch failed for ${symbol}:`, error.message);
+    console.error(
+      `❌ Yahoo Finance fetch failed for ${symbol}:`,
+      error.message
+    );
     return null;
   }
 }
@@ -162,7 +171,11 @@ export async function fetchYahooFinanceData(symbol) {
  * @param {string} interval - Data interval (1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo)
  * @returns {Promise<Object|null>} Historical price data
  */
-export async function fetchYahooHistoricalData(symbol, range = '1y', interval = '1d') {
+export async function fetchYahooHistoricalData(
+  symbol,
+  range = '1y',
+  interval = '1d'
+) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}`;
 
@@ -186,14 +199,16 @@ export async function fetchYahooHistoricalData(symbol, range = '1y', interval = 
     }
 
     // Format historical data
-    const historicalData = timestamps.map((timestamp, index) => ({
-      date: new Date(timestamp * 1000).toISOString(),
-      open: quote.open[index],
-      high: quote.high[index],
-      low: quote.low[index],
-      close: quote.close[index],
-      volume: quote.volume[index]
-    })).filter(item => item.close !== null); // Filter out null data points
+    const historicalData = timestamps
+      .map((timestamp, index) => ({
+        date: new Date(timestamp * 1000).toISOString(),
+        open: quote.open[index],
+        high: quote.high[index],
+        low: quote.low[index],
+        close: quote.close[index],
+        volume: quote.volume[index],
+      }))
+      .filter(item => item.close !== null); // Filter out null data points
 
     return {
       symbol: result.meta.symbol,
@@ -201,10 +216,13 @@ export async function fetchYahooHistoricalData(symbol, range = '1y', interval = 
       interval: interval,
       dataPoints: historicalData,
       timestamp: Date.now(),
-      source: 'Yahoo Finance'
+      source: 'Yahoo Finance',
     };
   } catch (error) {
-    console.error(`❌ Yahoo Finance historical fetch failed for ${symbol}:`, error.message);
+    console.error(
+      `❌ Yahoo Finance historical fetch failed for ${symbol}:`,
+      error.message
+    );
     return null;
   }
 }
@@ -237,13 +255,19 @@ export async function fetchYahooQuote(symbol) {
       symbol: meta.symbol,
       price: meta.regularMarketPrice,
       change: meta.regularMarketPrice - meta.chartPreviousClose,
-      changePercent: ((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100,
+      changePercent:
+        ((meta.regularMarketPrice - meta.chartPreviousClose) /
+          meta.chartPreviousClose) *
+        100,
       volume: meta.regularMarketVolume,
       timestamp: meta.regularMarketTime * 1000,
-      source: 'Yahoo Finance'
+      source: 'Yahoo Finance',
     };
   } catch (error) {
-    console.error(`❌ Yahoo Finance quote fetch failed for ${symbol}:`, error.message);
+    console.error(
+      `❌ Yahoo Finance quote fetch failed for ${symbol}:`,
+      error.message
+    );
     return null;
   }
 }
@@ -264,7 +288,9 @@ export async function batchFetchYahooFinance(symbols, batchSize = 5) {
   // Process in batches to avoid rate limiting
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
-    console.log(`🔄 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(symbols.length / batchSize)}: ${batch.join(', ')}`);
+    console.log(
+      `🔄 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(symbols.length / batchSize)}: ${batch.join(', ')}`
+    );
 
     const batchPromises = batch.map(async symbol => {
       try {
@@ -287,10 +313,15 @@ export async function batchFetchYahooFinance(symbols, batchSize = 5) {
   }
 
   if (errors.length > 0) {
-    console.warn(`⚠️ ${errors.length} stocks failed to fetch from Yahoo Finance:`, errors);
+    console.warn(
+      `⚠️ ${errors.length} stocks failed to fetch from Yahoo Finance:`,
+      errors
+    );
   }
 
-  console.log(`✅ Successfully fetched ${results.length}/${symbols.length} stocks from Yahoo Finance`);
+  console.log(
+    `✅ Successfully fetched ${results.length}/${symbols.length} stocks from Yahoo Finance`
+  );
   return results;
 }
 
@@ -305,7 +336,9 @@ export async function testYahooFinanceConnection() {
     const testData = await fetchYahooQuote('AAPL');
 
     if (testData && testData.price) {
-      console.log(`✅ Yahoo Finance API is working! AAPL price: $${testData.price}`);
+      console.log(
+        `✅ Yahoo Finance API is working! AAPL price: $${testData.price}`
+      );
       return true;
     }
 

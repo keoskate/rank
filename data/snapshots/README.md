@@ -27,7 +27,7 @@ Each snapshot file contains the complete ranking state for that day:
       "symbol": "NVDA",
       "rank": 1,
       "score": 95.2,
-      "price": 150.00,
+      "price": 150.0,
       "marketCap": 3700000000000,
 
       // Daily metrics (change frequently)
@@ -46,8 +46,8 @@ Each snapshot file contains the complete ranking state for that day:
       "cash": 25000000000,
 
       // Snapshot metrics
-      "yearHigh": 140.50,
-      "yearLow": 90.20,
+      "yearHigh": 140.5,
+      "yearLow": 90.2,
       "discount": 0.068,
       "beta": 1.75,
       "dividend": 0.001,
@@ -72,24 +72,27 @@ Each snapshot file contains the complete ranking state for that day:
 ## Usage
 
 ### Generate Snapshot
+
 ```javascript
 const { generateDailySnapshot } = require('../snapshotManager');
 await generateDailySnapshot();
 ```
 
 ### Load Snapshot
+
 ```javascript
 const { loadSnapshot } = require('../snapshotManager');
 const snapshot = await loadSnapshot('2025-12-03');
 ```
 
 ### Backtest Strategy
+
 ```javascript
 const { backtestStrategy } = require('../backtestEngine');
 const results = await backtestStrategy({
   startDate: '2025-11-03',
   endDate: '2025-12-03',
   strategy: 'top5',
-  rebalanceFrequency: 'daily'
+  rebalanceFrequency: 'daily',
 });
 ```

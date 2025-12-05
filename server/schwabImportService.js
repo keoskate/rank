@@ -23,13 +23,15 @@ const TRADES_DIR = path.join(__dirname, '..', 'data', 'training');
  * @returns {object} Parsed trades and summary
  */
 function parseCSV(csvData, userId = 'default_user') {
-  const csvString = Buffer.isBuffer(csvData) ? csvData.toString('utf-8') : csvData;
+  const csvString = Buffer.isBuffer(csvData)
+    ? csvData.toString('utf-8')
+    : csvData;
 
   // Parse CSV
   const parsed = Papa.parse(csvString, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header) => header.trim().toLowerCase().replace(/\s+/g, '_')
+    transformHeader: header => header.trim().toLowerCase().replace(/\s+/g, '_'),
   });
 
   if (parsed.errors.length > 0) {
@@ -66,7 +68,7 @@ function parseCSV(csvData, userId = 'default_user') {
     rawTransactions: trades.length,
     completeTrades: completeTrades.length,
     trades: completeTrades,
-    summary: generateSummary(completeTrades)
+    summary: generateSummary(completeTrades),
   };
 }
 
@@ -80,7 +82,9 @@ function normalizeSchwabRow(row) {
     // Try different column name variations
     const date = row.date || row.trade_date || row.settlement_date;
     const action = row.action || row.type || row.transaction_type;
-    const symbol = (row.symbol || row.ticker || '').replace(/\s+/g, '').toUpperCase();
+    const symbol = (row.symbol || row.ticker || '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
     const quantity = parseFloat(row.quantity || row.qty || row.shares || 0);
     const price = parseFloat(
       (row.price || row.trade_price || '0')
@@ -135,7 +139,7 @@ function normalizeSchwabRow(row) {
       price: Math.abs(price),
       amount: Math.abs(amount),
       fees: Math.abs(fees),
-      rawAction: action
+      rawAction: action,
     };
   } catch (error) {
     console.warn('[Schwab Import] Error parsing row:', error.message);
@@ -160,7 +164,7 @@ function matchBuysAndSells(transactions) {
       const positions = openPositions.get(symbol) || [];
       positions.push({
         trade: tx,
-        remainingQty: quantity
+        remainingQty: quantity,
       });
       openPositions.set(symbol, positions);
     } else if (side === 'sell') {
@@ -209,7 +213,12 @@ function matchBuysAndSells(transactions) {
           fees,
           isWin: profit > 0,
           // Trading style classification
-          tradingStyle: holdingDays < 1 ? 'scalping' : holdingDays <= 5 ? 'dayTrading' : 'swing'
+          tradingStyle:
+            holdingDays < 1
+              ? 'scalping'
+              : holdingDays <= 5
+                ? 'dayTrading'
+                : 'swing',
         });
       }
 
@@ -230,13 +239,17 @@ function generateSummary(trades) {
     return { message: 'No complete trades found' };
   }
 
-  const wins = trades.filter((t) => t.isWin);
-  const losses = trades.filter((t) => !t.isWin);
+  const wins = trades.filter(t => t.isWin);
+  const losses = trades.filter(t => !t.isWin);
 
   const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
   const avgProfit = totalProfit / trades.length;
-  const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
-  const avgLoss = losses.length > 0 ? losses.reduce((s, t) => s + t.profit, 0) / losses.length : 0;
+  const avgWin =
+    wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+  const avgLoss =
+    losses.length > 0
+      ? losses.reduce((s, t) => s + t.profit, 0) / losses.length
+      : 0;
 
   // Best and worst trades
   const sortedByProfit = [...trades].sort((a, b) => b.profit - a.profit);
@@ -245,14 +258,14 @@ function generateSummary(trades) {
 
   // Trading style breakdown
   const byStyle = {
-    scalping: trades.filter((t) => t.tradingStyle === 'scalping'),
-    dayTrading: trades.filter((t) => t.tradingStyle === 'dayTrading'),
-    swing: trades.filter((t) => t.tradingStyle === 'swing')
+    scalping: trades.filter(t => t.tradingStyle === 'scalping'),
+    dayTrading: trades.filter(t => t.tradingStyle === 'dayTrading'),
+    swing: trades.filter(t => t.tradingStyle === 'swing'),
   };
 
   // Symbol performance
   const symbolStats = {};
-  trades.forEach((t) => {
+  trades.forEach(t => {
     if (!symbolStats[t.symbol]) {
       symbolStats[t.symbol] = { trades: 0, wins: 0, profit: 0 };
     }
@@ -271,7 +284,7 @@ function generateSummary(trades) {
 
   // Time analysis
   const hourlyPerformance = {};
-  trades.forEach((t) => {
+  trades.forEach(t => {
     const hour = new Date(t.entryDate).getHours();
     if (!hourlyPerformance[hour]) {
       hourlyPerformance[hour] = { trades: 0, wins: 0, profit: 0 };
@@ -283,8 +296,16 @@ function generateSummary(trades) {
 
   // Day of week analysis
   const dayPerformance = {};
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  trades.forEach((t) => {
+  const dayNames = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  trades.forEach(t => {
     const day = dayNames[new Date(t.entryDate).getDay()];
     if (!dayPerformance[day]) {
       dayPerformance[day] = { trades: 0, wins: 0, profit: 0 };
@@ -295,12 +316,14 @@ function generateSummary(trades) {
   });
 
   // Holding period analysis
-  const avgHoldingWin = wins.length > 0
-    ? wins.reduce((s, t) => s + t.holdingDays, 0) / wins.length
-    : 0;
-  const avgHoldingLoss = losses.length > 0
-    ? losses.reduce((s, t) => s + t.holdingDays, 0) / losses.length
-    : 0;
+  const avgHoldingWin =
+    wins.length > 0
+      ? wins.reduce((s, t) => s + t.holdingDays, 0) / wins.length
+      : 0;
+  const avgHoldingLoss =
+    losses.length > 0
+      ? losses.reduce((s, t) => s + t.holdingDays, 0) / losses.length
+      : 0;
 
   return {
     overview: {
@@ -312,18 +335,19 @@ function generateSummary(trades) {
       avgProfit: avgProfit.toFixed(2),
       avgWin: avgWin.toFixed(2),
       avgLoss: avgLoss.toFixed(2),
-      profitFactor: avgLoss !== 0 ? (Math.abs(avgWin / avgLoss)).toFixed(2) : 'N/A',
+      profitFactor:
+        avgLoss !== 0 ? Math.abs(avgWin / avgLoss).toFixed(2) : 'N/A',
       expectancy: (
         (wins.length / trades.length) * avgWin +
         (losses.length / trades.length) * avgLoss
-      ).toFixed(2)
+      ).toFixed(2),
     },
     bestTrade: bestTrade
       ? {
           symbol: bestTrade.symbol,
           profit: bestTrade.profit.toFixed(2),
           profitPercent: bestTrade.profitPercent.toFixed(2),
-          holdingDays: bestTrade.holdingDays
+          holdingDays: bestTrade.holdingDays,
         }
       : null,
     worstTrade: worstTrade
@@ -331,43 +355,58 @@ function generateSummary(trades) {
           symbol: worstTrade.symbol,
           profit: worstTrade.profit.toFixed(2),
           profitPercent: worstTrade.profitPercent.toFixed(2),
-          holdingDays: worstTrade.holdingDays
+          holdingDays: worstTrade.holdingDays,
         }
       : null,
     byStyle: {
       scalping: {
         trades: byStyle.scalping.length,
-        winRate: byStyle.scalping.length > 0
-          ? ((byStyle.scalping.filter((t) => t.isWin).length / byStyle.scalping.length) * 100).toFixed(1)
-          : 0,
-        profit: byStyle.scalping.reduce((s, t) => s + t.profit, 0).toFixed(2)
+        winRate:
+          byStyle.scalping.length > 0
+            ? (
+                (byStyle.scalping.filter(t => t.isWin).length /
+                  byStyle.scalping.length) *
+                100
+              ).toFixed(1)
+            : 0,
+        profit: byStyle.scalping.reduce((s, t) => s + t.profit, 0).toFixed(2),
       },
       dayTrading: {
         trades: byStyle.dayTrading.length,
-        winRate: byStyle.dayTrading.length > 0
-          ? ((byStyle.dayTrading.filter((t) => t.isWin).length / byStyle.dayTrading.length) * 100).toFixed(1)
-          : 0,
-        profit: byStyle.dayTrading.reduce((s, t) => s + t.profit, 0).toFixed(2)
+        winRate:
+          byStyle.dayTrading.length > 0
+            ? (
+                (byStyle.dayTrading.filter(t => t.isWin).length /
+                  byStyle.dayTrading.length) *
+                100
+              ).toFixed(1)
+            : 0,
+        profit: byStyle.dayTrading.reduce((s, t) => s + t.profit, 0).toFixed(2),
       },
       swing: {
         trades: byStyle.swing.length,
-        winRate: byStyle.swing.length > 0
-          ? ((byStyle.swing.filter((t) => t.isWin).length / byStyle.swing.length) * 100).toFixed(1)
-          : 0,
-        profit: byStyle.swing.reduce((s, t) => s + t.profit, 0).toFixed(2)
-      }
+        winRate:
+          byStyle.swing.length > 0
+            ? (
+                (byStyle.swing.filter(t => t.isWin).length /
+                  byStyle.swing.length) *
+                100
+              ).toFixed(1)
+            : 0,
+        profit: byStyle.swing.reduce((s, t) => s + t.profit, 0).toFixed(2),
+      },
     },
     topSymbols: topSymbols.map(([symbol, stats]) => ({
       symbol,
       trades: stats.trades,
       winRate: ((stats.wins / stats.trades) * 100).toFixed(1),
-      profit: stats.profit.toFixed(2)
+      profit: stats.profit.toFixed(2),
     })),
     worstSymbols: worstSymbols.map(([symbol, stats]) => ({
       symbol,
       trades: stats.trades,
       winRate: ((stats.wins / stats.trades) * 100).toFixed(1),
-      profit: stats.profit.toFixed(2)
+      profit: stats.profit.toFixed(2),
     })),
     timing: {
       bestHours: Object.entries(hourlyPerformance)
@@ -376,16 +415,19 @@ function generateSummary(trades) {
         .map(([hour, stats]) => ({
           hour: `${hour}:00`,
           trades: stats.trades,
-          profit: stats.profit.toFixed(2)
+          profit: stats.profit.toFixed(2),
         })),
       bestDays: Object.entries(dayPerformance)
         .sort((a, b) => b[1].profit - a[1].profit)
         .map(([day, stats]) => ({
           day,
           trades: stats.trades,
-          winRate: stats.trades > 0 ? ((stats.wins / stats.trades) * 100).toFixed(1) : 0,
-          profit: stats.profit.toFixed(2)
-        }))
+          winRate:
+            stats.trades > 0
+              ? ((stats.wins / stats.trades) * 100).toFixed(1)
+              : 0,
+          profit: stats.profit.toFixed(2),
+        })),
     },
     holdingPeriod: {
       avgWinHolding: avgHoldingWin.toFixed(1),
@@ -395,9 +437,9 @@ function generateSummary(trades) {
           ? 'You tend to hold losers longer than winners. Consider tighter stop losses.'
           : avgHoldingWin > avgHoldingLoss * 1.5
             ? 'You exit winners too early. Consider trailing stops to capture more upside.'
-            : 'Your holding periods are balanced.'
+            : 'Your holding periods are balanced.',
     },
-    insights: generateInsights(trades, wins, losses)
+    insights: generateInsights(trades, wins, losses),
   };
 }
 
@@ -424,8 +466,12 @@ function generateInsights(trades, wins, losses) {
   }
 
   // Average win vs loss
-  const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
-  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+  const avgWin =
+    wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+  const avgLoss =
+    losses.length > 0
+      ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length)
+      : 0;
 
   if (avgLoss > avgWin * 1.5) {
     insights.push(
@@ -458,9 +504,11 @@ function generateInsights(trades, wins, losses) {
   }
 
   // Position sizing consistency
-  const quantities = trades.map((t) => t.quantity);
+  const quantities = trades.map(t => t.quantity);
   const avgQty = quantities.reduce((a, b) => a + b, 0) / quantities.length;
-  const qtyVariance = quantities.reduce((s, q) => s + Math.pow(q - avgQty, 2), 0) / quantities.length;
+  const qtyVariance =
+    quantities.reduce((s, q) => s + Math.pow(q - avgQty, 2), 0) /
+    quantities.length;
 
   if (qtyVariance > avgQty * avgQty) {
     insights.push(
@@ -469,7 +517,9 @@ function generateInsights(trades, wins, losses) {
   }
 
   // Early exit detection
-  const earlyExits = losses.filter((t) => t.profitPercent > -2 && t.profitPercent < 0);
+  const earlyExits = losses.filter(
+    t => t.profitPercent > -2 && t.profitPercent < 0
+  );
   if (earlyExits.length > losses.length * 0.3) {
     insights.push(
       'Many losses are small (-0% to -2%). You might be stopped out too early. Consider wider stops.'
@@ -565,14 +615,14 @@ function createTrainingDataset(userId) {
   // Format for ML training
   // Each trade needs candle data leading up to entry
   // This would be fetched from historical data
-  return trades.map((trade) => ({
+  return trades.map(trade => ({
     symbol: trade.symbol,
     entryDate: trade.entryDate,
     exitDate: trade.exitDate,
     outcome: trade.isWin ? 1 : 0,
     profitPercent: trade.profitPercent,
     holdingDays: trade.holdingDays,
-    tradingStyle: trade.tradingStyle
+    tradingStyle: trade.tradingStyle,
   }));
 }
 
@@ -583,5 +633,5 @@ module.exports = {
   generateSummary,
   createTrainingDataset,
   loadTrades,
-  saveTrades
+  saveTrades,
 };

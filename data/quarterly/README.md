@@ -40,7 +40,7 @@ Each file contains the quarterly history for one stock:
       "evEbitda": 35.2,
 
       // Price at time of earnings
-      "priceAtEarnings": 148.50,
+      "priceAtEarnings": 148.5,
 
       // Data quality
       "dataSource": "polygon",
@@ -62,7 +62,7 @@ Each file contains the quarterly history for one stock:
       "cash": 23000000000,
       "netDebt": -13000000000,
       "evEbitda": 36.5,
-      "priceAtEarnings": 135.20,
+      "priceAtEarnings": 135.2,
       "dataSource": "polygon",
       "confidence": 0.95,
       "status": "verified"
@@ -80,6 +80,7 @@ Each file contains the quarterly history for one stock:
 ## Calculations
 
 ### Quarter-over-Quarter (QoQ)
+
 ```javascript
 const qoq = ((current - previous) / previous) * 100;
 // Example: P/E Ratio Q4 2025 vs Q3 2025
@@ -87,6 +88,7 @@ const qoq = ((current - previous) / previous) * 100;
 ```
 
 ### Year-over-Year (YoY)
+
 ```javascript
 const yoy = ((current - yearAgo) / yearAgo) * 100;
 // Example: ROE Q4 2025 vs Q4 2024
@@ -96,12 +98,14 @@ const yoy = ((current - yearAgo) / yearAgo) * 100;
 ## Usage
 
 ### Load Quarterly Data
+
 ```javascript
 const { loadQuarterlyData } = require('../snapshotManager');
 const data = await loadQuarterlyData('NVDA');
 ```
 
 ### Calculate QoQ
+
 ```javascript
 const { calculateQoQ } = require('../snapshotManager');
 const qoq = calculateQoQ('NVDA', 'peRatio');
@@ -109,6 +113,7 @@ const qoq = calculateQoQ('NVDA', 'peRatio');
 ```
 
 ### Calculate YoY
+
 ```javascript
 const { calculateYoY } = require('../snapshotManager');
 const yoy = calculateYoY('NVDA', 'roe');
@@ -118,6 +123,7 @@ const yoy = calculateYoY('NVDA', 'roe');
 ## Data Updates
 
 Quarterly data should be updated when:
+
 1. Company reports earnings (typically 4x per year)
 2. Manual refresh triggered by user
 3. API fetch detects new quarterly data available

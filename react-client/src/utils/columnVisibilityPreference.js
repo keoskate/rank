@@ -28,7 +28,10 @@ export function saveColumnVisibilityPreference(columnVisibility) {
       version: '1.0',
     };
 
-    localStorage.setItem(COLUMN_VISIBILITY_PREFERENCE_KEY, JSON.stringify(preference));
+    localStorage.setItem(
+      COLUMN_VISIBILITY_PREFERENCE_KEY,
+      JSON.stringify(preference)
+    );
     console.info(`💾 Column visibility preference saved`);
     return true;
   } catch (error) {
@@ -46,14 +49,18 @@ export function loadColumnVisibilityPreference() {
     const saved = localStorage.getItem(COLUMN_VISIBILITY_PREFERENCE_KEY);
 
     if (!saved) {
-      console.info('📋 No saved column visibility preference found, using defaults');
+      console.info(
+        '📋 No saved column visibility preference found, using defaults'
+      );
       return DEFAULT_COLUMN_VISIBILITY;
     }
 
     const preference = JSON.parse(saved);
 
     if (!preference.columnVisibility) {
-      console.warn('⚠️ Invalid column visibility preference format, using defaults');
+      console.warn(
+        '⚠️ Invalid column visibility preference format, using defaults'
+      );
       return DEFAULT_COLUMN_VISIBILITY;
     }
 

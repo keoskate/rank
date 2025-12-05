@@ -12,7 +12,7 @@ const TIMEFRAMES = [
   { label: '1W', value: '5', unit: 'minute', days: 7 },
   { label: '1M', value: '15', unit: 'minute', days: 30 },
   { label: '3M', value: '1', unit: 'day', days: 90 },
-  { label: '1Y', value: '1', unit: 'day', days: 365 }
+  { label: '1Y', value: '1', unit: 'day', days: 365 },
 ];
 
 const INDICATORS = [
@@ -21,7 +21,7 @@ const INDICATORS = [
   { id: 'ema50', label: 'EMA 50', color: '#9C27B0' },
   { id: 'vwap', label: 'VWAP', color: '#E91E63' },
   { id: 'bollinger', label: 'BB', color: '#00BCD4' },
-  { id: 'rsi', label: 'RSI', color: '#4CAF50', subPane: true }
+  { id: 'rsi', label: 'RSI', color: '#4CAF50', subPane: true },
 ];
 
 const PriceChart = ({ symbol, height = 400, showControls = true }) => {
@@ -40,7 +40,7 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
     addVWAP,
     addBollingerBands,
     removeIndicator,
-    fitContent
+    fitContent,
   } = useTradingViewChart({ height });
 
   // Fetch chart data
@@ -58,7 +58,7 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
 
       const res = await fetch(
         `/api/polygon/aggregates/${symbol}/${multiplier}/${unit}?` +
-        `from=${startDate.toISOString().split('T')[0]}&to=${endDate.toISOString().split('T')[0]}`
+          `from=${startDate.toISOString().split('T')[0]}&to=${endDate.toISOString().split('T')[0]}`
       );
 
       if (!res.ok) throw new Error('Failed to fetch chart data');
@@ -73,15 +73,18 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
           high: bar.high ?? bar.h,
           low: bar.low ?? bar.l,
           close: bar.close ?? bar.c,
-          volume: bar.volume ?? bar.v
+          volume: bar.volume ?? bar.v,
         }));
 
         setCandlestickData(candles);
 
         // Calculate and add active indicators
-        if (activeIndicators.ema9) calculateAndAddEMA(candles, 9, 'ema9', '#2196F3');
-        if (activeIndicators.ema21) calculateAndAddEMA(candles, 21, 'ema21', '#FF9800');
-        if (activeIndicators.ema50) calculateAndAddEMA(candles, 50, 'ema50', '#9C27B0');
+        if (activeIndicators.ema9)
+          calculateAndAddEMA(candles, 9, 'ema9', '#2196F3');
+        if (activeIndicators.ema21)
+          calculateAndAddEMA(candles, 21, 'ema21', '#FF9800');
+        if (activeIndicators.ema50)
+          calculateAndAddEMA(candles, 50, 'ema50', '#9C27B0');
         if (activeIndicators.vwap) calculateAndAddVWAP(candles);
         if (activeIndicators.bollinger) calculateAndAddBollinger(candles);
         if (activeIndicators.rsi) calculateRSI(candles);
@@ -117,7 +120,9 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
 
     // Calculate rest of EMA
     for (let i = period; i < closes.length; i++) {
-      const value = (closes[i] - ema[ema.length - 1].value) * multiplier + ema[ema.length - 1].value;
+      const value =
+        (closes[i] - ema[ema.length - 1].value) * multiplier +
+        ema[ema.length - 1].value;
       ema.push({ time: candles[i].time, value });
     }
 
@@ -125,7 +130,7 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
   };
 
   // Calculate VWAP
-  const calculateAndAddVWAP = (candles) => {
+  const calculateAndAddVWAP = candles => {
     let cumulativeTPV = 0;
     let cumulativeVolume = 0;
 
@@ -135,7 +140,10 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
       cumulativeVolume += candle.volume;
       return {
         time: candle.time,
-        value: cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : typicalPrice
+        value:
+          cumulativeVolume > 0
+            ? cumulativeTPV / cumulativeVolume
+            : typicalPrice,
       };
     });
 
@@ -161,9 +169,9 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
 
       bbData.push({
         time: candles[i].time,
-        upper: sma + (stdDev * std),
+        upper: sma + stdDev * std,
         middle: sma,
-        lower: sma - (stdDev * std)
+        lower: sma - stdDev * std,
       });
     }
 
@@ -196,7 +204,7 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
     const firstRS = avgLoss === 0 ? 100 : avgGain / avgLoss;
     rsi.push({
       time: candles[period].time,
-      value: 100 - (100 / (1 + firstRS))
+      value: 100 - 100 / (1 + firstRS),
     });
 
     // Calculate remaining RSI values using smoothed averages
@@ -211,7 +219,7 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
       const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
       rsi.push({
         time: candles[i].time,
-        value: 100 - (100 / (1 + rs))
+        value: 100 - 100 / (1 + rs),
       });
     }
 
@@ -229,19 +237,19 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
       // Scale RSI (0-100) to fit within the lower portion of the chart
       const scaledRsi = rsi.map(r => ({
         time: r.time,
-        value: minPrice + (r.value / 100) * priceRange * 0.3 // Scale to 30% of price range from bottom
+        value: minPrice + (r.value / 100) * priceRange * 0.3, // Scale to 30% of price range from bottom
       }));
 
       addEMALine('rsi', scaledRsi, {
         color: '#4CAF50',
         lineWidth: 1,
-        title: 'RSI (scaled)'
+        title: 'RSI (scaled)',
       });
     }
   };
 
   // Toggle indicator
-  const toggleIndicator = (id) => {
+  const toggleIndicator = id => {
     setActiveIndicators(prev => {
       const newState = { ...prev, [id]: !prev[id] };
       if (!newState[id]) {
@@ -259,24 +267,28 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
   };
 
   return (
-    <div style={{
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.borderRadius.lg,
-      overflow: 'hidden',
-      boxShadow: theme.shadows.sm
-    }}>
+    <div
+      style={{
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.lg,
+        overflow: 'hidden',
+        boxShadow: theme.shadows.sm,
+      }}
+    >
       {/* Controls */}
       {showControls && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: theme.spacing.sm,
-          borderBottom: `1px solid ${theme.colors.gray200}`,
-          backgroundColor: theme.colors.gray50,
-          flexWrap: 'wrap',
-          gap: theme.spacing.sm
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: theme.spacing.sm,
+            borderBottom: `1px solid ${theme.colors.gray200}`,
+            backgroundColor: theme.colors.gray50,
+            flexWrap: 'wrap',
+            gap: theme.spacing.sm,
+          }}
+        >
           {/* Timeframe Selector */}
           <div style={{ display: 'flex', gap: '2px' }}>
             {TIMEFRAMES.map(tf => (
@@ -286,16 +298,18 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
                 style={{
                   padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
                   border: 'none',
-                  backgroundColor: selectedTimeframe.label === tf.label
-                    ? theme.colors.primary
-                    : 'transparent',
-                  color: selectedTimeframe.label === tf.label
-                    ? theme.colors.white
-                    : theme.colors.gray600,
+                  backgroundColor:
+                    selectedTimeframe.label === tf.label
+                      ? theme.colors.primary
+                      : 'transparent',
+                  color:
+                    selectedTimeframe.label === tf.label
+                      ? theme.colors.white
+                      : theme.colors.gray600,
                   borderRadius: theme.borderRadius.sm,
                   cursor: 'pointer',
                   fontSize: theme.typography.fontSize.sm,
-                  fontWeight: theme.typography.fontWeight.medium
+                  fontWeight: theme.typography.fontWeight.medium,
                 }}
               >
                 {tf.label}
@@ -304,7 +318,9 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
           </div>
 
           {/* Indicator Toggles */}
-          <div style={{ display: 'flex', gap: theme.spacing.xs, flexWrap: 'wrap' }}>
+          <div
+            style={{ display: 'flex', gap: theme.spacing.xs, flexWrap: 'wrap' }}
+          >
             {INDICATORS.map(ind => (
               <button
                 key={ind.id}
@@ -312,12 +328,16 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
                 style={{
                   padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
                   border: `1px solid ${activeIndicators[ind.id] ? ind.color : theme.colors.gray300}`,
-                  backgroundColor: activeIndicators[ind.id] ? `${ind.color}20` : 'transparent',
-                  color: activeIndicators[ind.id] ? ind.color : theme.colors.gray600,
+                  backgroundColor: activeIndicators[ind.id]
+                    ? `${ind.color}20`
+                    : 'transparent',
+                  color: activeIndicators[ind.id]
+                    ? ind.color
+                    : theme.colors.gray600,
                   borderRadius: theme.borderRadius.sm,
                   cursor: 'pointer',
                   fontSize: theme.typography.fontSize.xs,
-                  fontWeight: theme.typography.fontWeight.medium
+                  fontWeight: theme.typography.fontWeight.medium,
                 }}
               >
                 {ind.label}
@@ -330,28 +350,32 @@ const PriceChart = ({ symbol, height = 400, showControls = true }) => {
       {/* Chart Container */}
       <div style={{ position: 'relative' }}>
         {loading && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10,
-            color: theme.colors.gray500
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+              color: theme.colors.gray500,
+            }}
+          >
             Loading...
           </div>
         )}
 
         {error && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10,
-            color: theme.colors.error,
-            textAlign: 'center'
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+              color: theme.colors.error,
+              textAlign: 'center',
+            }}
+          >
             {error}
           </div>
         )}

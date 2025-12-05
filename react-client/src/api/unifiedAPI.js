@@ -15,10 +15,7 @@ import {
   getCurrentProviderConfig,
 } from '../config/apiConfig';
 import { fetchYahooFinanceData } from './yahooFinanceAPI';
-import {
-  validateStockData,
-  createValidatedStockData
-} from './dataValidator';
+import { validateStockData, createValidatedStockData } from './dataValidator';
 
 /**
  * Get stock data from the configured API provider
@@ -182,18 +179,26 @@ async function fetchFromPolygon(symbol, options = {}) {
 
   try {
     // Fetch multiple data sources for comprehensive data
-    const [marketData, dividendData, tickerDetails, yearHighData] = await Promise.all([
-      fetchPolygonMarketData(symbol, config.apiKey),
-      fetchPolygonDividendData(symbol, config.apiKey),
-      fetchPolygonTickerDetails(symbol, config.apiKey),
-      fetchPolygon52WeekHigh(symbol, config.apiKey),
-    ]);
+    const [marketData, dividendData, tickerDetails, yearHighData] =
+      await Promise.all([
+        fetchPolygonMarketData(symbol, config.apiKey),
+        fetchPolygonDividendData(symbol, config.apiKey),
+        fetchPolygonTickerDetails(symbol, config.apiKey),
+        fetchPolygon52WeekHigh(symbol, config.apiKey),
+      ]);
 
     if (!marketData) {
       throw new Error('No market data available');
     }
 
-    return parsePolygonData(symbol, marketData, null, dividendData, tickerDetails, yearHighData);
+    return parsePolygonData(
+      symbol,
+      marketData,
+      null,
+      dividendData,
+      tickerDetails,
+      yearHighData
+    );
   } catch (error) {
     console.error(`❌ Polygon fetch failed for ${symbol}:`, error.message);
     throw error;
@@ -237,7 +242,9 @@ async function fetchPolygon52WeekHigh(symbol, apiKey) {
   try {
     // Fetch 1 year of daily data to calculate REAL 52-week high
     const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
 
     const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&limit=500&apikey=${apiKey}`;
     console.log(`📈 Fetching 52W data from Polygon for ${symbol}...`);
@@ -256,18 +263,24 @@ async function fetchPolygon52WeekHigh(symbol, apiKey) {
     }
 
     // Calculate real 52-week high and low from historical data
-    const highs = data.results.map(r => r.h).filter(h => h !== null && isFinite(h));
-    const lows = data.results.map(r => r.l).filter(l => l !== null && isFinite(l));
+    const highs = data.results
+      .map(r => r.h)
+      .filter(h => h !== null && isFinite(h));
+    const lows = data.results
+      .map(r => r.l)
+      .filter(l => l !== null && isFinite(l));
 
     const yearHigh = highs.length > 0 ? Math.max(...highs) : null;
     const yearLow = lows.length > 0 ? Math.min(...lows) : null;
 
-    console.log(`✅ Polygon 52W High for ${symbol}: $${yearHigh?.toFixed(2)} (from ${data.results.length} days of data)`);
+    console.log(
+      `✅ Polygon 52W High for ${symbol}: $${yearHigh?.toFixed(2)} (from ${data.results.length} days of data)`
+    );
 
     return {
       yearHigh,
       yearLow,
-      dataPoints: data.results.length
+      dataPoints: data.results.length,
     };
   } catch (error) {
     console.warn(`Failed to fetch 52W data for ${symbol}:`, error.message);
@@ -282,7 +295,9 @@ async function fetchPolygonTickerDetails(symbol, apiKey) {
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.warn(`Ticker details API returned ${response.status} for ${symbol}`);
+      console.warn(
+        `Ticker details API returned ${response.status} for ${symbol}`
+      );
       return null;
     }
 
@@ -290,7 +305,10 @@ async function fetchPolygonTickerDetails(symbol, apiKey) {
     console.log(`Full ticker details response for ${symbol}:`, data);
     return data.results || null;
   } catch (error) {
-    console.warn(`Failed to fetch ticker details for ${symbol}:`, error.message);
+    console.warn(
+      `Failed to fetch ticker details for ${symbol}:`,
+      error.message
+    );
     return null;
   }
 }
@@ -419,7 +437,14 @@ function parseAlphaVantageData(overview) {
 /**
  * Parse Polygon.io data into standard format
  */
-function parsePolygonData(symbol, marketData, financialData, dividendData, tickerDetails, yearHighData) {
+function parsePolygonData(
+  symbol,
+  marketData,
+  financialData,
+  dividendData,
+  tickerDetails,
+  yearHighData
+) {
   const formatNumber = (value, precision = 2) => {
     const num = parseFloat(value);
     return isNaN(num) ? 0 : parseFloat(num.toFixed(precision));
@@ -490,11 +515,15 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
   if (yearHighData && yearHighData.yearHigh) {
     // REAL DATA from Polygon historical aggregates
     calculatedYearHigh = formatNumber(yearHighData.yearHigh);
-    calculatedYearLow = yearHighData.yearLow ? formatNumber(yearHighData.yearLow) : null;
+    calculatedYearLow = yearHighData.yearLow
+      ? formatNumber(yearHighData.yearLow)
+      : null;
     dataQuality.yearHigh = 'real';
     dataQuality.yearHighSource = 'polygon_historical';
     dataQuality.yearHighDataPoints = yearHighData.dataPoints;
-    console.log(`✅ Using REAL 52W high for ${symbol}: $${calculatedYearHigh} (from ${yearHighData.dataPoints} days)`);
+    console.log(
+      `✅ Using REAL 52W high for ${symbol}: $${calculatedYearHigh} (from ${yearHighData.dataPoints} days)`
+    );
   } else {
     // FALLBACK: Estimated 52W high (only if real data unavailable)
     const symbolHash = symbol
@@ -505,7 +534,9 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
     calculatedYearLow = formatNumber(currentPrice * 0.7); // Rough estimate
     dataQuality.yearHigh = 'estimated';
     dataQuality.yearHighSource = 'hash_calculation';
-    console.warn(`⚠️ Using ESTIMATED 52W high for ${symbol}: $${calculatedYearHigh} (real data unavailable)`);
+    console.warn(
+      `⚠️ Using ESTIMATED 52W high for ${symbol}: $${calculatedYearHigh} (real data unavailable)`
+    );
   }
 
   const discountPercent = formatNumber(
@@ -514,28 +545,30 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
 
   // Debug logging for company name
   console.log(`Parsing ticker details for ${symbol}:`, tickerDetails);
-  
+
   // Extract company information from ticker details
   const companyName = tickerDetails?.name || symbol;
-  
+
   // Use appropriate fields for sector and industry from Polygon API
-  const sector = tickerDetails?.sector || 
-                 tickerDetails?.industry_group || 
-                 tickerDetails?.gics_sector || 
-                 'Technology'; // Default fallback
-                 
-  const industry = tickerDetails?.industry || 
-                   tickerDetails?.sic_description || 
-                   tickerDetails?.gics_industry || 
-                   tickerDetails?.type || 
-                   'Software'; // Default fallback
-  
+  const sector =
+    tickerDetails?.sector ||
+    tickerDetails?.industry_group ||
+    tickerDetails?.gics_sector ||
+    'Technology'; // Default fallback
+
+  const industry =
+    tickerDetails?.industry ||
+    tickerDetails?.sic_description ||
+    tickerDetails?.gics_industry ||
+    tickerDetails?.type ||
+    'Software'; // Default fallback
+
   // Extract real company metrics from ticker details
   const marketCap = tickerDetails?.market_cap || null;
   const totalEmployees = tickerDetails?.total_employees || null;
   const listDate = tickerDetails?.list_date || null;
   const description = tickerDetails?.description || null;
-  
+
   console.log(`Extracted data for ${symbol}:`, {
     name: companyName,
     sector: sector,
@@ -543,9 +576,9 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
     marketCap: marketCap,
     employees: totalEmployees,
     listDate: listDate,
-    allFields: Object.keys(tickerDetails || {})
+    allFields: Object.keys(tickerDetails || {}),
   });
-  
+
   return {
     rank: 0,
     ticker: symbol,
@@ -622,7 +655,9 @@ function parsePolygonData(symbol, marketData, financialData, dividendData, ticke
  */
 export async function getHistoricalData(symbol, timeframe) {
   const config = getCurrentProviderConfig();
-  console.info(`📈 Fetching historical data for ${symbol} (${timeframe}) from ${config.name}`);
+  console.info(
+    `📈 Fetching historical data for ${symbol} (${timeframe}) from ${config.name}`
+  );
 
   try {
     switch (PRIMARY_PROVIDER) {
@@ -647,27 +682,27 @@ export async function getHistoricalData(symbol, timeframe) {
  */
 async function fetchHistoricalFromAlphaVantage(symbol, timeframe) {
   const config = getCurrentProviderConfig();
-  
+
   // Alpha Vantage historical endpoints
   let apiFunction = 'TIME_SERIES_DAILY';
   if (timeframe === '52W' || timeframe === 'YTD') {
     apiFunction = 'TIME_SERIES_WEEKLY';
   }
-  
+
   const url = `https://www.alphavantage.co/query?function=${apiFunction}&symbol=${symbol}&apikey=${config.apiKey}&outputsize=full`;
-  
+
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
-  
+
   const data = await response.json();
-  
+
   // Check for API errors
   if (data.Note || data.Error || data.Information) {
     throw new Error(data.Note || data.Error || data.Information);
   }
-  
+
   return parseAlphaVantageHistoricalData(data, timeframe);
 }
 
@@ -713,23 +748,23 @@ async function fetchHistoricalFromPolygon(symbol, timeframe) {
       startDate.setMonth(endDate.getMonth() - 3);
       startDate.setDate(startDate.getDate() - RSI_WARMUP_DAYS);
   }
-  
+
   const fromDate = startDate.toISOString().split('T')[0];
   const toDate = endDate.toISOString().split('T')[0];
-  
+
   const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=asc&apikey=${config.apiKey}`;
-  
+
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
-  
+
   const data = await response.json();
-  
+
   if (!data.results || data.results.length === 0) {
     throw new Error('No historical data available');
   }
-  
+
   return parsePolygonHistoricalData(data.results, timeframe);
 }
 
@@ -737,27 +772,29 @@ async function fetchHistoricalFromPolygon(symbol, timeframe) {
  * Parse Alpha Vantage historical data
  */
 function parseAlphaVantageHistoricalData(data, timeframe) {
-  const timeSeriesKey = Object.keys(data).find(key => key.includes('Time Series'));
+  const timeSeriesKey = Object.keys(data).find(key =>
+    key.includes('Time Series')
+  );
   if (!timeSeriesKey) {
     throw new Error('No time series data found');
   }
-  
+
   const timeSeries = data[timeSeriesKey];
   const labels = [];
   const prices = [];
-  
+
   // Get dates in chronological order
   const dates = Object.keys(timeSeries).sort();
-  
+
   // Filter based on timeframe
   const filteredDates = filterDatesByTimeframe(dates, timeframe);
-  
+
   for (const date of filteredDates) {
     const dayData = timeSeries[date];
     labels.push(new Date(date).toISOString());
     prices.push(parseFloat(dayData['4. close']));
   }
-  
+
   return { labels, data: prices };
 }
 
@@ -810,7 +847,9 @@ function parsePolygonHistoricalData(results, timeframe) {
     throw new Error('No valid historical data points found');
   }
 
-  console.log(`📊 Fetched ${labels.length} data points (includes warmup for RSI calculation)`);
+  console.log(
+    `📊 Fetched ${labels.length} data points (includes warmup for RSI calculation)`
+  );
 
   return {
     labels,
@@ -819,7 +858,7 @@ function parsePolygonHistoricalData(results, timeframe) {
     open: opens,
     high: highs,
     low: lows,
-    timeframe
+    timeframe,
   };
 }
 
@@ -829,7 +868,7 @@ function parsePolygonHistoricalData(results, timeframe) {
 function filterDatesByTimeframe(dates, timeframe) {
   const endDate = new Date();
   const startDate = new Date();
-  
+
   switch (timeframe) {
     case '1W':
       startDate.setDate(endDate.getDate() - 7);
@@ -853,7 +892,7 @@ function filterDatesByTimeframe(dates, timeframe) {
     default:
       startDate.setMonth(endDate.getMonth() - 3);
   }
-  
+
   return dates.filter(date => {
     const d = new Date(date);
     return d >= startDate && d <= endDate;
@@ -907,12 +946,20 @@ export async function getValidatedStockData(symbol, options = {}) {
     const validation = await validateStockData(symbol, primaryData, null);
 
     // Create merged, validated stock data
-    const validatedStock = createValidatedStockData(validation, primaryData, yahooData);
+    const validatedStock = createValidatedStockData(
+      validation,
+      primaryData,
+      yahooData
+    );
 
     console.info(`✅ Validated data for ${symbol}:`);
-    console.info(`   Confidence: ${(validation.overallConfidence * 100).toFixed(1)}%`);
+    console.info(
+      `   Confidence: ${(validation.overallConfidence * 100).toFixed(1)}%`
+    );
     console.info(`   Status: ${validation.summary.overallStatus}`);
-    console.info(`   52W High: ${validatedStock.yearHigh?.toFixed(2)} (was ${primaryData.yearHigh?.toFixed(2)})`);
+    console.info(
+      `   52W High: ${validatedStock.yearHigh?.toFixed(2)} (was ${primaryData.yearHigh?.toFixed(2)})`
+    );
 
     return validatedStock;
   } catch (error) {
@@ -929,7 +976,9 @@ export async function getValidatedStockData(symbol, options = {}) {
  * @returns {Promise<Object[]>} Array of validated stock data
  */
 export async function batchFetchValidatedStocks(symbols, options = {}) {
-  console.info(`📦 Batch fetching VALIDATED data for ${symbols.length} stocks...`);
+  console.info(
+    `📦 Batch fetching VALIDATED data for ${symbols.length} stocks...`
+  );
 
   const results = [];
 
@@ -949,6 +998,8 @@ export async function batchFetchValidatedStocks(symbols, options = {}) {
     }
   }
 
-  console.info(`✅ Successfully validated ${results.length}/${symbols.length} stocks`);
+  console.info(
+    `✅ Successfully validated ${results.length}/${symbols.length} stocks`
+  );
   return results;
 }

@@ -33,12 +33,16 @@ const Button = ({
         border: 'none',
       },
       success: {
-        backgroundColor: isHovered ? theme.colors.successDark : theme.colors.success,
+        backgroundColor: isHovered
+          ? theme.colors.successDark
+          : theme.colors.success,
         color: theme.colors.surface,
         border: 'none',
       },
       danger: {
-        backgroundColor: isHovered ? theme.colors.errorDark : theme.colors.error,
+        backgroundColor: isHovered
+          ? theme.colors.errorDark
+          : theme.colors.error,
         color: theme.colors.surface,
         border: 'none',
       },

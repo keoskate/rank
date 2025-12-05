@@ -43,7 +43,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Middleware for JSON parsing
 app.use(bodyParser.json());
 
-
 // ================================
 // PAPER TRADING SIMULATION SYSTEM
 // ================================
@@ -66,17 +65,19 @@ async function getCachedHistoricalData(symbol, date, interval = 'minute') {
   const key = getCacheKey(symbol, date, interval);
   const cached = historicalDataCache.get(key);
 
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     console.log(`📦 Cache HIT for ${symbol} on ${date}`);
     return cached.data;
   }
 
   console.log(`🌐 Cache MISS for ${symbol} on ${date} - fetching...`);
-  const data = await polygonClient.getHistoricalAggregates(symbol, date, date, interval).catch(() => []);
+  const data = await polygonClient
+    .getHistoricalAggregates(symbol, date, date, interval)
+    .catch(() => []);
 
   historicalDataCache.set(key, {
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   return data;
@@ -87,7 +88,10 @@ async function getCurrentStockPrice(symbol) {
   try {
     // Use Polygon API to get real-time stock price
     const quote = await polygonClient.getLatestQuote(symbol).catch(e => {
-      console.error(`❌ Error fetching real-time price for ${symbol}:`, e.message);
+      console.error(
+        `❌ Error fetching real-time price for ${symbol}:`,
+        e.message
+      );
       return { error: e.message };
     });
 
@@ -103,10 +107,15 @@ async function getCurrentStockPrice(symbol) {
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    const bars = await polygonClient.getHistoricalAggregates(symbol, startDateStr, endDateStr).catch(e => {
-      console.error(`❌ Error fetching historical price for ${symbol}:`, e.message);
-      return { error: e.message };
-    });
+    const bars = await polygonClient
+      .getHistoricalAggregates(symbol, startDateStr, endDateStr)
+      .catch(e => {
+        console.error(
+          `❌ Error fetching historical price for ${symbol}:`,
+          e.message
+        );
+        return { error: e.message };
+      });
 
     if (!bars.error && bars && bars.length > 0) {
       const latestBar = bars[bars.length - 1];
@@ -774,7 +783,9 @@ app.get('/api/intraday/:symbol', async (req, res) => {
     const { symbol } = req.params;
     const { date } = req.query; // Optional: analyze specific date (YYYY-MM-DD), defaults to today
 
-    console.log(`📈 Analyzing intraday trading for ${symbol}${date ? ` on ${date}` : ''}...`);
+    console.log(
+      `📈 Analyzing intraday trading for ${symbol}${date ? ` on ${date}` : ''}...`
+    );
 
     // Get today's date or specified date
     const targetDate = date ? new Date(date) : new Date();
@@ -786,47 +797,54 @@ app.get('/api/intraday/:symbol', async (req, res) => {
     const startDateStr = startDate.toISOString().split('T')[0];
 
     // Fetch 5-minute candles for the target day (market hours: 9:30 AM - 4:00 PM ET = 78 candles)
-    const intradayCandles = await polygonClient.getHistoricalAggregates(
-      symbol,
-      targetDateStr,
-      targetDateStr,
-      'minute'
-    ).catch(e => {
-      console.log(`⚠️  Could not fetch intraday candles: ${e.message}`);
-      return [];
-    });
+    const intradayCandles = await polygonClient
+      .getHistoricalAggregates(symbol, targetDateStr, targetDateStr, 'minute')
+      .catch(e => {
+        console.log(`⚠️  Could not fetch intraday candles: ${e.message}`);
+        return [];
+      });
 
     // Fetch daily bars for historical context and pattern matching
-    const dailyBars = await polygonClient.getHistoricalAggregates(
-      symbol,
-      startDateStr,
-      targetDateStr,
-      'day'
-    ).catch(e => {
-      console.error(`❌ Error fetching daily bars: ${e.message}`);
-      return [];
-    });
+    const dailyBars = await polygonClient
+      .getHistoricalAggregates(symbol, startDateStr, targetDateStr, 'day')
+      .catch(e => {
+        console.error(`❌ Error fetching daily bars: ${e.message}`);
+        return [];
+      });
 
     // Fetch market indicators (S&P 500 and VIX for sentiment)
     const [spyBars, vixBars] = await Promise.all([
-      polygonClient.getHistoricalAggregates('SPY', startDateStr, targetDateStr, 'day').catch(() => []),
-      polygonClient.getHistoricalAggregates('VIX', startDateStr, targetDateStr, 'day').catch(() => [])
+      polygonClient
+        .getHistoricalAggregates('SPY', startDateStr, targetDateStr, 'day')
+        .catch(() => []),
+      polygonClient
+        .getHistoricalAggregates('VIX', startDateStr, targetDateStr, 'day')
+        .catch(() => []),
     ]);
 
     // Also fetch intraday SPY and VIX candles for correlation analysis
     const [spyIntradayCandles, vixIntradayCandles] = await Promise.all([
-      polygonClient.getHistoricalAggregates('SPY', targetDateStr, targetDateStr, 'minute').catch((e) => {
-        console.log(`⚠️  Could not fetch SPY intraday candles: ${e.message}`);
-        return [];
-      }),
-      polygonClient.getHistoricalAggregates('VIX', targetDateStr, targetDateStr, 'minute').catch((e) => {
-        console.log(`⚠️  Could not fetch VIX intraday candles: ${e.message}`);
-        return [];
-      })
+      polygonClient
+        .getHistoricalAggregates('SPY', targetDateStr, targetDateStr, 'minute')
+        .catch(e => {
+          console.log(`⚠️  Could not fetch SPY intraday candles: ${e.message}`);
+          return [];
+        }),
+      polygonClient
+        .getHistoricalAggregates('VIX', targetDateStr, targetDateStr, 'minute')
+        .catch(e => {
+          console.log(`⚠️  Could not fetch VIX intraday candles: ${e.message}`);
+          return [];
+        }),
     ]);
 
     // Calculate market sentiment
-    const marketSentiment = analyzeMarketSentiment(spyBars, vixBars, spyIntradayCandles, vixIntradayCandles);
+    const marketSentiment = analyzeMarketSentiment(
+      spyBars,
+      vixBars,
+      spyIntradayCandles,
+      vixIntradayCandles
+    );
 
     // Calculate technical indicators
     const technicals = polygonClient.calculateTechnicalIndicators(dailyBars);
@@ -847,7 +865,11 @@ app.get('/api/intraday/:symbol', async (req, res) => {
     );
 
     // Find historical patterns similar to current setup
-    const similarPatterns = await findSimilarPatterns(symbol, dailyBars, marketSentiment);
+    const similarPatterns = await findSimilarPatterns(
+      symbol,
+      dailyBars,
+      marketSentiment
+    );
 
     res.json({
       success: true,
@@ -856,19 +878,19 @@ app.get('/api/intraday/:symbol', async (req, res) => {
       intraday: {
         candles: intradayCandles,
         openPrice: intradayCandles[0]?.open || null,
-        currentPrice: intradayCandles[intradayCandles.length - 1]?.close || null,
+        currentPrice:
+          intradayCandles[intradayCandles.length - 1]?.close || null,
         highOfDay: Math.max(...intradayCandles.map(c => c.high)),
         lowOfDay: Math.min(...intradayCandles.map(c => c.low)),
         volume: intradayCandles.reduce((sum, c) => sum + c.volume, 0),
         analysis: intradayAnalysis,
-        swingAnalysis: swingAnalysis
+        swingAnalysis: swingAnalysis,
       },
       marketSentiment,
       technicals,
       recommendations,
-      similarPatterns
+      similarPatterns,
     });
-
   } catch (error) {
     console.error(`❌ Error analyzing intraday for ${symbol}:`, error.message);
     res.status(500).json({ error: error.message });
@@ -880,7 +902,9 @@ app.post('/api/strategy/backtest', async (req, res) => {
   try {
     const { symbol, strategy, startDate, endDate } = req.body;
 
-    console.log(`🧪 Backtesting strategy for ${symbol} from ${startDate} to ${endDate}...`);
+    console.log(
+      `🧪 Backtesting strategy for ${symbol} from ${startDate} to ${endDate}...`
+    );
 
     // Validate strategy parameters
     if (!strategy || !strategy.type) {
@@ -888,8 +912,28 @@ app.post('/api/strategy/backtest', async (req, res) => {
     }
 
     // Define ranking list stocks (COVID_19 default list)
-    const rankingStocks = ['WM', 'ADSK', 'NKE', 'LSCC', 'DIS', 'LRCX', 'XRAY', 'RTX', 'YETI',
-                          'ENPH', 'TEVA', 'MGNI', 'RUN', 'DAL', 'LRMR', 'RCL', 'SHOP', 'HIMX', 'PI', 'PENN'];
+    const rankingStocks = [
+      'WM',
+      'ADSK',
+      'NKE',
+      'LSCC',
+      'DIS',
+      'LRCX',
+      'XRAY',
+      'RTX',
+      'YETI',
+      'ENPH',
+      'TEVA',
+      'MGNI',
+      'RUN',
+      'DAL',
+      'LRMR',
+      'RCL',
+      'SHOP',
+      'HIMX',
+      'PI',
+      'PENN',
+    ];
 
     // Remove the target symbol if it's in the list to avoid duplication
     const marketStocks = rankingStocks.filter(s => s !== symbol);
@@ -925,11 +969,15 @@ app.post('/api/strategy/backtest', async (req, res) => {
         const [candles, spyCandles, vixCandles] = await Promise.all([
           getCachedHistoricalData(symbol, date),
           getCachedHistoricalData('SPY', date),
-          getCachedHistoricalData('VIX', date)
+          getCachedHistoricalData('VIX', date),
         ]);
 
         if (candles.length === 0) {
-          dailyLogs.push({ date, status: 'no_data', reason: 'No intraday data available' });
+          dailyLogs.push({
+            date,
+            status: 'no_data',
+            reason: 'No intraday data available',
+          });
           continue;
         }
 
@@ -941,10 +989,20 @@ app.post('/api/strategy/backtest', async (req, res) => {
         );
 
         // Calculate market-wide metrics from ranking stocks
-        const marketMetrics = calculateMarketMetrics(rankingCandles, sampledStocks);
+        const marketMetrics = calculateMarketMetrics(
+          rankingCandles,
+          sampledStocks
+        );
 
         // Run strategy on this day with enhanced market context
-        const trade = executeStrategy(candles, strategy, date, spyCandles, vixCandles, marketMetrics);
+        const trade = executeStrategy(
+          candles,
+          strategy,
+          date,
+          spyCandles,
+          vixCandles,
+          marketMetrics
+        );
 
         if (trade && trade.executed) {
           trades.push(trade);
@@ -958,7 +1016,7 @@ app.post('/api/strategy/backtest', async (req, res) => {
             profitPercent: trade.profitPercent,
             reason: trade.reason,
             momentum: trade.momentum,
-            marketBreadth: trade.marketBreadth
+            marketBreadth: trade.marketBreadth,
           });
 
           if (trade.profitLoss > 0) {
@@ -979,7 +1037,7 @@ app.post('/api/strategy/backtest', async (req, res) => {
             reason: trade.reason,
             momentum: trade.momentum,
             actualDayReturn: trade.actualDayReturn, // How much stock moved that day
-            missedOpportunity: trade.actualDayReturn > 5 // Flag if we missed a big move
+            missedOpportunity: trade.actualDayReturn > 5, // Flag if we missed a big move
           });
         }
       } catch (err) {
@@ -994,17 +1052,26 @@ app.post('/api/strategy/backtest', async (req, res) => {
     const avgWin = winningTrades > 0 ? totalProfit / winningTrades : 0;
     const avgLoss = losingTrades > 0 ? totalLoss / losingTrades : 0;
     // Better profit factor display: use 999 as max instead of Infinity
-    const profitFactor = totalLoss > 0 ? totalProfit / totalLoss : (totalProfit > 0 ? 999 : 0);
+    const profitFactor =
+      totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? 999 : 0;
     const avgReturnPerTrade = totalTrades > 0 ? totalReturn / totalTrades : 0;
 
     // Calculate average entry/exit prices for successful trades
     const successfulTrades = trades.filter(t => t.profitLoss > 0);
-    const avgEntryPrice = successfulTrades.length > 0
-      ? (successfulTrades.reduce((sum, t) => sum + t.entryPrice, 0) / successfulTrades.length).toFixed(2)
-      : 'N/A';
-    const avgExitPrice = successfulTrades.length > 0
-      ? (successfulTrades.reduce((sum, t) => sum + t.exitPrice, 0) / successfulTrades.length).toFixed(2)
-      : 'N/A';
+    const avgEntryPrice =
+      successfulTrades.length > 0
+        ? (
+            successfulTrades.reduce((sum, t) => sum + t.entryPrice, 0) /
+            successfulTrades.length
+          ).toFixed(2)
+        : 'N/A';
+    const avgExitPrice =
+      successfulTrades.length > 0
+        ? (
+            successfulTrades.reduce((sum, t) => sum + t.exitPrice, 0) /
+            successfulTrades.length
+          ).toFixed(2)
+        : 'N/A';
 
     res.json({
       success: true,
@@ -1013,7 +1080,7 @@ app.post('/api/strategy/backtest', async (req, res) => {
       period: {
         start: startDate,
         end: endDate,
-        tradingDays: tradingDays.length
+        tradingDays: tradingDays.length,
       },
       results: {
         totalTrades,
@@ -1028,12 +1095,11 @@ app.post('/api/strategy/backtest', async (req, res) => {
         totalProfit: totalProfit.toFixed(2),
         totalLoss: totalLoss.toFixed(2),
         avgEntryPrice,
-        avgExitPrice
+        avgExitPrice,
       },
       trades: trades.slice(-20), // Return last 20 trades for review
-      dailyLogs // Return ALL daily logs for comprehensive analysis
+      dailyLogs, // Return ALL daily logs for comprehensive analysis
     });
-
   } catch (error) {
     console.error('❌ Error running backtest:', error.message);
     res.status(500).json({ error: error.message });
@@ -1061,7 +1127,18 @@ app.post('/api/strategy/optimize', async (req, res) => {
     }
 
     // Pre-fetch all historical data into cache (parallelized)
-    const rankingStocks = ['WM', 'ADSK', 'NKE', 'LSCC', 'DIS', 'LRCX', 'XRAY', 'RTX', 'YETI', 'ENPH'];
+    const rankingStocks = [
+      'WM',
+      'ADSK',
+      'NKE',
+      'LSCC',
+      'DIS',
+      'LRCX',
+      'XRAY',
+      'RTX',
+      'YETI',
+      'ENPH',
+    ];
     const allSymbols = [symbol, 'SPY', 'VIX', ...rankingStocks];
 
     await Promise.all(
@@ -1070,7 +1147,9 @@ app.post('/api/strategy/optimize', async (req, res) => {
       )
     );
 
-    console.log(`✅ Cache warmed with ${tradingDays.length} days × ${allSymbols.length} symbols`);
+    console.log(
+      `✅ Cache warmed with ${tradingDays.length} days × ${allSymbols.length} symbols`
+    );
 
     // Test multiple strategy variations
     // BREAKOUT MODE: Lower momentum thresholds + higher profit targets for QBTS-style runners
@@ -1081,10 +1160,30 @@ app.post('/api/strategy/optimize', async (req, res) => {
       { type: 'first-3hr-momentum', minMomentum3Hr: 2.0, profitTarget: 10 },
 
       // BREAKOUT strategies - catch big runners like QBTS
-      { type: 'first-3hr-momentum', minMomentum3Hr: 0.3, profitTarget: 15, minMarketBreadth: 30 }, // Ultra-aggressive
-      { type: 'first-3hr-momentum', minMomentum3Hr: 0.5, profitTarget: 15, minMarketBreadth: 35 }, // QBTS-style
-      { type: 'first-3hr-momentum', minMomentum3Hr: 0.8, profitTarget: 12, minMarketBreadth: 40 },
-      { type: 'first-3hr-momentum', minMomentum3Hr: 1.0, profitTarget: 12, minMarketBreadth: 40 },
+      {
+        type: 'first-3hr-momentum',
+        minMomentum3Hr: 0.3,
+        profitTarget: 15,
+        minMarketBreadth: 30,
+      }, // Ultra-aggressive
+      {
+        type: 'first-3hr-momentum',
+        minMomentum3Hr: 0.5,
+        profitTarget: 15,
+        minMarketBreadth: 35,
+      }, // QBTS-style
+      {
+        type: 'first-3hr-momentum',
+        minMomentum3Hr: 0.8,
+        profitTarget: 12,
+        minMarketBreadth: 40,
+      },
+      {
+        type: 'first-3hr-momentum',
+        minMomentum3Hr: 1.0,
+        profitTarget: 12,
+        minMarketBreadth: 40,
+      },
 
       // Balanced
       { type: 'first-3hr-momentum', minMomentum3Hr: 0.5, profitTarget: 8 },
@@ -1097,7 +1196,7 @@ app.post('/api/strategy/optimize', async (req, res) => {
       fetch(`http://localhost:${PORT}/api/strategy/backtest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol, strategy, startDate, endDate })
+        body: JSON.stringify({ symbol, strategy, startDate, endDate }),
       }).then(r => r.json())
     );
 
@@ -1107,13 +1206,19 @@ app.post('/api/strategy/optimize', async (req, res) => {
       .filter(data => data.success)
       .map((data, idx) => ({
         strategy: strategies[idx],
-        metrics: data.results
+        metrics: data.results,
       }));
 
     // Sort by win rate * profit factor to find best strategy
     results.sort((a, b) => {
-      const pfA = a.metrics.profitFactor === '999+' ? 999 : parseFloat(a.metrics.profitFactor);
-      const pfB = b.metrics.profitFactor === '999+' ? 999 : parseFloat(b.metrics.profitFactor);
+      const pfA =
+        a.metrics.profitFactor === '999+'
+          ? 999
+          : parseFloat(a.metrics.profitFactor);
+      const pfB =
+        b.metrics.profitFactor === '999+'
+          ? 999
+          : parseFloat(b.metrics.profitFactor);
       const scoreA = parseFloat(a.metrics.winRate) * pfA;
       const scoreB = parseFloat(b.metrics.winRate) * pfB;
       return scoreB - scoreA;
@@ -1128,10 +1233,9 @@ app.post('/api/strategy/optimize', async (req, res) => {
       cacheStats: {
         tradingDays: tradingDays.length,
         symbolsCached: allSymbols.length,
-        strategiesTested: strategies.length
-      }
+        strategiesTested: strategies.length,
+      },
     });
-
   } catch (error) {
     console.error('❌ Error optimizing strategy:', error.message);
     res.status(500).json({ error: error.message });
@@ -1143,7 +1247,9 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
   try {
     const { symbol, strategy, profitTargetDollars } = req.body;
 
-    console.log(`💵 Executing strategy trade for ${symbol} with $${profitTargetDollars} profit target...`);
+    console.log(
+      `💵 Executing strategy trade for ${symbol} with $${profitTargetDollars} profit target...`
+    );
 
     // Get today's date
     const today = new Date().toISOString().split('T')[0];
@@ -1151,29 +1257,64 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
     // Fetch today's intraday data
     const [candles, spyCandles, vixCandles] = await Promise.all([
       polygonClient.getHistoricalAggregates(symbol, today, today, 'minute'),
-      polygonClient.getHistoricalAggregates('SPY', today, today, 'minute').catch(() => []),
-      polygonClient.getHistoricalAggregates('VIX', today, today, 'minute').catch(() => [])
+      polygonClient
+        .getHistoricalAggregates('SPY', today, today, 'minute')
+        .catch(() => []),
+      polygonClient
+        .getHistoricalAggregates('VIX', today, today, 'minute')
+        .catch(() => []),
     ]);
 
     if (candles.length === 0) {
-      return res.status(400).json({ error: 'No intraday data available for today' });
+      return res
+        .status(400)
+        .json({ error: 'No intraday data available for today' });
     }
 
     // Fetch ranking stocks for market context
-    const rankingStocks = ['WM', 'ADSK', 'NKE', 'LSCC', 'DIS', 'LRCX', 'XRAY', 'RTX', 'YETI',
-                          'ENPH', 'TEVA', 'MGNI', 'RUN', 'DAL', 'LRMR', 'RCL', 'SHOP', 'HIMX', 'PI', 'PENN'];
+    const rankingStocks = [
+      'WM',
+      'ADSK',
+      'NKE',
+      'LSCC',
+      'DIS',
+      'LRCX',
+      'XRAY',
+      'RTX',
+      'YETI',
+      'ENPH',
+      'TEVA',
+      'MGNI',
+      'RUN',
+      'DAL',
+      'LRMR',
+      'RCL',
+      'SHOP',
+      'HIMX',
+      'PI',
+      'PENN',
+    ];
     const marketStocks = rankingStocks.filter(s => s !== symbol).slice(0, 10);
 
     const rankingCandles = await Promise.all(
       marketStocks.map(ticker =>
-        polygonClient.getHistoricalAggregates(ticker, today, today, 'minute').catch(() => [])
+        polygonClient
+          .getHistoricalAggregates(ticker, today, today, 'minute')
+          .catch(() => [])
       )
     );
 
     const marketMetrics = calculateMarketMetrics(rankingCandles, marketStocks);
 
     // Evaluate strategy for today
-    const analysis = executeStrategy(candles, strategy, today, spyCandles, vixCandles, marketMetrics);
+    const analysis = executeStrategy(
+      candles,
+      strategy,
+      today,
+      spyCandles,
+      vixCandles,
+      marketMetrics
+    );
 
     // Calculate quantity based on profit target
     const currentPrice = candles[candles.length - 1].close;
@@ -1181,17 +1322,22 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
     const profitPerShare = currentPrice * (profitTargetPercent / 100);
     const quantity = Math.floor(profitTargetDollars / profitPerShare);
 
-    console.log(`📊 Calculated quantity: ${quantity} shares (price: $${currentPrice}, profit/share: $${profitPerShare.toFixed(2)})`);
+    console.log(
+      `📊 Calculated quantity: ${quantity} shares (price: $${currentPrice}, profit/share: $${profitPerShare.toFixed(2)})`
+    );
 
     if (quantity < 1) {
       return res.status(400).json({
         success: false,
-        error: `Profit target too low. Need at least $${profitPerShare.toFixed(2)} to buy 1 share (${profitTargetPercent}% of $${currentPrice}).`
+        error: `Profit target too low. Need at least $${profitPerShare.toFixed(2)} to buy 1 share (${profitTargetPercent}% of $${currentPrice}).`,
       });
     }
 
     if (!analysis || !analysis.executed) {
-      const limitPrice = (currentPrice * (1 + profitTargetPercent / 100)).toFixed(2);
+      const limitPrice = (
+        currentPrice *
+        (1 + profitTargetPercent / 100)
+      ).toFixed(2);
       const actualProfit = (quantity * profitPerShare).toFixed(2);
 
       return res.json({
@@ -1213,8 +1359,8 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
           strategy: {
             type: strategy.type,
             minMomentum3Hr: strategy.minMomentum3Hr,
-            minMarketBreadth: strategy.minMarketBreadth || 40
-          }
+            minMarketBreadth: strategy.minMarketBreadth || 40,
+          },
         },
         // Specific failure details
         failureDetails: {
@@ -1222,27 +1368,32 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
           spyPerformance: analysis?.analysis?.spyChange3Hr || 'N/A',
           vixChange: analysis?.analysis?.vixChange3Hr || 'N/A',
           marketBreadth: analysis?.analysis?.positiveStocksPercent || 'N/A',
-          avgMarketChange: analysis?.analysis?.avgMarketChange3Hr || 'N/A'
-        }
+          avgMarketChange: analysis?.analysis?.avgMarketChange3Hr || 'N/A',
+        },
       });
     }
 
     // Strategy says to enter - place the trade
-    const limitPrice = (currentPrice * (1 + profitTargetPercent / 100)).toFixed(2);
+    const limitPrice = (currentPrice * (1 + profitTargetPercent / 100)).toFixed(
+      2
+    );
     const actualProfit = (quantity * profitPerShare).toFixed(2);
 
     // Place market buy order
-    const buyOrder = await fetch('http://localhost:' + PORT + '/api/alpaca/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        symbol,
-        qty: quantity,
-        side: 'buy',
-        type: 'market',
-        time_in_force: 'day'
-      })
-    });
+    const buyOrder = await fetch(
+      'http://localhost:' + PORT + '/api/alpaca/orders',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          qty: quantity,
+          side: 'buy',
+          type: 'market',
+          time_in_force: 'day',
+        }),
+      }
+    );
 
     const buyResult = await buyOrder.json();
 
@@ -1251,18 +1402,21 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
     }
 
     // Place limit sell order at profit target
-    const sellOrder = await fetch('http://localhost:' + PORT + '/api/alpaca/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        symbol,
-        qty: quantity,
-        side: 'sell',
-        type: 'limit',
-        limit_price: limitPrice,
-        time_in_force: 'day'
-      })
-    });
+    const sellOrder = await fetch(
+      'http://localhost:' + PORT + '/api/alpaca/orders',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          qty: quantity,
+          side: 'sell',
+          type: 'limit',
+          limit_price: limitPrice,
+          time_in_force: 'day',
+        }),
+      }
+    );
 
     const sellResult = await sellOrder.json();
 
@@ -1277,9 +1431,8 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
       targetPrice: limitPrice,
       profitTarget: `${profitTargetPercent}% ($${actualProfit})`,
       profitTargetDollars,
-      marketMetrics
+      marketMetrics,
     });
-
   } catch (error) {
     console.error('❌ Error executing strategy trade:', error.message);
     res.status(500).json({ error: error.message });
@@ -1289,36 +1442,40 @@ app.post('/api/strategy/execute-trade', async (req, res) => {
 // Helper: Calculate aggregate market metrics from ranking stocks
 function calculateMarketMetrics(rankingCandles, stockSymbols) {
   // Filter out stocks with no data
-  const validStocks = rankingCandles.filter((candles, i) => candles && candles.length >= 12);
+  const validStocks = rankingCandles.filter(
+    (candles, i) => candles && candles.length >= 12
+  );
 
   if (validStocks.length === 0) {
     return {
       avgChange3Hr: 0,
       positiveStocksPercent: 0,
       stocksWithData: 0,
-      marketBreadth: 'Unknown'
+      marketBreadth: 'Unknown',
     };
   }
 
   // Calculate first 3-hour performance for each stock
-  const changes3Hr = validStocks.map(candles => {
-    const first3Hr = candles.slice(0, Math.min(36, candles.length));
-    if (first3Hr.length < 12) return null;
+  const changes3Hr = validStocks
+    .map(candles => {
+      const first3Hr = candles.slice(0, Math.min(36, candles.length));
+      if (first3Hr.length < 12) return null;
 
-    const openPrice = first3Hr[0].open;
-    const price3Hr = first3Hr[first3Hr.length - 1].close;
-    return ((price3Hr - openPrice) / openPrice) * 100;
-  }).filter(change => change !== null);
+      const openPrice = first3Hr[0].open;
+      const price3Hr = first3Hr[first3Hr.length - 1].close;
+      return ((price3Hr - openPrice) / openPrice) * 100;
+    })
+    .filter(change => change !== null);
 
   // Calculate aggregate metrics
-  const avgChange3Hr = changes3Hr.length > 0
-    ? changes3Hr.reduce((sum, c) => sum + c, 0) / changes3Hr.length
-    : 0;
+  const avgChange3Hr =
+    changes3Hr.length > 0
+      ? changes3Hr.reduce((sum, c) => sum + c, 0) / changes3Hr.length
+      : 0;
 
   const positiveCount = changes3Hr.filter(c => c > 0).length;
-  const positiveStocksPercent = changes3Hr.length > 0
-    ? (positiveCount / changes3Hr.length) * 100
-    : 0;
+  const positiveStocksPercent =
+    changes3Hr.length > 0 ? (positiveCount / changes3Hr.length) * 100 : 0;
 
   // Determine market breadth
   let marketBreadth;
@@ -1337,12 +1494,19 @@ function calculateMarketMetrics(rankingCandles, stockSymbols) {
     positiveStocksPercent: positiveStocksPercent.toFixed(1),
     stocksWithData: validStocks.length,
     marketBreadth,
-    rawChanges: changes3Hr
+    rawChanges: changes3Hr,
   };
 }
 
 // Helper: Execute a trading strategy on a day's candles
-function executeStrategy(candles, strategy, date, spyCandles, vixCandles, marketMetrics = null) {
+function executeStrategy(
+  candles,
+  strategy,
+  date,
+  spyCandles,
+  vixCandles,
+  marketMetrics = null
+) {
   if (candles.length === 0) return null;
 
   const openPrice = candles[0].open;
@@ -1353,7 +1517,10 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
     // Strategy: Buy at open if day ends positive, exit X minutes before close
     if (dayChange > 0) {
       // Find exit candle (X minutes before close)
-      const exitIndex = Math.max(0, candles.length - strategy.exitMinutesBeforeClose - 1);
+      const exitIndex = Math.max(
+        0,
+        candles.length - strategy.exitMinutesBeforeClose - 1
+      );
       const exitPrice = candles[exitIndex].close;
 
       const profitLoss = ((exitPrice - openPrice) / openPrice) * 100;
@@ -1370,7 +1537,7 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
         profitLossPercent: profitLoss.toFixed(2),
         hitTarget,
         entryTime: new Date(candles[0].timestamp).toISOString(),
-        exitTime: new Date(candles[exitIndex].timestamp).toISOString()
+        exitTime: new Date(candles[exitIndex].timestamp).toISOString(),
       };
     }
   } else if (strategy.type === 'first-3hr-momentum') {
@@ -1385,7 +1552,7 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
         date,
         reason: 'Insufficient data for first 3 hours',
         actualDayReturn: dayChange.toFixed(2),
-        momentum: 0
+        momentum: 0,
       };
     }
 
@@ -1414,9 +1581,10 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
 
     // Entry criteria: Should we buy after analyzing first 3 hours?
     // Base criteria
-    let shouldEnter = change3Hr > strategy.minMomentum3Hr && // Stock showing positive momentum
-                      (spyChange3Hr > -0.5) && // Market not strongly negative
-                      (vixChange3Hr < 5); // Fear not spiking
+    let shouldEnter =
+      change3Hr > strategy.minMomentum3Hr && // Stock showing positive momentum
+      spyChange3Hr > -0.5 && // Market not strongly negative
+      vixChange3Hr < 5; // Fear not spiking
 
     // Enhanced criteria with market breadth from ranking stocks
     let marketBreadthPass = true;
@@ -1425,7 +1593,8 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
     if (marketMetrics && marketMetrics.stocksWithData >= 5) {
       // Require at least 40% of ranking stocks showing positive momentum
       const minPositivePercent = strategy.minMarketBreadth || 40;
-      marketBreadthPass = parseFloat(marketMetrics.positiveStocksPercent) >= minPositivePercent;
+      marketBreadthPass =
+        parseFloat(marketMetrics.positiveStocksPercent) >= minPositivePercent;
 
       if (!marketBreadthPass) {
         marketBreadthReason = `Market breadth too weak (${marketMetrics.positiveStocksPercent}% positive, need ${minPositivePercent}%)`;
@@ -1454,8 +1623,8 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
           vixChange3Hr: vixChange3Hr.toFixed(2),
           marketBreadth: marketMetrics?.marketBreadth || 'N/A',
           positiveStocksPercent: marketMetrics?.positiveStocksPercent || 'N/A',
-          avgMarketChange3Hr: marketMetrics?.avgChange3Hr || 'N/A'
-        }
+          avgMarketChange3Hr: marketMetrics?.avgChange3Hr || 'N/A',
+        },
       };
     }
 
@@ -1489,7 +1658,8 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
       exitReason = 'Market close';
     }
 
-    const profitLoss = ((exitPrice - actualEntryPrice) / actualEntryPrice) * 100;
+    const profitLoss =
+      ((exitPrice - actualEntryPrice) / actualEntryPrice) * 100;
     const hitTarget = profitLoss >= profitTarget;
 
     return {
@@ -1510,8 +1680,8 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
         marketBreadth: marketMetrics?.marketBreadth || 'N/A',
         positiveStocksPercent: marketMetrics?.positiveStocksPercent || 'N/A',
         avgMarketChange3Hr: marketMetrics?.avgChange3Hr || 'N/A',
-        enteredTrade: true
-      }
+        enteredTrade: true,
+      },
     };
   }
 
@@ -1521,19 +1691,24 @@ function executeStrategy(candles, strategy, date, spyCandles, vixCandles, market
     date,
     reason: 'Strategy conditions not met',
     actualDayReturn: dayChange.toFixed(2),
-    momentum: 0
+    momentum: 0,
   };
 }
 
 // Helper: Analyze market sentiment from S&P and VIX
-function analyzeMarketSentiment(spyBars, vixBars, spyIntradayCandles, vixIntradayCandles) {
+function analyzeMarketSentiment(
+  spyBars,
+  vixBars,
+  spyIntradayCandles,
+  vixIntradayCandles
+) {
   if (spyBars.length === 0 || vixBars.length === 0) {
     return {
       sentiment: 'Unknown',
       confidence: 0,
       description: 'Insufficient market data',
       spyCandles: spyIntradayCandles || [],
-      vixCandles: vixIntradayCandles || []
+      vixCandles: vixIntradayCandles || [],
     };
   }
 
@@ -1549,7 +1724,8 @@ function analyzeMarketSentiment(spyBars, vixBars, spyIntradayCandles, vixIntrada
   if (spyChange > 0.5 && vixLevel < 20) {
     sentiment = 'Bullish';
     confidence = 85;
-    description = 'Strong uptrend with low volatility - favorable for long positions';
+    description =
+      'Strong uptrend with low volatility - favorable for long positions';
   } else if (spyChange > 0 && vixLevel < 25) {
     sentiment = 'Bullish';
     confidence = 65;
@@ -1557,7 +1733,8 @@ function analyzeMarketSentiment(spyBars, vixBars, spyIntradayCandles, vixIntrada
   } else if (spyChange < -0.5 && vixLevel > 25) {
     sentiment = 'Bearish';
     confidence = 85;
-    description = 'Strong downtrend with elevated volatility - risky environment';
+    description =
+      'Strong downtrend with elevated volatility - risky environment';
   } else if (spyChange < 0 && vixLevel > 20) {
     sentiment = 'Bearish';
     confidence = 65;
@@ -1575,7 +1752,7 @@ function analyzeMarketSentiment(spyBars, vixBars, spyIntradayCandles, vixIntrada
     spyChange: spyChange.toFixed(2),
     vixLevel: vixLevel.toFixed(2),
     spyCandles: spyIntradayCandles || [],
-    vixCandles: vixIntradayCandles || []
+    vixCandles: vixIntradayCandles || [],
   };
 }
 
@@ -1589,7 +1766,7 @@ function analyzeIntradaySwings(intradayCandles) {
       closePrice: null,
       swingPattern: 'No data',
       openingBehavior: 'Unknown',
-      trendMagnitude: null
+      trendMagnitude: null,
     };
   }
 
@@ -1598,13 +1775,19 @@ function analyzeIntradaySwings(intradayCandles) {
   // 3 hours after open = 12:30 PM (36 candles if 5-min intervals)
 
   const openPrice = intradayCandles[0].close;
-  const price30min = intradayCandles[Math.min(6, intradayCandles.length - 1)]?.close || null;
-  const price3hr = intradayCandles[Math.min(36, intradayCandles.length - 1)]?.close || null;
+  const price30min =
+    intradayCandles[Math.min(6, intradayCandles.length - 1)]?.close || null;
+  const price3hr =
+    intradayCandles[Math.min(36, intradayCandles.length - 1)]?.close || null;
   const closePrice = intradayCandles[intradayCandles.length - 1].close;
 
   // Calculate changes
-  const change30min = price30min ? ((price30min - openPrice) / openPrice) * 100 : null;
-  const change3hr = price3hr ? ((price3hr - openPrice) / openPrice) * 100 : null;
+  const change30min = price30min
+    ? ((price30min - openPrice) / openPrice) * 100
+    : null;
+  const change3hr = price3hr
+    ? ((price3hr - openPrice) / openPrice) * 100
+    : null;
   const changeClose = ((closePrice - openPrice) / openPrice) * 100;
 
   // Determine opening behavior pattern
@@ -1626,11 +1809,19 @@ function analyzeIntradaySwings(intradayCandles) {
   if (change30min && change3hr && changeClose) {
     if (change30min > 0 && change3hr > change30min && changeClose > change3hr) {
       swingPattern = 'Sustained Rally - Continuous buying pressure';
-    } else if (change30min > 0 && change3hr > change30min && changeClose < change3hr) {
+    } else if (
+      change30min > 0 &&
+      change3hr > change30min &&
+      changeClose < change3hr
+    ) {
       swingPattern = 'Rally then Fade - Profit taking into close';
     } else if (change30min > 0 && changeClose < 0) {
       swingPattern = 'Gap Fill - Morning pop reversed';
-    } else if (change30min < 0 && change3hr < change30min && changeClose < change3hr) {
+    } else if (
+      change30min < 0 &&
+      change3hr < change30min &&
+      changeClose < change3hr
+    ) {
       swingPattern = 'Sustained Selloff - Continuous selling pressure';
     } else if (change30min < 0 && changeClose > 0) {
       swingPattern = 'Morning Dip Bought - Recovery into close';
@@ -1656,7 +1847,7 @@ function analyzeIntradaySwings(intradayCandles) {
     changeClose: changeClose.toFixed(2),
     swingPattern,
     openingBehavior,
-    trendMagnitude: trendMagnitude.toFixed(2)
+    trendMagnitude: trendMagnitude.toFixed(2),
   };
 }
 
@@ -1675,17 +1866,25 @@ function analyzeIntradayPattern(intradayCandles, dailyBars) {
   const firstHalf = highsAndLows.slice(0, Math.floor(highsAndLows.length / 2));
   const secondHalf = highsAndLows.slice(Math.floor(highsAndLows.length / 2));
 
-  const firstHalfAvgHigh = firstHalf.reduce((sum, hl) => sum + hl.high, 0) / firstHalf.length;
-  const secondHalfAvgHigh = secondHalf.reduce((sum, hl) => sum + hl.high, 0) / secondHalf.length;
+  const firstHalfAvgHigh =
+    firstHalf.reduce((sum, hl) => sum + hl.high, 0) / firstHalf.length;
+  const secondHalfAvgHigh =
+    secondHalf.reduce((sum, hl) => sum + hl.high, 0) / secondHalf.length;
 
   let pattern, strength;
 
   if (secondHalfAvgHigh > firstHalfAvgHigh * 1.01) {
     pattern = 'Uptrend';
-    strength = Math.min(((secondHalfAvgHigh - firstHalfAvgHigh) / firstHalfAvgHigh) * 1000, 100);
+    strength = Math.min(
+      ((secondHalfAvgHigh - firstHalfAvgHigh) / firstHalfAvgHigh) * 1000,
+      100
+    );
   } else if (secondHalfAvgHigh < firstHalfAvgHigh * 0.99) {
     pattern = 'Downtrend';
-    strength = Math.min(((firstHalfAvgHigh - secondHalfAvgHigh) / firstHalfAvgHigh) * 1000, 100);
+    strength = Math.min(
+      ((firstHalfAvgHigh - secondHalfAvgHigh) / firstHalfAvgHigh) * 1000,
+      100
+    );
   } else {
     pattern = 'Ranging';
     strength = 50;
@@ -1694,12 +1893,18 @@ function analyzeIntradayPattern(intradayCandles, dailyBars) {
   return {
     pattern,
     strength: Math.round(strength),
-    priceChange: priceChange.toFixed(2)
+    priceChange: priceChange.toFixed(2),
   };
 }
 
 // Helper: Generate trading recommendations
-function generateTradingRecommendations(symbol, intradayCandles, dailyBars, marketSentiment, technicals) {
+function generateTradingRecommendations(
+  symbol,
+  intradayCandles,
+  dailyBars,
+  marketSentiment,
+  technicals
+) {
   if (intradayCandles.length === 0 || dailyBars.length === 0) {
     return {
       action: 'WAIT',
@@ -1707,7 +1912,7 @@ function generateTradingRecommendations(symbol, intradayCandles, dailyBars, mark
       reason: 'Insufficient data for recommendation',
       entryPrice: null,
       exitPrice: null,
-      stopLoss: null
+      stopLoss: null,
     };
   }
 
@@ -1727,15 +1932,22 @@ function generateTradingRecommendations(symbol, intradayCandles, dailyBars, mark
 
   // RSI weight (20%)
   if (technicals?.rsi) {
-    if (technicals.rsi < 30) score += 20; // Oversold - bullish
+    if (technicals.rsi < 30)
+      score += 20; // Oversold - bullish
     else if (technicals.rsi > 70) score -= 20; // Overbought - bearish
   }
 
   // Price position relative to MAs (20%)
   if (technicals?.sma20 && technicals?.sma50) {
-    if (currentPrice > technicals.sma20 && technicals.sma20 > technicals.sma50) {
+    if (
+      currentPrice > technicals.sma20 &&
+      technicals.sma20 > technicals.sma50
+    ) {
       score += 20; // Above MAs and MAs aligned - bullish
-    } else if (currentPrice < technicals.sma20 && technicals.sma20 < technicals.sma50) {
+    } else if (
+      currentPrice < technicals.sma20 &&
+      technicals.sma20 < technicals.sma50
+    ) {
       score -= 20; // Below MAs and MAs aligned - bearish
     }
   }
@@ -1770,7 +1982,7 @@ function generateTradingRecommendations(symbol, intradayCandles, dailyBars, mark
     entryPrice: entryPrice ? entryPrice.toFixed(2) : null,
     exitPrice: exitPrice ? exitPrice.toFixed(2) : null,
     stopLoss: stopLoss ? stopLoss.toFixed(2) : null,
-    score: Math.round(score)
+    score: Math.round(score),
   };
 }
 
@@ -1791,8 +2003,8 @@ async function findSimilarPatterns(symbol, dailyBars, marketSentiment) {
       date: 'Historical analysis',
       similarity: 'High',
       description: `Similar ${marketSentiment.sentiment.toLowerCase()} setup with comparable volatility (${recentVolatility?.toFixed(2)}%) and RSI (${recentRSI?.toFixed(0)})`,
-      outcome: 'Pattern matching requires more historical data'
-    }
+      outcome: 'Pattern matching requires more historical data',
+    },
   ];
 }
 
@@ -1979,10 +2191,13 @@ app.get('/api/alpaca/orders', async (req, res) => {
     try {
       activities = await alpacaClient.getAccountActivities({
         activity_types: 'FILL',
-        page_size: 100
+        page_size: 100,
       });
     } catch (err) {
-      console.warn('Could not fetch activities for P/L enrichment:', err.message);
+      console.warn(
+        'Could not fetch activities for P/L enrichment:',
+        err.message
+      );
     }
 
     // Create a map of order_id -> activity for quick lookup
@@ -2014,7 +2229,10 @@ app.get('/api/alpaca/orders', async (req, res) => {
 
           fills.forEach(fill => {
             // Alpaca activities may have per_share_profit or we calculate from price/cost_basis
-            if (fill.per_share_profit !== undefined && fill.per_share_profit !== null) {
+            if (
+              fill.per_share_profit !== undefined &&
+              fill.per_share_profit !== null
+            ) {
               const qty = parseFloat(fill.qty) || 0;
               totalPnL += parseFloat(fill.per_share_profit) * qty;
               hasValidPnL = true;
@@ -2116,33 +2334,45 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
 
     // Use Polygon for historical data (same as rankings endpoint - more reliable)
     const polygonClient = require('./polygonClient');
-    const bars = await polygonClient.getHistoricalAggregates(symbol, startDateStr, endDateStr).catch(e => {
-      console.error(`❌ Polygon bars fetch failed for ${symbol}:`, e.message);
-      return { error: e.message };
-    });
+    const bars = await polygonClient
+      .getHistoricalAggregates(symbol, startDateStr, endDateStr)
+      .catch(e => {
+        console.error(`❌ Polygon bars fetch failed for ${symbol}:`, e.message);
+        return { error: e.message };
+      });
 
     // We need at least bars data to provide analysis
     if (bars.error || !bars || bars.length === 0) {
-      throw new Error(`Unable to fetch historical data for ${symbol}. The symbol may be invalid or market data unavailable.`);
+      throw new Error(
+        `Unable to fetch historical data for ${symbol}. The symbol may be invalid or market data unavailable.`
+      );
     }
 
     // Get latest quote from Polygon for current price
     const latestQuote = await polygonClient.getLatestQuote(symbol).catch(e => {
-      console.log(`⚠️  Polygon quote fetch failed for ${symbol} (may be normal if market closed)`);
+      console.log(
+        `⚠️  Polygon quote fetch failed for ${symbol} (may be normal if market closed)`
+      );
       return { error: e.message };
     });
 
     // Extract current price - use latest bar close price if real-time data unavailable
     const latestBar = bars[bars.length - 1];
-    const currentPrice = (!latestQuote.error && latestQuote.price) || latestBar.close;
+    const currentPrice =
+      (!latestQuote.error && latestQuote.price) || latestBar.close;
     const bidPrice = (!latestQuote.error && latestQuote.bidPrice) || null;
     const askPrice = (!latestQuote.error && latestQuote.askPrice) || null;
     const spread = bidPrice && askPrice ? askPrice - bidPrice : null;
 
     // Volume analysis
-    const dailyVolume = bars && bars.length > 0 ? bars[bars.length - 1].volume : null;
-    const prevVolume = bars && bars.length > 1 ? bars[bars.length - 2].volume : null;
-    const volumeChange = prevVolume && dailyVolume ? ((dailyVolume - prevVolume) / prevVolume) * 100 : null;
+    const dailyVolume =
+      bars && bars.length > 0 ? bars[bars.length - 1].volume : null;
+    const prevVolume =
+      bars && bars.length > 1 ? bars[bars.length - 2].volume : null;
+    const volumeChange =
+      prevVolume && dailyVolume
+        ? ((dailyVolume - prevVolume) / prevVolume) * 100
+        : null;
 
     // Calculate technical indicators from historical data
     let technicals = null;
@@ -2155,9 +2385,24 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       const sma50 = calculateSMA(bars, 50);
 
       // Price momentum
-      const priceChange1D = bars.length >= 2 ? ((bars[bars.length - 1].close - bars[bars.length - 2].close) / bars[bars.length - 2].close) * 100 : null;
-      const priceChange1W = bars.length >= 7 ? ((bars[bars.length - 1].close - bars[bars.length - 7].close) / bars[bars.length - 7].close) * 100 : null;
-      const priceChange1M = bars.length >= 30 ? ((bars[bars.length - 1].close - bars[bars.length - 30].close) / bars[bars.length - 30].close) * 100 : null;
+      const priceChange1D =
+        bars.length >= 2
+          ? ((bars[bars.length - 1].close - bars[bars.length - 2].close) /
+              bars[bars.length - 2].close) *
+            100
+          : null;
+      const priceChange1W =
+        bars.length >= 7
+          ? ((bars[bars.length - 1].close - bars[bars.length - 7].close) /
+              bars[bars.length - 7].close) *
+            100
+          : null;
+      const priceChange1M =
+        bars.length >= 30
+          ? ((bars[bars.length - 1].close - bars[bars.length - 30].close) /
+              bars[bars.length - 30].close) *
+            100
+          : null;
 
       // 52-week high/low
       const prices = bars.map(b => b.high);
@@ -2171,14 +2416,19 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
         rsiSignal: rsi < 30 ? 'Oversold' : rsi > 70 ? 'Overbought' : 'Neutral',
         sma20: sma20 ? sma20.toFixed(2) : null,
         sma50: sma50 ? sma50.toFixed(2) : null,
-        trendSignal: currentPrice > sma20 && sma20 > sma50 ? 'Bullish' : currentPrice < sma20 && sma20 < sma50 ? 'Bearish' : 'Neutral',
+        trendSignal:
+          currentPrice > sma20 && sma20 > sma50
+            ? 'Bullish'
+            : currentPrice < sma20 && sma20 < sma50
+              ? 'Bearish'
+              : 'Neutral',
         priceChange1D: priceChange1D ? priceChange1D.toFixed(2) : null,
         priceChange1W: priceChange1W ? priceChange1W.toFixed(2) : null,
         priceChange1M: priceChange1M ? priceChange1M.toFixed(2) : null,
         high52w: high52w.toFixed(2),
         low52w: low52w.toFixed(2),
         distanceFromHigh: distanceFromHigh.toFixed(2),
-        distanceFromLow: distanceFromLow.toFixed(2)
+        distanceFromLow: distanceFromLow.toFixed(2),
       };
     }
 
@@ -2230,7 +2480,8 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
         maxScore: 2.5,
         weight: '25%',
         explanation: rsiExplanation,
-        formula: 'RSI = 100 - (100 / (1 + RS)), where RS = Avg Gain / Avg Loss over 14 periods'
+        formula:
+          'RSI = 100 - (100 / (1 + RS)), where RS = Avg Gain / Avg Loss over 14 periods',
       });
       totalScore += rsiScore;
       if (rsiScore !== 0) reasons.push(rsiExplanation);
@@ -2257,12 +2508,13 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
         maxScore: 2,
         weight: '20%',
         explanation: trendExplanation,
-        formula: 'Bullish if Price > SMA20 > SMA50; Bearish if Price < SMA20 < SMA50',
+        formula:
+          'Bullish if Price > SMA20 > SMA50; Bearish if Price < SMA20 < SMA50',
         details: {
           price: currentPrice.toFixed(2),
           sma20: technicals.sma20,
-          sma50: technicals.sma50
-        }
+          sma50: technicals.sma50,
+        },
       });
       totalScore += trendScore;
       if (trendScore !== 0) reasons.push(trendExplanation);
@@ -2298,8 +2550,8 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
           high52w: technicals.high52w,
           low52w: technicals.low52w,
           distanceFromHigh: distFromHigh.toFixed(2) + '%',
-          distanceFromLow: distFromLow.toFixed(2) + '%'
-        }
+          distanceFromLow: distFromLow.toFixed(2) + '%',
+        },
       });
       totalScore += positionScore;
       if (positionScore !== 0) reasons.push(positionExplanation);
@@ -2342,8 +2594,8 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
         details: {
           change1D: technicals.priceChange1D + '%',
           change1W: technicals.priceChange1W + '%',
-          change1M: technicals.priceChange1M + '%'
-        }
+          change1M: technicals.priceChange1M + '%',
+        },
       });
       totalScore += momentumScore;
       if (momentumScore !== 0) reasons.push(momentumExplanation);
@@ -2384,8 +2636,8 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
         details: {
           current: dailyVolume,
           previous: prevVolume,
-          changePercent: volumeChange ? volumeChange.toFixed(1) + '%' : 'N/A'
-        }
+          changePercent: volumeChange ? volumeChange.toFixed(1) + '%' : 'N/A',
+        },
       });
       totalScore += volumeScore;
       if (volumeScore !== 0) reasons.push(volumeExplanation);
@@ -2398,10 +2650,15 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
 
       if (bars.length >= 20) {
         const recentBars = bars.slice(-20);
-        const dailyReturns = recentBars.slice(1).map((b, i) =>
-          Math.abs((b.close - recentBars[i].close) / recentBars[i].close) * 100
-        );
-        const avgDailySwing = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+        const dailyReturns = recentBars
+          .slice(1)
+          .map(
+            (b, i) =>
+              Math.abs((b.close - recentBars[i].close) / recentBars[i].close) *
+              100
+          );
+        const avgDailySwing =
+          dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
 
         if (avgDailySwing > 3) {
           volatilityScore = -1;
@@ -2422,7 +2679,7 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
           score: volatilityScore,
           maxScore: 1,
           weight: '10%',
-          explanation: volatilityExplanation
+          explanation: volatilityExplanation,
         });
         totalScore += volatilityScore;
       }
@@ -2431,7 +2688,10 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       // FINAL RECOMMENDATION CALCULATION
       // ============================================
       const normalizedScore = (totalScore / maxPossibleScore) * 100; // -100 to +100 scale
-      const confidence = Math.min(95, Math.max(30, 50 + Math.abs(normalizedScore) / 2));
+      const confidence = Math.min(
+        95,
+        Math.max(30, 50 + Math.abs(normalizedScore) / 2)
+      );
 
       if (totalScore >= 5) recommendation = 'Strong Buy';
       else if (totalScore >= 2.5) recommendation = 'Buy';
@@ -2442,11 +2702,12 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       else recommendation = 'Neutral';
 
       // Add confidence explanation
-      const confidenceExplanation = totalScore > 0
-        ? `${signalBreakdown.filter(s => s.score > 0).length} of ${signalBreakdown.length} signals are bullish`
-        : totalScore < 0
-        ? `${signalBreakdown.filter(s => s.score < 0).length} of ${signalBreakdown.length} signals are bearish`
-        : 'Signals are mixed - no clear direction';
+      const confidenceExplanation =
+        totalScore > 0
+          ? `${signalBreakdown.filter(s => s.score > 0).length} of ${signalBreakdown.length} signals are bullish`
+          : totalScore < 0
+            ? `${signalBreakdown.filter(s => s.score < 0).length} of ${signalBreakdown.length} signals are bearish`
+            : 'Signals are mixed - no clear direction';
 
       // Store enhanced analysis data
       technicals.signalBreakdown = signalBreakdown;
@@ -2462,11 +2723,14 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
     if (bars && bars.length >= 30 && currentPrice) {
       const returns = [];
       for (let i = 1; i < bars.length; i++) {
-        returns.push((bars[i].close - bars[i-1].close) / bars[i-1].close);
+        returns.push((bars[i].close - bars[i - 1].close) / bars[i - 1].close);
       }
 
       const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-      const stdDev = Math.sqrt(returns.reduce((sq, n) => sq + Math.pow(n - avgReturn, 2), 0) / returns.length);
+      const stdDev = Math.sqrt(
+        returns.reduce((sq, n) => sq + Math.pow(n - avgReturn, 2), 0) /
+          returns.length
+      );
 
       // Project forward (annualized then scaled down)
       const annualReturn = avgReturn * 252; // 252 trading days
@@ -2480,22 +2744,26 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       projections = {
         oneWeek: {
           expectedReturn: return1W.toFixed(2),
-          expectedPrice: (currentPrice * (1 + return1W/100)).toFixed(2),
+          expectedPrice: (currentPrice * (1 + return1W / 100)).toFixed(2),
           volatility: vol1W.toFixed(2),
           range: {
-            low: (currentPrice * (1 + return1W/100 - vol1W/100)).toFixed(2),
-            high: (currentPrice * (1 + return1W/100 + vol1W/100)).toFixed(2)
-          }
+            low: (currentPrice * (1 + return1W / 100 - vol1W / 100)).toFixed(2),
+            high: (currentPrice * (1 + return1W / 100 + vol1W / 100)).toFixed(
+              2
+            ),
+          },
         },
         oneMonth: {
           expectedReturn: return1M.toFixed(2),
-          expectedPrice: (currentPrice * (1 + return1M/100)).toFixed(2),
+          expectedPrice: (currentPrice * (1 + return1M / 100)).toFixed(2),
           volatility: vol1M.toFixed(2),
           range: {
-            low: (currentPrice * (1 + return1M/100 - vol1M/100)).toFixed(2),
-            high: (currentPrice * (1 + return1M/100 + vol1M/100)).toFixed(2)
-          }
-        }
+            low: (currentPrice * (1 + return1M / 100 - vol1M / 100)).toFixed(2),
+            high: (currentPrice * (1 + return1M / 100 + vol1M / 100)).toFixed(
+              2
+            ),
+          },
+        },
       };
     }
 
@@ -2512,7 +2780,7 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
       volume: {
         current: dailyVolume,
         previous: prevVolume,
-        changePercent: volumeChange ? volumeChange.toFixed(2) : null
+        changePercent: volumeChange ? volumeChange.toFixed(2) : null,
       },
       technicals,
       recommendation: {
@@ -2523,9 +2791,9 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
         confidence: technicals?.confidence || 50,
         confidenceExplanation: technicals?.confidenceExplanation || '',
         reasons,
-        signalBreakdown: technicals?.signalBreakdown || []
+        signalBreakdown: technicals?.signalBreakdown || [],
       },
-      projections
+      projections,
     };
 
     console.log(`✅ Analysis complete for ${symbol}: ${recommendation}`);
@@ -2542,19 +2810,21 @@ function calculateRSI(bars, period = 14) {
 
   const changes = [];
   for (let i = 1; i < bars.length; i++) {
-    changes.push(bars[i].close - bars[i-1].close);
+    changes.push(bars[i].close - bars[i - 1].close);
   }
 
   const recentChanges = changes.slice(-period);
   const gains = recentChanges.filter(c => c > 0);
   const losses = recentChanges.filter(c => c < 0).map(c => Math.abs(c));
 
-  const avgGain = gains.length > 0 ? gains.reduce((a, b) => a + b, 0) / period : 0;
-  const avgLoss = losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / period : 0;
+  const avgGain =
+    gains.length > 0 ? gains.reduce((a, b) => a + b, 0) / period : 0;
+  const avgLoss =
+    losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / period : 0;
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
+  return 100 - 100 / (1 + rs);
 }
 
 // Helper function to calculate Simple Moving Average
@@ -3024,7 +3294,7 @@ app.post('/api/ai/patterns/analyze', async (req, res) => {
     const fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
       from: fromDate.toISOString().split('T')[0],
-      to: toDate.toISOString().split('T')[0]
+      to: toDate.toISOString().split('T')[0],
     });
 
     if (!candles || candles.length < 50) {
@@ -3032,13 +3302,16 @@ app.post('/api/ai/patterns/analyze', async (req, res) => {
     }
 
     const indicators = technicalIndicatorsService.getAllIndicators(candles);
-    const patterns = await patternRecognitionService.predictPattern(candles, indicators);
+    const patterns = await patternRecognitionService.predictPattern(
+      candles,
+      indicators
+    );
 
     res.json({
       symbol,
       patterns,
       indicators: indicators.signals,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error analyzing patterns:', error);
@@ -3059,10 +3332,15 @@ app.get('/api/indicators/:symbol', async (req, res) => {
 
     const toDate = new Date();
     const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const candles = await polygonClient.getAggregates(symbol, parseInt(timeframe), unit, {
-      from: fromDate.toISOString().split('T')[0],
-      to: toDate.toISOString().split('T')[0]
-    });
+    const candles = await polygonClient.getAggregates(
+      symbol,
+      parseInt(timeframe),
+      unit,
+      {
+        from: fromDate.toISOString().split('T')[0],
+        to: toDate.toISOString().split('T')[0],
+      }
+    );
 
     if (!candles || candles.length < 50) {
       return res.status(400).json({ error: 'Insufficient data' });
@@ -3074,7 +3352,7 @@ app.get('/api/indicators/:symbol', async (req, res) => {
       symbol,
       candles: candles.slice(-200),
       indicators,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error getting indicators:', error);
@@ -3093,7 +3371,10 @@ app.post('/api/import/schwab', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const result = schwabImportService.parseCSV(req.file.buffer, 'default_user');
+    const result = schwabImportService.parseCSV(
+      req.file.buffer,
+      'default_user'
+    );
     res.json(result);
   } catch (error) {
     console.error('Error importing Schwab CSV:', error);
@@ -3106,7 +3387,8 @@ app.get('/api/import/schwab/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const trades = schwabImportService.getTrades(userId);
-    const summary = trades.length > 0 ? schwabImportService.generateSummary(trades) : null;
+    const summary =
+      trades.length > 0 ? schwabImportService.generateSummary(trades) : null;
     res.json({ trades, summary });
   } catch (error) {
     console.error('Error getting imported trades:', error);
@@ -3123,7 +3405,7 @@ app.post('/api/import/schwab/train', async (req, res) => {
     if (trades.length < 50) {
       return res.status(400).json({
         error: 'Need at least 50 trades for training',
-        currentCount: trades.length
+        currentCount: trades.length,
       });
     }
 
@@ -3131,7 +3413,7 @@ app.post('/api/import/schwab/train', async (req, res) => {
     const trainingData = schwabImportService.createTrainingDataset(userId);
     const result = await patternRecognitionService.trainModel(trainingData, {
       epochs: 30,
-      batchSize: 16
+      batchSize: 16,
     });
 
     res.json({ success: true, ...result });
@@ -3166,7 +3448,7 @@ app.post('/api/simulation/results', async (req, res) => {
       events: events || [],
       config: config || {},
       savedAt: savedAt || new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     // Store result
@@ -3182,12 +3464,14 @@ app.post('/api/simulation/results', async (req, res) => {
       simulationResults.set(userId, userResults.slice(-100));
     }
 
-    console.log(`✅ Saved simulation result: ${resultId} for ${analysis.symbol} on ${analysis.date}`);
+    console.log(
+      `✅ Saved simulation result: ${resultId} for ${analysis.symbol} on ${analysis.date}`
+    );
 
     res.json({
       success: true,
       resultId,
-      message: 'Simulation results saved for learning'
+      message: 'Simulation results saved for learning',
     });
   } catch (error) {
     console.error('Error saving simulation results:', error);
@@ -3209,7 +3493,7 @@ app.get('/api/simulation/results', async (req, res) => {
       returnPercent: r.analysis.returnPercent,
       winRate: r.analysis.winRate,
       totalTrades: r.analysis.totalTrades,
-      savedAt: r.savedAt
+      savedAt: r.savedAt,
     }));
 
     res.json({ results: summaries, total: summaries.length });
@@ -3248,17 +3532,24 @@ app.get('/api/simulation/insights', async (req, res) => {
     if (results.length === 0) {
       return res.json({
         message: 'No simulation data yet',
-        insights: null
+        insights: null,
       });
     }
 
     // Calculate aggregate stats
     const totalSimulations = results.length;
-    const avgReturn = results.reduce((s, r) => s + r.analysis.returnPercent, 0) / totalSimulations;
-    const avgWinRate = results.reduce((s, r) => s + r.analysis.winRate, 0) / totalSimulations;
-    const avgTrades = results.reduce((s, r) => s + r.analysis.totalTrades, 0) / totalSimulations;
+    const avgReturn =
+      results.reduce((s, r) => s + r.analysis.returnPercent, 0) /
+      totalSimulations;
+    const avgWinRate =
+      results.reduce((s, r) => s + r.analysis.winRate, 0) / totalSimulations;
+    const avgTrades =
+      results.reduce((s, r) => s + r.analysis.totalTrades, 0) /
+      totalSimulations;
 
-    const profitableSimulations = results.filter(r => r.analysis.returnPercent > 0).length;
+    const profitableSimulations = results.filter(
+      r => r.analysis.returnPercent > 0
+    ).length;
     const profitabilityRate = (profitableSimulations / totalSimulations) * 100;
 
     // Find best and worst days
@@ -3290,15 +3581,15 @@ app.get('/api/simulation/insights', async (req, res) => {
         bestDay: {
           date: bestDay.analysis.date,
           symbol: bestDay.analysis.symbol,
-          return: bestDay.analysis.returnPercent.toFixed(2)
+          return: bestDay.analysis.returnPercent.toFixed(2),
         },
         worstDay: {
           date: worstDay.analysis.date,
           symbol: worstDay.analysis.symbol,
-          return: worstDay.analysis.returnPercent.toFixed(2)
+          return: worstDay.analysis.returnPercent.toFixed(2),
         },
-        topImprovements
-      }
+        topImprovements,
+      },
     });
   } catch (error) {
     console.error('Error getting simulation insights:', error);
@@ -3327,7 +3618,7 @@ app.post('/api/backtest/what-if', async (req, res) => {
     const result = await enhancedBacktestEngine.runEnhancedBacktest(req.body);
     res.json({
       whatIfResults: result.whatIfResults,
-      recommendations: result.recommendations
+      recommendations: result.recommendations,
     });
   } catch (error) {
     console.error('Error running what-if analysis:', error);
@@ -3350,7 +3641,10 @@ app.post('/api/backtest/optimize', async (req, res) => {
 app.post('/api/backtest/monte-carlo', async (req, res) => {
   try {
     const { trades, simulations = 1000 } = req.body;
-    const result = enhancedBacktestEngine.runMonteCarloSimulation(trades, simulations);
+    const result = enhancedBacktestEngine.runMonteCarloSimulation(
+      trades,
+      simulations
+    );
     res.json(result);
   } catch (error) {
     console.error('Error running Monte Carlo:', error);
@@ -3369,16 +3663,23 @@ app.get('/api/polygon/quote/:symbol', async (req, res) => {
 
     // Try getLatestQuote first, fallback to getPreviousClose
     let quote = await polygonClient.getLatestQuote(symbol).catch(e => {
-      console.log(`Real-time quote unavailable for ${symbol}, trying previous close`);
+      console.log(
+        `Real-time quote unavailable for ${symbol}, trying previous close`
+      );
       return null;
     });
 
     if (!quote) {
       // Fallback to previous close (works with free Polygon API)
-      const prevClose = await polygonClient.getPreviousClose(symbol).catch(e => {
-        console.error(`Error fetching previous close for ${symbol}:`, e.message);
-        return null;
-      });
+      const prevClose = await polygonClient
+        .getPreviousClose(symbol)
+        .catch(e => {
+          console.error(
+            `Error fetching previous close for ${symbol}:`,
+            e.message
+          );
+          return null;
+        });
 
       if (prevClose) {
         quote = {
@@ -3389,7 +3690,7 @@ app.get('/api/polygon/quote/:symbol', async (req, res) => {
           low: prevClose.low,
           volume: prevClose.volume,
           prevClose: prevClose.close,
-          timestamp: prevClose.timestamp
+          timestamp: prevClose.timestamp,
         };
       }
     }
@@ -3426,25 +3727,30 @@ app.get('/api/polygon/details/:symbol', async (req, res) => {
 });
 
 // Get aggregates (OHLCV bars)
-app.get('/api/polygon/aggregates/:symbol/:multiplier/:timespan', async (req, res) => {
-  try {
-    const { symbol, multiplier, timespan } = req.params;
-    const { from, to } = req.query;
+app.get(
+  '/api/polygon/aggregates/:symbol/:multiplier/:timespan',
+  async (req, res) => {
+    try {
+      const { symbol, multiplier, timespan } = req.params;
+      const { from, to } = req.query;
 
-    const bars = await polygonClient.getAggregates(symbol, parseInt(multiplier), timespan, {
-      from,
-      to
-    }).catch(e => {
-      console.error(`Error fetching aggregates for ${symbol}:`, e.message);
-      return [];
-    });
+      const bars = await polygonClient
+        .getAggregates(symbol, parseInt(multiplier), timespan, {
+          from,
+          to,
+        })
+        .catch(e => {
+          console.error(`Error fetching aggregates for ${symbol}:`, e.message);
+          return [];
+        });
 
-    res.json({ results: bars });
-  } catch (error) {
-    console.error('Error fetching aggregates:', error);
-    res.status(500).json({ error: error.message });
+      res.json({ results: bars });
+    } catch (error) {
+      console.error('Error fetching aggregates:', error);
+      res.status(500).json({ error: error.message });
+    }
   }
-});
+);
 
 // Serve static files from React build
 app.use(express.static(`${__dirname}/../react-client/dist`));
@@ -3462,14 +3768,22 @@ websocketServer.initializeWebSocket(server);
 server.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}!`);
   console.log(`\n🤖 AI Trading Engine endpoints:`);
-  console.log(`   POST /api/ai/session/start     - Create new AI trading session`);
+  console.log(
+    `   POST /api/ai/session/start     - Create new AI trading session`
+  );
   console.log(`   POST /api/ai/session/stop      - Stop a session`);
   console.log(`   POST /api/ai/session/pause     - Pause a session`);
   console.log(`   POST /api/ai/session/resume    - Resume a paused session`);
   console.log(`   GET  /api/ai/sessions/:userId  - Get all sessions for user`);
-  console.log(`   GET  /api/ai/session/detail/:sessionId - Get specific session`);
-  console.log(`   GET  /api/ai/session/:userId   - Get first active session (legacy)`);
-  console.log(`   PUT  /api/ai/session/:sessionId/config - Update session config`);
+  console.log(
+    `   GET  /api/ai/session/detail/:sessionId - Get specific session`
+  );
+  console.log(
+    `   GET  /api/ai/session/:userId   - Get first active session (legacy)`
+  );
+  console.log(
+    `   PUT  /api/ai/session/:sessionId/config - Update session config`
+  );
   console.log(`   GET  /api/ai/decisions/:sessionId`);
   console.log(`   POST /api/ai/patterns/analyze`);
   console.log(`\n📈 Technical Indicators:`);

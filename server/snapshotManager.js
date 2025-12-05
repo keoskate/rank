@@ -36,7 +36,11 @@ async function ensureDirectories() {
  * @param {Date} date - Date for the snapshot (defaults to today)
  * @returns {Object} - Snapshot data
  */
-async function generateDailySnapshot(stocks, stockListName = 'Default', date = new Date()) {
+async function generateDailySnapshot(
+  stocks,
+  stockListName = 'Default',
+  date = new Date()
+) {
   await ensureDirectories();
 
   const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -80,19 +84,24 @@ async function generateDailySnapshot(stocks, stockListName = 'Default', date = n
 
       // Metadata
       lastQuarterUpdate: stock.lastQuarterUpdate || '2025-11-01',
-      dataQuality: stock._validation || { overallConfidence: 0.8, status: 'estimated' }
+      dataQuality: stock._validation || {
+        overallConfidence: 0.8,
+        status: 'estimated',
+      },
     })),
     metadata: {
       totalStocks: stocks.length,
       dataSource: 'polygon',
-      version: '1.0'
-    }
+      version: '1.0',
+    },
   };
 
   const filePath = path.join(SNAPSHOTS_DIR, `${dateStr}.json`);
   await fs.writeFile(filePath, JSON.stringify(snapshot, null, 2));
 
-  console.log(`✅ Generated daily snapshot: ${dateStr} (${stocks.length} stocks)`);
+  console.log(
+    `✅ Generated daily snapshot: ${dateStr} (${stocks.length} stocks)`
+  );
   return snapshot;
 }
 
@@ -143,7 +152,9 @@ async function getAvailableSnapshots() {
  */
 async function loadSnapshotRange(startDate, endDate) {
   const allDates = await getAvailableSnapshots();
-  const filteredDates = allDates.filter(date => date >= startDate && date <= endDate);
+  const filteredDates = allDates.filter(
+    date => date >= startDate && date <= endDate
+  );
 
   const snapshots = [];
   for (const date of filteredDates) {
@@ -165,7 +176,11 @@ async function loadSnapshotRange(startDate, endDate) {
  * @param {string} stockListName - Name of stock list
  * @returns {Array} - Array of generated snapshots
  */
-async function generateSyntheticHistory(currentStocks, days = 90, stockListName = 'Default') {
+async function generateSyntheticHistory(
+  currentStocks,
+  days = 90,
+  stockListName = 'Default'
+) {
   await ensureDirectories();
 
   console.log(`🔄 Generating ${days} days of synthetic historical data...`);
@@ -197,7 +212,9 @@ async function generateSyntheticHistory(currentStocks, days = 90, stockListName 
         // Keep quarterly metrics constant (they don't change daily)
         // Add slight variation to daily metrics
         rsi: stock.rsi ? stock.rsi + (Math.random() - 0.5) * 10 : null,
-        volume: stock.volume ? Math.floor(stock.volume * (0.8 + Math.random() * 0.4)) : null
+        volume: stock.volume
+          ? Math.floor(stock.volume * (0.8 + Math.random() * 0.4))
+          : null,
       };
     });
 
@@ -237,13 +254,15 @@ async function saveQuarterlyData(symbol, quarterData) {
       metadata: {
         totalQuarters: 0,
         earliestQuarter: null,
-        latestQuarter: null
-      }
+        latestQuarter: null,
+      },
     };
   }
 
   // Add new quarter (avoid duplicates)
-  const existingIndex = data.quarters.findIndex(q => q.quarter === quarterData.quarter);
+  const existingIndex = data.quarters.findIndex(
+    q => q.quarter === quarterData.quarter
+  );
   if (existingIndex >= 0) {
     data.quarters[existingIndex] = quarterData;
   } else {
@@ -257,7 +276,8 @@ async function saveQuarterlyData(symbol, quarterData) {
   data.lastUpdated = new Date().toISOString();
   data.metadata.totalQuarters = data.quarters.length;
   data.metadata.latestQuarter = data.quarters[0]?.quarter;
-  data.metadata.earliestQuarter = data.quarters[data.quarters.length - 1]?.quarter;
+  data.metadata.earliestQuarter =
+    data.quarters[data.quarters.length - 1]?.quarter;
 
   await fs.writeFile(filePath, JSON.stringify(data, null, 2));
 
@@ -306,15 +326,27 @@ async function calculateQoQ(symbol, metric) {
     return null;
   }
 
-  const change = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+  const change =
+    ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
 
   // Determine trend direction
   let trend = 'neutral';
   if (Math.abs(change) > 5) {
     // For metrics where higher is better (ROE, etc.)
-    const higherIsBetter = ['roe', 'freeCashFlowYield', 'quickRatio', 'ebitda', 'cash'].includes(metric);
+    const higherIsBetter = [
+      'roe',
+      'freeCashFlowYield',
+      'quickRatio',
+      'ebitda',
+      'cash',
+    ].includes(metric);
     // For metrics where lower is better (debt, P/E, etc.)
-    const lowerIsBetter = ['debtEbitda', 'peRatio', 'evEbitda', 'netDebt'].includes(metric);
+    const lowerIsBetter = [
+      'debtEbitda',
+      'peRatio',
+      'evEbitda',
+      'netDebt',
+    ].includes(metric);
 
     if (higherIsBetter) {
       trend = change > 0 ? 'improving' : 'declining';
@@ -331,7 +363,7 @@ async function calculateQoQ(symbol, metric) {
     quarters: [current.quarter, previous.quarter],
     currentValue,
     previousValue,
-    metric
+    metric,
   };
 }
 
@@ -350,9 +382,12 @@ async function calculateYoY(symbol, metric) {
   }
 
   const current = data.quarters[0];
-  const yearAgo = data.quarters.find(q =>
-    q.fiscalYear === current.fiscalYear - 1 && q.fiscalQuarter === current.fiscalQuarter
-  ) || data.quarters[3]; // Fallback to 4 quarters ago
+  const yearAgo =
+    data.quarters.find(
+      q =>
+        q.fiscalYear === current.fiscalYear - 1 &&
+        q.fiscalQuarter === current.fiscalQuarter
+    ) || data.quarters[3]; // Fallback to 4 quarters ago
 
   const currentValue = current[metric];
   const previousValue = yearAgo[metric];
@@ -361,12 +396,24 @@ async function calculateYoY(symbol, metric) {
     return null;
   }
 
-  const change = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+  const change =
+    ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
 
   let trend = 'neutral';
   if (Math.abs(change) > 10) {
-    const higherIsBetter = ['roe', 'freeCashFlowYield', 'quickRatio', 'ebitda', 'cash'].includes(metric);
-    const lowerIsBetter = ['debtEbitda', 'peRatio', 'evEbitda', 'netDebt'].includes(metric);
+    const higherIsBetter = [
+      'roe',
+      'freeCashFlowYield',
+      'quickRatio',
+      'ebitda',
+      'cash',
+    ].includes(metric);
+    const lowerIsBetter = [
+      'debtEbitda',
+      'peRatio',
+      'evEbitda',
+      'netDebt',
+    ].includes(metric);
 
     if (higherIsBetter) {
       trend = change > 0 ? 'strong_growth' : 'declining';
@@ -383,7 +430,7 @@ async function calculateYoY(symbol, metric) {
     quarters: [current.quarter, yearAgo.quarter],
     currentValue,
     previousValue,
-    metric
+    metric,
   };
 }
 
@@ -397,5 +444,5 @@ module.exports = {
   loadQuarterlyData,
   calculateQoQ,
   calculateYoY,
-  ensureDirectories
+  ensureDirectories,
 };

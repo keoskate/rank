@@ -38,7 +38,7 @@ const TradingSimulator = ({ config, onComplete }) => {
     cash: 100000,
     startingCash: 100000,
     positions: [],
-    trades: []
+    trades: [],
   });
   const [realizedPnL, setRealizedPnL] = useState(0);
   const [aiDecisions, setAiDecisions] = useState([]);
@@ -107,7 +107,12 @@ const TradingSimulator = ({ config, onComplete }) => {
           const high = candle.high ?? candle.h;
           const low = candle.low ?? candle.l;
           const open = candle.open ?? candle.o;
-          return close !== undefined && high !== undefined && low !== undefined && open !== undefined;
+          return (
+            close !== undefined &&
+            high !== undefined &&
+            low !== undefined &&
+            open !== undefined
+          );
         })
         .sort((a, b) => (a.timestamp || a.t) - (b.timestamp || b.t));
 
@@ -120,7 +125,7 @@ const TradingSimulator = ({ config, onComplete }) => {
   };
 
   // Safe getter for candle properties
-  const getCandle = (candle) => {
+  const getCandle = candle => {
     if (!candle) return null;
     return {
       close: candle.close ?? candle.c ?? 0,
@@ -128,7 +133,7 @@ const TradingSimulator = ({ config, onComplete }) => {
       high: candle.high ?? candle.h ?? 0,
       low: candle.low ?? candle.l ?? 0,
       volume: candle.volume ?? candle.v ?? 0,
-      timestamp: candle.timestamp ?? candle.t ?? Date.now()
+      timestamp: candle.timestamp ?? candle.t ?? Date.now(),
     };
   };
 
@@ -136,19 +141,33 @@ const TradingSimulator = ({ config, onComplete }) => {
   // Uses config for profit target, stop loss, min confidence, etc.
   const makeAiDecision = (candle, index, allCandles, currentPosition) => {
     const c = getCandle(candle);
-    if (!c) return { action: 'HOLD', confidence: 0, reasons: ['Invalid candle data'] };
+    if (!c)
+      return {
+        action: 'HOLD',
+        confidence: 0,
+        reasons: ['Invalid candle data'],
+      };
 
     const { close: price, volume, open, high, low, timestamp } = c;
 
     // Get config values with defaults
     // Config may use takeProfitPercent, profitTarget, or profitTargetPercent
-    const profitTargetPercent = config?.takeProfitPercent || config?.profitTarget || config?.profitTargetPercent || 2;
+    const profitTargetPercent =
+      config?.takeProfitPercent ||
+      config?.profitTarget ||
+      config?.profitTargetPercent ||
+      2;
     const stopLossPercent = config?.stopLossPercent || config?.stopLoss || 1;
     const minConfidence = config?.minConfidence || 70;
 
     // Debug log on first candle to verify config is being used
     if (index === 0) {
-      console.log('[Simulator] Using config:', { profitTargetPercent, stopLossPercent, minConfidence, rawConfig: config });
+      console.log('[Simulator] Using config:', {
+        profitTargetPercent,
+        stopLossPercent,
+        minConfidence,
+        rawConfig: config,
+      });
     }
 
     // Calculate price change from previous candle
@@ -161,7 +180,8 @@ const TradingSimulator = ({ config, onComplete }) => {
     }
 
     // Calculate RSI-like momentum (simplified)
-    let gains = 0, losses = 0;
+    let gains = 0,
+      losses = 0;
     const lookback = Math.min(14, index);
     for (let i = index - lookback; i < index; i++) {
       if (i > 0 && allCandles[i] && allCandles[i - 1]) {
@@ -177,10 +197,11 @@ const TradingSimulator = ({ config, onComplete }) => {
     const avgGain = lookback > 0 ? gains / lookback : 0;
     const avgLoss = lookback > 0 ? losses / lookback : 0.001;
     const rs = avgGain / Math.max(avgLoss, 0.001);
-    const rsi = 100 - (100 / (1 + rs));
+    const rsi = 100 - 100 / (1 + rs);
 
     // Calculate VWAP (simplified) with null checks
-    let cumulativeTPV = 0, cumulativeVol = 0;
+    let cumulativeTPV = 0,
+      cumulativeVol = 0;
     for (let i = 0; i <= index; i++) {
       const candleData = getCandle(allCandles[i]);
       if (candleData && candleData.volume > 0) {
@@ -199,7 +220,7 @@ const TradingSimulator = ({ config, onComplete }) => {
       priceVsVwap: ((price / vwap - 1) * 100).toFixed(2),
       action: 'HOLD',
       confidence: 50,
-      reasons: []
+      reasons: [],
     };
 
     // BUY signals
@@ -222,10 +243,11 @@ const TradingSimulator = ({ config, onComplete }) => {
 
       // Volume spike check with null safety
       const recentCandles = allCandles.slice(Math.max(0, index - 10), index);
-      const avgVolume = recentCandles.reduce((s, c) => {
-        const cd = getCandle(c);
-        return s + (cd ? cd.volume : 0);
-      }, 0) / Math.max(recentCandles.length, 1);
+      const avgVolume =
+        recentCandles.reduce((s, c) => {
+          const cd = getCandle(c);
+          return s + (cd ? cd.volume : 0);
+        }, 0) / Math.max(recentCandles.length, 1);
 
       if (volume > avgVolume * 1.5) {
         buyScore += 15;
@@ -289,141 +311,162 @@ const TradingSimulator = ({ config, onComplete }) => {
   };
 
   // Execute trade
-  const executeTrade = useCallback((decision, candle) => {
-    const c = getCandle(candle);
-    if (!c) return;
+  const executeTrade = useCallback(
+    (decision, candle) => {
+      const c = getCandle(candle);
+      if (!c) return;
 
-    const { close: price, timestamp } = c;
-    const reasons = decision.reasons || [];
-    const reasonsText = reasons.length > 0 ? reasons.join(', ') : 'Manual signal';
+      const { close: price, timestamp } = c;
+      const reasons = decision.reasons || [];
+      const reasonsText =
+        reasons.length > 0 ? reasons.join(', ') : 'Manual signal';
 
-    setPortfolio(prev => {
-      const newPortfolio = { ...prev };
+      setPortfolio(prev => {
+        const newPortfolio = { ...prev };
 
-      if (decision.action === 'BUY' && prev.positions.length === 0) {
-        const positionSize = Math.floor(prev.cash * 0.5 / price);
+        if (decision.action === 'BUY' && prev.positions.length === 0) {
+          const positionSize = Math.floor((prev.cash * 0.5) / price);
 
-        if (positionSize > 0) {
-          const cost = positionSize * price;
-          newPortfolio.cash = prev.cash - cost;
-          newPortfolio.positions = [{
-            symbol,
-            quantity: positionSize,
-            entryPrice: price,
-            entryTime: timestamp,
-            reasons: reasons
-          }];
+          if (positionSize > 0) {
+            const cost = positionSize * price;
+            newPortfolio.cash = prev.cash - cost;
+            newPortfolio.positions = [
+              {
+                symbol,
+                quantity: positionSize,
+                entryPrice: price,
+                entryTime: timestamp,
+                reasons: reasons,
+              },
+            ];
 
-          newPortfolio.trades = [...prev.trades, {
-            type: 'BUY',
-            symbol,
-            quantity: positionSize,
-            price,
-            timestamp,
-            value: cost,
-            confidence: decision.confidence,
-            reasons: reasons
-          }];
+            newPortfolio.trades = [
+              ...prev.trades,
+              {
+                type: 'BUY',
+                symbol,
+                quantity: positionSize,
+                price,
+                timestamp,
+                value: cost,
+                confidence: decision.confidence,
+                reasons: reasons,
+              },
+            ];
 
+            addEvent(
+              'trade',
+              'BUY Order Filled',
+              `Bought ${positionSize} ${symbol} @ $${price.toFixed(2)}`,
+              reasonsText,
+              decision.confidence
+            );
+          }
+        } else if (decision.action === 'SELL' && prev.positions.length > 0) {
+          const position = prev.positions[0];
+          const proceeds = position.quantity * price;
+          const pnl = proceeds - position.quantity * position.entryPrice;
+
+          newPortfolio.cash = prev.cash + proceeds;
+          newPortfolio.positions = [];
+
+          newPortfolio.trades = [
+            ...prev.trades,
+            {
+              type: 'SELL',
+              symbol,
+              quantity: position.quantity,
+              price,
+              timestamp,
+              value: proceeds,
+              pnl,
+              pnlPercent:
+                ((price - position.entryPrice) / position.entryPrice) * 100,
+              confidence: decision.confidence,
+              reasons: reasons,
+            },
+          ];
+
+          setRealizedPnL(prev => prev + pnl);
           addEvent(
-            'trade',
-            'BUY Order Filled',
-            `Bought ${positionSize} ${symbol} @ $${price.toFixed(2)}`,
+            pnl >= 0 ? 'success' : 'error',
+            'SELL Order Filled',
+            `Sold ${position.quantity} ${symbol} @ $${price.toFixed(2)} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)})`,
             reasonsText,
             decision.confidence
           );
         }
-      } else if (decision.action === 'SELL' && prev.positions.length > 0) {
-        const position = prev.positions[0];
-        const proceeds = position.quantity * price;
-        const pnl = proceeds - (position.quantity * position.entryPrice);
 
-        newPortfolio.cash = prev.cash + proceeds;
-        newPortfolio.positions = [];
-
-        newPortfolio.trades = [...prev.trades, {
-          type: 'SELL',
-          symbol,
-          quantity: position.quantity,
-          price,
-          timestamp,
-          value: proceeds,
-          pnl,
-          pnlPercent: ((price - position.entryPrice) / position.entryPrice * 100),
-          confidence: decision.confidence,
-          reasons: reasons
-        }];
-
-        setRealizedPnL(prev => prev + pnl);
-        addEvent(
-          pnl >= 0 ? 'success' : 'error',
-          'SELL Order Filled',
-          `Sold ${position.quantity} ${symbol} @ $${price.toFixed(2)} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)})`,
-          reasonsText,
-          decision.confidence
-        );
-      }
-
-      return newPortfolio;
-    });
-  }, [symbol]);
+        return newPortfolio;
+      });
+    },
+    [symbol]
+  );
 
   // Add event to timeline
   const addEvent = (type, title, message, reason = null, confidence = null) => {
-    setEvents(prev => [...prev, {
-      id: Date.now() + Math.random(),
-      type,
-      title,
-      reason,
-      confidence,
-      message,
-      timestamp: new Date()
-    }]);
+    setEvents(prev => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        type,
+        title,
+        reason,
+        confidence,
+        message,
+        timestamp: new Date(),
+      },
+    ]);
   };
 
   // Process single candle
-  const processCandle = useCallback((index, data) => {
-    if (index >= data.length) {
-      completeSimulation(data);
-      return;
-    }
-
-    const candle = data[index];
-    const c = getCandle(candle);
-    if (!c) {
-      // Skip invalid candle
-      indexRef.current = index + 1;
-      return;
-    }
-
-    const { close: price, high, low, timestamp } = c;
-
-    setCurrentPrice(price);
-    setCurrentCandleIndex(index);
-    setProgress((index / data.length) * 100);
-
-    setDayHigh(prev => Math.max(prev, high));
-    setDayLow(prev => Math.min(prev === Infinity ? low : prev, low));
-
-    const time = new Date(timestamp);
-    setCurrentTime(time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
-
-    // Make AI decision
-    setPortfolio(prev => {
-      const currentPosition = prev.positions[0] || null;
-      const decision = makeAiDecision(candle, index, data, currentPosition);
-
-      setAiDecisions(prevDecisions => [...prevDecisions, decision]);
-
-      if (decision.action !== 'HOLD') {
-        executeTrade(decision, candle);
+  const processCandle = useCallback(
+    (index, data) => {
+      if (index >= data.length) {
+        completeSimulation(data);
+        return;
       }
 
-      return prev;
-    });
+      const candle = data[index];
+      const c = getCandle(candle);
+      if (!c) {
+        // Skip invalid candle
+        indexRef.current = index + 1;
+        return;
+      }
 
-    indexRef.current = index + 1;
-  }, [executeTrade]);
+      const { close: price, high, low, timestamp } = c;
+
+      setCurrentPrice(price);
+      setCurrentCandleIndex(index);
+      setProgress((index / data.length) * 100);
+
+      setDayHigh(prev => Math.max(prev, high));
+      setDayLow(prev => Math.min(prev === Infinity ? low : prev, low));
+
+      const time = new Date(timestamp);
+      setCurrentTime(
+        time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      );
+
+      // Make AI decision
+      setPortfolio(prev => {
+        const currentPosition = prev.positions[0] || null;
+        const decision = makeAiDecision(candle, index, data, currentPosition);
+
+        setAiDecisions(prevDecisions => [...prevDecisions, decision]);
+
+        if (decision.action !== 'HOLD') {
+          executeTrade(decision, candle);
+        }
+
+        return prev;
+      });
+
+      indexRef.current = index + 1;
+    },
+    [executeTrade]
+  );
 
   // Start simulation
   const startSimulation = async () => {
@@ -442,12 +485,16 @@ const TradingSimulator = ({ config, onComplete }) => {
       cash: 100000,
       startingCash: 100000,
       positions: [],
-      trades: []
+      trades: [],
     });
     setDayHigh(0);
     setDayLow(Infinity);
 
-    addEvent('info', 'Simulation Started', `Running backtest for ${symbol} on ${simulationDate}`);
+    addEvent(
+      'info',
+      'Simulation Started',
+      `Running backtest for ${symbol} on ${simulationDate}`
+    );
 
     const data = await fetchSimulationData();
 
@@ -483,7 +530,7 @@ const TradingSimulator = ({ config, onComplete }) => {
   };
 
   // Complete simulation
-  const completeSimulation = (data) => {
+  const completeSimulation = data => {
     clearInterval(simulationRef.current);
     setIsRunning(false);
     setProgress(100);
@@ -495,38 +542,59 @@ const TradingSimulator = ({ config, onComplete }) => {
       setPortfolio(prev => {
         const totalTrades = prev.trades.length;
         const sellTrades = prev.trades.filter(t => t.type === 'SELL').length;
-        const profitableTrades = prev.trades.filter(t => t.pnl && t.pnl > 0).length;
+        const profitableTrades = prev.trades.filter(
+          t => t.pnl && t.pnl > 0
+        ).length;
         const losingTrades = prev.trades.filter(t => t.pnl && t.pnl < 0).length;
 
-        const totalPnLCalc = prev.trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
-        const winRate = sellTrades > 0 ? (profitableTrades / sellTrades * 100) : 0;
+        const totalPnLCalc = prev.trades.reduce(
+          (sum, t) => sum + (t.pnl || 0),
+          0
+        );
+        const winRate =
+          sellTrades > 0 ? (profitableTrades / sellTrades) * 100 : 0;
 
-        const finalValue = prev.cash + prev.positions.reduce((sum, p) => sum + p.quantity * currentPrice, 0);
-        const returnPercent = ((finalValue - prev.startingCash) / prev.startingCash * 100);
+        const finalValue =
+          prev.cash +
+          prev.positions.reduce((sum, p) => sum + p.quantity * currentPrice, 0);
+        const returnPercent =
+          ((finalValue - prev.startingCash) / prev.startingCash) * 100;
 
         const positives = [];
         const negatives = [];
         const improvements = [];
 
         if (returnPercent > 0) {
-          positives.push(`Generated positive return of +${returnPercent.toFixed(2)}%`);
+          positives.push(
+            `Generated positive return of +${returnPercent.toFixed(2)}%`
+          );
         } else if (returnPercent < 0) {
-          negatives.push(`Generated negative return of ${returnPercent.toFixed(2)}%`);
+          negatives.push(
+            `Generated negative return of ${returnPercent.toFixed(2)}%`
+          );
         }
 
         if (winRate >= 50) {
           positives.push(`Win rate of ${winRate.toFixed(0)}% is above 50%`);
         } else if (winRate > 0) {
           negatives.push(`Win rate of ${winRate.toFixed(0)}% is below 50%`);
-          improvements.push('Consider tighter stop losses or wider profit targets');
+          improvements.push(
+            'Consider tighter stop losses or wider profit targets'
+          );
         }
 
         if (totalTrades === 0) {
-          negatives.push('No trades executed - confidence threshold may be too high');
-          improvements.push('Lower minimum confidence threshold to increase trading activity');
+          negatives.push(
+            'No trades executed - confidence threshold may be too high'
+          );
+          improvements.push(
+            'Lower minimum confidence threshold to increase trading activity'
+          );
         } else if (totalTrades > 10) {
           negatives.push('High number of trades may indicate overtrading');
-          improvements.push('Increase confidence threshold to reduce noise trades');
+          improvements.push(
+            'Increase confidence threshold to reduce noise trades'
+          );
         }
 
         const analysisResult = {
@@ -544,10 +612,11 @@ const TradingSimulator = ({ config, onComplete }) => {
           dayHigh,
           dayLow,
           dayClose: currentPrice,
-          priceChangePercent: dayOpen > 0 ? ((currentPrice - dayOpen) / dayOpen * 100) : 0,
+          priceChangePercent:
+            dayOpen > 0 ? ((currentPrice - dayOpen) / dayOpen) * 100 : 0,
           positives,
           negatives,
-          improvements
+          improvements,
         };
 
         setAnalysis(analysisResult);
@@ -577,7 +646,11 @@ const TradingSimulator = ({ config, onComplete }) => {
     setIsRunning(false);
     setIsPaused(false);
     isPausedRef.current = false;
-    addEvent('warning', 'Simulation Stopped', 'Simulation was manually stopped');
+    addEvent(
+      'warning',
+      'Simulation Stopped',
+      'Simulation was manually stopped'
+    );
   };
 
   // Cleanup
@@ -600,28 +673,43 @@ const TradingSimulator = ({ config, onComplete }) => {
     const height = 180;
     const padding = 40;
 
-    const prices = visibleCandles.map(c => getCandle(c)?.close || 0).filter(p => p > 0);
+    const prices = visibleCandles
+      .map(c => getCandle(c)?.close || 0)
+      .filter(p => p > 0);
     if (prices.length === 0) return null;
 
     const minPrice = Math.min(...prices) * 0.999;
     const maxPrice = Math.max(...prices) * 1.001;
 
-    const xScale = (i) => padding + (i / candles.length) * (width - padding * 2);
-    const yScale = (p) => height - padding - ((p - minPrice) / (maxPrice - minPrice)) * (height - padding * 2);
+    const xScale = i => padding + (i / candles.length) * (width - padding * 2);
+    const yScale = p =>
+      height -
+      padding -
+      ((p - minPrice) / (maxPrice - minPrice)) * (height - padding * 2);
 
-    const pathPoints = visibleCandles.map((candle, i) => {
-      const c = getCandle(candle);
-      if (!c) return null;
-      const x = xScale(i);
-      const y = yScale(c.close);
-      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).filter(Boolean).join(' ');
+    const pathPoints = visibleCandles
+      .map((candle, i) => {
+        const c = getCandle(candle);
+        if (!c) return null;
+        const x = xScale(i);
+        const y = yScale(c.close);
+        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+      })
+      .filter(Boolean)
+      .join(' ');
 
     const buyTrades = portfolio.trades.filter(t => t.type === 'BUY');
     const sellTrades = portfolio.trades.filter(t => t.type === 'SELL');
 
     return (
-      <svg width={width} height={height} style={{ backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.md }}>
+      <svg
+        width={width}
+        height={height}
+        style={{
+          backgroundColor: theme.colors.gray50,
+          borderRadius: theme.borderRadius.md,
+        }}
+      >
         {[0, 0.25, 0.5, 0.75, 1].map(pct => (
           <line
             key={pct}
@@ -637,14 +725,21 @@ const TradingSimulator = ({ config, onComplete }) => {
         <text x={5} y={padding} fontSize={10} fill={theme.colors.gray500}>
           ${maxPrice.toFixed(2)}
         </text>
-        <text x={5} y={height - padding} fontSize={10} fill={theme.colors.gray500}>
+        <text
+          x={5}
+          y={height - padding}
+          fontSize={10}
+          fill={theme.colors.gray500}
+        >
           ${minPrice.toFixed(2)}
         </text>
 
         <path
           d={pathPoints}
           fill="none"
-          stroke={currentPrice >= dayOpen ? theme.colors.success : theme.colors.error}
+          stroke={
+            currentPrice >= dayOpen ? theme.colors.success : theme.colors.error
+          }
           strokeWidth={2}
         />
 
@@ -653,12 +748,18 @@ const TradingSimulator = ({ config, onComplete }) => {
             cx={xScale(visibleCandles.length - 1)}
             cy={yScale(currentPrice)}
             r={4}
-            fill={currentPrice >= dayOpen ? theme.colors.success : theme.colors.error}
+            fill={
+              currentPrice >= dayOpen
+                ? theme.colors.success
+                : theme.colors.error
+            }
           />
         )}
 
         {buyTrades.map((trade, i) => {
-          const tradeIndex = candles.findIndex(c => (c.timestamp || c.t) >= trade.timestamp);
+          const tradeIndex = candles.findIndex(
+            c => (c.timestamp || c.t) >= trade.timestamp
+          );
           if (tradeIndex < 0 || tradeIndex > currentCandleIndex) return null;
           return (
             <polygon
@@ -669,7 +770,9 @@ const TradingSimulator = ({ config, onComplete }) => {
           );
         })}
         {sellTrades.map((trade, i) => {
-          const tradeIndex = candles.findIndex(c => (c.timestamp || c.t) >= trade.timestamp);
+          const tradeIndex = candles.findIndex(
+            c => (c.timestamp || c.t) >= trade.timestamp
+          );
           if (tradeIndex < 0 || tradeIndex > currentCandleIndex) return null;
           return (
             <polygon
@@ -680,9 +783,32 @@ const TradingSimulator = ({ config, onComplete }) => {
           );
         })}
 
-        <text x={padding} y={height - 5} fontSize={10} fill={theme.colors.gray500}>9:30</text>
-        <text x={width / 2} y={height - 5} fontSize={10} fill={theme.colors.gray500} textAnchor="middle">12:00</text>
-        <text x={width - padding} y={height - 5} fontSize={10} fill={theme.colors.gray500} textAnchor="end">4:00</text>
+        <text
+          x={padding}
+          y={height - 5}
+          fontSize={10}
+          fill={theme.colors.gray500}
+        >
+          9:30
+        </text>
+        <text
+          x={width / 2}
+          y={height - 5}
+          fontSize={10}
+          fill={theme.colors.gray500}
+          textAnchor="middle"
+        >
+          12:00
+        </text>
+        <text
+          x={width - padding}
+          y={height - 5}
+          fontSize={10}
+          fill={theme.colors.gray500}
+          textAnchor="end"
+        >
+          4:00
+        </text>
       </svg>
     );
   };
@@ -700,8 +826,8 @@ const TradingSimulator = ({ config, onComplete }) => {
           aiDecisions,
           events,
           config,
-          savedAt: new Date().toISOString()
-        })
+          savedAt: new Date().toISOString(),
+        }),
       });
 
       if (res.ok) {
@@ -714,38 +840,84 @@ const TradingSimulator = ({ config, onComplete }) => {
 
   return (
     <Card style={{ marginBottom: theme.spacing.lg }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.md,
+        }}
+      >
         <h3 style={{ margin: 0 }}>Trading Day Simulator</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
-          <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, display: 'flex', gap: theme.spacing.sm }}>
-            <span style={{ backgroundColor: theme.colors.success + '20', padding: '2px 6px', borderRadius: theme.borderRadius.sm }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.md,
+          }}
+        >
+          <div
+            style={{
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.gray500,
+              display: 'flex',
+              gap: theme.spacing.sm,
+            }}
+          >
+            <span
+              style={{
+                backgroundColor: theme.colors.success + '20',
+                padding: '2px 6px',
+                borderRadius: theme.borderRadius.sm,
+              }}
+            >
               +{config?.takeProfitPercent || 2}% TP
             </span>
-            <span style={{ backgroundColor: theme.colors.error + '20', padding: '2px 6px', borderRadius: theme.borderRadius.sm }}>
+            <span
+              style={{
+                backgroundColor: theme.colors.error + '20',
+                padding: '2px 6px',
+                borderRadius: theme.borderRadius.sm,
+              }}
+            >
               -{config?.stopLossPercent || 1}% SL
             </span>
           </div>
-          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray500 }}>
+          <div
+            style={{
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.gray500,
+            }}
+          >
             6.5 hours → {(6 / simulationSpeed).toFixed(1)} seconds
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: theme.spacing.md,
-        marginBottom: theme.spacing.lg
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: theme.spacing.md,
+          marginBottom: theme.spacing.lg,
+        }}
+      >
         <div>
-          <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: theme.spacing.xs,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.gray600,
+            }}
+          >
             Date
           </label>
           <input
             type="date"
             value={simulationDate}
-            onChange={(e) => setSimulationDate(e.target.value)}
+            onChange={e => setSimulationDate(e.target.value)}
             disabled={isRunning}
             max={new Date().toISOString().split('T')[0]}
             style={{
@@ -753,19 +925,26 @@ const TradingSimulator = ({ config, onComplete }) => {
               padding: theme.spacing.sm,
               border: `1px solid ${theme.colors.gray300}`,
               borderRadius: theme.borderRadius.md,
-              fontSize: theme.typography.fontSize.md
+              fontSize: theme.typography.fontSize.md,
             }}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: theme.spacing.xs,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.gray600,
+            }}
+          >
             Symbol
           </label>
           <input
             type="text"
             value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+            onChange={e => setSymbol(e.target.value.toUpperCase())}
             disabled={isRunning}
             placeholder="AAPL"
             style={{
@@ -773,25 +952,32 @@ const TradingSimulator = ({ config, onComplete }) => {
               padding: theme.spacing.sm,
               border: `1px solid ${theme.colors.gray300}`,
               borderRadius: theme.borderRadius.md,
-              fontSize: theme.typography.fontSize.md
+              fontSize: theme.typography.fontSize.md,
             }}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: theme.spacing.xs,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.gray600,
+            }}
+          >
             Speed
           </label>
           <select
             value={simulationSpeed}
-            onChange={(e) => setSimulationSpeed(parseFloat(e.target.value))}
+            onChange={e => setSimulationSpeed(parseFloat(e.target.value))}
             disabled={isRunning}
             style={{
               width: '100%',
               padding: theme.spacing.sm,
               border: `1px solid ${theme.colors.gray300}`,
               borderRadius: theme.borderRadius.md,
-              fontSize: theme.typography.fontSize.md
+              fontSize: theme.typography.fontSize.md,
             }}
           >
             <option value={0.5}>0.5x (12s)</option>
@@ -801,14 +987,26 @@ const TradingSimulator = ({ config, onComplete }) => {
           </select>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: theme.spacing.sm }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: theme.spacing.sm,
+          }}
+        >
           {!isRunning ? (
-            <Button onClick={startSimulation} disabled={!simulationDate || !symbol}>
+            <Button
+              onClick={startSimulation}
+              disabled={!simulationDate || !symbol}
+            >
               Run Simulation
             </Button>
           ) : (
             <>
-              <Button variant={isPaused ? 'primary' : 'outline'} onClick={togglePause}>
+              <Button
+                variant={isPaused ? 'primary' : 'outline'}
+                onClick={togglePause}
+              >
                 {isPaused ? 'Resume' : 'Pause'}
               </Button>
               <Button variant="danger" onClick={stopSimulation}>
@@ -821,30 +1019,54 @@ const TradingSimulator = ({ config, onComplete }) => {
 
       {/* PROMINENT P&L DISPLAY */}
       {(isRunning || progress > 0) && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: theme.spacing.lg,
-          marginBottom: theme.spacing.md,
-          backgroundColor: totalPnL >= 0 ? `${theme.colors.success}15` : `${theme.colors.error}15`,
-          borderRadius: theme.borderRadius.lg,
-          border: `2px solid ${totalPnL >= 0 ? theme.colors.success : theme.colors.error}`
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: theme.spacing.lg,
+            marginBottom: theme.spacing.md,
+            backgroundColor:
+              totalPnL >= 0
+                ? `${theme.colors.success}15`
+                : `${theme.colors.error}15`,
+            borderRadius: theme.borderRadius.lg,
+            border: `2px solid ${totalPnL >= 0 ? theme.colors.success : theme.colors.error}`,
+          }}
+        >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginBottom: theme.spacing.xs }}>
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.gray600,
+                marginBottom: theme.spacing.xs,
+              }}
+            >
               Total P&L
             </div>
-            <div style={{
-              fontSize: '48px',
-              fontWeight: theme.typography.fontWeight.bold,
-              color: totalPnL >= 0 ? theme.colors.success : theme.colors.error,
-              lineHeight: 1
-            }}>
-              {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}
+            <div
+              style={{
+                fontSize: '48px',
+                fontWeight: theme.typography.fontWeight.bold,
+                color:
+                  totalPnL >= 0 ? theme.colors.success : theme.colors.error,
+                lineHeight: 1,
+              }}
+            >
+              {totalPnL >= 0 ? '+' : ''}
+              {totalPnL.toFixed(2)}
             </div>
-            <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginTop: theme.spacing.xs }}>
-              {portfolio.startingCash > 0 ? `${((totalPnL / portfolio.startingCash) * 100).toFixed(2)}%` : '0.00%'} return
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.gray600,
+                marginTop: theme.spacing.xs,
+              }}
+            >
+              {portfolio.startingCash > 0
+                ? `${((totalPnL / portfolio.startingCash) * 100).toFixed(2)}%`
+                : '0.00%'}{' '}
+              return
             </div>
           </div>
         </div>
@@ -853,74 +1075,209 @@ const TradingSimulator = ({ config, onComplete }) => {
       {/* Progress bar */}
       {(isRunning || progress > 0) && (
         <div style={{ marginBottom: theme.spacing.md }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
-            <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-              {currentTime} {isPaused && <span style={{ color: theme.colors.warning }}>(PAUSED)</span>}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing.xs,
+            }}
+          >
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.gray600,
+              }}
+            >
+              {currentTime}{' '}
+              {isPaused && (
+                <span style={{ color: theme.colors.warning }}>(PAUSED)</span>
+              )}
             </span>
-            <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.gray600,
+              }}
+            >
               {progress.toFixed(0)}%
             </span>
           </div>
-          <div style={{
-            height: 8,
-            backgroundColor: theme.colors.gray200,
-            borderRadius: theme.borderRadius.full,
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${progress}%`,
-              backgroundColor: isPaused ? theme.colors.warning : isRunning ? theme.colors.primary : theme.colors.success,
-              transition: 'width 0.1s linear'
-            }} />
+          <div
+            style={{
+              height: 8,
+              backgroundColor: theme.colors.gray200,
+              borderRadius: theme.borderRadius.full,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${progress}%`,
+                backgroundColor: isPaused
+                  ? theme.colors.warning
+                  : isRunning
+                    ? theme.colors.primary
+                    : theme.colors.success,
+                transition: 'width 0.1s linear',
+              }}
+            />
           </div>
         </div>
       )}
 
       {/* Live Stats */}
       {(isRunning || progress > 0) && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-          gap: theme.spacing.sm,
-          marginBottom: theme.spacing.md
-        }}>
-          <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.sm, textAlign: 'center' }}>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Price</div>
-            <div style={{
-              fontSize: theme.typography.fontSize.lg,
-              fontWeight: theme.typography.fontWeight.bold,
-              color: currentPrice >= dayOpen ? theme.colors.success : theme.colors.error
-            }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+            gap: theme.spacing.sm,
+            marginBottom: theme.spacing.md,
+          }}
+        >
+          <div
+            style={{
+              padding: theme.spacing.sm,
+              backgroundColor: theme.colors.gray50,
+              borderRadius: theme.borderRadius.sm,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray500,
+              }}
+            >
+              Price
+            </div>
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.lg,
+                fontWeight: theme.typography.fontWeight.bold,
+                color:
+                  currentPrice >= dayOpen
+                    ? theme.colors.success
+                    : theme.colors.error,
+              }}
+            >
               ${currentPrice.toFixed(2)}
             </div>
           </div>
-          <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.sm, textAlign: 'center' }}>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Day %</div>
-            <div style={{
-              fontSize: theme.typography.fontSize.lg,
-              fontWeight: theme.typography.fontWeight.bold,
-              color: currentPrice >= dayOpen ? theme.colors.success : theme.colors.error
-            }}>
-              {dayOpen > 0 ? `${((currentPrice - dayOpen) / dayOpen * 100).toFixed(2)}%` : '--'}
+          <div
+            style={{
+              padding: theme.spacing.sm,
+              backgroundColor: theme.colors.gray50,
+              borderRadius: theme.borderRadius.sm,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray500,
+              }}
+            >
+              Day %
+            </div>
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.lg,
+                fontWeight: theme.typography.fontWeight.bold,
+                color:
+                  currentPrice >= dayOpen
+                    ? theme.colors.success
+                    : theme.colors.error,
+              }}
+            >
+              {dayOpen > 0
+                ? `${(((currentPrice - dayOpen) / dayOpen) * 100).toFixed(2)}%`
+                : '--'}
             </div>
           </div>
-          <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.sm, textAlign: 'center' }}>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Cash</div>
-            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold }}>
+          <div
+            style={{
+              padding: theme.spacing.sm,
+              backgroundColor: theme.colors.gray50,
+              borderRadius: theme.borderRadius.sm,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray500,
+              }}
+            >
+              Cash
+            </div>
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.lg,
+                fontWeight: theme.typography.fontWeight.bold,
+              }}
+            >
               ${portfolio.cash.toFixed(0)}
             </div>
           </div>
-          <div style={{ padding: theme.spacing.sm, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.sm, textAlign: 'center' }}>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Trades</div>
-            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold }}>
+          <div
+            style={{
+              padding: theme.spacing.sm,
+              backgroundColor: theme.colors.gray50,
+              borderRadius: theme.borderRadius.sm,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray500,
+              }}
+            >
+              Trades
+            </div>
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.lg,
+                fontWeight: theme.typography.fontWeight.bold,
+              }}
+            >
               {portfolio.trades.length}
             </div>
           </div>
-          <div style={{ padding: theme.spacing.sm, backgroundColor: portfolio.positions.length > 0 ? `${theme.colors.info}15` : theme.colors.gray50, borderRadius: theme.borderRadius.sm, textAlign: 'center' }}>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Position</div>
-            <div style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: portfolio.positions.length > 0 ? theme.colors.info : theme.colors.gray400 }}>
-              {portfolio.positions.length > 0 ? `${portfolio.positions[0].quantity} shs` : 'None'}
+          <div
+            style={{
+              padding: theme.spacing.sm,
+              backgroundColor:
+                portfolio.positions.length > 0
+                  ? `${theme.colors.info}15`
+                  : theme.colors.gray50,
+              borderRadius: theme.borderRadius.sm,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray500,
+              }}
+            >
+              Position
+            </div>
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.md,
+                fontWeight: theme.typography.fontWeight.bold,
+                color:
+                  portfolio.positions.length > 0
+                    ? theme.colors.info
+                    : theme.colors.gray400,
+              }}
+            >
+              {portfolio.positions.length > 0
+                ? `${portfolio.positions[0].quantity} shs`
+                : 'None'}
             </div>
           </div>
         </div>
@@ -936,152 +1293,355 @@ const TradingSimulator = ({ config, onComplete }) => {
       {/* Events Feed */}
       {events.length > 0 && (
         <div style={{ marginBottom: theme.spacing.md }}>
-          <h4 style={{ margin: 0, marginBottom: theme.spacing.sm }}>Event Log</h4>
-          <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: theme.typography.fontSize.sm }}>
-            {events.slice().reverse().slice(0, 10).map(event => (
-              <div
-                key={event.id}
-                style={{
-                  padding: theme.spacing.sm,
-                  marginBottom: theme.spacing.xs,
-                  backgroundColor: event.type === 'error' ? `${theme.colors.error}10`
-                    : event.type === 'success' ? `${theme.colors.success}10`
-                    : event.type === 'trade' ? `${theme.colors.info}10`
-                    : theme.colors.gray50,
-                  borderLeft: `3px solid ${
-                    event.type === 'error' ? theme.colors.error
-                    : event.type === 'success' ? theme.colors.success
-                    : event.type === 'trade' ? theme.colors.info
-                    : theme.colors.gray300
-                  }`,
-                  borderRadius: theme.borderRadius.sm
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <strong style={{ color: event.type === 'error' ? theme.colors.error : event.type === 'success' ? theme.colors.success : theme.colors.info }}>
-                      {event.title}
-                    </strong>
-                    <span>: {event.message}</span>
+          <h4 style={{ margin: 0, marginBottom: theme.spacing.sm }}>
+            Event Log
+          </h4>
+          <div
+            style={{
+              maxHeight: 200,
+              overflowY: 'auto',
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            {events
+              .slice()
+              .reverse()
+              .slice(0, 10)
+              .map(event => (
+                <div
+                  key={event.id}
+                  style={{
+                    padding: theme.spacing.sm,
+                    marginBottom: theme.spacing.xs,
+                    backgroundColor:
+                      event.type === 'error'
+                        ? `${theme.colors.error}10`
+                        : event.type === 'success'
+                          ? `${theme.colors.success}10`
+                          : event.type === 'trade'
+                            ? `${theme.colors.info}10`
+                            : theme.colors.gray50,
+                    borderLeft: `3px solid ${
+                      event.type === 'error'
+                        ? theme.colors.error
+                        : event.type === 'success'
+                          ? theme.colors.success
+                          : event.type === 'trade'
+                            ? theme.colors.info
+                            : theme.colors.gray300
+                    }`,
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <div>
+                      <strong
+                        style={{
+                          color:
+                            event.type === 'error'
+                              ? theme.colors.error
+                              : event.type === 'success'
+                                ? theme.colors.success
+                                : theme.colors.info,
+                        }}
+                      >
+                        {event.title}
+                      </strong>
+                      <span>: {event.message}</span>
+                    </div>
+                    {event.confidence && (
+                      <span
+                        style={{
+                          fontSize: theme.typography.fontSize.xs,
+                          backgroundColor: theme.colors.gray200,
+                          padding: '2px 6px',
+                          borderRadius: theme.borderRadius.sm,
+                          marginLeft: theme.spacing.sm,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {event.confidence}% conf
+                      </span>
+                    )}
                   </div>
-                  {event.confidence && (
-                    <span style={{
-                      fontSize: theme.typography.fontSize.xs,
-                      backgroundColor: theme.colors.gray200,
-                      padding: '2px 6px',
-                      borderRadius: theme.borderRadius.sm,
-                      marginLeft: theme.spacing.sm,
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {event.confidence}% conf
-                    </span>
+                  {event.reason && (
+                    <div
+                      style={{
+                        marginTop: theme.spacing.xs,
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray600,
+                        fontStyle: 'italic',
+                        paddingLeft: theme.spacing.sm,
+                        borderLeft: `2px solid ${theme.colors.gray300}`,
+                      }}
+                    >
+                      Trigger: {event.reason}
+                    </div>
                   )}
                 </div>
-                {event.reason && (
-                  <div style={{
-                    marginTop: theme.spacing.xs,
-                    fontSize: theme.typography.fontSize.xs,
-                    color: theme.colors.gray600,
-                    fontStyle: 'italic',
-                    paddingLeft: theme.spacing.sm,
-                    borderLeft: `2px solid ${theme.colors.gray300}`
-                  }}>
-                    Trigger: {event.reason}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
 
       {/* Analysis Results */}
       {showAnalysis && analysis && (
-        <div style={{ borderTop: `1px solid ${theme.colors.gray200}`, paddingTop: theme.spacing.md }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+        <div
+          style={{
+            borderTop: `1px solid ${theme.colors.gray200}`,
+            paddingTop: theme.spacing.md,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing.md,
+            }}
+          >
             <h4 style={{ margin: 0 }}>Simulation Analysis</h4>
             <Button size="small" variant="outline" onClick={saveResults}>
               Save Results
             </Button>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: theme.spacing.md,
-            marginBottom: theme.spacing.lg
-          }}>
-            <div style={{
-              padding: theme.spacing.md,
-              backgroundColor: analysis.returnPercent >= 0 ? `${theme.colors.success}10` : `${theme.colors.error}10`,
-              borderRadius: theme.borderRadius.md,
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>Return</div>
-              <div style={{
-                fontSize: theme.typography.fontSize.xxl,
-                fontWeight: theme.typography.fontWeight.bold,
-                color: analysis.returnPercent >= 0 ? theme.colors.success : theme.colors.error
-              }}>
-                {analysis.returnPercent >= 0 ? '+' : ''}{analysis.returnPercent.toFixed(2)}%
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: theme.spacing.md,
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor:
+                  analysis.returnPercent >= 0
+                    ? `${theme.colors.success}10`
+                    : `${theme.colors.error}10`,
+                borderRadius: theme.borderRadius.md,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.gray600,
+                }}
+              >
+                Return
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xxl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    analysis.returnPercent >= 0
+                      ? theme.colors.success
+                      : theme.colors.error,
+                }}
+              >
+                {analysis.returnPercent >= 0 ? '+' : ''}
+                {analysis.returnPercent.toFixed(2)}%
               </div>
             </div>
 
-            <div style={{ padding: theme.spacing.md, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>Win Rate</div>
-              <div style={{
-                fontSize: theme.typography.fontSize.xxl,
-                fontWeight: theme.typography.fontWeight.bold,
-                color: analysis.winRate >= 50 ? theme.colors.success : theme.colors.warning
-              }}>
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor: theme.colors.gray50,
+                borderRadius: theme.borderRadius.md,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.gray600,
+                }}
+              >
+                Win Rate
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xxl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    analysis.winRate >= 50
+                      ? theme.colors.success
+                      : theme.colors.warning,
+                }}
+              >
                 {analysis.winRate.toFixed(0)}%
               </div>
             </div>
 
-            <div style={{ padding: theme.spacing.md, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>Trades</div>
-              <div style={{ fontSize: theme.typography.fontSize.xxl, fontWeight: theme.typography.fontWeight.bold }}>
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor: theme.colors.gray50,
+                borderRadius: theme.borderRadius.md,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.gray600,
+                }}
+              >
+                Trades
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xxl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                }}
+              >
                 {analysis.totalTrades}
               </div>
             </div>
 
-            <div style={{ padding: theme.spacing.md, backgroundColor: theme.colors.gray50, borderRadius: theme.borderRadius.md, textAlign: 'center' }}>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>Stock %</div>
-              <div style={{
-                fontSize: theme.typography.fontSize.xxl,
-                fontWeight: theme.typography.fontWeight.bold,
-                color: analysis.priceChangePercent >= 0 ? theme.colors.success : theme.colors.error
-              }}>
-                {analysis.priceChangePercent >= 0 ? '+' : ''}{analysis.priceChangePercent.toFixed(2)}%
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor: theme.colors.gray50,
+                borderRadius: theme.borderRadius.md,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.gray600,
+                }}
+              >
+                Stock %
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xxl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    analysis.priceChangePercent >= 0
+                      ? theme.colors.success
+                      : theme.colors.error,
+                }}
+              >
+                {analysis.priceChangePercent >= 0 ? '+' : ''}
+                {analysis.priceChangePercent.toFixed(2)}%
               </div>
             </div>
           </div>
 
           {/* Feedback */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: theme.spacing.md,
+            }}
+          >
             {analysis.positives.length > 0 && (
-              <div style={{ padding: theme.spacing.md, backgroundColor: `${theme.colors.success}08`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.success}30` }}>
-                <h5 style={{ margin: 0, marginBottom: theme.spacing.sm, color: theme.colors.success }}>Positives</h5>
-                <ul style={{ margin: 0, paddingLeft: theme.spacing.md, fontSize: theme.typography.fontSize.sm }}>
-                  {analysis.positives.map((p, i) => <li key={i}>{p}</li>)}
+              <div
+                style={{
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.success}08`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.success}30`,
+                }}
+              >
+                <h5
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.sm,
+                    color: theme.colors.success,
+                  }}
+                >
+                  Positives
+                </h5>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: theme.spacing.md,
+                    fontSize: theme.typography.fontSize.sm,
+                  }}
+                >
+                  {analysis.positives.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
                 </ul>
               </div>
             )}
 
             {analysis.negatives.length > 0 && (
-              <div style={{ padding: theme.spacing.md, backgroundColor: `${theme.colors.error}08`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.error}30` }}>
-                <h5 style={{ margin: 0, marginBottom: theme.spacing.sm, color: theme.colors.error }}>Concerns</h5>
-                <ul style={{ margin: 0, paddingLeft: theme.spacing.md, fontSize: theme.typography.fontSize.sm }}>
-                  {analysis.negatives.map((n, i) => <li key={i}>{n}</li>)}
+              <div
+                style={{
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.error}08`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.error}30`,
+                }}
+              >
+                <h5
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.sm,
+                    color: theme.colors.error,
+                  }}
+                >
+                  Concerns
+                </h5>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: theme.spacing.md,
+                    fontSize: theme.typography.fontSize.sm,
+                  }}
+                >
+                  {analysis.negatives.map((n, i) => (
+                    <li key={i}>{n}</li>
+                  ))}
                 </ul>
               </div>
             )}
 
             {analysis.improvements.length > 0 && (
-              <div style={{ padding: theme.spacing.md, backgroundColor: `${theme.colors.info}08`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.info}30` }}>
-                <h5 style={{ margin: 0, marginBottom: theme.spacing.sm, color: theme.colors.info }}>Improvements</h5>
-                <ul style={{ margin: 0, paddingLeft: theme.spacing.md, fontSize: theme.typography.fontSize.sm }}>
-                  {analysis.improvements.map((imp, i) => <li key={i}>{imp}</li>)}
+              <div
+                style={{
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.info}08`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.info}30`,
+                }}
+              >
+                <h5
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.sm,
+                    color: theme.colors.info,
+                  }}
+                >
+                  Improvements
+                </h5>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: theme.spacing.md,
+                    fontSize: theme.typography.fontSize.sm,
+                  }}
+                >
+                  {analysis.improvements.map((imp, i) => (
+                    <li key={i}>{imp}</li>
+                  ))}
                 </ul>
               </div>
             )}

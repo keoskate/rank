@@ -29,7 +29,9 @@ async function rateLimit() {
   const timeSinceLastRequest = now - lastRequestTime;
 
   if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
-    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
+    await new Promise(resolve =>
+      setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest)
+    );
   }
 
   lastRequestTime = Date.now();
@@ -52,8 +54,8 @@ async function alpacaRequest(method, endpoint, data = null) {
     headers: {
       'APCA-API-KEY-ID': credentials.apiKey,
       'APCA-API-SECRET-KEY': credentials.secretKey,
-      'Content-Type': 'application/json'
-    }
+      'Content-Type': 'application/json',
+    },
   };
 
   if (data) {
@@ -66,7 +68,9 @@ async function alpacaRequest(method, endpoint, data = null) {
   } catch (error) {
     if (error.response) {
       console.error(`❌ Alpaca API Error (${endpoint}):`, error.response.data);
-      throw new Error(error.response.data.message || 'Alpaca API request failed');
+      throw new Error(
+        error.response.data.message || 'Alpaca API request failed'
+      );
     }
     throw error;
   }
@@ -87,9 +91,13 @@ async function getAccount() {
   const verification = tradingModeManager.verifyAccount(account.account_number);
 
   console.log(`✅ Account Status: ${account.status}`);
-  console.log(`   Portfolio Value: $${parseFloat(account.portfolio_value).toLocaleString()}`);
+  console.log(
+    `   Portfolio Value: $${parseFloat(account.portfolio_value).toLocaleString()}`
+  );
   console.log(`   Cash: $${parseFloat(account.cash).toLocaleString()}`);
-  console.log(`   Buying Power: $${parseFloat(account.buying_power).toLocaleString()}`);
+  console.log(
+    `   Buying Power: $${parseFloat(account.buying_power).toLocaleString()}`
+  );
 
   if (!verification.matches) {
     console.warn(`⚠️  WARNING: Account number mismatch!`);
@@ -119,7 +127,7 @@ async function getPositions() {
     costBasis: parseFloat(pos.cost_basis),
     unrealizedPL: parseFloat(pos.unrealized_pl),
     unrealizedPLPercent: parseFloat(pos.unrealized_plpc) * 100,
-    changeToday: parseFloat(pos.change_today) * 100
+    changeToday: parseFloat(pos.change_today) * 100,
   }));
 }
 
@@ -142,7 +150,7 @@ async function getPosition(symbol) {
       marketValue: parseFloat(position.market_value),
       costBasis: parseFloat(position.cost_basis),
       unrealizedPL: parseFloat(position.unrealized_pl),
-      unrealizedPLPercent: parseFloat(position.unrealized_plpc) * 100
+      unrealizedPLPercent: parseFloat(position.unrealized_plpc) * 100,
     };
   } catch (error) {
     // Position doesn't exist
@@ -171,7 +179,9 @@ async function placeOrder(orderParams, accountValue = null) {
   if (orderParams.qty !== undefined) {
     orderParams.qty = parseInt(orderParams.qty, 10);
     if (isNaN(orderParams.qty) || orderParams.qty < 1) {
-      throw new Error(`Invalid quantity: ${orderParams.qty}. qty must be a positive integer.`);
+      throw new Error(
+        `Invalid quantity: ${orderParams.qty}. qty must be a positive integer.`
+      );
     }
     // Convert to string as Alpaca API expects string for qty
     orderParams.qty = String(orderParams.qty);
@@ -180,7 +190,10 @@ async function placeOrder(orderParams, accountValue = null) {
   }
 
   // Validate order before placing
-  const validation = tradingModeManager.validateOrder(orderParams, accountValue);
+  const validation = tradingModeManager.validateOrder(
+    orderParams,
+    accountValue
+  );
 
   if (!validation.valid) {
     console.error('❌ Order validation failed:');
@@ -193,7 +206,9 @@ async function placeOrder(orderParams, accountValue = null) {
     validation.warnings.forEach(warn => console.warn(`⚠️  ${warn}`));
   }
 
-  console.log(`📝 Placing ${orderParams.side} order: ${orderParams.qty} shares of ${orderParams.symbol} (${modeInfo.statusText})`);
+  console.log(
+    `📝 Placing ${orderParams.side} order: ${orderParams.qty} shares of ${orderParams.symbol} (${modeInfo.statusText})`
+  );
 
   const order = await alpacaRequest('POST', '/v2/orders', orderParams);
 
@@ -209,10 +224,12 @@ async function placeOrder(orderParams, accountValue = null) {
     timeInForce: order.time_in_force,
     status: order.status,
     filledQty: parseInt(order.filled_qty || 0),
-    filledAvgPrice: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
+    filledAvgPrice: order.filled_avg_price
+      ? parseFloat(order.filled_avg_price)
+      : null,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
-    submittedAt: order.submitted_at
+    submittedAt: order.submitted_at,
   };
 }
 
@@ -236,8 +253,10 @@ async function getOrders(filters = {}) {
     filledQty: parseInt(order.filled_qty || 0),
     type: order.type,
     status: order.status,
-    filledAvgPrice: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
-    createdAt: order.created_at
+    filledAvgPrice: order.filled_avg_price
+      ? parseFloat(order.filled_avg_price)
+      : null,
+    createdAt: order.created_at,
   }));
 }
 
@@ -273,7 +292,10 @@ async function cancelAllOrders() {
  * @returns {Object} - Latest quote data
  */
 async function getLatestQuote(symbol) {
-  const quote = await alpacaRequest('GET', `/v2/stocks/${symbol}/quotes/latest`);
+  const quote = await alpacaRequest(
+    'GET',
+    `/v2/stocks/${symbol}/quotes/latest`
+  );
 
   return {
     symbol: quote.symbol,
@@ -281,7 +303,7 @@ async function getLatestQuote(symbol) {
     askSize: quote.quote.as,
     bidPrice: parseFloat(quote.quote.bp),
     bidSize: quote.quote.bs,
-    timestamp: quote.quote.t
+    timestamp: quote.quote.t,
   };
 }
 
@@ -292,14 +314,17 @@ async function getLatestQuote(symbol) {
  * @returns {Object} - Latest trade data
  */
 async function getLatestTrade(symbol) {
-  const trade = await alpacaRequest('GET', `/v2/stocks/${symbol}/trades/latest`);
+  const trade = await alpacaRequest(
+    'GET',
+    `/v2/stocks/${symbol}/trades/latest`
+  );
 
   return {
     symbol: trade.symbol,
     price: parseFloat(trade.trade.p),
     size: trade.trade.s,
     timestamp: trade.trade.t,
-    exchange: trade.trade.x
+    exchange: trade.trade.x,
   };
 }
 
@@ -313,16 +338,25 @@ async function getLatestTrade(symbol) {
  * @param {number} limit - Max number of bars
  * @returns {Array} - Array of bar data
  */
-async function getBars(symbol, timeframe = '1Day', start = null, end = null, limit = 100) {
+async function getBars(
+  symbol,
+  timeframe = '1Day',
+  start = null,
+  end = null,
+  limit = 100
+) {
   const params = new URLSearchParams({
     timeframe,
-    limit: limit.toString()
+    limit: limit.toString(),
   });
 
   if (start) params.append('start', start);
   if (end) params.append('end', end);
 
-  const data = await alpacaRequest('GET', `/v2/stocks/${symbol}/bars?${params.toString()}`);
+  const data = await alpacaRequest(
+    'GET',
+    `/v2/stocks/${symbol}/bars?${params.toString()}`
+  );
 
   if (!data.bars || data.bars.length === 0) {
     return [];
@@ -336,7 +370,7 @@ async function getBars(symbol, timeframe = '1Day', start = null, end = null, lim
     close: parseFloat(bar.c),
     volume: bar.v,
     vwap: bar.vw ? parseFloat(bar.vw) : null,
-    tradeCount: bar.n
+    tradeCount: bar.n,
   }));
 }
 
@@ -348,7 +382,9 @@ async function getBars(symbol, timeframe = '1Day', start = null, end = null, lim
  * @returns {Object} - Comparison results
  */
 async function validatePriceWithPolygon(symbol, polygonClient) {
-  console.log(`\n🔍 Cross-validating ${symbol} prices between Alpaca and Polygon...`);
+  console.log(
+    `\n🔍 Cross-validating ${symbol} prices between Alpaca and Polygon...`
+  );
 
   try {
     // Get latest price from both sources
@@ -363,7 +399,9 @@ async function validatePriceWithPolygon(symbol, polygonClient) {
 
     console.log(`   Alpaca Price:  $${alpacaPrice.toFixed(2)}`);
     console.log(`   Polygon Price: $${polygonPrice.toFixed(2)}`);
-    console.log(`   Difference:    $${priceDiff.toFixed(2)} (${priceDiffPercent.toFixed(2)}%)`);
+    console.log(
+      `   Difference:    $${priceDiff.toFixed(2)} (${priceDiffPercent.toFixed(2)}%)`
+    );
 
     // Flag if difference is > 0.5%
     const isValid = priceDiffPercent < 0.5;
@@ -381,16 +419,15 @@ async function validatePriceWithPolygon(symbol, polygonClient) {
       difference: priceDiff,
       differencePercent: priceDiffPercent,
       isValid,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-
   } catch (error) {
     console.error(`❌ Validation failed for ${symbol}:`, error.message);
     return {
       symbol,
       error: error.message,
       isValid: false,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
@@ -404,13 +441,24 @@ async function validatePriceWithPolygon(symbol, polygonClient) {
  * @param {Object} polygonClient - Polygon client instance
  * @returns {Object} - Comparison results
  */
-async function validateHistoricalDataWithPolygon(symbol, startDate, endDate, polygonClient) {
-  console.log(`\n🔍 Cross-validating ${symbol} historical data (${startDate} to ${endDate})...`);
+async function validateHistoricalDataWithPolygon(
+  symbol,
+  startDate,
+  endDate,
+  polygonClient
+) {
+  console.log(
+    `\n🔍 Cross-validating ${symbol} historical data (${startDate} to ${endDate})...`
+  );
 
   try {
     // Get bars from both sources
     const alpacaBars = await getBars(symbol, '1Day', startDate, endDate);
-    const polygonBars = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate);
+    const polygonBars = await polygonClient.getHistoricalAggregates(
+      symbol,
+      startDate,
+      endDate
+    );
 
     console.log(`   Alpaca bars:  ${alpacaBars.length}`);
     console.log(`   Polygon bars: ${polygonBars.length}`);
@@ -419,7 +467,9 @@ async function validateHistoricalDataWithPolygon(symbol, startDate, endDate, pol
     const comparisons = [];
 
     for (const alpacaBar of alpacaBars) {
-      const alpacaDate = new Date(alpacaBar.timestamp).toISOString().split('T')[0];
+      const alpacaDate = new Date(alpacaBar.timestamp)
+        .toISOString()
+        .split('T')[0];
       const polygonBar = polygonBars.find(pb => pb.date === alpacaDate);
 
       if (polygonBar) {
@@ -432,7 +482,7 @@ async function validateHistoricalDataWithPolygon(symbol, startDate, endDate, pol
           polygonClose: polygonBar.close,
           difference: closeDiff,
           differencePercent: closeDiffPercent,
-          isValid: closeDiffPercent < 0.5
+          isValid: closeDiffPercent < 0.5,
         });
       }
     }
@@ -440,7 +490,9 @@ async function validateHistoricalDataWithPolygon(symbol, startDate, endDate, pol
     const validCount = comparisons.filter(c => c.isValid).length;
     const validPercent = (validCount / comparisons.length) * 100;
 
-    console.log(`   ✅ Validated ${validCount}/${comparisons.length} dates (${validPercent.toFixed(1)}%)`);
+    console.log(
+      `   ✅ Validated ${validCount}/${comparisons.length} dates (${validPercent.toFixed(1)}%)`
+    );
 
     if (validPercent < 95) {
       console.warn(`   ⚠️  WARNING: Less than 95% of data points validated!`);
@@ -454,16 +506,18 @@ async function validateHistoricalDataWithPolygon(symbol, startDate, endDate, pol
       validPercent,
       comparisons: comparisons.slice(0, 10), // Include first 10 for inspection
       isValid: validPercent >= 95,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-
   } catch (error) {
-    console.error(`❌ Historical validation failed for ${symbol}:`, error.message);
+    console.error(
+      `❌ Historical validation failed for ${symbol}:`,
+      error.message
+    );
     return {
       symbol,
       error: error.message,
       isValid: false,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
@@ -481,7 +535,7 @@ async function marketBuy(symbol, quantity) {
     qty: quantity,
     side: 'buy',
     type: 'market',
-    time_in_force: 'day'
+    time_in_force: 'day',
   });
 }
 
@@ -498,7 +552,7 @@ async function marketSell(symbol, quantity) {
     qty: quantity,
     side: 'sell',
     type: 'market',
-    time_in_force: 'day'
+    time_in_force: 'day',
   });
 }
 
@@ -522,7 +576,10 @@ async function closePosition(symbol) {
  */
 async function closeAllPositions() {
   console.log('📤 Closing all positions...');
-  const result = await alpacaRequest('DELETE', '/v2/positions?cancel_orders=true');
+  const result = await alpacaRequest(
+    'DELETE',
+    '/v2/positions?cancel_orders=true'
+  );
   console.log(`✅ All positions closed`);
   return result;
 }
@@ -548,7 +605,10 @@ async function getAccountActivities(filters = {}) {
   if (filters.page_size) queryParams.push(`page_size=${filters.page_size}`);
 
   const queryString = queryParams.length ? `?${queryParams.join('&')}` : '';
-  const activities = await alpacaRequest('GET', `/v2/account/activities${queryString}`);
+  const activities = await alpacaRequest(
+    'GET',
+    `/v2/account/activities${queryString}`
+  );
 
   return activities;
 }
@@ -579,5 +639,5 @@ module.exports = {
 
   // Cross-validation
   validatePriceWithPolygon,
-  validateHistoricalDataWithPolygon
+  validateHistoricalDataWithPolygon,
 };

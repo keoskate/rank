@@ -23,7 +23,7 @@ import {
   announcePriceAlert,
   testAudioSystem,
   playBuySound,
-  playSellSound
+  playSellSound,
 } from '../../utils/audioNotifications';
 
 // Socket connection
@@ -37,17 +37,41 @@ const DEFAULT_CONFIG = {
   // === CAPITAL ALLOCATION ===
   watchlist: [
     // Tech Giants
-    'NVDA', 'AMD', 'TSLA', 'AMZN', 'META', 'GOOG', 'MSFT', 'PLTR',
+    'NVDA',
+    'AMD',
+    'TSLA',
+    'AMZN',
+    'META',
+    'GOOG',
+    'MSFT',
+    'PLTR',
     // Quantum Computing
-    'IONQ', 'RGTI', 'QBTS', 'RGTX', 'QBTX', 'QBTZ',
+    'IONQ',
+    'RGTI',
+    'QBTS',
+    'RGTX',
+    'QBTX',
+    'QBTZ',
     // Semiconductors & ETFs
-    'SOXL', 'SOXS', 'SOXX', 'AMDL', 'HIMX', 'ARBE',
+    'SOXL',
+    'SOXS',
+    'SOXX',
+    'AMDL',
+    'HIMX',
+    'ARBE',
     // Volatility & Commodities
-    'SPY', 'UVIX', 'TSLQ',
+    'SPY',
+    'UVIX',
+    'TSLQ',
     // Crypto & Other
-    'BTC-USD', 'MSTR',
+    'BTC-USD',
+    'MSTR',
     // Other stocks
-    'RR', 'UURAF', 'PLTU', 'CRVW', 'PLTZ'
+    'RR',
+    'UURAF',
+    'PLTU',
+    'CRVW',
+    'PLTZ',
   ],
   allocatedCapital: 100000,
   maxLeverage: 1.0,
@@ -97,7 +121,7 @@ const DEFAULT_CONFIG = {
 
   // === AUTO-TRADE ===
   autoTrade: false,
-  paperTradeOnly: true
+  paperTradeOnly: true,
 };
 
 // Load config from localStorage
@@ -117,7 +141,7 @@ const loadTradingConfig = () => {
 };
 
 // Save config to localStorage
-const saveTradingConfig = (config) => {
+const saveTradingConfig = config => {
   try {
     localStorage.setItem(TRADING_CONFIG_KEY, JSON.stringify(config));
     console.info('💾 Trading config saved to localStorage');
@@ -160,7 +184,7 @@ const LiveTradingDashboard = () => {
     losses: 0,
     winRate: 0,
     totalPnL: 0,
-    totalPnLPercent: 0
+    totalPnLPercent: 0,
   });
 
   // Real order stats from Alpaca (today's filled orders)
@@ -168,7 +192,7 @@ const LiveTradingDashboard = () => {
     todayOrders: 0,
     todayBuys: 0,
     todaySells: 0,
-    pendingOrders: 0
+    pendingOrders: 0,
   });
 
   // Chart state
@@ -204,7 +228,7 @@ const LiveTradingDashboard = () => {
   // Initialize socket connection
   useEffect(() => {
     socket = io('http://localhost:8080', {
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
     });
 
     socket.on('connect', () => {
@@ -218,19 +242,27 @@ const LiveTradingDashboard = () => {
       setIsConnected(false);
     });
 
-    socket.on('authenticated', (data) => {
+    socket.on('authenticated', data => {
       console.log('Authenticated:', data);
     });
 
-    socket.on('simulation_started', (data) => {
+    socket.on('simulation_started', data => {
       setSessionId(data.sessionId);
       setSessionStatus('running');
-      addAlert('success', 'Trading Started', 'AI trading simulation is now active');
+      addAlert(
+        'success',
+        'Trading Started',
+        'AI trading simulation is now active'
+      );
     });
 
     socket.on('simulation_stopped', () => {
       setSessionStatus('stopped');
-      addAlert('info', 'Trading Stopped', 'AI trading simulation has been stopped');
+      addAlert(
+        'info',
+        'Trading Stopped',
+        'AI trading simulation has been stopped'
+      );
     });
 
     socket.on('simulation_paused', () => {
@@ -243,17 +275,17 @@ const LiveTradingDashboard = () => {
       addAlert('success', 'Trading Resumed', 'AI trading simulation resumed');
     });
 
-    socket.on('ai_decision', (decision) => {
-      setDecisions((prev) => [...prev.slice(-49), decision]);
+    socket.on('ai_decision', decision => {
+      setDecisions(prev => [...prev.slice(-49), decision]);
       // Announce AI decisions if enabled
       if (decision.action === 'BUY' || decision.action === 'SELL') {
         announceAIDecision(decision);
       }
     });
 
-    socket.on('position_update', (position) => {
-      setPositions((prev) => {
-        const idx = prev.findIndex((p) => p.symbol === position.symbol);
+    socket.on('position_update', position => {
+      setPositions(prev => {
+        const idx = prev.findIndex(p => p.symbol === position.symbol);
         if (idx >= 0) {
           const updated = [...prev];
           updated[idx] = position;
@@ -263,7 +295,7 @@ const LiveTradingDashboard = () => {
       });
     });
 
-    socket.on('trade_executed', (trade) => {
+    socket.on('trade_executed', trade => {
       addAlert(
         trade.status === 'filled' ? 'success' : 'info',
         `Trade ${trade.side.toUpperCase()}`,
@@ -275,15 +307,15 @@ const LiveTradingDashboard = () => {
       fetchPositions();
     });
 
-    socket.on('alert', (alert) => {
+    socket.on('alert', alert => {
       addAlert(alert.type, alert.title, alert.message);
     });
 
-    socket.on('daily_summary', (summary) => {
+    socket.on('daily_summary', summary => {
       setStats(summary);
     });
 
-    socket.on('price_update', (data) => {
+    socket.on('price_update', data => {
       // Update chart if it's the selected symbol
       if (data.symbol === chartSymbol) {
         // Update last candle
@@ -367,7 +399,9 @@ const LiveTradingDashboard = () => {
   const fetchOrderStats = async () => {
     try {
       // Fetch filled orders (today's completed trades)
-      const filledRes = await fetch('/api/alpaca/orders?status=filled&limit=100');
+      const filledRes = await fetch(
+        '/api/alpaca/orders?status=filled&limit=100'
+      );
       const filledData = await filledRes.json();
 
       // Fetch pending/open orders
@@ -381,19 +415,19 @@ const LiveTradingDashboard = () => {
         // Filter to today's orders
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const todayOrders = filledOrders.filter((order) => {
+        const todayOrders = filledOrders.filter(order => {
           const orderDate = new Date(order.filled_at || order.submitted_at);
           return orderDate >= today;
         });
 
-        const todayBuys = todayOrders.filter((o) => o.side === 'buy').length;
-        const todaySells = todayOrders.filter((o) => o.side === 'sell').length;
+        const todayBuys = todayOrders.filter(o => o.side === 'buy').length;
+        const todaySells = todayOrders.filter(o => o.side === 'sell').length;
 
         setOrderStats({
           todayOrders: todayOrders.length,
           todayBuys,
           todaySells,
-          pendingOrders: pendingOrders.length
+          pendingOrders: pendingOrders.length,
         });
       }
     } catch (err) {
@@ -417,15 +451,21 @@ const LiveTradingDashboard = () => {
         // Only load config from server on initial load OR when explicitly requested
         // Never overwrite when user is editing to prevent losing their changes
         // Use ref to get current editing state (avoids closure issues)
-        if (data.config && !isEditingConfigRef.current && (!configLoaded || forceLoadConfig)) {
-          setConfig((prevConfig) => ({ ...prevConfig, ...data.config }));
+        if (
+          data.config &&
+          !isEditingConfigRef.current &&
+          (!configLoaded || forceLoadConfig)
+        ) {
+          setConfig(prevConfig => ({ ...prevConfig, ...data.config }));
           setConfigLoaded(true);
         }
         // Restore alerts from server session (only on initial load)
         if (data.alerts && data.alerts.length > 0 && !configLoaded) {
           setAlerts(data.alerts.map((a, i) => ({ ...a, id: Date.now() + i })));
         }
-        console.log(`[LiveTrading] Loaded session "${data.name}" (${data.status})`);
+        console.log(
+          `[LiveTrading] Loaded session "${data.name}" (${data.status})`
+        );
       } else if (data.status === 'not_found') {
         // Session doesn't exist, redirect to sessions list
         navigate('/live-trading');
@@ -441,9 +481,9 @@ const LiveTradingDashboard = () => {
       type,
       title,
       message,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setAlerts((prev) => [...prev.slice(-9), alert]);
+    setAlerts(prev => [...prev.slice(-9), alert]);
   };
 
   // Start trading for current session (resume if stopped, or create new if no session)
@@ -454,7 +494,7 @@ const LiveTradingDashboard = () => {
     try {
       const sessionConfig = {
         ...config,
-        name: sessionName || config.name || 'New Strategy'
+        name: sessionName || config.name || 'New Strategy',
       };
 
       // If we have a URL sessionId, try to resume it
@@ -463,12 +503,23 @@ const LiveTradingDashboard = () => {
         const res = await fetch('/api/ai/session/resume', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: urlSessionId, config: sessionConfig })
+          body: JSON.stringify({
+            sessionId: urlSessionId,
+            config: sessionConfig,
+          }),
         });
         if (res.ok) {
           setSessionStatus('running');
-          addAlert('success', 'Session Resumed', `"${sessionConfig.name}" is now running`);
-          socket?.emit('start_simulation', { userId: 'default_user', sessionId: urlSessionId, config: sessionConfig });
+          addAlert(
+            'success',
+            'Session Resumed',
+            `"${sessionConfig.name}" is now running`
+          );
+          socket?.emit('start_simulation', {
+            userId: 'default_user',
+            sessionId: urlSessionId,
+            config: sessionConfig,
+          });
         }
       } else if (!urlSessionId) {
         // Create a new session and navigate to it
@@ -477,8 +528,8 @@ const LiveTradingDashboard = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: 'default_user',
-            config: sessionConfig
-          })
+            config: sessionConfig,
+          }),
         });
 
         const data = await res.json();
@@ -488,13 +539,21 @@ const LiveTradingDashboard = () => {
         }
 
         setSessionStatus('running');
-        addAlert('success', 'Session Started', `"${sessionConfig.name}" is now running`);
+        addAlert(
+          'success',
+          'Session Started',
+          `"${sessionConfig.name}" is now running`
+        );
 
         // Navigate to the new session URL
         navigate(`/live-trading/${data.sessionId}`);
 
         // Notify via socket
-        socket?.emit('start_simulation', { userId: 'default_user', sessionId: data.sessionId, config: sessionConfig });
+        socket?.emit('start_simulation', {
+          userId: 'default_user',
+          sessionId: data.sessionId,
+          config: sessionConfig,
+        });
       }
     } catch (err) {
       setError(err.message);
@@ -514,7 +573,7 @@ const LiveTradingDashboard = () => {
       const res = await fetch('/api/ai/session/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: urlSessionId })
+        body: JSON.stringify({ sessionId: urlSessionId }),
       });
 
       if (res.ok) {
@@ -537,7 +596,7 @@ const LiveTradingDashboard = () => {
       const res = await fetch('/api/ai/session/pause', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: urlSessionId })
+        body: JSON.stringify({ sessionId: urlSessionId }),
       });
 
       if (res.ok) {
@@ -558,12 +617,16 @@ const LiveTradingDashboard = () => {
       const res = await fetch('/api/ai/session/resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: urlSessionId })
+        body: JSON.stringify({ sessionId: urlSessionId }),
       });
 
       if (res.ok) {
         setSessionStatus('running');
-        addAlert('success', 'Session Resumed', 'Trading session is now running');
+        addAlert(
+          'success',
+          'Session Resumed',
+          'Trading session is now running'
+        );
         socket?.emit('resume_simulation', { sessionId: urlSessionId });
       }
     } catch (err) {
@@ -571,7 +634,7 @@ const LiveTradingDashboard = () => {
     }
   };
 
-  const fetchChartData = async (symbol) => {
+  const fetchChartData = async symbol => {
     try {
       const res = await fetch(`/api/indicators/${symbol}`);
       const data = await res.json();
@@ -586,15 +649,15 @@ const LiveTradingDashboard = () => {
     }
   };
 
-  const selectPosition = (position) => {
+  const selectPosition = position => {
     setSelectedPosition(position);
     fetchChartData(position.symbol);
   };
 
-  const closePosition = async (symbol) => {
+  const closePosition = async symbol => {
     try {
       const res = await fetch(`/api/alpaca/positions/${symbol}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (res.ok) {
@@ -623,7 +686,7 @@ const LiveTradingDashboard = () => {
       isEditingConfigRef.current = false;
     }, 60000);
 
-    setConfig((prev) => ({ ...prev, [key]: value }));
+    setConfig(prev => ({ ...prev, [key]: value }));
   };
 
   const saveConfig = async () => {
@@ -636,7 +699,11 @@ const LiveTradingDashboard = () => {
 
     if (!urlSessionId) {
       // No active session, just save to localStorage (already happens automatically)
-      addAlert('success', 'Config Saved', 'Configuration saved (will be used for new sessions)');
+      addAlert(
+        'success',
+        'Config Saved',
+        'Configuration saved (will be used for new sessions)'
+      );
       setShowConfig(false);
       return;
     }
@@ -645,7 +712,7 @@ const LiveTradingDashboard = () => {
       const res = await fetch(`/api/ai/session/${urlSessionId}/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(config),
       });
 
       if (res.ok) {
@@ -669,14 +736,14 @@ const LiveTradingDashboard = () => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (value === undefined || value === null) return '$0.00';
     const num = parseFloat(value);
     if (isNaN(num)) return '$0.00';
     return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatPercent = (value) => {
+  const formatPercent = value => {
     if (value === undefined || value === null) return '0.00%';
     const num = parseFloat(value);
     if (isNaN(num)) return '0.00%';
@@ -689,7 +756,7 @@ const LiveTradingDashboard = () => {
       style={{
         padding: theme.spacing.lg,
         maxWidth: theme.layout.maxWidthWide,
-        margin: '0 auto'
+        margin: '0 auto',
       }}
     >
       {/* Header */}
@@ -698,7 +765,7 @@ const LiveTradingDashboard = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: theme.spacing.lg
+          marginBottom: theme.spacing.lg,
         }}
       >
         <div>
@@ -711,7 +778,7 @@ const LiveTradingDashboard = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              marginBottom: theme.spacing.xs
+              marginBottom: theme.spacing.xs,
             }}
           >
             ← Back to Sessions
@@ -719,38 +786,71 @@ const LiveTradingDashboard = () => {
           <h1 style={{ margin: 0, fontSize: theme.typography.fontSize.xxl }}>
             {sessionName || 'New Session'}
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, marginTop: theme.spacing.xs }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              marginTop: theme.spacing.xs,
+            }}
+          >
             <span
               style={{
                 width: 10,
                 height: 10,
                 borderRadius: '50%',
                 backgroundColor: getStatusColor(),
-                animation: sessionStatus === 'running' ? 'pulse 2s infinite' : 'none'
+                animation:
+                  sessionStatus === 'running' ? 'pulse 2s infinite' : 'none',
               }}
             />
-            <span style={{ color: theme.colors.gray600, textTransform: 'capitalize' }}>
+            <span
+              style={{
+                color: theme.colors.gray600,
+                textTransform: 'capitalize',
+              }}
+            >
               {sessionStatus}
             </span>
             {isConnected && (
-              <span style={{ color: theme.colors.success, fontSize: theme.typography.fontSize.sm }}>
+              <span
+                style={{
+                  color: theme.colors.success,
+                  fontSize: theme.typography.fontSize.sm,
+                }}
+              >
                 Connected
               </span>
             )}
             {urlSessionId && (
-              <span style={{ color: theme.colors.gray400, fontSize: theme.typography.fontSize.xs, fontFamily: 'monospace' }}>
+              <span
+                style={{
+                  color: theme.colors.gray400,
+                  fontSize: theme.typography.fontSize.xs,
+                  fontFamily: 'monospace',
+                }}
+              >
                 {urlSessionId.slice(0, 8)}...
               </span>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: theme.spacing.sm,
+            alignItems: 'center',
+          }}
+        >
           {/* Audio Toggle Button */}
           <Button
             variant={audioSettings.enabled ? 'primary' : 'outline'}
             onClick={() => {
-              const newSettings = { ...audioSettings, enabled: !audioSettings.enabled };
+              const newSettings = {
+                ...audioSettings,
+                enabled: !audioSettings.enabled,
+              };
               setAudioSettings(newSettings);
               saveAudioSettings(newSettings);
               if (newSettings.enabled) {
@@ -758,13 +858,21 @@ const LiveTradingDashboard = () => {
               }
             }}
             style={{
-              backgroundColor: audioSettings.enabled ? theme.colors.success : 'transparent',
-              borderColor: audioSettings.enabled ? theme.colors.success : theme.colors.gray400,
+              backgroundColor: audioSettings.enabled
+                ? theme.colors.success
+                : 'transparent',
+              borderColor: audioSettings.enabled
+                ? theme.colors.success
+                : theme.colors.gray400,
               color: audioSettings.enabled ? '#fff' : theme.colors.gray600,
               minWidth: 'auto',
-              padding: `${theme.spacing.sm} ${theme.spacing.md}`
+              padding: `${theme.spacing.sm} ${theme.spacing.md}`,
             }}
-            title={audioSettings.enabled ? 'Audio alerts ON - Click to mute' : 'Audio alerts OFF - Click to enable'}
+            title={
+              audioSettings.enabled
+                ? 'Audio alerts ON - Click to mute'
+                : 'Audio alerts OFF - Click to enable'
+            }
           >
             {audioSettings.enabled ? '🔊' : '🔇'}
           </Button>
@@ -774,9 +882,11 @@ const LiveTradingDashboard = () => {
             variant={showSimulator ? 'primary' : 'outline'}
             onClick={() => setShowSimulator(!showSimulator)}
             style={{
-              backgroundColor: showSimulator ? theme.colors.info : 'transparent',
+              backgroundColor: showSimulator
+                ? theme.colors.info
+                : 'transparent',
               borderColor: theme.colors.info,
-              color: showSimulator ? '#fff' : theme.colors.info
+              color: showSimulator ? '#fff' : theme.colors.info,
             }}
           >
             {showSimulator ? 'Hide Simulator' : 'Simulate Trading'}
@@ -822,7 +932,7 @@ const LiveTradingDashboard = () => {
             border: `1px solid ${theme.colors.error}`,
             borderRadius: theme.borderRadius.md,
             marginBottom: theme.spacing.md,
-            color: theme.colors.error
+            color: theme.colors.error,
           }}
         >
           {error}
@@ -831,43 +941,70 @@ const LiveTradingDashboard = () => {
 
       {/* Configuration Panel - Enhanced */}
       {showConfig && (
-        <Card style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.lg }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+        <Card
+          style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.lg }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing.md,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.md,
+              }}
+            >
               <h3 style={{ margin: 0 }}>Trading Configuration</h3>
               {isEditingConfig && (
-                <span style={{
-                  fontSize: theme.typography.fontSize.xs,
-                  color: theme.colors.warning,
-                  padding: '2px 8px',
-                  borderRadius: theme.borderRadius.sm,
-                  backgroundColor: `${theme.colors.warning}15`,
-                  border: `1px solid ${theme.colors.warning}30`
-                }}>
+                <span
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.warning,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor: `${theme.colors.warning}15`,
+                    border: `1px solid ${theme.colors.warning}30`,
+                  }}
+                >
                   Auto-refresh paused while editing
                 </span>
               )}
             </div>
             <div style={{ display: 'flex', gap: theme.spacing.sm }}>
-              <Button onClick={saveConfig} size="small">Save Configuration</Button>
-              <Button variant="ghost" size="small" onClick={() => setShowConfig(false)}>Cancel</Button>
+              <Button onClick={saveConfig} size="small">
+                Save Configuration
+              </Button>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setShowConfig(false)}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
 
           {/* Config Section Tabs */}
-          <div style={{
-            display: 'flex',
-            gap: theme.spacing.xs,
-            marginBottom: theme.spacing.lg,
-            borderBottom: `1px solid ${theme.colors.gray200}`,
-            paddingBottom: theme.spacing.sm
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: theme.spacing.xs,
+              marginBottom: theme.spacing.lg,
+              borderBottom: `1px solid ${theme.colors.gray200}`,
+              paddingBottom: theme.spacing.sm,
+            }}
+          >
             {[
               { id: 'capital', label: '💰 Capital', icon: '💰' },
               { id: 'risk', label: '🛡️ Risk', icon: '🛡️' },
               { id: 'ai', label: '🤖 AI Model', icon: '🤖' },
               { id: 'entry', label: '📈 Entry', icon: '📈' },
-              { id: 'exit', label: '📉 Exit', icon: '📉' }
+              { id: 'exit', label: '📉 Exit', icon: '📉' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -875,13 +1012,17 @@ const LiveTradingDashboard = () => {
                 style={{
                   padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                   border: 'none',
-                  background: configSection === tab.id ? theme.colors.primary : 'transparent',
-                  color: configSection === tab.id ? '#fff' : theme.colors.gray600,
+                  background:
+                    configSection === tab.id
+                      ? theme.colors.primary
+                      : 'transparent',
+                  color:
+                    configSection === tab.id ? '#fff' : theme.colors.gray600,
                   borderRadius: theme.borderRadius.md,
                   cursor: 'pointer',
                   fontWeight: theme.typography.fontWeight.medium,
                   fontSize: theme.typography.fontSize.sm,
-                  transition: theme.transitions.fast
+                  transition: theme.transitions.fast,
                 }}
               >
                 {tab.label}
@@ -892,31 +1033,136 @@ const LiveTradingDashboard = () => {
           {/* CAPITAL ALLOCATION SECTION */}
           {configSection === 'capital' && (
             <div>
-              <div style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.md, backgroundColor: `${theme.colors.info}10`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.info}30` }}>
-                <h4 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.info }}>Capital Summary</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: theme.spacing.md }}>
+              <div
+                style={{
+                  marginBottom: theme.spacing.lg,
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.info}10`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.info}30`,
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: theme.colors.info,
+                  }}
+                >
+                  Capital Summary
+                </h4>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: theme.spacing.md,
+                  }}
+                >
                   <div>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Allocated Capital</div>
-                    <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>${config.allocatedCapital.toLocaleString()}</div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      Allocated Capital
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xl,
+                        fontWeight: theme.typography.fontWeight.bold,
+                      }}
+                    >
+                      ${config.allocatedCapital.toLocaleString()}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>With Leverage ({config.maxLeverage}x)</div>
-                    <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>${(config.allocatedCapital * config.maxLeverage).toLocaleString()}</div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      With Leverage ({config.maxLeverage}x)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xl,
+                        fontWeight: theme.typography.fontWeight.bold,
+                      }}
+                    >
+                      $
+                      {(
+                        config.allocatedCapital * config.maxLeverage
+                      ).toLocaleString()}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Deployable ({100 - config.reserveCashPercent}%)</div>
-                    <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>${(config.allocatedCapital * config.maxLeverage * (1 - config.reserveCashPercent / 100)).toLocaleString()}</div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      Deployable ({100 - config.reserveCashPercent}%)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xl,
+                        fontWeight: theme.typography.fontWeight.bold,
+                      }}
+                    >
+                      $
+                      {(
+                        config.allocatedCapital *
+                        config.maxLeverage *
+                        (1 - config.reserveCashPercent / 100)
+                      ).toLocaleString()}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Max Per Position</div>
-                    <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>${Math.min(config.maxPositionSize, config.allocatedCapital * config.maxPositionSizePercent / 100).toLocaleString()}</div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      Max Per Position
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xl,
+                        fontWeight: theme.typography.fontWeight.bold,
+                      }}
+                    >
+                      $
+                      {Math.min(
+                        config.maxPositionSize,
+                        (config.allocatedCapital *
+                          config.maxPositionSizePercent) /
+                          100
+                      ).toLocaleString()}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Allocated Capital ($)
                   </label>
                   <input
@@ -925,20 +1171,53 @@ const LiveTradingDashboard = () => {
                     max="10000000"
                     step="1000"
                     value={config.allocatedCapital}
-                    onChange={(e) => updateConfig('allocatedCapital', parseInt(e.target.value) || 0)}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'allocatedCapital',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Total capital for AI trading</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Total capital for AI trading
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Max Leverage
                   </label>
                   <select
                     value={config.maxLeverage}
-                    onChange={(e) => updateConfig('maxLeverage', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('maxLeverage', parseFloat(e.target.value))
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   >
                     <option value={1.0}>1x (No Leverage)</option>
                     <option value={1.5}>1.5x</option>
@@ -946,13 +1225,30 @@ const LiveTradingDashboard = () => {
                     <option value={3.0}>3x</option>
                     <option value={4.0}>4x (Aggressive)</option>
                   </select>
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: config.maxLeverage > 2 ? theme.colors.error : theme.colors.gray500 }}>
-                    {config.maxLeverage > 2 ? '⚠️ High leverage increases risk' : 'Buying power multiplier'}
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color:
+                        config.maxLeverage > 2
+                          ? theme.colors.error
+                          : theme.colors.gray500,
+                    }}
+                  >
+                    {config.maxLeverage > 2
+                      ? '⚠️ High leverage increases risk'
+                      : 'Buying power multiplier'}
                   </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Cash Reserve %
                   </label>
                   <input
@@ -960,14 +1256,39 @@ const LiveTradingDashboard = () => {
                     min="0"
                     max="50"
                     value={config.reserveCashPercent}
-                    onChange={(e) => updateConfig('reserveCashPercent', parseInt(e.target.value) || 0)}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'reserveCashPercent',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Keep as emergency cash</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Keep as emergency cash
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Max Positions
                   </label>
                   <input
@@ -975,14 +1296,36 @@ const LiveTradingDashboard = () => {
                     min="1"
                     max="20"
                     value={config.maxPositions}
-                    onChange={(e) => updateConfig('maxPositions', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('maxPositions', parseInt(e.target.value))
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Concurrent open positions</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Concurrent open positions
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Max Position Size %
                   </label>
                   <input
@@ -990,14 +1333,39 @@ const LiveTradingDashboard = () => {
                     min="1"
                     max="50"
                     value={config.maxPositionSizePercent}
-                    onChange={(e) => updateConfig('maxPositionSizePercent', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'maxPositionSizePercent',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Max % of capital per position</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Max % of capital per position
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Max Position Size ($)
                   </label>
                   <input
@@ -1006,15 +1374,40 @@ const LiveTradingDashboard = () => {
                     max="1000000"
                     step="100"
                     value={config.maxPositionSize}
-                    onChange={(e) => updateConfig('maxPositionSize', parseInt(e.target.value) || 0)}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'maxPositionSize',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Absolute max $ per trade</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Absolute max $ per trade
+                  </span>
                 </div>
               </div>
 
               <div style={{ marginTop: theme.spacing.lg }}>
-                <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: theme.spacing.xs,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    fontSize: theme.typography.fontSize.sm,
+                  }}
+                >
                   Watchlist (comma-separated)
                 </label>
                 <input
@@ -1025,29 +1418,46 @@ const LiveTradingDashboard = () => {
                     setIsEditingConfig(true);
                     isEditingConfigRef.current = true;
                   }}
-                  onBlur={(e) => {
+                  onBlur={e => {
                     // Parse and update watchlist on blur
-                    const newWatchlist = e.target.value.split(',').map((s) => s.trim().toUpperCase()).filter(s => s);
-                    setConfig((prev) => ({ ...prev, watchlist: newWatchlist }));
+                    const newWatchlist = e.target.value
+                      .split(',')
+                      .map(s => s.trim().toUpperCase())
+                      .filter(s => s);
+                    setConfig(prev => ({ ...prev, watchlist: newWatchlist }));
                     // Keep editing flag for a bit longer to allow saves
                     setTimeout(() => {
                       setIsEditingConfig(false);
                       isEditingConfigRef.current = false;
                     }, 2000);
                   }}
-                  onChange={(e) => {
+                  onChange={e => {
                     // Keep editing flag active while typing
                     setIsEditingConfig(true);
                     isEditingConfigRef.current = true;
-                    if (configEditTimeoutRef.current) clearTimeout(configEditTimeoutRef.current);
+                    if (configEditTimeoutRef.current)
+                      clearTimeout(configEditTimeoutRef.current);
                     configEditTimeoutRef.current = setTimeout(() => {
                       setIsEditingConfig(false);
                       isEditingConfigRef.current = false;
                     }, 60000);
                   }}
-                  style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                  style={{
+                    width: '100%',
+                    padding: theme.spacing.sm,
+                    border: `1px solid ${theme.colors.gray300}`,
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.md,
+                  }}
                 />
-                <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Symbols to monitor: {config.watchlist.length} stocks</span>
+                <span
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.gray500,
+                  }}
+                >
+                  Symbols to monitor: {config.watchlist.length} stocks
+                </span>
               </div>
             </div>
           )}
@@ -1055,18 +1465,65 @@ const LiveTradingDashboard = () => {
           {/* RISK MANAGEMENT SECTION */}
           {configSection === 'risk' && (
             <div>
-              <div style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.md, backgroundColor: `${theme.colors.warning}10`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.warning}30` }}>
-                <h4 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.warning }}>Risk Profile</h4>
-                <p style={{ margin: 0, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-                  Max risk per trade: ${(config.allocatedCapital * config.riskPerTradePercent / 100).toLocaleString()} |
-                  Daily stop: ${(config.allocatedCapital * config.dailyLossLimitPercent / 100).toLocaleString()} |
-                  Weekly stop: ${(config.allocatedCapital * config.weeklyLossLimitPercent / 100).toLocaleString()}
+              <div
+                style={{
+                  marginBottom: theme.spacing.lg,
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.warning}10`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.warning}30`,
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: theme.colors.warning,
+                  }}
+                >
+                  Risk Profile
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
+                  Max risk per trade: $
+                  {(
+                    (config.allocatedCapital * config.riskPerTradePercent) /
+                    100
+                  ).toLocaleString()}{' '}
+                  | Daily stop: $
+                  {(
+                    (config.allocatedCapital * config.dailyLossLimitPercent) /
+                    100
+                  ).toLocaleString()}{' '}
+                  | Weekly stop: $
+                  {(
+                    (config.allocatedCapital * config.weeklyLossLimitPercent) /
+                    100
+                  ).toLocaleString()}
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Risk Per Trade %
                   </label>
                   <input
@@ -1075,14 +1532,39 @@ const LiveTradingDashboard = () => {
                     max="10"
                     step="0.5"
                     value={config.riskPerTradePercent}
-                    onChange={(e) => updateConfig('riskPerTradePercent', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'riskPerTradePercent',
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Max loss per trade</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Max loss per trade
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Daily Loss Limit %
                   </label>
                   <input
@@ -1090,14 +1572,39 @@ const LiveTradingDashboard = () => {
                     min="1"
                     max="20"
                     value={config.dailyLossLimitPercent}
-                    onChange={(e) => updateConfig('dailyLossLimitPercent', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'dailyLossLimitPercent',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Stop trading for day</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Stop trading for day
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Weekly Loss Limit %
                   </label>
                   <input
@@ -1105,14 +1612,39 @@ const LiveTradingDashboard = () => {
                     min="1"
                     max="30"
                     value={config.weeklyLossLimitPercent}
-                    onChange={(e) => updateConfig('weeklyLossLimitPercent', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'weeklyLossLimitPercent',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Stop trading for week</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Stop trading for week
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Max Consecutive Losses
                   </label>
                   <input
@@ -1120,14 +1652,39 @@ const LiveTradingDashboard = () => {
                     min="1"
                     max="10"
                     value={config.maxConsecutiveLosses}
-                    onChange={(e) => updateConfig('maxConsecutiveLosses', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'maxConsecutiveLosses',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Pause after X losses in a row</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Pause after X losses in a row
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Trailing Stop %
                   </label>
                   <input
@@ -1136,25 +1693,73 @@ const LiveTradingDashboard = () => {
                     max="10"
                     step="0.5"
                     value={config.trailingStopPercent}
-                    onChange={(e) => updateConfig('trailingStopPercent', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'trailingStopPercent',
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>0 = disabled</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    0 = disabled
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: theme.spacing.sm,
+                      cursor: 'pointer',
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={config.paperTradeOnly}
-                      onChange={(e) => updateConfig('paperTradeOnly', e.target.checked)}
+                      onChange={e =>
+                        updateConfig('paperTradeOnly', e.target.checked)
+                      }
                     />
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium, color: config.paperTradeOnly ? theme.colors.success : theme.colors.error }}>
+                    <span
+                      style={{
+                        fontWeight: theme.typography.fontWeight.medium,
+                        color: config.paperTradeOnly
+                          ? theme.colors.success
+                          : theme.colors.error,
+                      }}
+                    >
                       Paper Trading Only
                     </span>
                   </label>
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, marginTop: '4px' }}>
-                    {config.paperTradeOnly ? '✅ Safe mode - no real money' : '⚠️ Real trading enabled!'}
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                      marginTop: '4px',
+                    }}
+                  >
+                    {config.paperTradeOnly
+                      ? '✅ Safe mode - no real money'
+                      : '⚠️ Real trading enabled!'}
                   </span>
                 </div>
               </div>
@@ -1164,16 +1769,51 @@ const LiveTradingDashboard = () => {
           {/* AI MODEL PARAMETERS SECTION */}
           {configSection === 'ai' && (
             <div>
-              <div style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.md, backgroundColor: `${theme.colors.primary}10`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.primary}30` }}>
-                <h4 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.primary }}>AI Signal Thresholds</h4>
-                <p style={{ margin: 0, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+              <div
+                style={{
+                  marginBottom: theme.spacing.lg,
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.primary}10`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.primary}30`,
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  AI Signal Thresholds
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
                   Fine-tune how the AI model evaluates trading opportunities
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Min Confidence %
                   </label>
                   <input
@@ -1181,18 +1821,41 @@ const LiveTradingDashboard = () => {
                     min="50"
                     max="95"
                     value={config.minConfidence}
-                    onChange={(e) => updateConfig('minConfidence', parseInt(e.target.value))}
+                    onChange={e =>
+                      updateConfig('minConfidence', parseInt(e.target.value))
+                    }
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
                     <span>50% (More trades)</span>
-                    <span style={{ fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary }}>{config.minConfidence}%</span>
+                    <span
+                      style={{
+                        fontWeight: theme.typography.fontWeight.bold,
+                        color: theme.colors.primary,
+                      }}
+                    >
+                      {config.minConfidence}%
+                    </span>
                     <span>95% (Fewer trades)</span>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     RSI Oversold Level
                   </label>
                   <input
@@ -1200,14 +1863,36 @@ const LiveTradingDashboard = () => {
                     min="20"
                     max="40"
                     value={config.rsiOversold}
-                    onChange={(e) => updateConfig('rsiOversold', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('rsiOversold', parseInt(e.target.value))
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.success }}>Buy signal when RSI &lt; {config.rsiOversold}</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.success,
+                    }}
+                  >
+                    Buy signal when RSI &lt; {config.rsiOversold}
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     RSI Overbought Level
                   </label>
                   <input
@@ -1215,14 +1900,36 @@ const LiveTradingDashboard = () => {
                     min="60"
                     max="80"
                     value={config.rsiOverbought}
-                    onChange={(e) => updateConfig('rsiOverbought', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('rsiOverbought', parseInt(e.target.value))
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.error }}>Sell signal when RSI &gt; {config.rsiOverbought}</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.error,
+                    }}
+                  >
+                    Sell signal when RSI &gt; {config.rsiOverbought}
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     VWAP Deviation %
                   </label>
                   <input
@@ -1231,14 +1938,39 @@ const LiveTradingDashboard = () => {
                     max="2"
                     step="0.1"
                     value={config.vwapDeviationPercent}
-                    onChange={(e) => updateConfig('vwapDeviationPercent', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'vwapDeviationPercent',
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Entry when price deviates from VWAP</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Entry when price deviates from VWAP
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Volume Multiplier
                   </label>
                   <input
@@ -1247,14 +1979,39 @@ const LiveTradingDashboard = () => {
                     max="3"
                     step="0.1"
                     value={config.volumeMultiplier}
-                    onChange={(e) => updateConfig('volumeMultiplier', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'volumeMultiplier',
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Entry on volume &gt; {config.volumeMultiplier}x average</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Entry on volume &gt; {config.volumeMultiplier}x average
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     ADX Min Strength
                   </label>
                   <input
@@ -1262,38 +2019,98 @@ const LiveTradingDashboard = () => {
                     min="10"
                     max="40"
                     value={config.adxMinStrength}
-                    onChange={(e) => updateConfig('adxMinStrength', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('adxMinStrength', parseInt(e.target.value))
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Minimum trend strength</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Minimum trend strength
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     MACD Sensitivity
                   </label>
                   <select
                     value={config.macdSensitivity}
-                    onChange={(e) => updateConfig('macdSensitivity', e.target.value)}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('macdSensitivity', e.target.value)
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   >
-                    <option value="conservative">Conservative (fewer signals)</option>
+                    <option value="conservative">
+                      Conservative (fewer signals)
+                    </option>
                     <option value="normal">Normal</option>
-                    <option value="aggressive">Aggressive (more signals)</option>
+                    <option value="aggressive">
+                      Aggressive (more signals)
+                    </option>
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: theme.spacing.sm,
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: theme.spacing.sm,
+                      cursor: 'pointer',
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={config.patternRecognition}
-                      onChange={(e) => updateConfig('patternRecognition', e.target.checked)}
+                      onChange={e =>
+                        updateConfig('patternRecognition', e.target.checked)
+                      }
                     />
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>ML Pattern Recognition</span>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      ML Pattern Recognition
+                    </span>
                   </label>
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
-                    {config.patternRecognition ? 'Using TensorFlow.js CNN model' : 'Pattern detection disabled'}
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    {config.patternRecognition
+                      ? 'Using TensorFlow.js CNN model'
+                      : 'Pattern detection disabled'}
                   </span>
                 </div>
               </div>
@@ -1303,31 +2120,87 @@ const LiveTradingDashboard = () => {
           {/* ENTRY CONDITIONS SECTION */}
           {configSection === 'entry' && (
             <div>
-              <div style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.md, backgroundColor: `${theme.colors.success}10`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.success}30` }}>
-                <h4 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.success }}>Entry Strategy</h4>
-                <p style={{ margin: 0, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+              <div
+                style={{
+                  marginBottom: theme.spacing.lg,
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.success}10`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.success}30`,
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: theme.colors.success,
+                  }}
+                >
+                  Entry Strategy
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
                   Configure conditions required before AI opens a position
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Entry Strategy
                   </label>
                   <select
                     value={config.entryStrategy}
-                    onChange={(e) => updateConfig('entryStrategy', e.target.value)}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('entryStrategy', e.target.value)
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   >
-                    <option value="conservative">Conservative (wait for strong signals)</option>
-                    <option value="balanced">Balanced (standard approach)</option>
-                    <option value="aggressive">Aggressive (act on early signals)</option>
+                    <option value="conservative">
+                      Conservative (wait for strong signals)
+                    </option>
+                    <option value="balanced">
+                      Balanced (standard approach)
+                    </option>
+                    <option value="aggressive">
+                      Aggressive (act on early signals)
+                    </option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Min Signals Required
                   </label>
                   <input
@@ -1335,20 +2208,53 @@ const LiveTradingDashboard = () => {
                     min="1"
                     max="5"
                     value={config.minSignalsRequired}
-                    onChange={(e) => updateConfig('minSignalsRequired', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'minSignalsRequired',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Number of confirming signals</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Number of confirming signals
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Preferred Timeframe
                   </label>
                   <select
                     value={config.preferredTimeframe}
-                    onChange={(e) => updateConfig('preferredTimeframe', e.target.value)}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig('preferredTimeframe', e.target.value)
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   >
                     <option value="1min">1 Minute (Scalping)</option>
                     <option value="5min">5 Minutes (Day Trading)</option>
@@ -1358,40 +2264,122 @@ const LiveTradingDashboard = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer', padding: theme.spacing.sm, backgroundColor: config.requireVolumeSpike ? `${theme.colors.success}10` : 'transparent', borderRadius: theme.borderRadius.sm }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                  marginTop: theme.spacing.lg,
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    cursor: 'pointer',
+                    padding: theme.spacing.sm,
+                    backgroundColor: config.requireVolumeSpike
+                      ? `${theme.colors.success}10`
+                      : 'transparent',
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.requireVolumeSpike}
-                    onChange={(e) => updateConfig('requireVolumeSpike', e.target.checked)}
+                    onChange={e =>
+                      updateConfig('requireVolumeSpike', e.target.checked)
+                    }
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>Require Volume Spike</span>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Volume must exceed average</div>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      Require Volume Spike
+                    </span>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      Volume must exceed average
+                    </div>
                   </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer', padding: theme.spacing.sm, backgroundColor: config.requireTrendAlignment ? `${theme.colors.success}10` : 'transparent', borderRadius: theme.borderRadius.sm }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    cursor: 'pointer',
+                    padding: theme.spacing.sm,
+                    backgroundColor: config.requireTrendAlignment
+                      ? `${theme.colors.success}10`
+                      : 'transparent',
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.requireTrendAlignment}
-                    onChange={(e) => updateConfig('requireTrendAlignment', e.target.checked)}
+                    onChange={e =>
+                      updateConfig('requireTrendAlignment', e.target.checked)
+                    }
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>Require Trend Alignment</span>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Price vs VWAP confirmation</div>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      Require Trend Alignment
+                    </span>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      Price vs VWAP confirmation
+                    </div>
                   </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer', padding: theme.spacing.sm, backgroundColor: config.requireRsiSignal ? `${theme.colors.success}10` : 'transparent', borderRadius: theme.borderRadius.sm }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    cursor: 'pointer',
+                    padding: theme.spacing.sm,
+                    backgroundColor: config.requireRsiSignal
+                      ? `${theme.colors.success}10`
+                      : 'transparent',
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.requireRsiSignal}
-                    onChange={(e) => updateConfig('requireRsiSignal', e.target.checked)}
+                    onChange={e =>
+                      updateConfig('requireRsiSignal', e.target.checked)
+                    }
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>Require RSI Signal</span>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>RSI must be oversold/overbought</div>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      Require RSI Signal
+                    </span>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      RSI must be oversold/overbought
+                    </div>
                   </div>
                 </label>
               </div>
@@ -1401,16 +2389,56 @@ const LiveTradingDashboard = () => {
           {/* EXIT CONDITIONS SECTION */}
           {configSection === 'exit' && (
             <div>
-              <div style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.md, backgroundColor: `${theme.colors.error}10`, borderRadius: theme.borderRadius.md, border: `1px solid ${theme.colors.error}30` }}>
-                <h4 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.error }}>Exit Strategy</h4>
-                <p style={{ margin: 0, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-                  Risk/Reward: {config.takeProfitPercent}% profit / {config.stopLossPercent}% loss = {(config.takeProfitPercent / config.stopLossPercent).toFixed(1)}:1 ratio
+              <div
+                style={{
+                  marginBottom: theme.spacing.lg,
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.error}10`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${theme.colors.error}30`,
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: theme.colors.error,
+                  }}
+                >
+                  Exit Strategy
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
+                  Risk/Reward: {config.takeProfitPercent}% profit /{' '}
+                  {config.stopLossPercent}% loss ={' '}
+                  {(config.takeProfitPercent / config.stopLossPercent).toFixed(
+                    1
+                  )}
+                  :1 ratio
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Take Profit %
                   </label>
                   <input
@@ -1419,14 +2447,39 @@ const LiveTradingDashboard = () => {
                     max="10"
                     step="0.5"
                     value={config.takeProfitPercent}
-                    onChange={(e) => updateConfig('takeProfitPercent', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'takeProfitPercent',
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.success }}>Exit at +{config.takeProfitPercent}% profit</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.success,
+                    }}
+                  >
+                    Exit at +{config.takeProfitPercent}% profit
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Stop Loss %
                   </label>
                   <input
@@ -1435,14 +2488,39 @@ const LiveTradingDashboard = () => {
                     max="5"
                     step="0.5"
                     value={config.stopLossPercent}
-                    onChange={(e) => updateConfig('stopLossPercent', parseFloat(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'stopLossPercent',
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.error }}>Exit at -{config.stopLossPercent}% loss</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.error,
+                    }}
+                  >
+                    Exit at -{config.stopLossPercent}% loss
+                  </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.medium, fontSize: theme.typography.fontSize.sm }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: theme.spacing.xs,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Exit Before Close (minutes)
                   </label>
                   <input
@@ -1450,66 +2528,194 @@ const LiveTradingDashboard = () => {
                     min="5"
                     max="60"
                     value={config.exitBeforeCloseMinutes}
-                    onChange={(e) => updateConfig('exitBeforeCloseMinutes', parseInt(e.target.value))}
-                    style={{ width: '100%', padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray300}`, borderRadius: theme.borderRadius.sm, fontSize: theme.typography.fontSize.md }}
+                    onChange={e =>
+                      updateConfig(
+                        'exitBeforeCloseMinutes',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.md,
+                    }}
                     disabled={!config.exitBeforeClose}
                   />
-                  <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Close day trades before market close</span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray500,
+                    }}
+                  >
+                    Close day trades before market close
+                  </span>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer', padding: theme.spacing.sm, backgroundColor: config.useAdaptiveTargets ? `${theme.colors.info}10` : 'transparent', borderRadius: theme.borderRadius.sm }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: theme.spacing.md,
+                  marginTop: theme.spacing.lg,
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    cursor: 'pointer',
+                    padding: theme.spacing.sm,
+                    backgroundColor: config.useAdaptiveTargets
+                      ? `${theme.colors.info}10`
+                      : 'transparent',
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.useAdaptiveTargets}
-                    onChange={(e) => updateConfig('useAdaptiveTargets', e.target.checked)}
+                    onChange={e =>
+                      updateConfig('useAdaptiveTargets', e.target.checked)
+                    }
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>Adaptive Targets (ATR)</span>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>AI adjusts based on volatility</div>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      Adaptive Targets (ATR)
+                    </span>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      AI adjusts based on volatility
+                    </div>
                   </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer', padding: theme.spacing.sm, backgroundColor: config.exitOnRsiExtreme ? `${theme.colors.info}10` : 'transparent', borderRadius: theme.borderRadius.sm }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    cursor: 'pointer',
+                    padding: theme.spacing.sm,
+                    backgroundColor: config.exitOnRsiExtreme
+                      ? `${theme.colors.info}10`
+                      : 'transparent',
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.exitOnRsiExtreme}
-                    onChange={(e) => updateConfig('exitOnRsiExtreme', e.target.checked)}
+                    onChange={e =>
+                      updateConfig('exitOnRsiExtreme', e.target.checked)
+                    }
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>Exit on RSI Extreme</span>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>Close when RSI hits extreme</div>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      Exit on RSI Extreme
+                    </span>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      Close when RSI hits extreme
+                    </div>
                   </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, cursor: 'pointer', padding: theme.spacing.sm, backgroundColor: config.exitBeforeClose ? `${theme.colors.info}10` : 'transparent', borderRadius: theme.borderRadius.sm }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    cursor: 'pointer',
+                    padding: theme.spacing.sm,
+                    backgroundColor: config.exitBeforeClose
+                      ? `${theme.colors.info}10`
+                      : 'transparent',
+                    borderRadius: theme.borderRadius.sm,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.exitBeforeClose}
-                    onChange={(e) => updateConfig('exitBeforeClose', e.target.checked)}
+                    onChange={e =>
+                      updateConfig('exitBeforeClose', e.target.checked)
+                    }
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.medium }}>Exit Before Market Close</span>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>No overnight positions</div>
+                    <span
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
+                      Exit Before Market Close
+                    </span>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
+                      No overnight positions
+                    </div>
                   </div>
                 </label>
               </div>
 
               {/* Auto-Trade Toggle */}
-              <div style={{ marginTop: theme.spacing.xl, padding: theme.spacing.md, backgroundColor: config.autoTrade ? `${theme.colors.warning}20` : theme.colors.gray50, borderRadius: theme.borderRadius.md, border: `2px solid ${config.autoTrade ? theme.colors.warning : theme.colors.gray200}` }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, cursor: 'pointer' }}>
+              <div
+                style={{
+                  marginTop: theme.spacing.xl,
+                  padding: theme.spacing.md,
+                  backgroundColor: config.autoTrade
+                    ? `${theme.colors.warning}20`
+                    : theme.colors.gray50,
+                  borderRadius: theme.borderRadius.md,
+                  border: `2px solid ${config.autoTrade ? theme.colors.warning : theme.colors.gray200}`,
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.md,
+                    cursor: 'pointer',
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.autoTrade}
-                    onChange={(e) => updateConfig('autoTrade', e.target.checked)}
+                    onChange={e => updateConfig('autoTrade', e.target.checked)}
                     style={{ width: 20, height: 20 }}
                   />
                   <div>
-                    <span style={{ fontWeight: theme.typography.fontWeight.bold, fontSize: theme.typography.fontSize.md }}>
+                    <span
+                      style={{
+                        fontWeight: theme.typography.fontWeight.bold,
+                        fontSize: theme.typography.fontSize.md,
+                      }}
+                    >
                       Enable Auto-Trading
                     </span>
-                    <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginTop: '4px' }}>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.sm,
+                        color: theme.colors.gray600,
+                        marginTop: '4px',
+                      }}
+                    >
                       {config.autoTrade
                         ? '⚠️ AI will automatically execute trades on your account'
                         : 'AI will only suggest trades, no automatic execution'}
@@ -1526,7 +2732,7 @@ const LiveTradingDashboard = () => {
       {showSimulator && (
         <TradingSimulator
           config={config}
-          onComplete={(results) => {
+          onComplete={results => {
             // Optionally handle simulation results
             console.log('Simulation completed:', results);
           }}
@@ -1539,13 +2745,17 @@ const LiveTradingDashboard = () => {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: theme.spacing.md,
-          marginBottom: theme.spacing.lg
+          marginBottom: theme.spacing.lg,
         }}
       >
         <MetricCard
           title="Account Equity"
           value={formatCurrency(account?.equity || account?.portfolio_value)}
-          subtitle={account?.buying_power ? `Cash: ${formatCurrency(account.buying_power)}` : 'Loading...'}
+          subtitle={
+            account?.buying_power
+              ? `Cash: ${formatCurrency(account.buying_power)}`
+              : 'Loading...'
+          }
         />
         <MetricCard
           title="Today's P&L"
@@ -1556,7 +2766,7 @@ const LiveTradingDashboard = () => {
           )}
           subtitle={
             account?.equity && account?.last_equity
-              ? `${((parseFloat(account.equity) - parseFloat(account.last_equity)) / parseFloat(account.last_equity) * 100).toFixed(2)}% change`
+              ? `${(((parseFloat(account.equity) - parseFloat(account.last_equity)) / parseFloat(account.last_equity)) * 100).toFixed(2)}% change`
               : 'vs yesterday close'
           }
           variant={
@@ -1576,21 +2786,35 @@ const LiveTradingDashboard = () => {
         <MetricCard
           title="Pending Orders"
           value={orderStats.pendingOrders}
-          subtitle={orderStats.pendingOrders > 0 ? 'Awaiting fill' : 'None queued'}
+          subtitle={
+            orderStats.pendingOrders > 0 ? 'Awaiting fill' : 'None queued'
+          }
           variant={orderStats.pendingOrders > 0 ? 'warning' : 'default'}
         />
         <MetricCard
           title="Open Positions"
           value={positions.length}
           subtitle={`Limit: ${config.maxPositions} max`}
-          variant={positions.length >= config.maxPositions ? 'warning' : positions.length > 0 ? 'info' : 'default'}
+          variant={
+            positions.length >= config.maxPositions
+              ? 'warning'
+              : positions.length > 0
+                ? 'info'
+                : 'default'
+          }
         />
         {urlSessionId && stats.totalTrades > 0 && (
           <MetricCard
             title="AI Session"
             value={`${stats.winRate || 0}%`}
             subtitle={`${stats.wins}W/${stats.losses}L (${stats.totalTrades} trades)`}
-            variant={stats.winRate >= 50 ? 'success' : stats.winRate > 0 ? 'warning' : 'default'}
+            variant={
+              stats.winRate >= 50
+                ? 'success'
+                : stats.winRate > 0
+                  ? 'warning'
+                  : 'default'
+            }
           />
         )}
       </div>
@@ -1600,7 +2824,7 @@ const LiveTradingDashboard = () => {
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 350px',
-          gap: theme.spacing.lg
+          gap: theme.spacing.lg,
         }}
       >
         {/* Left Column - Chart and Positions */}
@@ -1619,9 +2843,11 @@ const LiveTradingDashboard = () => {
           ) : (
             <WatchlistPanel
               watchlist={config.watchlist}
-              onSelectSymbol={(symbol) => fetchChartData(symbol)}
+              onSelectSymbol={symbol => fetchChartData(symbol)}
               sessionStatus={sessionStatus}
-              onReorderWatchlist={(newWatchlist) => updateConfig('watchlist', newWatchlist)}
+              onReorderWatchlist={newWatchlist =>
+                updateConfig('watchlist', newWatchlist)
+              }
             />
           )}
 
@@ -1629,32 +2855,88 @@ const LiveTradingDashboard = () => {
           <Card style={{ marginTop: theme.spacing.lg }}>
             <h3 style={{ marginTop: 0 }}>Active Positions</h3>
             {positions.length === 0 ? (
-              <p style={{ color: theme.colors.gray500 }}>No open positions. AI is monitoring {config.watchlist.length} stocks for opportunities.</p>
+              <p style={{ color: theme.colors.gray500 }}>
+                No open positions. AI is monitoring {config.watchlist.length}{' '}
+                stocks for opportunities.
+              </p>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: `1px solid ${theme.colors.gray200}` }}>
-                      <th style={{ textAlign: 'left', padding: theme.spacing.sm }}>Symbol</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Qty</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Avg Cost</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Current</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>P&L</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>P&L %</th>
-                      <th style={{ textAlign: 'center', padding: theme.spacing.sm }}>Actions</th>
+                    <tr
+                      style={{
+                        borderBottom: `1px solid ${theme.colors.gray200}`,
+                      }}
+                    >
+                      <th
+                        style={{ textAlign: 'left', padding: theme.spacing.sm }}
+                      >
+                        Symbol
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        Qty
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        Avg Cost
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        Current
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        P&L
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        P&L %
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'center',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(Array.isArray(positions) ? positions : []).map((pos) => {
+                    {(Array.isArray(positions) ? positions : []).map(pos => {
                       // Handle both camelCase (from alpacaClient) and snake_case (raw API) field names
                       const qty = pos.quantity || pos.qty;
                       const avgPrice = pos.avgEntryPrice || pos.avg_entry_price;
-                      const currentPrice = pos.currentPrice || pos.current_price;
-                      const unrealizedPL = pos.unrealizedPL || pos.unrealized_pl;
+                      const currentPrice =
+                        pos.currentPrice || pos.current_price;
+                      const unrealizedPL =
+                        pos.unrealizedPL || pos.unrealized_pl;
                       // unrealizedPLPercent is already multiplied by 100 in alpacaClient, unrealized_plpc is decimal
-                      const unrealizedPLPercent = pos.unrealizedPLPercent !== undefined
-                        ? pos.unrealizedPLPercent
-                        : (parseFloat(pos.unrealized_plpc || 0) * 100);
+                      const unrealizedPLPercent =
+                        pos.unrealizedPLPercent !== undefined
+                          ? pos.unrealizedPLPercent
+                          : parseFloat(pos.unrealized_plpc || 0) * 100;
                       const isPositive = parseFloat(unrealizedPL) >= 0;
 
                       return (
@@ -1667,26 +2949,48 @@ const LiveTradingDashboard = () => {
                               selectedPosition?.symbol === pos.symbol
                                 ? theme.colors.gray100
                                 : 'transparent',
-                            borderBottom: `1px solid ${theme.colors.gray100}`
+                            borderBottom: `1px solid ${theme.colors.gray100}`,
                           }}
                         >
-                          <td style={{ padding: theme.spacing.sm, fontWeight: theme.typography.fontWeight.bold }}>
+                          <td
+                            style={{
+                              padding: theme.spacing.sm,
+                              fontWeight: theme.typography.fontWeight.bold,
+                            }}
+                          >
                             {pos.symbol}
                           </td>
-                          <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          <td
+                            style={{
+                              textAlign: 'right',
+                              padding: theme.spacing.sm,
+                            }}
+                          >
                             {qty}
                           </td>
-                          <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          <td
+                            style={{
+                              textAlign: 'right',
+                              padding: theme.spacing.sm,
+                            }}
+                          >
                             {formatCurrency(avgPrice)}
                           </td>
-                          <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          <td
+                            style={{
+                              textAlign: 'right',
+                              padding: theme.spacing.sm,
+                            }}
+                          >
                             {formatCurrency(currentPrice)}
                           </td>
                           <td
                             style={{
                               textAlign: 'right',
                               padding: theme.spacing.sm,
-                              color: isPositive ? theme.colors.success : theme.colors.error
+                              color: isPositive
+                                ? theme.colors.success
+                                : theme.colors.error,
                             }}
                           >
                             {formatCurrency(unrealizedPL)}
@@ -1695,16 +2999,23 @@ const LiveTradingDashboard = () => {
                             style={{
                               textAlign: 'right',
                               padding: theme.spacing.sm,
-                              color: isPositive ? theme.colors.success : theme.colors.error
+                              color: isPositive
+                                ? theme.colors.success
+                                : theme.colors.error,
                             }}
                           >
                             {formatPercent(unrealizedPLPercent)}
                           </td>
-                          <td style={{ textAlign: 'center', padding: theme.spacing.sm }}>
+                          <td
+                            style={{
+                              textAlign: 'center',
+                              padding: theme.spacing.sm,
+                            }}
+                          >
                             <Button
                               size="small"
                               variant="danger"
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation();
                                 closePosition(pos.symbol);
                               }}
@@ -1731,7 +3042,7 @@ const LiveTradingDashboard = () => {
               style={{
                 height: 450,
                 overflowY: 'auto',
-                fontSize: theme.typography.fontSize.sm
+                fontSize: theme.typography.fontSize.sm,
               }}
             >
               {decisions.length === 0 ? (
@@ -1758,11 +3069,19 @@ const LiveTradingDashboard = () => {
                           : decision.action === 'SELL'
                             ? theme.colors.error
                             : theme.colors.gray300
-                      }`
+                      }`,
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: theme.typography.fontWeight.bold }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span
+                        style={{ fontWeight: theme.typography.fontWeight.bold }}
+                      >
                         {decision.symbol}
                       </span>
                       <span
@@ -1776,13 +3095,18 @@ const LiveTradingDashboard = () => {
                                 : theme.colors.gray400,
                           color: '#fff',
                           borderRadius: theme.borderRadius.sm,
-                          fontSize: theme.typography.fontSize.xs
+                          fontSize: theme.typography.fontSize.xs,
                         }}
                       >
                         {decision.action}
                       </span>
                     </div>
-                    <div style={{ marginTop: theme.spacing.xs, color: theme.colors.gray600 }}>
+                    <div
+                      style={{
+                        marginTop: theme.spacing.xs,
+                        color: theme.colors.gray600,
+                      }}
+                    >
                       Confidence: {decision.confidence}%
                     </div>
                     {decision.reasons && decision.reasons.length > 0 && (
@@ -1790,7 +3114,7 @@ const LiveTradingDashboard = () => {
                         style={{
                           margin: `${theme.spacing.xs} 0 0 0`,
                           paddingLeft: theme.spacing.md,
-                          color: theme.colors.gray600
+                          color: theme.colors.gray600,
                         }}
                       >
                         {decision.reasons.slice(0, 3).map((reason, i) => (
@@ -1802,7 +3126,7 @@ const LiveTradingDashboard = () => {
                       style={{
                         marginTop: theme.spacing.xs,
                         fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray400
+                        color: theme.colors.gray400,
                       }}
                     >
                       {new Date(decision.timestamp).toLocaleTimeString()}
@@ -1824,7 +3148,7 @@ const LiveTradingDashboard = () => {
                 alerts
                   .slice()
                   .reverse()
-                  .map((alert) => (
+                  .map(alert => (
                     <div
                       key={alert.id}
                       style={{
@@ -1847,20 +3171,29 @@ const LiveTradingDashboard = () => {
                               : alert.type === 'warning'
                                 ? theme.colors.warning
                                 : theme.colors.info
-                        }`
+                        }`,
                       }}
                     >
-                      <div style={{ fontWeight: theme.typography.fontWeight.medium }}>
+                      <div
+                        style={{
+                          fontWeight: theme.typography.fontWeight.medium,
+                        }}
+                      >
                         {alert.title}
                       </div>
-                      <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+                      <div
+                        style={{
+                          fontSize: theme.typography.fontSize.sm,
+                          color: theme.colors.gray600,
+                        }}
+                      >
                         {alert.message}
                       </div>
                       <div
                         style={{
                           fontSize: theme.typography.fontSize.xs,
                           color: theme.colors.gray400,
-                          marginTop: theme.spacing.xs
+                          marginTop: theme.spacing.xs,
                         }}
                       >
                         {new Date(alert.timestamp).toLocaleTimeString()}
@@ -1875,17 +3208,39 @@ const LiveTradingDashboard = () => {
           <Card style={{ marginTop: theme.spacing.lg }}>
             <h3 style={{ marginTop: 0 }}>Market Status</h3>
             <div style={{ fontSize: theme.typography.fontSize.sm }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
                 <span>Market Hours</span>
-                <span style={{ color: theme.colors.gray600 }}>9:30 AM - 4:00 PM ET</span>
+                <span style={{ color: theme.colors.gray600 }}>
+                  9:30 AM - 4:00 PM ET
+                </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
                 <span>Watchlist</span>
-                <span style={{ color: theme.colors.gray600 }}>{config.watchlist.length} symbols</span>
+                <span style={{ color: theme.colors.gray600 }}>
+                  {config.watchlist.length} symbols
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Auto-Trade</span>
-                <span style={{ color: config.autoTrade ? theme.colors.success : theme.colors.gray400 }}>
+                <span
+                  style={{
+                    color: config.autoTrade
+                      ? theme.colors.success
+                      : theme.colors.gray400,
+                  }}
+                >
                   {config.autoTrade ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
@@ -1914,7 +3269,7 @@ const AnimatedValue = ({ value, isAnimating, direction }) => {
         display: 'inline-block',
         transition: 'all 0.2s ease',
         transform: isAnimating ? 'scale(1.05)' : 'scale(1)',
-        opacity: isAnimating ? 0.8 : 1
+        opacity: isAnimating ? 0.8 : 1,
       }}
     >
       {value}
@@ -1923,7 +3278,12 @@ const AnimatedValue = ({ value, isAnimating, direction }) => {
 };
 
 // Watchlist Panel Component - Split-Flap Display with real-time updates
-const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWatchlist }) => {
+const WatchlistPanel = ({
+  watchlist,
+  onSelectSymbol,
+  sessionStatus,
+  onReorderWatchlist,
+}) => {
   const [stockData, setStockData] = useState({});
   const [prevStockData, setPrevStockData] = useState({});
   const [initialLoading, setInitialLoading] = useState(true);
@@ -1947,7 +3307,7 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
 
       // Fetch data for all watchlist symbols in parallel
       await Promise.all(
-        localWatchlist.map(async (symbol) => {
+        localWatchlist.map(async symbol => {
           try {
             const res = await fetch(`/api/stock/analysis/${symbol}`);
             if (res.ok) {
@@ -1994,7 +3354,7 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
     }
   }, [localWatchlist]);
 
-  const getSignalColor = (action) => {
+  const getSignalColor = action => {
     if (!action) return theme.colors.gray400;
     const a = action.toLowerCase();
     if (a.includes('buy')) return theme.colors.success;
@@ -2003,7 +3363,7 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
   };
 
   // Get RSI background color with gradient based on value
-  const getRsiBackground = (rsi) => {
+  const getRsiBackground = rsi => {
     if (!rsi) return theme.colors.gray100;
     const val = parseFloat(rsi);
     if (val <= 30) return `rgba(34, 197, 94, ${0.2 + (30 - val) / 100})`;
@@ -2011,7 +3371,7 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
     return theme.colors.gray100;
   };
 
-  const getRsiTextColor = (rsi) => {
+  const getRsiTextColor = rsi => {
     if (!rsi) return theme.colors.gray600;
     const val = parseFloat(rsi);
     if (val <= 30) return theme.colors.success;
@@ -2019,19 +3379,19 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
     return theme.colors.gray700;
   };
 
-  const formatPrice = (price) => {
+  const formatPrice = price => {
     if (!price) return '---.--';
     return `$${parseFloat(price).toFixed(2)}`;
   };
 
-  const formatChange = (change) => {
+  const formatChange = change => {
     if (!change) return '+0.00%';
     const val = parseFloat(change);
     return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
   };
 
   // Determine if price went up or down
-  const getPriceDirection = (symbol) => {
+  const getPriceDirection = symbol => {
     const oldData = prevStockData[symbol];
     const newData = stockData[symbol];
     if (!oldData || !newData) return 'neutral';
@@ -2071,47 +3431,69 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
       `}</style>
 
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: theme.spacing.md
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.md,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}
+        >
           <h3 style={{ margin: 0, fontSize: theme.typography.fontSize.md }}>
             Live Quotes
           </h3>
-          <span style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: sessionStatus === 'running' ? theme.colors.success : theme.colors.gray400,
-            animation: sessionStatus === 'running' ? 'pulse 1.5s infinite' : 'none'
-          }} />
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor:
+                sessionStatus === 'running'
+                  ? theme.colors.success
+                  : theme.colors.gray400,
+              animation:
+                sessionStatus === 'running' ? 'pulse 1.5s infinite' : 'none',
+            }}
+          />
         </div>
-        <div style={{
-          fontSize: theme.typography.fontSize.xs,
-          color: theme.colors.gray500
-        }}>
-          {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Loading...'}
+        <div
+          style={{
+            fontSize: theme.typography.fontSize.xs,
+            color: theme.colors.gray500,
+          }}
+        >
+          {lastUpdate
+            ? `Updated ${lastUpdate.toLocaleTimeString()}`
+            : 'Loading...'}
         </div>
       </div>
 
       {initialLoading ? (
-        <div style={{
-          textAlign: 'center',
-          padding: theme.spacing.xl,
-          color: theme.colors.gray500
-        }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: theme.spacing.xl,
+            color: theme.colors.gray500,
+          }}
+        >
           Loading market data...
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-          gap: theme.spacing.xs
-        }}>
-          {localWatchlist.map((symbol) => {
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: theme.spacing.xs,
+          }}
+        >
+          {localWatchlist.map(symbol => {
             const data = stockData[symbol];
             const rec = data?.recommendation;
             const price = data?.price?.current;
@@ -2135,119 +3517,153 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
                   border: `1px solid ${theme.colors.gray200}`,
                   position: 'relative',
                   overflow: 'hidden',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow =
+                    '0 4px 12px rgba(0,0,0,0.15)';
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.boxShadow = 'none';
                   e.currentTarget.style.borderColor = theme.colors.gray200;
                 }}
               >
                 {/* Flash bar indicator for price changes */}
                 {isAnimating && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '3px',
-                    backgroundColor: direction === 'up' ? theme.colors.success : direction === 'down' ? theme.colors.error : theme.colors.warning,
-                    animation: 'priceFlash 0.3s ease-in-out 3'
-                  }} />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '3px',
+                      backgroundColor:
+                        direction === 'up'
+                          ? theme.colors.success
+                          : direction === 'down'
+                            ? theme.colors.error
+                            : theme.colors.warning,
+                      animation: 'priceFlash 0.3s ease-in-out 3',
+                    }}
+                  />
                 )}
 
                 {/* Symbol & Signal Badge */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '4px'
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '4px',
+                  }}
+                >
                   <Link
                     to={`/stock/${symbol}`}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                     style={{
                       fontWeight: theme.typography.fontWeight.bold,
                       fontSize: theme.typography.fontSize.sm,
                       color: theme.colors.gray800,
-                      textDecoration: 'none'
+                      textDecoration: 'none',
                     }}
                   >
                     {symbol}
                   </Link>
-                  <span style={{
-                    padding: '2px 6px',
-                    backgroundColor: getSignalColor(rec?.action),
-                    color: '#fff',
-                    borderRadius: theme.borderRadius.sm,
-                    fontSize: '10px',
-                    fontWeight: theme.typography.fontWeight.bold
-                  }}>
-                    {rec?.action?.replace('Lean ', '').replace('Strong ', '') || 'Hold'}
+                  <span
+                    style={{
+                      padding: '2px 6px',
+                      backgroundColor: getSignalColor(rec?.action),
+                      color: '#fff',
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: '10px',
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
+                    {rec?.action?.replace('Lean ', '').replace('Strong ', '') ||
+                      'Hold'}
                   </span>
                 </div>
 
                 {/* Price with direction indicator */}
-                <div style={{
-                  fontSize: theme.typography.fontSize.md,
-                  fontWeight: theme.typography.fontWeight.bold,
-                  color: theme.colors.gray900,
-                  marginBottom: '2px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
+                <div
+                  style={{
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: theme.typography.fontWeight.bold,
+                    color: theme.colors.gray900,
+                    marginBottom: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
                   <AnimatedValue
                     value={formatPrice(price)}
                     isAnimating={isAnimating}
                     direction={direction}
                   />
                   {isAnimating && direction !== 'neutral' && (
-                    <span style={{
-                      fontSize: '10px',
-                      color: direction === 'up' ? theme.colors.success : theme.colors.error,
-                      fontWeight: 'bold'
-                    }}>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color:
+                          direction === 'up'
+                            ? theme.colors.success
+                            : theme.colors.error,
+                        fontWeight: 'bold',
+                      }}
+                    >
                       {direction === 'up' ? '▲' : '▼'}
                     </span>
                   )}
                 </div>
 
                 {/* Change */}
-                <div style={{
-                  fontSize: theme.typography.fontSize.xs,
-                  color: changeVal >= 0 ? theme.colors.success : theme.colors.error,
-                  fontWeight: theme.typography.fontWeight.medium,
-                  marginBottom: '4px'
-                }}>
+                <div
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color:
+                      changeVal >= 0
+                        ? theme.colors.success
+                        : theme.colors.error,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    marginBottom: '4px',
+                  }}
+                >
                   {formatChange(change)}
                 </div>
 
                 {/* RSI & Trend Row */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: theme.typography.fontSize.xs,
-                  borderTop: `1px solid ${theme.colors.gray200}`,
-                  paddingTop: '4px',
-                  marginTop: '2px'
-                }}>
-                  <span style={{
-                    color: getRsiTextColor(rsi),
-                    fontWeight: theme.typography.fontWeight.bold
-                  }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: theme.typography.fontSize.xs,
+                    borderTop: `1px solid ${theme.colors.gray200}`,
+                    paddingTop: '4px',
+                    marginTop: '2px',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: getRsiTextColor(rsi),
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     RSI {rsi ? parseFloat(rsi).toFixed(0) : '--'}
                   </span>
-                  <span style={{
-                    color: trend === 'Bullish' ? theme.colors.success
-                      : trend === 'Bearish' ? theme.colors.error
-                      : theme.colors.gray500,
-                    fontSize: '10px'
-                  }}>
+                  <span
+                    style={{
+                      color:
+                        trend === 'Bullish'
+                          ? theme.colors.success
+                          : trend === 'Bearish'
+                            ? theme.colors.error
+                            : theme.colors.gray500,
+                      fontSize: '10px',
+                    }}
+                  >
                     {trend || 'Neutral'}
                   </span>
                 </div>
@@ -2258,21 +3674,28 @@ const WatchlistPanel = ({ watchlist, onSelectSymbol, sessionStatus, onReorderWat
       )}
 
       {/* Footer */}
-      <div style={{
-        marginTop: theme.spacing.sm,
-        padding: theme.spacing.xs,
-        backgroundColor: theme.colors.gray50,
-        borderRadius: theme.borderRadius.sm,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '10px',
-        color: theme.colors.gray500
-      }}>
-        <span>
-          {localWatchlist.length} symbols • Live • 10s refresh
-        </span>
-        <span style={{ color: sessionStatus === 'running' ? theme.colors.success : theme.colors.gray500 }}>
+      <div
+        style={{
+          marginTop: theme.spacing.sm,
+          padding: theme.spacing.xs,
+          backgroundColor: theme.colors.gray50,
+          borderRadius: theme.borderRadius.sm,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '10px',
+          color: theme.colors.gray500,
+        }}
+      >
+        <span>{localWatchlist.length} symbols • Live • 10s refresh</span>
+        <span
+          style={{
+            color:
+              sessionStatus === 'running'
+                ? theme.colors.success
+                : theme.colors.gray500,
+          }}
+        >
           {sessionStatus === 'running' ? 'AI Active' : 'Standby'}
         </span>
       </div>

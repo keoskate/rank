@@ -16,21 +16,21 @@ import { fetchYahooFinanceData } from './yahooFinanceAPI';
  * Confidence thresholds
  */
 const CONFIDENCE_LEVELS = {
-  HIGH: 0.95,      // >95% - Data matches across sources
-  MEDIUM: 0.80,    // 80-95% - Minor discrepancies
-  LOW: 0.60,       // 60-80% - Significant differences
-  UNRELIABLE: 0.0  // <60% - Don't trust this data
+  HIGH: 0.95, // >95% - Data matches across sources
+  MEDIUM: 0.8, // 80-95% - Minor discrepancies
+  LOW: 0.6, // 60-80% - Significant differences
+  UNRELIABLE: 0.0, // <60% - Don't trust this data
 };
 
 /**
  * Maximum allowed deviation between sources (percentage)
  */
 const DEVIATION_THRESHOLDS = {
-  price: 0.01,           // 1% for prices
-  yearHigh: 0.05,        // 5% for 52W high
-  marketCap: 0.10,       // 10% for market cap
-  peRatio: 0.15,         // 15% for P/E ratios
-  financialMetrics: 0.20 // 20% for debt, EBITDA, etc.
+  price: 0.01, // 1% for prices
+  yearHigh: 0.05, // 5% for 52W high
+  marketCap: 0.1, // 10% for market cap
+  peRatio: 0.15, // 15% for P/E ratios
+  financialMetrics: 0.2, // 20% for debt, EBITDA, etc.
 };
 
 /**
@@ -87,7 +87,9 @@ function getConfidenceFromDeviation(deviation, threshold) {
  */
 function validateMetric(metricName, sources, threshold) {
   const availableSources = Object.entries(sources)
-    .filter(([_, value]) => value !== null && value !== undefined && isFinite(value))
+    .filter(
+      ([_, value]) => value !== null && value !== undefined && isFinite(value)
+    )
     .map(([source, value]) => ({ source, value }));
 
   if (availableSources.length === 0) {
@@ -96,7 +98,7 @@ function validateMetric(metricName, sources, threshold) {
       confidence: 0,
       sources: [],
       status: 'missing',
-      message: 'No data available from any source'
+      message: 'No data available from any source',
     };
   }
 
@@ -106,7 +108,7 @@ function validateMetric(metricName, sources, threshold) {
       confidence: CONFIDENCE_LEVELS.MEDIUM, // Single source = medium confidence
       sources: [availableSources[0].source],
       status: 'single-source',
-      message: `Only available from ${availableSources[0].source}`
+      message: `Only available from ${availableSources[0].source}`,
     };
   }
 
@@ -124,9 +126,10 @@ function validateMetric(metricName, sources, threshold) {
     }
   }
 
-  const avgDeviation = deviations.length > 0
-    ? deviations.reduce((sum, d) => sum + d, 0) / deviations.length
-    : 0;
+  const avgDeviation =
+    deviations.length > 0
+      ? deviations.reduce((sum, d) => sum + d, 0) / deviations.length
+      : 0;
 
   const confidence = getConfidenceFromDeviation(avgDeviation, threshold);
 
@@ -151,7 +154,7 @@ function validateMetric(metricName, sources, threshold) {
     deviation: avgDeviation,
     status: status,
     message: `Validated across ${availableSources.length} sources (${(avgDeviation * 100).toFixed(2)}% deviation)`,
-    individual: availableSources
+    individual: availableSources,
   };
 }
 
@@ -163,14 +166,20 @@ function validateMetric(metricName, sources, threshold) {
  * @param {Object} alphaVantageData - Data from Alpha Vantage (optional)
  * @returns {Promise<Object>} Validated stock data with confidence scores
  */
-export async function validateStockData(ticker, polygonData, alphaVantageData = null) {
+export async function validateStockData(
+  ticker,
+  polygonData,
+  alphaVantageData = null
+) {
   console.log(`🔍 Validating data for ${ticker} across multiple sources...`);
 
   // Fetch Yahoo Finance data
   const yahooData = await fetchYahooFinanceData(ticker);
 
   if (!yahooData) {
-    console.warn(`⚠️ Could not fetch Yahoo Finance data for ${ticker}, using single-source data`);
+    console.warn(
+      `⚠️ Could not fetch Yahoo Finance data for ${ticker}, using single-source data`
+    );
   }
 
   // Prepare validation results
@@ -178,7 +187,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     ticker: ticker,
     timestamp: Date.now(),
     overallConfidence: 0,
-    metrics: {}
+    metrics: {},
   };
 
   // Validate price
@@ -187,7 +196,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.price,
       yahoo: yahooData?.regularMarketPrice,
-      alphaVantage: alphaVantageData?.price
+      alphaVantage: alphaVantageData?.price,
     },
     DEVIATION_THRESHOLDS.price
   );
@@ -198,7 +207,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.yearHigh,
       yahoo: yahooData?.fiftyTwoWeekHigh,
-      alphaVantage: alphaVantageData?.yearHigh
+      alphaVantage: alphaVantageData?.yearHigh,
     },
     DEVIATION_THRESHOLDS.yearHigh
   );
@@ -209,7 +218,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.marketCap,
       yahoo: yahooData?.marketCap,
-      alphaVantage: alphaVantageData?.marketCap
+      alphaVantage: alphaVantageData?.marketCap,
     },
     DEVIATION_THRESHOLDS.marketCap
   );
@@ -220,7 +229,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.peRatio,
       yahoo: yahooData?.peRatio,
-      alphaVantage: alphaVantageData?.peRatio
+      alphaVantage: alphaVantageData?.peRatio,
     },
     DEVIATION_THRESHOLDS.peRatio
   );
@@ -231,7 +240,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.roe,
       yahoo: yahooData?.returnOnEquity,
-      alphaVantage: alphaVantageData?.roe
+      alphaVantage: alphaVantageData?.roe,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -242,7 +251,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.beta,
       yahoo: yahooData?.beta,
-      alphaVantage: alphaVantageData?.beta
+      alphaVantage: alphaVantageData?.beta,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -253,7 +262,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.dividend,
       yahoo: yahooData?.dividendRate,
-      alphaVantage: alphaVantageData?.dividend
+      alphaVantage: alphaVantageData?.dividend,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -264,7 +273,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.quickRatio,
       yahoo: yahooData?.quickRatio,
-      alphaVantage: alphaVantageData?.quickRatio
+      alphaVantage: alphaVantageData?.quickRatio,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -275,7 +284,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.ebitda,
       yahoo: yahooData?.ebitda ? yahooData.ebitda / 1000000 : null, // Convert to millions
-      alphaVantage: alphaVantageData?.ebitda
+      alphaVantage: alphaVantageData?.ebitda,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -286,7 +295,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.cash,
       yahoo: yahooData?.totalCash ? yahooData.totalCash / 1000000 : null, // Convert to millions
-      alphaVantage: alphaVantageData?.cash
+      alphaVantage: alphaVantageData?.cash,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -297,7 +306,7 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     {
       polygon: polygonData?.netDebt, // Polygon gives net debt
       yahoo: yahooData?.totalDebt ? yahooData.totalDebt / 1000000 : null, // Convert to millions
-      alphaVantage: alphaVantageData?.netDebt
+      alphaVantage: alphaVantageData?.netDebt,
     },
     DEVIATION_THRESHOLDS.financialMetrics
   );
@@ -307,27 +316,34 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
     .map(m => m.confidence)
     .filter(c => c > 0);
 
-  validatedData.overallConfidence = confidenceScores.length > 0
-    ? confidenceScores.reduce((sum, c) => sum + c, 0) / confidenceScores.length
-    : 0;
+  validatedData.overallConfidence =
+    confidenceScores.length > 0
+      ? confidenceScores.reduce((sum, c) => sum + c, 0) /
+        confidenceScores.length
+      : 0;
 
   // Add summary
-  const verified = Object.values(validatedData.metrics).filter(m => m.status === 'verified').length;
+  const verified = Object.values(validatedData.metrics).filter(
+    m => m.status === 'verified'
+  ).length;
   const total = Object.keys(validatedData.metrics).length;
 
   validatedData.summary = {
     verified: verified,
     total: total,
     verificationRate: verified / total,
-    overallStatus: validatedData.overallConfidence >= CONFIDENCE_LEVELS.HIGH
-      ? 'verified'
-      : validatedData.overallConfidence >= CONFIDENCE_LEVELS.MEDIUM
-      ? 'acceptable'
-      : 'questionable'
+    overallStatus:
+      validatedData.overallConfidence >= CONFIDENCE_LEVELS.HIGH
+        ? 'verified'
+        : validatedData.overallConfidence >= CONFIDENCE_LEVELS.MEDIUM
+          ? 'acceptable'
+          : 'questionable',
   };
 
   console.log(`✅ Validation complete for ${ticker}:`);
-  console.log(`   Overall confidence: ${(validatedData.overallConfidence * 100).toFixed(1)}%`);
+  console.log(
+    `   Overall confidence: ${(validatedData.overallConfidence * 100).toFixed(1)}%`
+  );
   console.log(`   Verified metrics: ${verified}/${total}`);
   console.log(`   Status: ${validatedData.summary.overallStatus}`);
 
@@ -342,7 +358,11 @@ export async function validateStockData(ticker, polygonData, alphaVantageData = 
  * @param {Object} yahooData - Yahoo Finance data (for filling gaps)
  * @returns {Object} Merged stock data with confidence indicators
  */
-export function createValidatedStockData(validationResult, primarySource, yahooData) {
+export function createValidatedStockData(
+  validationResult,
+  primarySource,
+  yahooData
+) {
   return {
     // Basic info from primary source
     ticker: primarySource.ticker,
@@ -353,15 +373,21 @@ export function createValidatedStockData(validationResult, primarySource, yahooD
     // Validated metrics (use consensus values)
     price: validationResult.metrics.price.value,
     yearHigh: validationResult.metrics.yearHigh.value,
-    discount: validationResult.metrics.yearHigh.value && validationResult.metrics.price.value
-      ? (validationResult.metrics.yearHigh.value - validationResult.metrics.price.value) / validationResult.metrics.yearHigh.value
-      : primarySource.discount,
-    marketCap: validationResult.metrics.marketCap.value || primarySource.marketCap,
+    discount:
+      validationResult.metrics.yearHigh.value &&
+      validationResult.metrics.price.value
+        ? (validationResult.metrics.yearHigh.value -
+            validationResult.metrics.price.value) /
+          validationResult.metrics.yearHigh.value
+        : primarySource.discount,
+    marketCap:
+      validationResult.metrics.marketCap.value || primarySource.marketCap,
     peRatio: validationResult.metrics.peRatio.value || primarySource.peRatio,
     roe: validationResult.metrics.roe.value || primarySource.roe,
     beta: validationResult.metrics.beta.value || primarySource.beta,
     dividend: validationResult.metrics.dividend.value || primarySource.dividend,
-    quickRatio: validationResult.metrics.quickRatio.value || primarySource.quickRatio,
+    quickRatio:
+      validationResult.metrics.quickRatio.value || primarySource.quickRatio,
     ebitda: validationResult.metrics.ebitda.value || primarySource.ebitda,
     cash: validationResult.metrics.cash.value || primarySource.cash,
 
@@ -369,7 +395,9 @@ export function createValidatedStockData(validationResult, primarySource, yahooD
     priceToBook: yahooData?.priceToBook || primarySource.priceToBook,
     debtToEquity: yahooData?.debtToEquity,
     currentRatio: yahooData?.currentRatio,
-    freeCashflow: yahooData?.freeCashflow ? yahooData.freeCashflow / 1000000 : null,
+    freeCashflow: yahooData?.freeCashflow
+      ? yahooData.freeCashflow / 1000000
+      : null,
     earningsGrowth: yahooData?.earningsGrowth,
     revenueGrowth: yahooData?.revenueGrowth,
     profitMargins: yahooData?.profitMargins,
@@ -381,7 +409,7 @@ export function createValidatedStockData(validationResult, primarySource, yahooD
       verifiedMetrics: validationResult.summary.verified,
       totalMetrics: validationResult.summary.total,
       timestamp: validationResult.timestamp,
-      metrics: validationResult.metrics // Full validation details
+      metrics: validationResult.metrics, // Full validation details
     },
 
     // Legacy fields (keep for compatibility)
@@ -391,7 +419,7 @@ export function createValidatedStockData(validationResult, primarySource, yahooD
     evEbitda: primarySource.evEbitda,
     impliedVolatility: primarySource.impliedVolatility,
     freeCashFlowYield: primarySource.freeCashFlowYield,
-    rsi: primarySource.rsi // Will be calculated from real price data separately
+    rsi: primarySource.rsi, // Will be calculated from real price data separately
   };
 }
 
@@ -407,7 +435,7 @@ export function getConfidenceLevel(confidence) {
       level: 'high',
       label: 'Verified',
       color: '#28a745',
-      icon: '✓'
+      icon: '✓',
     };
   }
 
@@ -416,7 +444,7 @@ export function getConfidenceLevel(confidence) {
       level: 'medium',
       label: 'Acceptable',
       color: '#ffc107',
-      icon: '~'
+      icon: '~',
     };
   }
 
@@ -425,7 +453,7 @@ export function getConfidenceLevel(confidence) {
       level: 'low',
       label: 'Questionable',
       color: '#fd7e14',
-      icon: '?'
+      icon: '?',
     };
   }
 
@@ -433,7 +461,7 @@ export function getConfidenceLevel(confidence) {
     level: 'unreliable',
     label: 'Unreliable',
     color: '#dc3545',
-    icon: '✗'
+    icon: '✗',
   };
 }
 

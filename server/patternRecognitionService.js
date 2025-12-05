@@ -18,7 +18,7 @@ const NUM_FEATURES = 8; // OHLCV + RSI + MACD + BB%B
 const PATTERNS = {
   BUY_SIGNAL: 0,
   HOLD: 1,
-  SELL_SIGNAL: 2
+  SELL_SIGNAL: 2,
 };
 
 const PATTERN_NAMES = ['BUY_SIGNAL', 'HOLD', 'SELL_SIGNAL'];
@@ -42,7 +42,7 @@ function createModel() {
       filters: 64,
       kernelSize: 5,
       activation: 'relu',
-      padding: 'same'
+      padding: 'same',
     })
   );
   model.add(tf.layers.maxPooling1d({ poolSize: 2 }));
@@ -54,7 +54,7 @@ function createModel() {
       filters: 128,
       kernelSize: 3,
       activation: 'relu',
-      padding: 'same'
+      padding: 'same',
     })
   );
   model.add(tf.layers.maxPooling1d({ poolSize: 2 }));
@@ -66,7 +66,7 @@ function createModel() {
       filters: 256,
       kernelSize: 3,
       activation: 'relu',
-      padding: 'same'
+      padding: 'same',
     })
   );
   model.add(tf.layers.globalMaxPooling1d());
@@ -82,7 +82,7 @@ function createModel() {
   model.compile({
     optimizer: tf.train.adam(0.001),
     loss: 'categoricalCrossentropy',
-    metrics: ['accuracy']
+    metrics: ['accuracy'],
   });
 
   return model;
@@ -140,11 +140,11 @@ function preprocessData(candles, indicators = {}) {
   const recentCandles = candles.slice(-SEQUENCE_LENGTH);
 
   // Calculate min/max for normalization
-  const opens = recentCandles.map((c) => c.open);
-  const highs = recentCandles.map((c) => c.high);
-  const lows = recentCandles.map((c) => c.low);
-  const closes = recentCandles.map((c) => c.close);
-  const volumes = recentCandles.map((c) => c.volume);
+  const opens = recentCandles.map(c => c.open);
+  const highs = recentCandles.map(c => c.high);
+  const lows = recentCandles.map(c => c.low);
+  const closes = recentCandles.map(c => c.close);
+  const volumes = recentCandles.map(c => c.volume);
 
   const priceMin = Math.min(...lows);
   const priceMax = Math.max(...highs);
@@ -153,9 +153,11 @@ function preprocessData(candles, indicators = {}) {
 
   // Get indicator values (use defaults if not provided)
   const rsiValues = indicators.rsi?.history || Array(SEQUENCE_LENGTH).fill(50);
-  const macdValues = indicators.macd?.history?.map((m) => m?.histogram || 0) ||
+  const macdValues =
+    indicators.macd?.history?.map(m => m?.histogram || 0) ||
     Array(SEQUENCE_LENGTH).fill(0);
-  const bbValues = indicators.bollingerBands?.history?.map((b) => b?.percentB || 0.5) ||
+  const bbValues =
+    indicators.bollingerBands?.history?.map(b => b?.percentB || 0.5) ||
     Array(SEQUENCE_LENGTH).fill(0.5);
 
   // Pad indicator arrays if needed
@@ -181,7 +183,7 @@ function preprocessData(candles, indicators = {}) {
     normalize(candle.volume, volumeMin, volumeMax),
     paddedRSI[i] / 100, // RSI is 0-100
     normalize(paddedMACD[i], macdMin, macdMax),
-    paddedBB[i] // Already 0-1
+    paddedBB[i], // Already 0-1
   ]);
 
   return tf.tensor3d([features], [1, SEQUENCE_LENGTH, NUM_FEATURES]);
@@ -224,10 +226,10 @@ async function predictPattern(candles, indicators = {}) {
       probabilities: {
         BUY_SIGNAL: Math.round(probabilities[0] * 100),
         HOLD: Math.round(probabilities[1] * 100),
-        SELL_SIGNAL: Math.round(probabilities[2] * 100)
+        SELL_SIGNAL: Math.round(probabilities[2] * 100),
       },
       detectedPatterns,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   } catch (error) {
     console.error('[Pattern Recognition] Prediction error:', error);
@@ -252,8 +254,8 @@ function detectHeuristicPatterns(candles, indicators = {}) {
   let bearishScore = 0;
 
   const recent = candles.slice(-20);
-  const closes = recent.map((c) => c.close);
-  const volumes = recent.map((c) => c.volume);
+  const closes = recent.map(c => c.close);
+  const volumes = recent.map(c => c.volume);
   const currentPrice = closes[closes.length - 1];
   const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
   const currentVolume = volumes[volumes.length - 1];
@@ -276,16 +278,19 @@ function detectHeuristicPatterns(candles, indicators = {}) {
   }
 
   // 2. Double Bottom / Double Top
-  const lows = recent.slice(-10).map((c) => c.low);
-  const highs = recent.slice(-10).map((c) => c.high);
+  const lows = recent.slice(-10).map(c => c.low);
+  const highs = recent.slice(-10).map(c => c.high);
   const minLow = Math.min(...lows);
   const maxHigh = Math.max(...highs);
 
   // Check for double bottom (two similar lows)
   const lowIndices = lows
     .map((l, i) => (l < minLow * 1.02 ? i : -1))
-    .filter((i) => i >= 0);
-  if (lowIndices.length >= 2 && lowIndices[lowIndices.length - 1] - lowIndices[0] > 3) {
+    .filter(i => i >= 0);
+  if (
+    lowIndices.length >= 2 &&
+    lowIndices[lowIndices.length - 1] - lowIndices[0] > 3
+  ) {
     patterns.push('Double Bottom');
     bullishScore += 20;
   }
@@ -293,8 +298,11 @@ function detectHeuristicPatterns(candles, indicators = {}) {
   // Check for double top (two similar highs)
   const highIndices = highs
     .map((h, i) => (h > maxHigh * 0.98 ? i : -1))
-    .filter((i) => i >= 0);
-  if (highIndices.length >= 2 && highIndices[highIndices.length - 1] - highIndices[0] > 3) {
+    .filter(i => i >= 0);
+  if (
+    highIndices.length >= 2 &&
+    highIndices[highIndices.length - 1] - highIndices[0] > 3
+  ) {
     patterns.push('Double Top');
     bearishScore += 20;
   }
@@ -310,7 +318,8 @@ function detectHeuristicPatterns(candles, indicators = {}) {
   }
 
   // 4. Volume Profile
-  const volumeDecreasing = volumes[volumes.length - 1] < volumes[volumes.length - 2] &&
+  const volumeDecreasing =
+    volumes[volumes.length - 1] < volumes[volumes.length - 2] &&
     volumes[volumes.length - 2] < volumes[volumes.length - 3];
 
   if (volumeDecreasing && currentPrice > closes[closes.length - 4]) {
@@ -325,8 +334,8 @@ function detectHeuristicPatterns(candles, indicators = {}) {
   // 5. Opening Range Breakout (for intraday)
   const first30min = candles.slice(0, 6); // Assuming 5-min candles
   if (first30min.length >= 6) {
-    const orbHigh = Math.max(...first30min.map((c) => c.high));
-    const orbLow = Math.min(...first30min.map((c) => c.low));
+    const orbHigh = Math.max(...first30min.map(c => c.high));
+    const orbLow = Math.min(...first30min.map(c => c.low));
 
     if (currentPrice > orbHigh && currentVolume > avgVolume) {
       patterns.push('ORB Breakout (Bullish)');
@@ -384,12 +393,12 @@ function detectHeuristicPatterns(candles, indicators = {}) {
     probabilities: {
       BUY_SIGNAL: Math.min(35 + bullishScore, 95),
       HOLD: Math.max(30 - Math.abs(netScore) / 2, 10),
-      SELL_SIGNAL: Math.min(35 + bearishScore, 95)
+      SELL_SIGNAL: Math.min(35 + bearishScore, 95),
     },
     patterns,
     bullishScore,
     bearishScore,
-    timestamp: new Date()
+    timestamp: new Date(),
   };
 }
 
@@ -455,8 +464,8 @@ async function trainModel(trades, options = {}) {
             `[Pattern Recognition] Epoch ${epoch + 1}/${epochs} - ` +
               `Loss: ${logs.loss.toFixed(4)}, Accuracy: ${logs.acc.toFixed(4)}`
           );
-        }
-      }
+        },
+      },
     });
 
     // Clean up
@@ -471,7 +480,7 @@ async function trainModel(trades, options = {}) {
       epochs,
       finalLoss: history.history.loss[history.history.loss.length - 1],
       finalAccuracy: history.history.acc[history.history.acc.length - 1],
-      samplesUsed: xs.length
+      samplesUsed: xs.length,
     };
   } catch (error) {
     console.error('[Pattern Recognition] Training error:', error);
@@ -487,11 +496,11 @@ async function trainModel(trades, options = {}) {
 function preprocessTradeData(candles) {
   const recentCandles = candles.slice(-SEQUENCE_LENGTH);
 
-  const opens = recentCandles.map((c) => c.open);
-  const highs = recentCandles.map((c) => c.high);
-  const lows = recentCandles.map((c) => c.low);
-  const closes = recentCandles.map((c) => c.close);
-  const volumes = recentCandles.map((c) => c.volume);
+  const opens = recentCandles.map(c => c.open);
+  const highs = recentCandles.map(c => c.high);
+  const lows = recentCandles.map(c => c.low);
+  const closes = recentCandles.map(c => c.close);
+  const volumes = recentCandles.map(c => c.volume);
 
   const priceMin = Math.min(...lows);
   const priceMax = Math.max(...highs);
@@ -510,7 +519,7 @@ function preprocessTradeData(candles) {
     normalize(candle.volume, volumeMin, volumeMax),
     (rsi[i] || 50) / 100,
     normalize(macd[i] || 0, -1, 1),
-    0.5 // Placeholder for BB%B
+    0.5, // Placeholder for BB%B
   ]);
 }
 
@@ -545,8 +554,8 @@ function calculateSimpleRSI(closes, period = 14) {
       const currentGain = change > 0 ? change : 0;
       const currentLoss = change < 0 ? -change : 0;
 
-      gains = (avgGain * (period - 1) + currentGain);
-      losses = (avgLoss * (period - 1) + currentLoss);
+      gains = avgGain * (period - 1) + currentGain;
+      losses = avgLoss * (period - 1) + currentLoss;
 
       const rs = losses === 0 ? 100 : gains / losses;
       rsi.push(100 - 100 / (1 + rs));
@@ -617,7 +626,7 @@ function getModelInfo() {
     sequenceLength: SEQUENCE_LENGTH,
     numFeatures: NUM_FEATURES,
     patterns: PATTERN_NAMES,
-    modelPath: MODEL_PATH
+    modelPath: MODEL_PATH,
   };
 }
 
@@ -632,5 +641,5 @@ module.exports = {
   saveModel,
   getModelInfo,
   PATTERNS,
-  PATTERN_NAMES
+  PATTERN_NAMES,
 };

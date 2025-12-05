@@ -34,6 +34,7 @@ Comprehensive paper trading simulation environment for testing investment strate
 ## 🚀 **How to Use**
 
 ### 1. **Access Paper Trading**
+
 ```bash
 # Start the application
 npm run build
@@ -44,11 +45,13 @@ npm run server-dev
 ```
 
 ### 2. **Create Portfolio**
+
 - Click "Create Paper Trading Portfolio"
 - Starts with $100,000 virtual cash
 - Ready to place orders immediately
 
 ### 3. **Place Orders**
+
 ```
 Symbol: AAPL, NVDA, TSLA, etc.
 Side: Buy or Sell
@@ -58,6 +61,7 @@ Limit Price: (if using limit orders)
 ```
 
 ### 4. **Track Performance**
+
 - View portfolio summary (total value, cash, P&L)
 - Monitor individual positions with real-time updates
 - Review trade history with execution details
@@ -65,6 +69,7 @@ Limit Price: (if using limit orders)
 ## 🔧 **API Endpoints**
 
 ### **Create/Get Portfolio**
+
 ```bash
 POST /api/paper-trading/portfolio
 {
@@ -74,6 +79,7 @@ POST /api/paper-trading/portfolio
 ```
 
 ### **Execute Trade**
+
 ```bash
 POST /api/paper-trading/order
 {
@@ -86,11 +92,13 @@ POST /api/paper-trading/order
 ```
 
 ### **Get Portfolio Status**
+
 ```bash
 GET /api/paper-trading/portfolio/{userId}
 ```
 
 ### **Reset Portfolio**
+
 ```bash
 POST /api/paper-trading/portfolio/{userId}/reset
 {
@@ -101,6 +109,7 @@ POST /api/paper-trading/portfolio/{userId}/reset
 ## 💡 **Strategy Testing Use Cases**
 
 ### **1. Ranking-Based Strategy**
+
 ```javascript
 // Test top-ranked stocks from your scoring system
 // Example: Buy top 5 ranked stocks equally weighted
@@ -112,21 +121,24 @@ topStocks.forEach(symbol => {
     symbol,
     side: 'buy',
     quantity: Math.floor(cashPerStock / getCurrentPrice(symbol)),
-    orderType: 'market'
+    orderType: 'market',
   });
 });
 ```
 
 ### **2. Momentum Strategy**
+
 ```javascript
 // Buy stocks showing positive momentum
 // Sell positions that have declined
-if (stockData.discount < 0.15) { // Less than 15% from 52-week high
+if (stockData.discount < 0.15) {
+  // Less than 15% from 52-week high
   buyStock(symbol, quantity);
 }
 ```
 
 ### **3. Value Strategy**
+
 ```javascript
 // Buy undervalued stocks based on metrics
 if (stockData.peRatio < 15 && stockData.priceToBook < 2) {
@@ -135,6 +147,7 @@ if (stockData.peRatio < 15 && stockData.priceToBook < 2) {
 ```
 
 ### **4. Portfolio Rebalancing**
+
 ```javascript
 // Monthly rebalancing based on new rankings
 // Sell underperforming positions
@@ -144,12 +157,14 @@ if (stockData.peRatio < 15 && stockData.priceToBook < 2) {
 ## 🎯 **Key Advantages**
 
 ### **vs. Real Money Trading:**
+
 - ✅ **Zero Risk** - Test strategies without losing money
 - ✅ **Unlimited Experiments** - Try different approaches
 - ✅ **Quick Iterations** - Reset and test new strategies instantly
 - ✅ **Educational** - Learn trading concepts safely
 
 ### **vs. Other Paper Trading Tools:**
+
 - ✅ **Integrated with Your Ranking System** - Test strategies directly
 - ✅ **Real Market Data** - Uses live stock prices
 - ✅ **Customizable** - Modify starting cash, add new features
@@ -158,28 +173,30 @@ if (stockData.peRatio < 15 && stockData.priceToBook < 2) {
 ## 🔮 **Future Enhancements**
 
 ### **Strategy Automation** (Next Phase)
+
 ```javascript
 // Automated strategy execution
 const strategy = {
-  name: "Top 10 Momentum",
-  rebalanceFrequency: "weekly",
+  name: 'Top 10 Momentum',
+  rebalanceFrequency: 'weekly',
   stockSelection: topRankedStocks(10),
-  allocation: "equal_weight",
-  stopLoss: 0.10, // 10% stop loss
-  targetProfit: 0.25 // 25% profit target
+  allocation: 'equal_weight',
+  stopLoss: 0.1, // 10% stop loss
+  targetProfit: 0.25, // 25% profit target
 };
 
 executeStrategy(strategy);
 ```
 
 ### **Backtesting Engine** (Next Phase)
+
 ```javascript
 // Test strategies on historical data
 const backtest = {
   strategy: momentumStrategy,
-  startDate: "2023-01-01",
-  endDate: "2024-01-01",
-  initialCash: 100000
+  startDate: '2023-01-01',
+  endDate: '2024-01-01',
+  initialCash: 100000,
 };
 
 runBacktest(backtest);
@@ -207,8 +224,9 @@ curl -X POST /api/paper-trading/order \
 ## 🎉 **Status: PRODUCTION READY**
 
 The paper trading simulation is fully functional and ready for:
+
 - ✅ Strategy development and testing
-- ✅ Educational purposes  
+- ✅ Educational purposes
 - ✅ Risk-free experimentation
 - ✅ Portfolio management practice
 - ✅ Integration with your stock ranking system

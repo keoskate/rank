@@ -24,7 +24,7 @@ function calculateRSI(closes, period = 14) {
 
   const rsi = ti.RSI.calculate({
     values: closes,
-    period: period
+    period: period,
   });
 
   return rsi;
@@ -50,7 +50,7 @@ function calculateMACD(
     slowPeriod,
     signalPeriod,
     SimpleMAOscillator: false,
-    SimpleMASignal: false
+    SimpleMASignal: false,
   });
 
   return macd;
@@ -70,7 +70,7 @@ function calculateBollingerBands(closes, { period = 20, stdDev = 2 } = {}) {
   const bb = ti.BollingerBands.calculate({
     period,
     values: closes,
-    stdDev
+    stdDev,
   });
 
   // Add %B calculation (position within bands)
@@ -84,7 +84,7 @@ function calculateBollingerBands(closes, { period = 20, stdDev = 2 } = {}) {
     return {
       ...band,
       percentB,
-      bandwidth: (band.upper - band.lower) / band.middle
+      bandwidth: (band.upper - band.lower) / band.middle,
     };
   });
 }
@@ -101,10 +101,10 @@ function calculateATR(candles, period = 14) {
   }
 
   const atr = ti.ATR.calculate({
-    high: candles.map((c) => c.high),
-    low: candles.map((c) => c.low),
-    close: candles.map((c) => c.close),
-    period
+    high: candles.map(c => c.high),
+    low: candles.map(c => c.low),
+    close: candles.map(c => c.close),
+    period,
   });
 
   return atr;
@@ -123,7 +123,7 @@ function calculateEMA(closes, period) {
 
   const ema = ti.EMA.calculate({
     values: closes,
-    period
+    period,
   });
 
   return ema;
@@ -142,7 +142,7 @@ function calculateSMA(closes, period) {
 
   const sma = ti.SMA.calculate({
     values: closes,
-    period
+    period,
   });
 
   return sma;
@@ -159,10 +159,10 @@ function calculateVWAP(candles) {
   }
 
   const vwap = ti.VWAP.calculate({
-    high: candles.map((c) => c.high),
-    low: candles.map((c) => c.low),
-    close: candles.map((c) => c.close),
-    volume: candles.map((c) => c.volume)
+    high: candles.map(c => c.high),
+    low: candles.map(c => c.low),
+    close: candles.map(c => c.close),
+    volume: candles.map(c => c.volume),
   });
 
   return vwap;
@@ -174,20 +174,17 @@ function calculateVWAP(candles) {
  * @param {object} options - Stochastic parameters
  * @returns {object[]} %K and %D values
  */
-function calculateStochastic(
-  candles,
-  { period = 14, signalPeriod = 3 } = {}
-) {
+function calculateStochastic(candles, { period = 14, signalPeriod = 3 } = {}) {
   if (!candles || candles.length < period + signalPeriod) {
     return [];
   }
 
   const stoch = ti.Stochastic.calculate({
-    high: candles.map((c) => c.high),
-    low: candles.map((c) => c.low),
-    close: candles.map((c) => c.close),
+    high: candles.map(c => c.high),
+    low: candles.map(c => c.low),
+    close: candles.map(c => c.close),
     period,
-    signalPeriod
+    signalPeriod,
   });
 
   return stoch;
@@ -205,10 +202,10 @@ function calculateADX(candles, period = 14) {
   }
 
   const adx = ti.ADX.calculate({
-    high: candles.map((c) => c.high),
-    low: candles.map((c) => c.low),
-    close: candles.map((c) => c.close),
-    period
+    high: candles.map(c => c.high),
+    low: candles.map(c => c.low),
+    close: candles.map(c => c.close),
+    period,
   });
 
   return adx;
@@ -225,8 +222,8 @@ function calculateOBV(candles) {
   }
 
   const obv = ti.OBV.calculate({
-    close: candles.map((c) => c.close),
-    volume: candles.map((c) => c.volume)
+    close: candles.map(c => c.close),
+    volume: candles.map(c => c.volume),
   });
 
   return obv;
@@ -243,7 +240,7 @@ function calculateVolumeProfile(candles, zones = 20) {
     return [];
   }
 
-  const prices = candles.map((c) => c.close);
+  const prices = candles.map(c => c.close);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const zoneSize = (maxPrice - minPrice) / zones;
@@ -253,10 +250,10 @@ function calculateVolumeProfile(candles, zones = 20) {
     .map((_, i) => ({
       priceMin: minPrice + i * zoneSize,
       priceMax: minPrice + (i + 1) * zoneSize,
-      volume: 0
+      volume: 0,
     }));
 
-  candles.forEach((candle) => {
+  candles.forEach(candle => {
     const zoneIndex = Math.min(
       Math.floor((candle.close - minPrice) / zoneSize),
       zones - 1
@@ -268,14 +265,15 @@ function calculateVolumeProfile(candles, zones = 20) {
 
   // Find Point of Control (POC) - highest volume zone
   const pocIndex = profile.reduce(
-    (maxIdx, zone, idx, arr) => (zone.volume > arr[maxIdx].volume ? idx : maxIdx),
+    (maxIdx, zone, idx, arr) =>
+      zone.volume > arr[maxIdx].volume ? idx : maxIdx,
     0
   );
 
   return {
     zones: profile,
     poc: profile[pocIndex],
-    pocPrice: (profile[pocIndex].priceMin + profile[pocIndex].priceMax) / 2
+    pocPrice: (profile[pocIndex].priceMin + profile[pocIndex].priceMax) / 2,
   };
 }
 
@@ -315,7 +313,7 @@ function detectRSIDivergence(closes, rsiValues, lookback = 10) {
     bullish: bullishDivergence,
     bearish: bearishDivergence,
     currentRSI,
-    rsiTrend: currentRSI > recentRSI[0] ? 'rising' : 'falling'
+    rsiTrend: currentRSI > recentRSI[0] ? 'rising' : 'falling',
   };
 }
 
@@ -329,8 +327,8 @@ function getAllIndicators(candles) {
     return { error: 'Insufficient data. Need at least 50 candles.' };
   }
 
-  const closes = candles.map((c) => c.close);
-  const volumes = candles.map((c) => c.volume);
+  const closes = candles.map(c => c.close);
+  const volumes = candles.map(c => c.volume);
 
   // Calculate all indicators
   const rsi = calculateRSI(closes, 14);
@@ -357,7 +355,8 @@ function getAllIndicators(candles) {
 
   // Volume analysis
   const avgVolume =
-    volumes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, volumes.length);
+    volumes.slice(-20).reduce((a, b) => a + b, 0) /
+    Math.min(20, volumes.length);
   const volumeRatio = volumes[latestIdx] / avgVolume;
 
   // Trend analysis
@@ -379,7 +378,7 @@ function getAllIndicators(candles) {
       ? currentPrice > getLatest(vwap)
         ? 'above'
         : 'below'
-      : 'unknown'
+      : 'unknown',
   };
 
   // Summary signal
@@ -399,7 +398,7 @@ function getAllIndicators(candles) {
       history: rsi.slice(-50),
       overbought: latestRSI > 70,
       oversold: latestRSI < 30,
-      divergence
+      divergence,
     },
 
     macd: {
@@ -411,7 +410,7 @@ function getAllIndicators(candles) {
         macd.length > 1
           ? macd[macd.length - 2]?.histogram < 0 && latestMACD?.histogram > 0
           : false,
-      history: macd.slice(-50)
+      history: macd.slice(-50),
     },
 
     bollingerBands: {
@@ -421,13 +420,13 @@ function getAllIndicators(candles) {
       percentB: latestBB?.percentB,
       bandwidth: latestBB?.bandwidth,
       squeeze: latestBB?.bandwidth < 0.1,
-      history: bb.slice(-50)
+      history: bb.slice(-50),
     },
 
     atr: {
       value: getLatest(atr),
       percent: getLatest(atr) ? (getLatest(atr) / currentPrice) * 100 : null,
-      history: atr.slice(-50)
+      history: atr.slice(-50),
     },
 
     ema: {
@@ -436,14 +435,14 @@ function getAllIndicators(candles) {
       ema50: latestEMA50,
       ema200: latestEMA200,
       goldenCross: latestEMA50 && latestEMA200 && latestEMA50 > latestEMA200,
-      deathCross: latestEMA50 && latestEMA200 && latestEMA50 < latestEMA200
+      deathCross: latestEMA50 && latestEMA200 && latestEMA50 < latestEMA200,
     },
 
     vwap: {
       value: getLatest(vwap),
       pricePosition: getLatest(vwap)
         ? ((currentPrice - getLatest(vwap)) / getLatest(vwap)) * 100
-        : null
+        : null,
     },
 
     stochastic: {
@@ -452,7 +451,7 @@ function getAllIndicators(candles) {
       overbought: latestStoch?.k > 80,
       oversold: latestStoch?.k < 20,
       bullishCross: latestStoch?.k > latestStoch?.d,
-      history: stoch.slice(-50)
+      history: stoch.slice(-50),
     },
 
     adx: {
@@ -462,7 +461,7 @@ function getAllIndicators(candles) {
       trending: latestADX?.adx > 25,
       strongTrend: latestADX?.adx > 50,
       bullishDI: latestADX?.pdi > latestADX?.mdi,
-      history: adx.slice(-50)
+      history: adx.slice(-50),
     },
 
     volume: {
@@ -471,7 +470,7 @@ function getAllIndicators(candles) {
       ratio: volumeRatio,
       aboveAverage: volumeRatio > 1.5,
       obv: getLatest(obv),
-      profile: volumeProfile
+      profile: volumeProfile,
     },
 
     trend,
@@ -487,8 +486,8 @@ function getAllIndicators(candles) {
       volumeRatio,
       divergence,
       currentPrice,
-      vwap: getLatest(vwap)
-    })
+      vwap: getLatest(vwap),
+    }),
   };
 }
 
@@ -508,7 +507,7 @@ function generateSignals(indicators) {
     volumeRatio,
     divergence,
     currentPrice,
-    vwap
+    vwap,
   } = indicators;
 
   let bullishScore = 0;
@@ -611,8 +610,7 @@ function generateSignals(indicators) {
   // Calculate final signal
   const totalScore = bullishScore + bearishScore;
   const netScore = bullishScore - bearishScore;
-  const confidence =
-    totalScore > 0 ? Math.abs(netScore) / totalScore : 0;
+  const confidence = totalScore > 0 ? Math.abs(netScore) / totalScore : 0;
 
   let signal = 'HOLD';
   if (netScore >= 3 && confidence >= 0.3) signal = 'BUY';
@@ -624,7 +622,7 @@ function generateSignals(indicators) {
     bullishScore,
     bearishScore,
     netScore,
-    reasons
+    reasons,
   };
 }
 
@@ -645,7 +643,7 @@ function getIndicatorsWithCache(symbol, candles) {
   const indicators = getAllIndicators(candles);
   indicatorCache.set(cacheKey, {
     data: indicators,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   // Clean old cache entries
@@ -673,5 +671,5 @@ module.exports = {
   detectRSIDivergence,
   getAllIndicators,
   generateSignals,
-  getIndicatorsWithCache
+  getIndicatorsWithCache,
 };

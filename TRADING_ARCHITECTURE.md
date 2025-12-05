@@ -97,6 +97,7 @@ react-client/src/
 ## Phase 1: Data Quality (Current)
 
 ### Goals:
+
 1. Fix 52-week high using real Yahoo Finance data
 2. Get real financial metrics (debt, EBITDA, cash, ROE)
 3. Build validation layer to compare providers
@@ -105,31 +106,34 @@ react-client/src/
 ### Implementation:
 
 #### **Yahoo Finance Integration**
+
 - **Endpoint**: `https://query1.finance.yahoo.com/v8/finance/chart/{symbol}`
 - **Get Real Data**: 52W high, volume, historical prices
 - **Endpoint**: `https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}`
 - **Get Financials**: Balance sheet, income statement, key statistics
 
 #### **Data Validator**
+
 ```javascript
 // Pseudo-code
 const validatedData = {
   price: {
     polygon: 150.25,
     yahoo: 150.27,
-    confidence: 0.99,  // <1% deviation
-    source: 'consensus'
+    confidence: 0.99, // <1% deviation
+    source: 'consensus',
   },
   yearHigh: {
-    polygon: null,       // not available
-    yahoo: 180.50,
-    confidence: 1.0,     // single source
-    source: 'yahoo'
-  }
-}
+    polygon: null, // not available
+    yahoo: 180.5,
+    confidence: 1.0, // single source
+    source: 'yahoo',
+  },
+};
 ```
 
 #### **UI Changes**
+
 - Add confidence badges to each metric (🟢 high, 🟡 medium, 🔴 low)
 - Show data source and last update time
 - Alert when validation fails
@@ -139,6 +143,7 @@ const validatedData = {
 ## Phase 2: Backtesting
 
 ### Goals:
+
 1. Store daily ranking snapshots
 2. Calculate "If I bought top 5 last month, what's my return?"
 3. Track win rates by ranking position
@@ -155,13 +160,16 @@ const validatedData = {
       "ticker": "NVDA",
       "price": 150.25,
       "score": 95.5,
-      "metrics": { /* all ranking metrics */ }
+      "metrics": {
+        /* all ranking metrics */
+      }
     }
   ]
 }
 ```
 
 ### Backtest Engine:
+
 - Load snapshot from 30 days ago
 - Calculate performance of top N stocks
 - Compare vs S&P 500 benchmark
@@ -172,6 +180,7 @@ const validatedData = {
 ## Phase 3: Alpaca Paper Trading
 
 ### Goals:
+
 1. Integrate Alpaca SDK (paper mode)
 2. Build unified trading interface
 3. Auto-execute trades based on ranking signals
@@ -183,7 +192,7 @@ const validatedData = {
 // tradingEnvironment.js
 const TRADING_MODE = {
   PAPER: 'paper',
-  LIVE: 'live'
+  LIVE: 'live',
 };
 
 const getCurrentMode = () => {
@@ -193,19 +202,24 @@ const getCurrentMode = () => {
 const getAlpacaConfig = () => {
   const isPaper = getCurrentMode() === TRADING_MODE.PAPER;
   return {
-    apiKey: isPaper ? process.env.ALPACA_PAPER_KEY : process.env.ALPACA_LIVE_KEY,
-    secretKey: isPaper ? process.env.ALPACA_PAPER_SECRET : process.env.ALPACA_LIVE_SECRET,
+    apiKey: isPaper
+      ? process.env.ALPACA_PAPER_KEY
+      : process.env.ALPACA_LIVE_KEY,
+    secretKey: isPaper
+      ? process.env.ALPACA_PAPER_SECRET
+      : process.env.ALPACA_LIVE_SECRET,
     baseUrl: isPaper
       ? 'https://paper-api.alpaca.markets'
-      : 'https://api.alpaca.markets'
+      : 'https://api.alpaca.markets',
   };
 };
 ```
 
 ### Trading Strategy:
+
 ```javascript
 // tradingStrategy.js
-const generateSignals = (rankedStocks) => {
+const generateSignals = rankedStocks => {
   const signals = [];
 
   // BUY: Top 5 ranked stocks
@@ -215,7 +229,7 @@ const generateSignals = (rankedStocks) => {
       action: 'BUY',
       ticker: stock.ticker,
       reason: `Rank #${stock.rank} - Score: ${stock.score}`,
-      confidence: stock.dataConfidence
+      confidence: stock.dataConfidence,
     });
   }
 
@@ -227,6 +241,7 @@ const generateSignals = (rankedStocks) => {
 ```
 
 ### Unified Dashboard:
+
 - Same UI for paper and live
 - Clear environment banner (PAPER MODE / LIVE MODE)
 - Real-time P&L
@@ -239,6 +254,7 @@ const generateSignals = (rankedStocks) => {
 ## Phase 4: Live Trading Ready
 
 ### Checklist Before Going Live:
+
 - [ ] Backtesting shows positive returns over 3+ months
 - [ ] Paper trading profitable for 1+ month
 - [ ] All data validation passes with >95% confidence
@@ -247,6 +263,7 @@ const generateSignals = (rankedStocks) => {
 - [ ] User explicitly confirms live mode
 
 ### Easy Switch:
+
 ```bash
 # In .env file
 TRADING_MODE=paper  # Change to 'live' when ready
@@ -259,16 +276,19 @@ That's it! Same code, different environment.
 ## API Providers
 
 ### Current Stack:
+
 1. **Polygon.io** - Real-time prices, historical data
 2. **Yahoo Finance** - 52W high, financial statements (free!)
 3. **Alpaca** - Paper + live trading execution
 
 ### Why This Stack:
+
 - **Yahoo Finance**: Free, reliable for missing data
 - **Alpaca**: Industry standard, great API, free paper trading
 - **Polygon**: Already integrated, good data quality
 
 ### Future Additions (if needed):
+
 - **IEX Cloud** - Options data, better financials
 - **Financial Modeling Prep** - Comprehensive fundamentals
 - **TradingView** - Advanced charting (Phase 5)
@@ -278,16 +298,19 @@ That's it! Same code, different environment.
 ## Success Metrics
 
 ### Data Quality:
+
 - ✅ >95% of metrics validated across 2+ sources
 - ✅ Zero fake/estimated data in ranking calculations
 - ✅ All data <24 hours old
 
 ### Backtesting:
+
 - ✅ Top 5 stocks outperform S&P 500 by >5% over 3 months
 - ✅ Win rate >60% for top-ranked stocks
 - ✅ Positive Sharpe ratio
 
 ### Paper Trading:
+
 - ✅ Consistent weekly profits for 4+ weeks
 - ✅ Max drawdown <15%
 - ✅ All trades executed successfully
@@ -303,6 +326,7 @@ That's it! Same code, different environment.
 5. **Phase 3** - Start paper trading with validated strategies
 
 **Target Timeline:**
+
 - Phase 1: 2-3 days
 - Phase 2: 2-3 days
 - Phase 3: 3-4 days

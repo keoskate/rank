@@ -14,7 +14,7 @@ class ErrorBoundary extends Component {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
@@ -46,7 +46,7 @@ class ErrorBoundary extends Component {
             backgroundColor: theme.colors.gray50,
             borderRadius: theme.borderRadius.lg,
             border: `1px solid ${theme.colors.error}`,
-            margin: theme.spacing.md
+            margin: theme.spacing.md,
           }}
         >
           <h2
@@ -54,7 +54,7 @@ class ErrorBoundary extends Component {
               color: theme.colors.error,
               marginTop: 0,
               marginBottom: theme.spacing.md,
-              fontSize: theme.typography.fontSize.xl
+              fontSize: theme.typography.fontSize.xl,
             }}
           >
             Something went wrong
@@ -62,10 +62,11 @@ class ErrorBoundary extends Component {
           <p
             style={{
               color: theme.colors.gray600,
-              marginBottom: theme.spacing.md
+              marginBottom: theme.spacing.md,
             }}
           >
-            {this.props.message || 'An unexpected error occurred in this section.'}
+            {this.props.message ||
+              'An unexpected error occurred in this section.'}
           </p>
 
           {process.env.NODE_ENV === 'development' && this.state.error && (
@@ -75,14 +76,14 @@ class ErrorBoundary extends Component {
                 padding: theme.spacing.md,
                 backgroundColor: theme.colors.gray100,
                 borderRadius: theme.borderRadius.md,
-                overflow: 'auto'
+                overflow: 'auto',
               }}
             >
               <summary
                 style={{
                   cursor: 'pointer',
                   color: theme.colors.gray700,
-                  fontWeight: theme.typography.fontWeight.medium
+                  fontWeight: theme.typography.fontWeight.medium,
                 }}
               >
                 Error Details
@@ -93,7 +94,7 @@ class ErrorBoundary extends Component {
                   fontSize: theme.typography.fontSize.sm,
                   color: theme.colors.error,
                   whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
+                  wordBreak: 'break-word',
                 }}
               >
                 {this.state.error.toString()}
@@ -112,7 +113,7 @@ class ErrorBoundary extends Component {
               borderRadius: theme.borderRadius.md,
               cursor: 'pointer',
               fontSize: theme.typography.fontSize.md,
-              fontWeight: theme.typography.fontWeight.medium
+              fontWeight: theme.typography.fontWeight.medium,
             }}
           >
             Try Again

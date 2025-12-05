@@ -22,7 +22,7 @@ const defaultSettings = {
   announcePriceAlerts: true,
   announceAIDecisions: false,
   voiceRate: 1.2, // Slightly faster for snappier announcements
-  voicePitch: 1.0
+  voicePitch: 1.0,
 };
 
 // Speech queue to prevent overlapping
@@ -43,7 +43,7 @@ export const loadAudioSettings = () => {
 };
 
 // Save settings to localStorage
-export const saveAudioSettings = (settings) => {
+export const saveAudioSettings = settings => {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     return true;
@@ -64,8 +64,12 @@ const getVoice = () => {
 
   const voices = window.speechSynthesis.getVoices();
   // Prefer a US English voice
-  const preferred = voices.find(v =>
-    v.lang === 'en-US' && (v.name.includes('Samantha') || v.name.includes('Alex') || v.name.includes('Google'))
+  const preferred = voices.find(
+    v =>
+      v.lang === 'en-US' &&
+      (v.name.includes('Samantha') ||
+        v.name.includes('Alex') ||
+        v.name.includes('Google'))
   );
   return preferred || voices.find(v => v.lang.startsWith('en')) || voices[0];
 };
@@ -108,7 +112,7 @@ export const speak = (text, options = {}) => {
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     speechQueue.push({ text, options, resolve });
     processQueue();
   });
@@ -129,9 +133,10 @@ const playTone = (frequency, duration, type = 'sine', volume = 0.3) => {
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -141,8 +146,14 @@ const playTone = (frequency, duration, type = 'sine', volume = 0.3) => {
       oscillator.frequency.value = frequency;
       oscillator.type = type;
 
-      gainNode.gain.setValueAtTime(volume * settings.volume, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+      gainNode.gain.setValueAtTime(
+        volume * settings.volume,
+        audioContext.currentTime
+      );
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + duration
+      );
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + duration);
@@ -157,15 +168,15 @@ const playTone = (frequency, duration, type = 'sine', volume = 0.3) => {
 
 // Play a success/buy sound (ascending tone)
 export const playBuySound = async () => {
-  await playTone(440, 0.1, 'sine', 0.4);  // A4
-  await playTone(554, 0.1, 'sine', 0.4);  // C#5
+  await playTone(440, 0.1, 'sine', 0.4); // A4
+  await playTone(554, 0.1, 'sine', 0.4); // C#5
   await playTone(659, 0.15, 'sine', 0.4); // E5
 };
 
 // Play a sell sound (descending tone)
 export const playSellSound = async () => {
-  await playTone(659, 0.1, 'sine', 0.4);  // E5
-  await playTone(554, 0.1, 'sine', 0.4);  // C#5
+  await playTone(659, 0.1, 'sine', 0.4); // E5
+  await playTone(554, 0.1, 'sine', 0.4); // C#5
   await playTone(440, 0.15, 'sine', 0.4); // A4
 };
 
@@ -189,7 +200,7 @@ export const playNotificationSound = async () => {
  * Announce a trade execution - short and sweet format
  * Examples: "Profit $50 - SELL 31 GOOG at 321", "Loss $20 - SELL...", "BUY 10 TSLA at 245"
  */
-export const announceTrade = async (trade) => {
+export const announceTrade = async trade => {
   const settings = loadAudioSettings();
   if (!settings.enabled || !settings.announceTrades) return;
 
@@ -226,7 +237,7 @@ export const announceTrade = async (trade) => {
  * Announce a price alert - short format
  * Example: "TSLA up 5% at 245"
  */
-export const announcePriceAlert = async (alert) => {
+export const announcePriceAlert = async alert => {
   const settings = loadAudioSettings();
   if (!settings.enabled || !settings.announcePriceAlerts) return;
 
@@ -244,7 +255,7 @@ export const announcePriceAlert = async (alert) => {
  * Announce AI decision - short format
  * Example: "AI: BUY NVDA, 85% confidence"
  */
-export const announceAIDecision = async (decision) => {
+export const announceAIDecision = async decision => {
   const settings = loadAudioSettings();
   if (!settings.enabled || !settings.announceAIDecisions) return;
 
@@ -260,7 +271,7 @@ export const announceAIDecision = async (decision) => {
  * Announce portfolio update - short format
  * Example: "Portfolio up $150"
  */
-export const announcePortfolioUpdate = async (update) => {
+export const announcePortfolioUpdate = async update => {
   const settings = loadAudioSettings();
   if (!settings.enabled) return;
 
@@ -304,5 +315,5 @@ export default {
   announcePriceAlert,
   announceAIDecision,
   announcePortfolioUpdate,
-  testAudioSystem
+  testAudioSystem,
 };

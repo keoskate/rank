@@ -73,7 +73,8 @@ export const theme = {
 
   // Typography
   typography: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     fontSize: {
       xs: '11px',
       sm: '12px',
@@ -125,8 +126,16 @@ export const theme = {
 // Helper function to create button styles
 export const createButtonStyle = (variant = 'primary', size = 'medium') => {
   const baseStyle = {
-    padding: size === 'small' ? '6px 12px' : size === 'large' ? '12px 24px' : '8px 16px',
-    fontSize: size === 'small' ? theme.typography.fontSize.sm : theme.typography.fontSize.base,
+    padding:
+      size === 'small'
+        ? '6px 12px'
+        : size === 'large'
+          ? '12px 24px'
+          : '8px 16px',
+    fontSize:
+      size === 'small'
+        ? theme.typography.fontSize.sm
+        : theme.typography.fontSize.base,
     fontWeight: theme.typography.fontWeight.medium,
     border: 'none',
     borderRadius: theme.borderRadius.md,
@@ -155,7 +164,10 @@ export const createButtonStyle = (variant = 'primary', size = 'medium') => {
       backgroundColor: 'transparent',
       color: theme.colors.info,
       border: `2px solid ${theme.colors.info}`,
-      '&:hover': { backgroundColor: theme.colors.info, color: theme.colors.surface },
+      '&:hover': {
+        backgroundColor: theme.colors.info,
+        color: theme.colors.surface,
+      },
     },
   };
 

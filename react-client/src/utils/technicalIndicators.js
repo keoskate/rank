@@ -39,21 +39,23 @@ export function calculateRSI(prices, period = 14) {
   }
 
   // Step 2: Calculate initial average gain and loss (simple average for first period)
-  let avgGain = gains.slice(0, period).reduce((sum, gain) => sum + gain, 0) / period;
-  let avgLoss = losses.slice(0, period).reduce((sum, loss) => sum + loss, 0) / period;
+  let avgGain =
+    gains.slice(0, period).reduce((sum, gain) => sum + gain, 0) / period;
+  let avgLoss =
+    losses.slice(0, period).reduce((sum, loss) => sum + loss, 0) / period;
 
   // Calculate first RSI value
   const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-  rsiValues[period] = 100 - (100 / (1 + rs));
+  rsiValues[period] = 100 - 100 / (1 + rs);
 
   // Step 3: Calculate subsequent RSI values using Wilder's smoothing
   // Wilder's smoothing: new avg = (previous avg * (period - 1) + current value) / period
   for (let i = period; i < gains.length; i++) {
-    avgGain = ((avgGain * (period - 1)) + gains[i]) / period;
-    avgLoss = ((avgLoss * (period - 1)) + losses[i]) / period;
+    avgGain = (avgGain * (period - 1) + gains[i]) / period;
+    avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
 
     const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    rsiValues[i + 1] = 100 - (100 / (1 + rs));
+    rsiValues[i + 1] = 100 - 100 / (1 + rs);
   }
 
   return rsiValues;

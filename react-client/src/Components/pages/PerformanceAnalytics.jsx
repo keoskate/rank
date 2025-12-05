@@ -18,7 +18,7 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 } from 'chart.js';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -96,7 +96,7 @@ const PerformanceAnalytics = () => {
         return trades;
     }
 
-    return trades.filter((t) => new Date(t.exitDate) >= cutoff);
+    return trades.filter(t => new Date(t.exitDate) >= cutoff);
   }, [trades, timeRange]);
 
   // Calculate metrics
@@ -114,16 +114,22 @@ const PerformanceAnalytics = () => {
         largestWin: 0,
         largestLoss: 0,
         avgHoldingDays: 0,
-        streaks: { maxWin: 0, maxLoss: 0 }
+        streaks: { maxWin: 0, maxLoss: 0 },
       };
     }
 
-    const wins = filteredTrades.filter((t) => t.isWin);
-    const losses = filteredTrades.filter((t) => !t.isWin);
+    const wins = filteredTrades.filter(t => t.isWin);
+    const losses = filteredTrades.filter(t => !t.isWin);
 
     const totalPnL = filteredTrades.reduce((s, t) => s + t.profit, 0);
-    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
-    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+    const avgWin =
+      wins.length > 0
+        ? wins.reduce((s, t) => s + t.profit, 0) / wins.length
+        : 0;
+    const avgLoss =
+      losses.length > 0
+        ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length)
+        : 0;
 
     // Calculate streaks
     let maxWinStreak = 0;
@@ -131,7 +137,7 @@ const PerformanceAnalytics = () => {
     let currentWinStreak = 0;
     let currentLossStreak = 0;
 
-    filteredTrades.forEach((t) => {
+    filteredTrades.forEach(t => {
       if (t.isWin) {
         currentWinStreak++;
         currentLossStreak = 0;
@@ -152,10 +158,13 @@ const PerformanceAnalytics = () => {
       avgWin,
       avgLoss,
       profitFactor: avgLoss > 0 ? avgWin / avgLoss : 0,
-      largestWin: wins.length > 0 ? Math.max(...wins.map((t) => t.profit)) : 0,
-      largestLoss: losses.length > 0 ? Math.min(...losses.map((t) => t.profit)) : 0,
-      avgHoldingDays: filteredTrades.reduce((s, t) => s + t.holdingDays, 0) / filteredTrades.length,
-      streaks: { maxWin: maxWinStreak, maxLoss: maxLossStreak }
+      largestWin: wins.length > 0 ? Math.max(...wins.map(t => t.profit)) : 0,
+      largestLoss:
+        losses.length > 0 ? Math.min(...losses.map(t => t.profit)) : 0,
+      avgHoldingDays:
+        filteredTrades.reduce((s, t) => s + t.holdingDays, 0) /
+        filteredTrades.length,
+      streaks: { maxWin: maxWinStreak, maxLoss: maxLossStreak },
     };
   }, [filteredTrades]);
 
@@ -168,26 +177,26 @@ const PerformanceAnalytics = () => {
     );
 
     let cumulative = 0;
-    const data = sorted.map((trade) => {
+    const data = sorted.map(trade => {
       cumulative += trade.profit;
       return {
         date: new Date(trade.exitDate).toLocaleDateString(),
-        value: cumulative
+        value: cumulative,
       };
     });
 
     return {
-      labels: data.map((d) => d.date),
+      labels: data.map(d => d.date),
       datasets: [
         {
           label: 'Cumulative P&L',
-          data: data.map((d) => d.value),
+          data: data.map(d => d.value),
           borderColor: theme.colors.primary,
           backgroundColor: theme.colors.primary + '20',
           fill: true,
-          tension: 0.3
-        }
-      ]
+          tension: 0.3,
+        },
+      ],
     };
   }, [filteredTrades]);
 
@@ -197,7 +206,7 @@ const PerformanceAnalytics = () => {
 
     // Group by date
     const byDate = {};
-    filteredTrades.forEach((trade) => {
+    filteredTrades.forEach(trade => {
       const date = new Date(trade.exitDate).toLocaleDateString();
       if (!byDate[date]) byDate[date] = 0;
       byDate[date] += trade.profit;
@@ -210,12 +219,12 @@ const PerformanceAnalytics = () => {
       datasets: [
         {
           label: 'Daily P&L',
-          data: dates.map((d) => byDate[d]),
-          backgroundColor: dates.map((d) =>
+          data: dates.map(d => byDate[d]),
+          backgroundColor: dates.map(d =>
             byDate[d] >= 0 ? theme.colors.success : theme.colors.error
-          )
-        }
-      ]
+          ),
+        },
+      ],
     };
   }, [filteredTrades]);
 
@@ -228,9 +237,9 @@ const PerformanceAnalytics = () => {
       datasets: [
         {
           data: [metrics.wins, metrics.losses],
-          backgroundColor: [theme.colors.success, theme.colors.error]
-        }
-      ]
+          backgroundColor: [theme.colors.success, theme.colors.error],
+        },
+      ],
     };
   }, [filteredTrades, metrics]);
 
@@ -239,9 +248,9 @@ const PerformanceAnalytics = () => {
     if (filteredTrades.length === 0) return null;
 
     const byStyle = {
-      scalping: filteredTrades.filter((t) => t.tradingStyle === 'scalping'),
-      dayTrading: filteredTrades.filter((t) => t.tradingStyle === 'dayTrading'),
-      swing: filteredTrades.filter((t) => t.tradingStyle === 'swing')
+      scalping: filteredTrades.filter(t => t.tradingStyle === 'scalping'),
+      dayTrading: filteredTrades.filter(t => t.tradingStyle === 'dayTrading'),
+      swing: filteredTrades.filter(t => t.tradingStyle === 'swing'),
     };
 
     return {
@@ -249,19 +258,23 @@ const PerformanceAnalytics = () => {
       datasets: [
         {
           label: 'Trades',
-          data: [byStyle.scalping.length, byStyle.dayTrading.length, byStyle.swing.length],
-          backgroundColor: theme.colors.info
+          data: [
+            byStyle.scalping.length,
+            byStyle.dayTrading.length,
+            byStyle.swing.length,
+          ],
+          backgroundColor: theme.colors.info,
         },
         {
           label: 'P&L',
           data: [
             byStyle.scalping.reduce((s, t) => s + t.profit, 0),
             byStyle.dayTrading.reduce((s, t) => s + t.profit, 0),
-            byStyle.swing.reduce((s, t) => s + t.profit, 0)
+            byStyle.swing.reduce((s, t) => s + t.profit, 0),
           ],
-          backgroundColor: theme.colors.success
-        }
-      ]
+          backgroundColor: theme.colors.success,
+        },
+      ],
     };
   }, [filteredTrades]);
 
@@ -270,7 +283,7 @@ const PerformanceAnalytics = () => {
     if (filteredTrades.length === 0) return [];
 
     const bySymbol = {};
-    filteredTrades.forEach((t) => {
+    filteredTrades.forEach(t => {
       if (!bySymbol[t.symbol]) {
         bySymbol[t.symbol] = { trades: 0, wins: 0, pnl: 0 };
       }
@@ -285,15 +298,15 @@ const PerformanceAnalytics = () => {
       .map(([symbol, data]) => ({
         symbol,
         ...data,
-        winRate: (data.wins / data.trades) * 100
+        winRate: (data.wins / data.trades) * 100,
       }));
   }, [filteredTrades]);
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     const sign = value >= 0 ? '+' : '';
     return `${sign}$${Math.abs(value).toLocaleString('en-US', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     })}`;
   };
 
@@ -302,14 +315,14 @@ const PerformanceAnalytics = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top'
-      }
+        position: 'top',
+      },
     },
     scales: {
       y: {
-        beginAtZero: true
-      }
-    }
+        beginAtZero: true,
+      },
+    },
   };
 
   if (loading) {
@@ -318,7 +331,7 @@ const PerformanceAnalytics = () => {
         style={{
           padding: theme.spacing.lg,
           textAlign: 'center',
-          color: theme.colors.gray500
+          color: theme.colors.gray500,
         }}
       >
         Loading analytics...
@@ -331,7 +344,7 @@ const PerformanceAnalytics = () => {
       style={{
         padding: theme.spacing.lg,
         maxWidth: theme.layout.maxWidthWide,
-        margin: '0 auto'
+        margin: '0 auto',
       }}
     >
       {/* Header */}
@@ -340,27 +353,31 @@ const PerformanceAnalytics = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: theme.spacing.lg
+          marginBottom: theme.spacing.lg,
         }}
       >
         <div>
           <h1 style={{ margin: 0, fontSize: theme.typography.fontSize.xxl }}>
             Performance Analytics
           </h1>
-          <p style={{ color: theme.colors.gray600, marginTop: theme.spacing.xs }}>
+          <p
+            style={{ color: theme.colors.gray600, marginTop: theme.spacing.xs }}
+          >
             {filteredTrades.length} trades analyzed
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: theme.spacing.sm }}>
-          {['week', 'month', 'quarter', 'year', 'all'].map((range) => (
+          {['week', 'month', 'quarter', 'year', 'all'].map(range => (
             <Button
               key={range}
               variant={timeRange === range ? 'primary' : 'ghost'}
               size="small"
               onClick={() => setTimeRange(range)}
             >
-              {range === 'all' ? 'All Time' : range.charAt(0).toUpperCase() + range.slice(1)}
+              {range === 'all'
+                ? 'All Time'
+                : range.charAt(0).toUpperCase() + range.slice(1)}
             </Button>
           ))}
         </div>
@@ -384,7 +401,7 @@ const PerformanceAnalytics = () => {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
               gap: theme.spacing.md,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             <MetricCard title="Total Trades" value={metrics.totalTrades} />
@@ -422,7 +439,7 @@ const PerformanceAnalytics = () => {
               display: 'grid',
               gridTemplateColumns: '2fr 1fr',
               gap: theme.spacing.lg,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             {/* Equity Curve */}
@@ -438,13 +455,20 @@ const PerformanceAnalytics = () => {
             {/* Win/Loss Distribution */}
             <Card>
               <h3 style={{ marginTop: 0 }}>Win/Loss Ratio</h3>
-              <div style={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <div
+                style={{
+                  height: 300,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
                 {winLossData && (
                   <Doughnut
                     data={winLossData}
                     options={{
                       ...chartOptions,
-                      cutout: '60%'
+                      cutout: '60%',
                     }}
                   />
                 )}
@@ -458,14 +482,16 @@ const PerformanceAnalytics = () => {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: theme.spacing.lg,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             {/* Daily P&L */}
             <Card>
               <h3 style={{ marginTop: 0 }}>Daily P&L</h3>
               <div style={{ height: 250 }}>
-                {dailyPnLData && <Bar data={dailyPnLData} options={chartOptions} />}
+                {dailyPnLData && (
+                  <Bar data={dailyPnLData} options={chartOptions} />
+                )}
               </div>
             </Card>
 
@@ -484,39 +510,77 @@ const PerformanceAnalytics = () => {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr 1fr',
               gap: theme.spacing.lg,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             <Card>
               <h3 style={{ marginTop: 0 }}>Trade Statistics</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: theme.spacing.sm,
+                }}
+              >
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                >
                   <span>Largest Win</span>
-                  <span style={{ color: theme.colors.success, fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{
+                      color: theme.colors.success,
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     {formatCurrency(metrics.largestWin)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                >
                   <span>Largest Loss</span>
-                  <span style={{ color: theme.colors.error, fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{
+                      color: theme.colors.error,
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     {formatCurrency(metrics.largestLoss)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                >
                   <span>Avg Holding Days</span>
-                  <span style={{ fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{ fontWeight: theme.typography.fontWeight.bold }}
+                  >
                     {metrics.avgHoldingDays.toFixed(1)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                >
                   <span>Max Win Streak</span>
-                  <span style={{ color: theme.colors.success, fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{
+                      color: theme.colors.success,
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     {metrics.streaks.maxWin}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                >
                   <span>Max Loss Streak</span>
-                  <span style={{ color: theme.colors.error, fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{
+                      color: theme.colors.error,
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     {metrics.streaks.maxLoss}
                   </span>
                 </div>
@@ -529,34 +593,86 @@ const PerformanceAnalytics = () => {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: `1px solid ${theme.colors.gray200}` }}>
-                      <th style={{ textAlign: 'left', padding: theme.spacing.sm }}>Symbol</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Trades</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Win Rate</th>
-                      <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>P&L</th>
+                    <tr
+                      style={{
+                        borderBottom: `1px solid ${theme.colors.gray200}`,
+                      }}
+                    >
+                      <th
+                        style={{ textAlign: 'left', padding: theme.spacing.sm }}
+                      >
+                        Symbol
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        Trades
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        Win Rate
+                      </th>
+                      <th
+                        style={{
+                          textAlign: 'right',
+                          padding: theme.spacing.sm,
+                        }}
+                      >
+                        P&L
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {topSymbols.map((sym, i) => (
-                      <tr key={sym.symbol} style={{ borderBottom: `1px solid ${theme.colors.gray100}` }}>
+                      <tr
+                        key={sym.symbol}
+                        style={{
+                          borderBottom: `1px solid ${theme.colors.gray100}`,
+                        }}
+                      >
                         <td style={{ padding: theme.spacing.sm }}>
-                          <span style={{ color: theme.colors.gray400, marginRight: theme.spacing.sm }}>
+                          <span
+                            style={{
+                              color: theme.colors.gray400,
+                              marginRight: theme.spacing.sm,
+                            }}
+                          >
                             #{i + 1}
                           </span>
                           <strong>{sym.symbol}</strong>
                         </td>
-                        <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                        <td
+                          style={{
+                            textAlign: 'right',
+                            padding: theme.spacing.sm,
+                          }}
+                        >
                           {sym.trades}
                         </td>
-                        <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                        <td
+                          style={{
+                            textAlign: 'right',
+                            padding: theme.spacing.sm,
+                          }}
+                        >
                           {sym.winRate.toFixed(1)}%
                         </td>
                         <td
                           style={{
                             textAlign: 'right',
                             padding: theme.spacing.sm,
-                            color: sym.pnl >= 0 ? theme.colors.success : theme.colors.error,
-                            fontWeight: theme.typography.fontWeight.bold
+                            color:
+                              sym.pnl >= 0
+                                ? theme.colors.success
+                                : theme.colors.error,
+                            fontWeight: theme.typography.fontWeight.bold,
                           }}
                         >
                           {formatCurrency(sym.pnl)}
@@ -577,11 +693,16 @@ const PerformanceAnalytics = () => {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                  gap: theme.spacing.md
+                  gap: theme.spacing.md,
                 }}
               >
                 <div>
-                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                  <div
+                    style={{
+                      color: theme.colors.gray500,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Status
                   </div>
                   <div
@@ -592,27 +713,37 @@ const PerformanceAnalytics = () => {
                         sessionStats.status === 'running'
                           ? theme.colors.success
                           : theme.colors.gray500,
-                      textTransform: 'capitalize'
+                      textTransform: 'capitalize',
                     }}
                   >
                     {sessionStats.status}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                  <div
+                    style={{
+                      color: theme.colors.gray500,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Today's Trades
                   </div>
                   <div
                     style={{
                       fontSize: theme.typography.fontSize.lg,
-                      fontWeight: theme.typography.fontWeight.bold
+                      fontWeight: theme.typography.fontWeight.bold,
                     }}
                   >
                     {sessionStats.stats?.totalTrades || 0}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                  <div
+                    style={{
+                      color: theme.colors.gray500,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Today's P&L
                   </div>
                   <div
@@ -622,20 +753,25 @@ const PerformanceAnalytics = () => {
                       color:
                         (sessionStats.stats?.totalPnL || 0) >= 0
                           ? theme.colors.success
-                          : theme.colors.error
+                          : theme.colors.error,
                     }}
                   >
                     {formatCurrency(sessionStats.stats?.totalPnL || 0)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                  <div
+                    style={{
+                      color: theme.colors.gray500,
+                      fontSize: theme.typography.fontSize.sm,
+                    }}
+                  >
                     Open Positions
                   </div>
                   <div
                     style={{
                       fontSize: theme.typography.fontSize.lg,
-                      fontWeight: theme.typography.fontWeight.bold
+                      fontWeight: theme.typography.fontWeight.bold,
                     }}
                   >
                     {sessionStats.positions?.length || 0}

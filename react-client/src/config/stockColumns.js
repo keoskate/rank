@@ -32,15 +32,16 @@ export const STRATEGY_PRESETS = {
   default: {
     id: 'default',
     name: 'Value Investing',
-    description: 'Classic value approach - undervalued stocks with solid fundamentals',
+    description:
+      'Classic value approach - undervalued stocks with solid fundamentals',
     icon: '💎',
     weights: {
-      discount: 0.40,    // 40% - Primary value signal (buy low)
-      debtEbitda: 0.15,  // 15% - Leverage assessment
-      netDebt: 0.15,     // 15% - Debt burden
-      beta: 0.15,        // 15% - Risk adjustment
-      quickRatio: 0.10,  // 10% - Liquidity check
-      dividend: 0.05,    // 5%  - Income component
+      discount: 0.4, // 40% - Primary value signal (buy low)
+      debtEbitda: 0.15, // 15% - Leverage assessment
+      netDebt: 0.15, // 15% - Debt burden
+      beta: 0.15, // 15% - Risk adjustment
+      quickRatio: 0.1, // 10% - Liquidity check
+      dividend: 0.05, // 5%  - Income component
     },
   },
 
@@ -67,13 +68,13 @@ export const STRATEGY_PRESETS = {
     description: 'ML-optimized for momentum & mean reversion plays',
     icon: '🤖',
     weights: {
-      rsi: 0.20,                // 20% - Mean reversion signal (prefer oversold)
-      discount: 0.20,           // 20% - Buy the dip
-      beta: 0.15,               // 15% - Lower volatility preference
-      roe: 0.15,                // 15% - Quality management
-      freeCashFlowYield: 0.10,  // 10% - Cash generation
-      quickRatio: 0.10,         // 10% - Liquidity safety
-      peRatio: 0.10,            // 10% - Valuation sanity check
+      rsi: 0.2, // 20% - Mean reversion signal (prefer oversold)
+      discount: 0.2, // 20% - Buy the dip
+      beta: 0.15, // 15% - Lower volatility preference
+      roe: 0.15, // 15% - Quality management
+      freeCashFlowYield: 0.1, // 10% - Cash generation
+      quickRatio: 0.1, // 10% - Liquidity safety
+      peRatio: 0.1, // 10% - Valuation sanity check
     },
   },
 
@@ -87,12 +88,12 @@ export const STRATEGY_PRESETS = {
     description: 'Focus on high-growth companies with strong efficiency',
     icon: '🚀',
     weights: {
-      roe: 0.25,                // 25% - Return on equity (management efficiency)
-      freeCashFlowYield: 0.20,  // 20% - Cash generation for reinvestment
-      evEbitda: 0.15,           // 15% - Enterprise value efficiency
-      discount: 0.15,           // 15% - Entry point optimization
-      beta: 0.15,               // 15% - Accept higher volatility for growth
-      quickRatio: 0.10,         // 10% - Basic liquidity check
+      roe: 0.25, // 25% - Return on equity (management efficiency)
+      freeCashFlowYield: 0.2, // 20% - Cash generation for reinvestment
+      evEbitda: 0.15, // 15% - Enterprise value efficiency
+      discount: 0.15, // 15% - Entry point optimization
+      beta: 0.15, // 15% - Accept higher volatility for growth
+      quickRatio: 0.1, // 10% - Basic liquidity check
     },
   },
 
@@ -106,12 +107,12 @@ export const STRATEGY_PRESETS = {
     description: 'Dividend-focused for steady income generation',
     icon: '💰',
     weights: {
-      dividend: 0.30,           // 30% - Primary income signal
-      freeCashFlowYield: 0.20,  // 20% - Supports dividend sustainability
-      quickRatio: 0.15,         // 15% - Liquidity ensures payout safety
-      beta: 0.15,               // 15% - Lower volatility preferred
-      debtEbitda: 0.10,         // 10% - Moderate debt check
-      discount: 0.10,           // 10% - Entry point optimization
+      dividend: 0.3, // 30% - Primary income signal
+      freeCashFlowYield: 0.2, // 20% - Supports dividend sustainability
+      quickRatio: 0.15, // 15% - Liquidity ensures payout safety
+      beta: 0.15, // 15% - Lower volatility preferred
+      debtEbitda: 0.1, // 10% - Moderate debt check
+      discount: 0.1, // 10% - Entry point optimization
     },
   },
 
@@ -125,12 +126,12 @@ export const STRATEGY_PRESETS = {
     description: 'Financially strong, stable companies with low risk',
     icon: '🛡️',
     weights: {
-      quickRatio: 0.20,         // 20% - Strong liquidity
-      debtEbitda: 0.20,         // 20% - Low leverage
-      roe: 0.15,                // 15% - Efficient management
-      beta: 0.15,               // 15% - Low volatility
-      netDebt: 0.15,            // 15% - Clean balance sheet
-      freeCashFlowYield: 0.15,  // 15% - Strong cash generation
+      quickRatio: 0.2, // 20% - Strong liquidity
+      debtEbitda: 0.2, // 20% - Low leverage
+      roe: 0.15, // 15% - Efficient management
+      beta: 0.15, // 15% - Low volatility
+      netDebt: 0.15, // 15% - Clean balance sheet
+      freeCashFlowYield: 0.15, // 15% - Strong cash generation
     },
   },
 
@@ -144,11 +145,11 @@ export const STRATEGY_PRESETS = {
     description: 'Technical signals for short-term trades',
     icon: '📈',
     weights: {
-      rsi: 0.30,                // 30% - Primary technical signal
-      discount: 0.25,           // 25% - Buy pullbacks
-      impliedVolatility: 0.20,  // 20% - Volatility opportunity
-      beta: 0.15,               // 15% - Higher beta = more movement
-      quickRatio: 0.10,         // 10% - Basic safety check
+      rsi: 0.3, // 30% - Primary technical signal
+      discount: 0.25, // 25% - Buy pullbacks
+      impliedVolatility: 0.2, // 20% - Volatility opportunity
+      beta: 0.15, // 15% - Higher beta = more movement
+      quickRatio: 0.1, // 10% - Basic safety check
     },
   },
 
@@ -162,11 +163,11 @@ export const STRATEGY_PRESETS = {
     description: 'Deep value hunting in beaten-down stocks',
     icon: '🎯',
     weights: {
-      discount: 0.35,           // 35% - Heavily discounted stocks
-      rsi: 0.20,                // 20% - Oversold conditions
-      priceToBook: 0.15,        // 15% - Trading below book value
-      quickRatio: 0.15,         // 15% - Must have liquidity to survive
-      freeCashFlowYield: 0.15,  // 15% - Cash flow to weather storm
+      discount: 0.35, // 35% - Heavily discounted stocks
+      rsi: 0.2, // 20% - Oversold conditions
+      priceToBook: 0.15, // 15% - Trading below book value
+      quickRatio: 0.15, // 15% - Must have liquidity to survive
+      freeCashFlowYield: 0.15, // 15% - Cash flow to weather storm
     },
   },
 };
@@ -504,10 +505,12 @@ export const getActivePreset = currentParams => {
     });
 
     // Also check that no other weights are set
-    const noExtraWeights = Object.entries(currentParams).every(([key, param]) => {
-      if (preset.weights[key] !== undefined) return true;
-      return (param.weight || 0) === 0;
-    });
+    const noExtraWeights = Object.entries(currentParams).every(
+      ([key, param]) => {
+        if (preset.weights[key] !== undefined) return true;
+        return (param.weight || 0) === 0;
+      }
+    );
 
     if (matches && noExtraWeights) {
       return preset;

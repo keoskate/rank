@@ -15,34 +15,38 @@ const NavBar = () => {
   const primaryNav = [
     { path: '/', label: 'Rankings' },
     { path: '/portfolio', label: 'Portfolio' },
-    { path: '/live-trading', label: 'Trading' }
+    { path: '/live-trading', label: 'Trading' },
   ];
 
   const toolsNav = [
     { path: '/backtest', label: 'Backtesting' },
     { path: '/day-trading', label: 'Day Trading Lab' },
     { path: '/import-trades', label: 'Import Trades' },
-    { path: '/analytics', label: 'Analytics' }
+    { path: '/analytics', label: 'Analytics' },
   ];
 
-  const isActive = (path) => {
+  const isActive = path => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
   return (
-    <header style={{
-      backgroundColor: theme.colors.primary,
-      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-      boxShadow: theme.shadows.md
-    }}>
-      <div style={{
-        maxWidth: theme.layout.maxWidthWide,
-        margin: '0 auto',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
+    <header
+      style={{
+        backgroundColor: theme.colors.primary,
+        padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+        boxShadow: theme.shadows.md,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: theme.layout.maxWidthWide,
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         {/* Logo */}
         <Link
           to="/"
@@ -52,25 +56,29 @@ const NavBar = () => {
             fontWeight: 700,
             textDecoration: 'none',
             padding: '8px 12px',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
           }}
         >
           Keo Stonks
         </Link>
 
         {/* Navigation */}
-        <nav style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: theme.spacing.sm
-        }}>
+        <nav
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}
+        >
           {/* Primary Nav */}
-          {primaryNav.map((item) => (
+          {primaryNav.map(item => (
             <Link
               key={item.path}
               to={item.path}
               style={{
-                background: isActive(item.path) ? 'rgba(255,255,255,0.2)' : 'transparent',
+                background: isActive(item.path)
+                  ? 'rgba(255,255,255,0.2)'
+                  : 'transparent',
                 color: '#ffffff',
                 textDecoration: 'none',
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
@@ -78,7 +86,7 @@ const NavBar = () => {
                 fontSize: theme.typography.fontSize.md,
                 fontWeight: isActive(item.path)
                   ? theme.typography.fontWeight.bold
-                  : theme.typography.fontWeight.normal
+                  : theme.typography.fontWeight.normal,
               }}
             >
               {item.label}
@@ -100,15 +108,17 @@ const NavBar = () => {
                 fontSize: theme.typography.fontSize.md,
                 display: 'flex',
                 alignItems: 'center',
-                gap: theme.spacing.xs
+                gap: theme.spacing.xs,
               }}
             >
               Tools
-              <span style={{
-                fontSize: '10px',
-                transform: showTools ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s'
-              }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  transform: showTools ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                }}
+              >
                 ▼
               </span>
             </button>
@@ -125,11 +135,11 @@ const NavBar = () => {
                   boxShadow: theme.shadows.lg,
                   minWidth: '180px',
                   overflow: 'hidden',
-                  zIndex: 1000
+                  zIndex: 1000,
                 }}
                 onMouseLeave={() => setShowTools(false)}
               >
-                {toolsNav.map((item) => (
+                {toolsNav.map(item => (
                   <Link
                     key={item.path}
                     to={item.path}
@@ -144,7 +154,7 @@ const NavBar = () => {
                       color: theme.colors.text,
                       textDecoration: 'none',
                       textAlign: 'left',
-                      fontSize: theme.typography.fontSize.sm
+                      fontSize: theme.typography.fontSize.sm,
                     }}
                   >
                     {item.label}

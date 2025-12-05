@@ -66,9 +66,9 @@ const TradingSessionsList = () => {
         body: JSON.stringify({
           userId: 'default_user',
           config: {
-            name: newSessionName.trim() || `Strategy ${sessions.length + 1}`
-          }
-        })
+            name: newSessionName.trim() || `Strategy ${sessions.length + 1}`,
+          },
+        }),
       });
 
       const data = await res.json();
@@ -90,7 +90,7 @@ const TradingSessionsList = () => {
       await fetch('/api/ai/session/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId })
+        body: JSON.stringify({ sessionId }),
       });
       fetchSessions();
     } catch (err) {
@@ -105,7 +105,7 @@ const TradingSessionsList = () => {
       await fetch('/api/ai/session/pause', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId })
+        body: JSON.stringify({ sessionId }),
       });
       fetchSessions();
     } catch (err) {
@@ -120,7 +120,7 @@ const TradingSessionsList = () => {
       await fetch('/api/ai/session/resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId })
+        body: JSON.stringify({ sessionId }),
       });
       fetchSessions();
     } catch (err) {
@@ -128,16 +128,16 @@ const TradingSessionsList = () => {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (value == null || isNaN(value)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
     }).format(value);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status) {
       case 'running':
         return theme.colors.success;
@@ -149,7 +149,7 @@ const TradingSessionsList = () => {
     }
   };
 
-  const getStatusBg = (status) => {
+  const getStatusBg = status => {
     switch (status) {
       case 'running':
         return `${theme.colors.success}15`;
@@ -160,23 +160,31 @@ const TradingSessionsList = () => {
     }
   };
 
-  const runningSessions = sessions.filter((s) => s.status === 'running');
-  const pausedSessions = sessions.filter((s) => s.status === 'paused');
-  const stoppedSessions = sessions.filter((s) => s.status === 'stopped');
+  const runningSessions = sessions.filter(s => s.status === 'running');
+  const pausedSessions = sessions.filter(s => s.status === 'paused');
+  const stoppedSessions = sessions.filter(s => s.status === 'stopped');
 
   return (
-    <div style={{ padding: theme.spacing.lg, maxWidth: '1400px', margin: '0 auto' }}>
+    <div
+      style={{
+        padding: theme.spacing.lg,
+        maxWidth: '1400px',
+        margin: '0 auto',
+      }}
+    >
       {/* Header */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: theme.spacing.lg
+          marginBottom: theme.spacing.lg,
         }}
       >
         <div>
-          <h1 style={{ margin: 0, color: theme.colors.gray900 }}>AI Trading Sessions</h1>
+          <h1 style={{ margin: 0, color: theme.colors.gray900 }}>
+            AI Trading Sessions
+          </h1>
           <p style={{ margin: '8px 0 0', color: theme.colors.gray600 }}>
             Manage your autonomous trading strategies
           </p>
@@ -193,7 +201,7 @@ const TradingSessionsList = () => {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: theme.spacing.md,
-            marginBottom: theme.spacing.lg
+            marginBottom: theme.spacing.lg,
           }}
         >
           <MetricCard
@@ -217,16 +225,24 @@ const TradingSessionsList = () => {
 
       {/* New Session Form */}
       {showNewForm && (
-        <Card style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.lg }}>
+        <Card
+          style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.lg }}
+        >
           <h3 style={{ marginTop: 0 }}>Create New Trading Session</h3>
-          <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'flex-end' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: theme.spacing.md,
+              alignItems: 'flex-end',
+            }}
+          >
             <div style={{ flex: 1 }}>
               <label
                 style={{
                   display: 'block',
                   marginBottom: theme.spacing.xs,
                   color: theme.colors.gray700,
-                  fontWeight: theme.typography.fontWeight.medium
+                  fontWeight: theme.typography.fontWeight.medium,
                 }}
               >
                 Session Name
@@ -234,14 +250,14 @@ const TradingSessionsList = () => {
               <input
                 type="text"
                 value={newSessionName}
-                onChange={(e) => setNewSessionName(e.target.value)}
+                onChange={e => setNewSessionName(e.target.value)}
                 placeholder={`Strategy ${sessions.length + 1}`}
                 style={{
                   width: '100%',
                   padding: theme.spacing.sm,
                   border: `1px solid ${theme.colors.gray300}`,
                   borderRadius: theme.borderRadius.md,
-                  fontSize: theme.typography.fontSize.md
+                  fontSize: theme.typography.fontSize.md,
                 }}
               />
             </div>
@@ -252,8 +268,15 @@ const TradingSessionsList = () => {
               Cancel
             </Button>
           </div>
-          <p style={{ margin: '12px 0 0', color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
-            You'll be taken to the session page to configure watchlist, risk settings, and start trading.
+          <p
+            style={{
+              margin: '12px 0 0',
+              color: theme.colors.gray500,
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            You'll be taken to the session page to configure watchlist, risk
+            settings, and start trading.
           </p>
         </Card>
       )}
@@ -265,7 +288,7 @@ const TradingSessionsList = () => {
             marginBottom: theme.spacing.lg,
             padding: theme.spacing.md,
             backgroundColor: `${theme.colors.error}10`,
-            border: `1px solid ${theme.colors.error}`
+            border: `1px solid ${theme.colors.error}`,
           }}
         >
           <p style={{ margin: 0, color: theme.colors.error }}>{error}</p>
@@ -282,11 +305,18 @@ const TradingSessionsList = () => {
       {/* Sessions List */}
       {!loading && sessions.length === 0 && (
         <Card style={{ padding: theme.spacing.xl, textAlign: 'center' }}>
-          <h3 style={{ color: theme.colors.gray700 }}>No Trading Sessions Yet</h3>
+          <h3 style={{ color: theme.colors.gray700 }}>
+            No Trading Sessions Yet
+          </h3>
           <p style={{ color: theme.colors.gray500 }}>
-            Create your first AI trading session to get started with autonomous trading.
+            Create your first AI trading session to get started with autonomous
+            trading.
           </p>
-          <Button variant="primary" onClick={() => setShowNewForm(true)} style={{ marginTop: theme.spacing.md }}>
+          <Button
+            variant="primary"
+            onClick={() => setShowNewForm(true)}
+            style={{ marginTop: theme.spacing.md }}
+          >
             Create First Session
           </Button>
         </Card>
@@ -299,13 +329,13 @@ const TradingSessionsList = () => {
             style={{
               color: theme.colors.success,
               fontSize: theme.typography.fontSize.lg,
-              marginBottom: theme.spacing.md
+              marginBottom: theme.spacing.md,
             }}
           >
             Running ({runningSessions.length})
           </h2>
           <div style={{ display: 'grid', gap: theme.spacing.md }}>
-            {runningSessions.map((session) => (
+            {runningSessions.map(session => (
               <SessionCard
                 key={session.sessionId}
                 session={session}
@@ -328,13 +358,13 @@ const TradingSessionsList = () => {
             style={{
               color: theme.colors.warning,
               fontSize: theme.typography.fontSize.lg,
-              marginBottom: theme.spacing.md
+              marginBottom: theme.spacing.md,
             }}
           >
             Paused ({pausedSessions.length})
           </h2>
           <div style={{ display: 'grid', gap: theme.spacing.md }}>
-            {pausedSessions.map((session) => (
+            {pausedSessions.map(session => (
               <SessionCard
                 key={session.sessionId}
                 session={session}
@@ -357,13 +387,13 @@ const TradingSessionsList = () => {
             style={{
               color: theme.colors.gray500,
               fontSize: theme.typography.fontSize.lg,
-              marginBottom: theme.spacing.md
+              marginBottom: theme.spacing.md,
             }}
           >
             Stopped ({stoppedSessions.length})
           </h2>
           <div style={{ display: 'grid', gap: theme.spacing.md }}>
-            {stoppedSessions.map((session) => (
+            {stoppedSessions.map(session => (
               <SessionCard
                 key={session.sessionId}
                 session={session}
@@ -383,7 +413,15 @@ const TradingSessionsList = () => {
 };
 
 // Session Card Component
-const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getStatusColor, getStatusBg }) => {
+const SessionCard = ({
+  session,
+  onStop,
+  onPause,
+  onResume,
+  formatCurrency,
+  getStatusColor,
+  getStatusBg,
+}) => {
   const navigate = useNavigate();
 
   return (
@@ -393,23 +431,37 @@ const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getSt
         backgroundColor: getStatusBg(session.status),
         border: `1px solid ${getStatusColor(session.status)}30`,
         cursor: 'pointer',
-        transition: 'transform 0.1s, box-shadow 0.1s'
+        transition: 'transform 0.1s, box-shadow 0.1s',
       }}
       onClick={() => navigate(`/live-trading/${session.sessionId}`)}
-      onMouseEnter={(e) => {
+      onMouseEnter={e => {
         e.currentTarget.style.transform = 'translateY(-2px)';
         e.currentTarget.style.boxShadow = theme.shadows.md;
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
         {/* Session Info */}
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-            <h3 style={{ margin: 0, color: theme.colors.gray900 }}>{session.name || 'Unnamed Session'}</h3>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}
+          >
+            <h3 style={{ margin: 0, color: theme.colors.gray900 }}>
+              {session.name || 'Unnamed Session'}
+            </h3>
             <span
               style={{
                 padding: '2px 8px',
@@ -418,7 +470,7 @@ const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getSt
                 color: 'white',
                 fontSize: theme.typography.fontSize.xs,
                 fontWeight: theme.typography.fontWeight.medium,
-                textTransform: 'uppercase'
+                textTransform: 'uppercase',
               }}
             >
               {session.status}
@@ -431,11 +483,12 @@ const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getSt
               style={{
                 margin: '8px 0 0',
                 color: theme.colors.gray600,
-                fontSize: theme.typography.fontSize.sm
+                fontSize: theme.typography.fontSize.sm,
               }}
             >
               Watching: {session.watchlist.slice(0, 5).join(', ')}
-              {session.watchlist.length > 5 && ` +${session.watchlist.length - 5} more`}
+              {session.watchlist.length > 5 &&
+                ` +${session.watchlist.length - 5} more`}
             </p>
           )}
 
@@ -445,7 +498,7 @@ const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getSt
               display: 'flex',
               gap: theme.spacing.lg,
               marginTop: theme.spacing.sm,
-              fontSize: theme.typography.fontSize.sm
+              fontSize: theme.typography.fontSize.sm,
             }}
           >
             {session.stats && (
@@ -455,16 +508,27 @@ const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getSt
                 </span>
                 <span style={{ color: theme.colors.gray600 }}>
                   Win Rate:{' '}
-                  <strong style={{ color: (session.stats.winRate || 0) >= 50 ? theme.colors.success : theme.colors.gray700 }}>
+                  <strong
+                    style={{
+                      color:
+                        (session.stats.winRate || 0) >= 50
+                          ? theme.colors.success
+                          : theme.colors.gray700,
+                    }}
+                  >
                     {session.stats.winRate || 0}%
                   </strong>
                 </span>
                 <span
                   style={{
-                    color: (session.stats.totalPnL || 0) >= 0 ? theme.colors.success : theme.colors.error
+                    color:
+                      (session.stats.totalPnL || 0) >= 0
+                        ? theme.colors.success
+                        : theme.colors.error,
                   }}
                 >
-                  P&L: <strong>{formatCurrency(session.stats.totalPnL || 0)}</strong>
+                  P&L:{' '}
+                  <strong>{formatCurrency(session.stats.totalPnL || 0)}</strong>
                 </span>
               </>
             )}
@@ -472,23 +536,42 @@ const SessionCard = ({ session, onStop, onPause, onResume, formatCurrency, getSt
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: theme.spacing.sm }} onClick={(e) => e.stopPropagation()}>
+        <div
+          style={{ display: 'flex', gap: theme.spacing.sm }}
+          onClick={e => e.stopPropagation()}
+        >
           {session.status === 'running' && (
-            <Button size="small" variant="secondary" onClick={(e) => onPause(session.sessionId, e)}>
+            <Button
+              size="small"
+              variant="secondary"
+              onClick={e => onPause(session.sessionId, e)}
+            >
               Pause
             </Button>
           )}
           {session.status === 'paused' && (
-            <Button size="small" variant="primary" onClick={(e) => onResume(session.sessionId, e)}>
+            <Button
+              size="small"
+              variant="primary"
+              onClick={e => onResume(session.sessionId, e)}
+            >
               Resume
             </Button>
           )}
           {session.status !== 'stopped' && (
-            <Button size="small" variant="danger" onClick={(e) => onStop(session.sessionId, e)}>
+            <Button
+              size="small"
+              variant="danger"
+              onClick={e => onStop(session.sessionId, e)}
+            >
               Stop
             </Button>
           )}
-          <Button size="small" variant="secondary" onClick={() => navigate(`/live-trading/${session.sessionId}`)}>
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={() => navigate(`/live-trading/${session.sessionId}`)}
+          >
             View
           </Button>
         </div>

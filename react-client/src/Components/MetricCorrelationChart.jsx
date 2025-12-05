@@ -97,7 +97,12 @@ const METRIC_COLORS = [
   '#e83e8c', // Pink
 ];
 
-const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title = "Metric Correlation Analysis" }) => {
+const MetricCorrelationChart = ({
+  metricsData,
+  labels,
+  availableMetrics,
+  title = 'Metric Correlation Analysis',
+}) => {
   const [selectedMetrics, setSelectedMetrics] = useState([]);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -125,7 +130,7 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
               metric2,
               correlation,
               strength: getCorrelationLabel(correlation),
-              color: getCorrelationColor(correlation)
+              color: getCorrelationColor(correlation),
             });
           }
         }
@@ -139,7 +144,10 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
   const averageCorrelation = useMemo(() => {
     if (correlations.length === 0) return null;
 
-    const sum = correlations.reduce((acc, c) => acc + Math.abs(c.correlation), 0);
+    const sum = correlations.reduce(
+      (acc, c) => acc + Math.abs(c.correlation),
+      0
+    );
     return sum / correlations.length;
   }, [correlations]);
 
@@ -157,7 +165,7 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
   }, [selectedMetrics, metricsData]);
 
   // Toggle metric selection
-  const toggleMetric = (metric) => {
+  const toggleMetric = metric => {
     setSelectedMetrics(prev => {
       if (prev.includes(metric)) {
         return prev.filter(m => m !== metric);
@@ -195,21 +203,29 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
           value: metricsData[metric][index],
           normalizedValue: value,
           label: labels[index],
-          index
+          index,
         };
       });
 
       result[metric] = {
         points,
-        color: METRIC_COLORS[metricIndex % METRIC_COLORS.length]
+        color: METRIC_COLORS[metricIndex % METRIC_COLORS.length],
       };
     });
 
     return result;
-  }, [selectedMetrics, normalizedData, metricsData, labels, plotWidth, plotHeight, padding]);
+  }, [
+    selectedMetrics,
+    normalizedData,
+    metricsData,
+    labels,
+    plotWidth,
+    plotHeight,
+    padding,
+  ]);
 
   // Generate SVG path for each metric
-  const generatePath = (points) => {
+  const generatePath = points => {
     if (!points || points.length === 0) return '';
 
     return points
@@ -217,7 +233,7 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
       .join(' ');
   };
 
-  const handleMouseMove = (event) => {
+  const handleMouseMove = event => {
     const rect = event.currentTarget.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -237,7 +253,7 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
           closestPoint = {
             ...point,
             metric,
-            color: data.color
+            color: data.color,
           };
         }
       });
@@ -256,30 +272,45 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
 
       {/* Metric Selection */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontWeight: '600', marginBottom: '10px', color: '#6c757d' }}>
+        <div
+          style={{ fontWeight: '600', marginBottom: '10px', color: '#6c757d' }}
+        >
           Select Metrics to Compare (max {METRIC_COLORS.length}):
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {Object.entries(availableMetrics).map(([key, label]) => {
             const isSelected = selectedMetrics.includes(key);
             const colorIndex = selectedMetrics.indexOf(key);
-            const color = colorIndex >= 0 ? METRIC_COLORS[colorIndex] : '#6c757d';
+            const color =
+              colorIndex >= 0 ? METRIC_COLORS[colorIndex] : '#6c757d';
 
             return (
               <button
                 key={key}
                 onClick={() => toggleMetric(key)}
-                disabled={!isSelected && selectedMetrics.length >= METRIC_COLORS.length}
+                disabled={
+                  !isSelected && selectedMetrics.length >= METRIC_COLORS.length
+                }
                 style={{
                   padding: '8px 16px',
                   borderRadius: '6px',
-                  border: isSelected ? `2px solid ${color}` : '2px solid #dee2e6',
+                  border: isSelected
+                    ? `2px solid ${color}`
+                    : '2px solid #dee2e6',
                   backgroundColor: isSelected ? `${color}20` : 'white',
                   color: isSelected ? color : '#6c757d',
                   fontWeight: isSelected ? '600' : '400',
-                  cursor: (!isSelected && selectedMetrics.length >= METRIC_COLORS.length) ? 'not-allowed' : 'pointer',
-                  opacity: (!isSelected && selectedMetrics.length >= METRIC_COLORS.length) ? 0.5 : 1,
-                  transition: 'all 0.2s'
+                  cursor:
+                    !isSelected &&
+                    selectedMetrics.length >= METRIC_COLORS.length
+                      ? 'not-allowed'
+                      : 'pointer',
+                  opacity:
+                    !isSelected &&
+                    selectedMetrics.length >= METRIC_COLORS.length
+                      ? 0.5
+                      : 1,
+                  transition: 'all 0.2s',
                 }}
               >
                 {label}
@@ -290,13 +321,15 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
       </div>
 
       {selectedMetrics.length === 0 && (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px',
-          color: '#6c757d'
-        }}>
+        <div
+          style={{
+            padding: '40px',
+            textAlign: 'center',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            color: '#6c757d',
+          }}
+        >
           <div style={{ fontSize: '48px', marginBottom: '10px' }}>📊</div>
           <div>Select metrics above to see correlation analysis</div>
         </div>
@@ -305,13 +338,15 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
       {selectedMetrics.length > 0 && (
         <>
           {/* Chart */}
-          <div style={{
-            backgroundColor: 'white',
-            border: '1px solid #dee2e6',
-            borderRadius: '8px',
-            padding: '20px',
-            marginBottom: '20px'
-          }}>
+          <div
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #dee2e6',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '20px',
+            }}
+          >
             <svg
               width={chartWidth}
               height={chartHeight}
@@ -320,7 +355,7 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
               style={{ cursor: 'crosshair' }}
             >
               {/* Grid lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+              {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
                 const y = padding.top + ratio * plotHeight;
                 return (
                   <g key={ratio}>
@@ -394,21 +429,26 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
               )}
 
               {/* X-axis labels (time) */}
-              {labels && labels.length > 0 && [0, Math.floor(labels.length / 2), labels.length - 1].map((index) => {
-                const x = padding.left + (index / (labels.length - 1)) * plotWidth;
-                return (
-                  <text
-                    key={index}
-                    x={x}
-                    y={chartHeight - padding.bottom + 20}
-                    textAnchor="middle"
-                    fontSize="11"
-                    fill="#6c757d"
-                  >
-                    {labels[index]}
-                  </text>
-                );
-              })}
+              {labels &&
+                labels.length > 0 &&
+                [0, Math.floor(labels.length / 2), labels.length - 1].map(
+                  index => {
+                    const x =
+                      padding.left + (index / (labels.length - 1)) * plotWidth;
+                    return (
+                      <text
+                        key={index}
+                        x={x}
+                        y={chartHeight - padding.bottom + 20}
+                        textAnchor="middle"
+                        fontSize="11"
+                        fill="#6c757d"
+                      >
+                        {labels[index]}
+                      </text>
+                    );
+                  }
+                )}
 
               {/* Legend */}
               {selectedMetrics.map((metric, index) => {
@@ -426,12 +466,7 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
                       stroke={color}
                       strokeWidth="3"
                     />
-                    <text
-                      x={x + 25}
-                      y={y + 4}
-                      fontSize="11"
-                      fill="#2c3e50"
-                    >
+                    <text x={x + 25} y={y + 4} fontSize="11" fill="#2c3e50">
                       {availableMetrics[metric]}
                     </text>
                   </g>
@@ -454,10 +489,16 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
                   pointerEvents: 'none',
                   zIndex: 1000,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <div style={{ fontWeight: '600', marginBottom: '4px', color: hoveredPoint.color }}>
+                <div
+                  style={{
+                    fontWeight: '600',
+                    marginBottom: '4px',
+                    color: hoveredPoint.color,
+                  }}
+                >
                   {availableMetrics[hoveredPoint.metric]}
                 </div>
                 <div>Value: {hoveredPoint.value.toFixed(2)}</div>
@@ -468,36 +509,54 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
 
           {/* Correlation Analysis */}
           {correlations.length > 0 && (
-            <div style={{
-              backgroundColor: 'white',
-              border: '1px solid #dee2e6',
-              borderRadius: '8px',
-              padding: '20px'
-            }}>
+            <div
+              style={{
+                backgroundColor: 'white',
+                border: '1px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '20px',
+              }}
+            >
               <h4 style={{ marginBottom: '15px', color: '#2c3e50' }}>
                 Correlation Analysis
               </h4>
 
               {/* Average correlation */}
               {averageCorrelation !== null && (
-                <div style={{
-                  padding: '12px',
-                  backgroundColor: getCorrelationColor(averageCorrelation) + '20',
-                  border: `2px solid ${getCorrelationColor(averageCorrelation)}`,
-                  borderRadius: '6px',
-                  marginBottom: '15px'
-                }}>
+                <div
+                  style={{
+                    padding: '12px',
+                    backgroundColor:
+                      getCorrelationColor(averageCorrelation) + '20',
+                    border: `2px solid ${getCorrelationColor(averageCorrelation)}`,
+                    borderRadius: '6px',
+                    marginBottom: '15px',
+                  }}
+                >
                   <div style={{ fontWeight: '600', color: '#2c3e50' }}>
-                    Average Correlation Strength: {getCorrelationLabel(averageCorrelation)}
+                    Average Correlation Strength:{' '}
+                    {getCorrelationLabel(averageCorrelation)}
                   </div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: getCorrelationColor(averageCorrelation) }}>
+                  <div
+                    style={{
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: getCorrelationColor(averageCorrelation),
+                    }}
+                  >
                     {averageCorrelation.toFixed(3)}
                   </div>
                 </div>
               )}
 
               {/* Pairwise correlations */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                  gap: '15px',
+                }}
+              >
                 {correlations.map((corr, index) => (
                   <div
                     key={index}
@@ -505,34 +564,67 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
                       padding: '15px',
                       backgroundColor: corr.color + '10',
                       border: `1px solid ${corr.color}`,
-                      borderRadius: '6px'
+                      borderRadius: '6px',
                     }}
                   >
-                    <div style={{ fontWeight: '600', marginBottom: '8px', color: '#2c3e50' }}>
-                      {availableMetrics[corr.metric1]} ↔ {availableMetrics[corr.metric2]}
+                    <div
+                      style={{
+                        fontWeight: '600',
+                        marginBottom: '8px',
+                        color: '#2c3e50',
+                      }}
+                    >
+                      {availableMetrics[corr.metric1]} ↔{' '}
+                      {availableMetrics[corr.metric2]}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <div>
-                        <div style={{ fontSize: '11px', color: '#6c757d', marginBottom: '2px' }}>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: '#6c757d',
+                            marginBottom: '2px',
+                          }}
+                        >
                           Correlation
                         </div>
-                        <div style={{ fontSize: '20px', fontWeight: 'bold', color: corr.color }}>
+                        <div
+                          style={{
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+                            color: corr.color,
+                          }}
+                        >
                           {corr.correlation.toFixed(3)}
                         </div>
                       </div>
-                      <div style={{
-                        padding: '4px 12px',
-                        backgroundColor: corr.color,
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
+                      <div
+                        style={{
+                          padding: '4px 12px',
+                          backgroundColor: corr.color,
+                          color: 'white',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                        }}
+                      >
                         {corr.strength}
                       </div>
                     </div>
                     {corr.correlation < 0 && (
-                      <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          fontSize: '11px',
+                          color: '#6c757d',
+                        }}
+                      >
                         ⚠️ Negative correlation (inverse relationship)
                       </div>
                     )}
@@ -541,26 +633,50 @@ const MetricCorrelationChart = ({ metricsData, labels, availableMetrics, title =
               </div>
 
               {/* Interpretation guide */}
-              <div style={{
-                marginTop: '20px',
-                padding: '15px',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '6px',
-                fontSize: '12px',
-                color: '#6c757d'
-              }}>
-                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#2c3e50' }}>
+              <div
+                style={{
+                  marginTop: '20px',
+                  padding: '15px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  color: '#6c757d',
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: '600',
+                    marginBottom: '8px',
+                    color: '#2c3e50',
+                  }}
+                >
                   📖 How to Interpret Correlations:
                 </div>
                 <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                  <li><strong>0.9 to 1.0 / -0.9 to -1.0:</strong> Very strong correlation - metrics move together/opposite very reliably</li>
-                  <li><strong>0.7 to 0.9 / -0.7 to -0.9:</strong> Strong correlation - metrics generally move together/opposite</li>
-                  <li><strong>0.5 to 0.7 / -0.5 to -0.7:</strong> Moderate correlation - some relationship exists</li>
-                  <li><strong>0.3 to 0.5 / -0.3 to -0.5:</strong> Weak correlation - slight relationship</li>
-                  <li><strong>-0.3 to 0.3:</strong> Very weak/no correlation - metrics move independently</li>
+                  <li>
+                    <strong>0.9 to 1.0 / -0.9 to -1.0:</strong> Very strong
+                    correlation - metrics move together/opposite very reliably
+                  </li>
+                  <li>
+                    <strong>0.7 to 0.9 / -0.7 to -0.9:</strong> Strong
+                    correlation - metrics generally move together/opposite
+                  </li>
+                  <li>
+                    <strong>0.5 to 0.7 / -0.5 to -0.7:</strong> Moderate
+                    correlation - some relationship exists
+                  </li>
+                  <li>
+                    <strong>0.3 to 0.5 / -0.3 to -0.5:</strong> Weak correlation
+                    - slight relationship
+                  </li>
+                  <li>
+                    <strong>-0.3 to 0.3:</strong> Very weak/no correlation -
+                    metrics move independently
+                  </li>
                 </ul>
                 <div style={{ marginTop: '8px', fontStyle: 'italic' }}>
-                  Positive values = metrics move together | Negative values = metrics move opposite
+                  Positive values = metrics move together | Negative values =
+                  metrics move opposite
                 </div>
               </div>
             </div>

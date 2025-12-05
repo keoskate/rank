@@ -11,48 +11,48 @@ import { createChart } from '../utils/lightweightChartsShim';
 const defaultChartOptions = {
   layout: {
     background: { type: 'solid', color: '#1a1a2e' },
-    textColor: '#d1d4dc'
+    textColor: '#d1d4dc',
   },
   grid: {
     vertLines: { color: '#2B2B43' },
-    horzLines: { color: '#2B2B43' }
+    horzLines: { color: '#2B2B43' },
   },
   crosshair: {
     mode: 1, // Normal crosshair
     vertLine: {
       width: 1,
       color: '#758696',
-      style: 2
+      style: 2,
     },
     horzLine: {
       width: 1,
       color: '#758696',
-      style: 2
-    }
+      style: 2,
+    },
   },
   rightPriceScale: {
     borderColor: '#2B2B43',
     scaleMargins: {
       top: 0.1,
-      bottom: 0.2
-    }
+      bottom: 0.2,
+    },
   },
   timeScale: {
     borderColor: '#2B2B43',
     timeVisible: true,
-    secondsVisible: false
+    secondsVisible: false,
   },
   handleScroll: {
     mouseWheel: true,
     pressedMouseMove: true,
     horzTouchDrag: true,
-    vertTouchDrag: true
+    vertTouchDrag: true,
   },
   handleScale: {
     axisPressedMouseMove: true,
     mouseWheel: true,
-    pinch: true
-  }
+    pinch: true,
+  },
 };
 
 /**
@@ -85,7 +85,9 @@ export function useTradingViewChart(options = {}) {
           retryCount++;
           timeoutId = setTimeout(initChart, 200); // Retry after 200ms
         } else {
-          console.error('TradingView lightweight-charts failed to load after retries');
+          console.error(
+            'TradingView lightweight-charts failed to load after retries'
+          );
         }
         return;
       }
@@ -94,12 +96,15 @@ export function useTradingViewChart(options = {}) {
         ...defaultChartOptions,
         width: chartContainerRef.current.clientWidth,
         height: options.height || 400,
-        ...options.chartOptions
+        ...options.chartOptions,
       };
 
       try {
         // Create chart directly using window.LightweightCharts
-        chartRef.current = lwc.createChart(chartContainerRef.current, chartOptions);
+        chartRef.current = lwc.createChart(
+          chartContainerRef.current,
+          chartOptions
+        );
 
         // Create candlestick series (v3 API)
         candlestickSeriesRef.current = chartRef.current.addCandlestickSeries({
@@ -108,7 +113,7 @@ export function useTradingViewChart(options = {}) {
           borderUpColor: '#26a69a',
           borderDownColor: '#ef5350',
           wickUpColor: '#26a69a',
-          wickDownColor: '#ef5350'
+          wickDownColor: '#ef5350',
         });
 
         // Create volume series
@@ -116,7 +121,7 @@ export function useTradingViewChart(options = {}) {
           color: '#26a69a',
           priceFormat: { type: 'volume' },
           priceScaleId: '',
-          scaleMargins: { top: 0.8, bottom: 0 }
+          scaleMargins: { top: 0.8, bottom: 0 },
         });
 
         setIsReady(true);
@@ -132,7 +137,7 @@ export function useTradingViewChart(options = {}) {
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
         chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth
+          width: chartContainerRef.current.clientWidth,
         });
       }
     };
@@ -153,22 +158,26 @@ export function useTradingViewChart(options = {}) {
    * Set candlestick data
    * @param {Array} data - OHLCV candle data
    */
-  const setCandlestickData = useCallback((data) => {
+  const setCandlestickData = useCallback(data => {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
 
     // Format data for lightweight-charts
-    const candleData = data.map((candle) => ({
-      time: candle.time || new Date(candle.date || candle.timestamp).getTime() / 1000,
+    const candleData = data.map(candle => ({
+      time:
+        candle.time ||
+        new Date(candle.date || candle.timestamp).getTime() / 1000,
       open: candle.open,
       high: candle.high,
       low: candle.low,
-      close: candle.close
+      close: candle.close,
     }));
 
-    const volumeData = data.map((candle) => ({
-      time: candle.time || new Date(candle.date || candle.timestamp).getTime() / 1000,
+    const volumeData = data.map(candle => ({
+      time:
+        candle.time ||
+        new Date(candle.date || candle.timestamp).getTime() / 1000,
       value: candle.volume,
-      color: candle.close >= candle.open ? '#26a69a80' : '#ef535080'
+      color: candle.close >= candle.open ? '#26a69a80' : '#ef535080',
     }));
 
     candlestickSeriesRef.current.setData(candleData);
@@ -182,23 +191,24 @@ export function useTradingViewChart(options = {}) {
    * Update with new candle (real-time)
    * @param {object} candle - Single candle data
    */
-  const updateCandle = useCallback((candle) => {
+  const updateCandle = useCallback(candle => {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
 
-    const time = candle.time || new Date(candle.date || candle.timestamp).getTime() / 1000;
+    const time =
+      candle.time || new Date(candle.date || candle.timestamp).getTime() / 1000;
 
     candlestickSeriesRef.current.update({
       time,
       open: candle.open,
       high: candle.high,
       low: candle.low,
-      close: candle.close
+      close: candle.close,
     });
 
     volumeSeriesRef.current.update({
       time,
       value: candle.volume,
-      color: candle.close >= candle.open ? '#26a69a80' : '#ef535080'
+      color: candle.close >= candle.open ? '#26a69a80' : '#ef535080',
     });
   }, []);
 
@@ -222,12 +232,13 @@ export function useTradingViewChart(options = {}) {
       lineStyle: lineOptions.lineStyle || 0,
       title: lineOptions.title || id,
       priceLineVisible: false,
-      lastValueVisible: lineOptions.showLabel !== false
+      lastValueVisible: lineOptions.showLabel !== false,
     });
 
-    const formattedData = data.map((point) => ({
-      time: point.time || new Date(point.date || point.timestamp).getTime() / 1000,
-      value: point.value
+    const formattedData = data.map(point => ({
+      time:
+        point.time || new Date(point.date || point.timestamp).getTime() / 1000,
+      value: point.value,
     }));
 
     series.setData(formattedData);
@@ -238,11 +249,11 @@ export function useTradingViewChart(options = {}) {
    * Add Bollinger Bands
    * @param {Array} data - Bollinger band data
    */
-  const addBollingerBands = useCallback((data) => {
+  const addBollingerBands = useCallback(data => {
     if (!chartRef.current) return;
 
     // Remove existing
-    ['bb_upper', 'bb_middle', 'bb_lower'].forEach((id) => {
+    ['bb_upper', 'bb_middle', 'bb_lower'].forEach(id => {
       if (indicatorSeriesRef.current[id]) {
         chartRef.current.removeSeries(indicatorSeriesRef.current[id]);
       }
@@ -255,7 +266,7 @@ export function useTradingViewChart(options = {}) {
       lineStyle: 2,
       title: 'BB Upper',
       priceLineVisible: false,
-      lastValueVisible: false
+      lastValueVisible: false,
     });
 
     // Middle band (SMA)
@@ -264,7 +275,7 @@ export function useTradingViewChart(options = {}) {
       lineWidth: 1,
       title: 'BB Middle',
       priceLineVisible: false,
-      lastValueVisible: false
+      lastValueVisible: false,
     });
 
     // Lower band
@@ -274,15 +285,21 @@ export function useTradingViewChart(options = {}) {
       lineStyle: 2,
       title: 'BB Lower',
       priceLineVisible: false,
-      lastValueVisible: false
+      lastValueVisible: false,
     });
 
-    const formatTime = (point) =>
+    const formatTime = point =>
       point.time || new Date(point.date || point.timestamp).getTime() / 1000;
 
-    upperSeries.setData(data.map((d) => ({ time: formatTime(d), value: d.upper })));
-    middleSeries.setData(data.map((d) => ({ time: formatTime(d), value: d.middle })));
-    lowerSeries.setData(data.map((d) => ({ time: formatTime(d), value: d.lower })));
+    upperSeries.setData(
+      data.map(d => ({ time: formatTime(d), value: d.upper }))
+    );
+    middleSeries.setData(
+      data.map(d => ({ time: formatTime(d), value: d.middle }))
+    );
+    lowerSeries.setData(
+      data.map(d => ({ time: formatTime(d), value: d.lower }))
+    );
 
     indicatorSeriesRef.current['bb_upper'] = upperSeries;
     indicatorSeriesRef.current['bb_middle'] = middleSeries;
@@ -293,27 +310,31 @@ export function useTradingViewChart(options = {}) {
    * Add VWAP line
    * @param {Array} data - VWAP values with timestamps
    */
-  const addVWAP = useCallback((data) => {
-    addEMALine('vwap', data, {
-      color: '#FF9800',
-      lineWidth: 2,
-      title: 'VWAP'
-    });
-  }, [addEMALine]);
+  const addVWAP = useCallback(
+    data => {
+      addEMALine('vwap', data, {
+        color: '#FF9800',
+        lineWidth: 2,
+        title: 'VWAP',
+      });
+    },
+    [addEMALine]
+  );
 
   /**
    * Add trade entry/exit markers
    * @param {Array} trades - Array of trade markers
    */
-  const setTradeMarkers = useCallback((trades) => {
+  const setTradeMarkers = useCallback(trades => {
     if (!candlestickSeriesRef.current) return;
 
-    const markers = trades.map((trade) => ({
-      time: trade.time || new Date(trade.date || trade.timestamp).getTime() / 1000,
+    const markers = trades.map(trade => ({
+      time:
+        trade.time || new Date(trade.date || trade.timestamp).getTime() / 1000,
       position: trade.side === 'buy' ? 'belowBar' : 'aboveBar',
       color: trade.side === 'buy' ? '#26a69a' : '#ef5350',
       shape: trade.side === 'buy' ? 'arrowUp' : 'arrowDown',
-      text: `${trade.side.toUpperCase()} @ $${trade.price.toFixed(2)}`
+      text: `${trade.side.toUpperCase()} @ $${trade.price.toFixed(2)}`,
     }));
 
     candlestickSeriesRef.current.setMarkers(markers);
@@ -324,15 +345,18 @@ export function useTradingViewChart(options = {}) {
    * Add a single marker (entry or exit point)
    * @param {object} marker - Marker data
    */
-  const addMarker = useCallback((marker) => {
+  const addMarker = useCallback(marker => {
     if (!candlestickSeriesRef.current) return;
 
     const newMarker = {
-      time: marker.time || new Date(marker.date || marker.timestamp).getTime() / 1000,
-      position: marker.position || (marker.side === 'buy' ? 'belowBar' : 'aboveBar'),
+      time:
+        marker.time ||
+        new Date(marker.date || marker.timestamp).getTime() / 1000,
+      position:
+        marker.position || (marker.side === 'buy' ? 'belowBar' : 'aboveBar'),
       color: marker.color || (marker.side === 'buy' ? '#26a69a' : '#ef5350'),
       shape: marker.shape || (marker.side === 'buy' ? 'arrowUp' : 'arrowDown'),
-      text: marker.text || ''
+      text: marker.text || '',
     };
 
     markersRef.current = [...markersRef.current, newMarker];
@@ -362,7 +386,7 @@ export function useTradingViewChart(options = {}) {
       lineWidth: lineOptions.lineWidth || 1,
       lineStyle: lineOptions.lineStyle || 2,
       axisLabelVisible: lineOptions.axisLabelVisible !== false,
-      title: lineOptions.title || ''
+      title: lineOptions.title || '',
     });
   }, []);
 
@@ -370,7 +394,7 @@ export function useTradingViewChart(options = {}) {
    * Remove indicator
    * @param {string} id - Indicator identifier
    */
-  const removeIndicator = useCallback((id) => {
+  const removeIndicator = useCallback(id => {
     if (!chartRef.current || !indicatorSeriesRef.current[id]) return;
     chartRef.current.removeSeries(indicatorSeriesRef.current[id]);
     delete indicatorSeriesRef.current[id];
@@ -381,7 +405,7 @@ export function useTradingViewChart(options = {}) {
    */
   const clearIndicators = useCallback(() => {
     if (!chartRef.current) return;
-    Object.keys(indicatorSeriesRef.current).forEach((id) => {
+    Object.keys(indicatorSeriesRef.current).forEach(id => {
       chartRef.current.removeSeries(indicatorSeriesRef.current[id]);
     });
     indicatorSeriesRef.current = {};
@@ -391,7 +415,7 @@ export function useTradingViewChart(options = {}) {
    * Subscribe to crosshair move events
    * @param {Function} callback - Callback function
    */
-  const subscribeCrosshairMove = useCallback((callback) => {
+  const subscribeCrosshairMove = useCallback(callback => {
     if (!chartRef.current) return;
     chartRef.current.subscribeCrosshairMove(callback);
     return () => chartRef.current?.unsubscribeCrosshairMove(callback);
@@ -401,7 +425,7 @@ export function useTradingViewChart(options = {}) {
    * Subscribe to click events
    * @param {Function} callback - Callback function
    */
-  const subscribeClick = useCallback((callback) => {
+  const subscribeClick = useCallback(callback => {
     if (!chartRef.current) return;
     chartRef.current.subscribeClick(callback);
     return () => chartRef.current?.unsubscribeClick(callback);
@@ -418,7 +442,7 @@ export function useTradingViewChart(options = {}) {
    * Set visible range
    * @param {object} range - Time range { from, to }
    */
-  const setVisibleRange = useCallback((range) => {
+  const setVisibleRange = useCallback(range => {
     chartRef.current?.timeScale().setVisibleRange(range);
   }, []);
 
@@ -443,7 +467,7 @@ export function useTradingViewChart(options = {}) {
    * Apply new chart options
    * @param {object} newOptions - Chart options to apply
    */
-  const applyOptions = useCallback((newOptions) => {
+  const applyOptions = useCallback(newOptions => {
     chartRef.current?.applyOptions(newOptions);
   }, []);
 
@@ -451,21 +475,21 @@ export function useTradingViewChart(options = {}) {
    * Change chart theme
    * @param {string} theme - 'dark' or 'light'
    */
-  const setTheme = useCallback((theme) => {
+  const setTheme = useCallback(theme => {
     if (!chartRef.current) return;
 
     if (theme === 'light') {
       chartRef.current.applyOptions({
         layout: {
           background: { type: 'solid', color: '#ffffff' },
-          textColor: '#333333'
+          textColor: '#333333',
         },
         grid: {
           vertLines: { color: '#e1e1e1' },
-          horzLines: { color: '#e1e1e1' }
+          horzLines: { color: '#e1e1e1' },
         },
         rightPriceScale: { borderColor: '#e1e1e1' },
-        timeScale: { borderColor: '#e1e1e1' }
+        timeScale: { borderColor: '#e1e1e1' },
       });
     } else {
       chartRef.current.applyOptions(defaultChartOptions);
@@ -494,7 +518,7 @@ export function useTradingViewChart(options = {}) {
     scrollToPosition,
     takeScreenshot,
     applyOptions,
-    setTheme
+    setTheme,
   };
 }
 

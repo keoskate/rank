@@ -7,6 +7,7 @@ Successfully implemented a comprehensive proof of concept for Charles Schwab int
 ## What's Implemented
 
 ### 1. Backend API Proxy (`server/index.js`)
+
 - **Secure SnapTrade API endpoints** for frontend communication
 - **User creation** with proper signature generation
 - **Connection portal** URL generation for brokerage authentication
@@ -15,6 +16,7 @@ Successfully implemented a comprehensive proof of concept for Charles Schwab int
 - **Mock data implementation** for demo purposes (easily replaceable with real SnapTrade calls)
 
 ### 2. Enhanced InvestTab Component (`react-client/src/Components/InvestTab.jsx`)
+
 - **Multi-step connection flow**: Connect → Connecting → Connected
 - **Account overview** displaying balance, account number, and institution
 - **Portfolio positions table** with real-time gain/loss tracking
@@ -27,7 +29,7 @@ Successfully implemented a comprehensive proof of concept for Charles Schwab int
 POST /api/snaptrade/users
 # Creates a SnapTrade user and returns userId/userSecret
 
-POST /api/snaptrade/connection-portal  
+POST /api/snaptrade/connection-portal
 # Generates secure connection URL for brokerage login
 
 GET /api/snaptrade/accounts/:userId
@@ -40,9 +42,10 @@ GET /api/snaptrade/accounts/:accountId/positions
 ## Proof of Concept Results
 
 ✅ **Successfully demonstrates:**
+
 - Charles Schwab account connection via SnapTrade
 - Account balance retrieval ($45,782.35 demo balance)
-- Account number display (****7890)
+- Account number display (\*\*\*\*7890)
 - Portfolio positions with real-time P&L
 - Secure API proxy architecture
 - Professional user interface
@@ -61,13 +64,14 @@ GET /api/snaptrade/accounts/:accountId/positions
 
 3. **Account Data Display**
    - Shows account balance: $45,782.35
-   - Displays account number: ****7890
+   - Displays account number: \*\*\*\*7890
    - Lists portfolio positions (AAPL, NVDA with P&L)
    - Shows success confirmation
 
 ## Production Implementation Notes
 
 ### Required for Production:
+
 1. **Real SnapTrade API credentials**
    - Set `SNAPTRADE_CLIENT_ID` environment variable
    - Set `SNAPTRADE_CONSUMER_KEY` environment variable
@@ -92,18 +96,21 @@ GET /api/snaptrade/accounts/:accountId/positions
 ## Technical Architecture
 
 ### Security Model
+
 - **Backend proxy**: All SnapTrade calls go through secure backend
 - **No credentials in frontend**: API keys never exposed to browser
 - **Signature-based authentication**: Uses HMAC-SHA256 for API security
 - **User secret management**: Securely generated and stored
 
 ### Data Flow
+
 ```
 Frontend → Backend API → SnapTrade API → Brokerage (Schwab)
          ←              ←               ←
 ```
 
 ### Error Handling
+
 - Comprehensive error catching and user-friendly messages
 - Proper HTTP status codes and error responses
 - Graceful fallbacks for network issues
@@ -121,7 +128,7 @@ Frontend → Backend API → SnapTrade API → Brokerage (Schwab)
 ## SnapTrade Service Information
 
 - **Pricing**: $1.50/user/month (Pay as You Go)
-- **Supported brokers**: 22+ including Charles Schwab, Fidelity, E*TRADE
+- **Supported brokers**: 22+ including Charles Schwab, Fidelity, E\*TRADE
 - **Trading access**: Requires evaluation for production trading
 - **Real-time data**: Available with Custom Plan
 - **Free tier**: Read-only access with 5 connections
@@ -135,6 +142,7 @@ Frontend → Backend API → SnapTrade API → Brokerage (Schwab)
 ## Testing the Integration
 
 1. **Start the application**:
+
    ```bash
    npm run build
    npm run server-dev

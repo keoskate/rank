@@ -5,7 +5,7 @@ Your application is now configured to use **Polygon.io** for professional financ
 ## ✅ **Why Polygon.io?**
 
 - ✅ **All your current columns supported**
-- ✅ **Professional-grade data quality** 
+- ✅ **Professional-grade data quality**
 - ✅ **Technical indicators** (RSI, MACD, etc.) for future features
 - ✅ **No CORS issues**
 - ⚠️ **Free tier**: 5 requests/minute (slower but reliable)
@@ -96,12 +96,14 @@ When ready for production:
 ## ⚠️ **Rate Limiting (Free Tier)**
 
 The free tier has rate limits:
+
 - **5 requests per minute** maximum
 - App automatically waits **13 seconds** between requests
 - **Fetching 5 stocks = ~1 minute** (but reliable data!)
 - Upgrade to $99/month for unlimited requests
 
 If you see `429 Too Many Requests`:
+
 - The app will automatically wait 60 seconds and retry
 - This is normal for the free tier
 - Consider Alpha Vantage fallback for faster testing

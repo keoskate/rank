@@ -52,7 +52,10 @@ import {
   setDebugPreference,
   getDebugModeInfo,
 } from '../utils/debugPreference';
-import { resetToDefaultWeights, applyStrategyPreset } from '../config/stockColumns';
+import {
+  resetToDefaultWeights,
+  applyStrategyPreset,
+} from '../config/stockColumns';
 import {
   loadWeightPreferences,
   applyWeightPreferences,
@@ -518,104 +521,107 @@ function ModernStonkBoard() {
    * - Red shades: Poor values (2+ std dev in negative direction)
    * - Light colors: Values close to average
    */
-  const getConditionalColor = useCallback((col, value, paramConfig) => {
-    const weight = paramConfig[col]?.weight || 0;
-    const mult = paramConfig[col]?.multiplier === 1;
+  const getConditionalColor = useCallback(
+    (col, value, paramConfig) => {
+      const weight = paramConfig[col]?.weight || 0;
+      const mult = paramConfig[col]?.multiplier === 1;
 
-    // Calculate stats on-demand from current data
-    const avg = data.length > 0 ? getColAverage(col, data) : 0;
-    const std = data.length > 0 ? getColStandardDeviation(col, data) : 0;
+      // Calculate stats on-demand from current data
+      const avg = data.length > 0 ? getColAverage(col, data) : 0;
+      const std = data.length > 0 ? getColStandardDeviation(col, data) : 0;
 
-    if (avg === 0 || std === 0 || data.length === 0) {
-      return '#ffffff'; // White if no stats available
-    }
+      if (avg === 0 || std === 0 || data.length === 0) {
+        return '#ffffff'; // White if no stats available
+      }
 
-    if (weight === 0) {
-      return '#ffffff'; // White if weight is 0
-    }
+      if (weight === 0) {
+        return '#ffffff'; // White if weight is 0
+      }
 
-    // Best values (2+ standard deviations in good direction)
-    else if (
-      (avg - 2 * std >= value && !mult) ||
-      (avg + 2 * std <= value && mult)
-    ) {
-      return '#67c279'; // Bright green
-    }
+      // Best values (2+ standard deviations in good direction)
+      else if (
+        (avg - 2 * std >= value && !mult) ||
+        (avg + 2 * std <= value && mult)
+      ) {
+        return '#67c279'; // Bright green
+      }
 
-    // Very good values (1.5-2 std dev)
-    else if (
-      (avg - 1.5 * std >= value && value >= avg - 2 * std && !mult) ||
-      (avg + 1.5 * std <= value && value <= avg + 2 * std && mult)
-    ) {
-      return '#a5d3a5'; // Green
-    }
+      // Very good values (1.5-2 std dev)
+      else if (
+        (avg - 1.5 * std >= value && value >= avg - 2 * std && !mult) ||
+        (avg + 1.5 * std <= value && value <= avg + 2 * std && mult)
+      ) {
+        return '#a5d3a5'; // Green
+      }
 
-    // Good values (1-1.5 std dev)
-    else if (
-      (avg - 1 * std >= value && value >= avg - 1.5 * std && !mult) ||
-      (avg + 1 * std <= value && value <= avg + 1.5 * std && mult)
-    ) {
-      return '#b1e1b0'; // Light green
-    }
+      // Good values (1-1.5 std dev)
+      else if (
+        (avg - 1 * std >= value && value >= avg - 1.5 * std && !mult) ||
+        (avg + 1 * std <= value && value <= avg + 1.5 * std && mult)
+      ) {
+        return '#b1e1b0'; // Light green
+      }
 
-    // Slightly good values (0.5-1 std dev)
-    else if (
-      (avg - 0.5 * std >= value && value >= avg - 1 * std && !mult) ||
-      (avg + 0.5 * std <= value && value <= avg + 1 * std && mult)
-    ) {
-      return '#c5f1c6'; // Very light green
-    }
+      // Slightly good values (0.5-1 std dev)
+      else if (
+        (avg - 0.5 * std >= value && value >= avg - 1 * std && !mult) ||
+        (avg + 0.5 * std <= value && value <= avg + 1 * std && mult)
+      ) {
+        return '#c5f1c6'; // Very light green
+      }
 
-    // Near average (good direction)
-    else if (
-      (avg >= value && value >= avg - 0.5 * std && !mult) ||
-      (avg <= value && value <= avg + 0.5 * std && mult)
-    ) {
-      return '#e7f6e5'; // Pale green
-    }
+      // Near average (good direction)
+      else if (
+        (avg >= value && value >= avg - 0.5 * std && !mult) ||
+        (avg <= value && value <= avg + 0.5 * std && mult)
+      ) {
+        return '#e7f6e5'; // Pale green
+      }
 
-    // Near average (poor direction)
-    else if (
-      (avg >= value && value >= avg - 0.5 * std && mult) ||
-      (avg <= value && value <= avg + 0.5 * std && !mult)
-    ) {
-      return '#fff3f3'; // Pale red
-    }
+      // Near average (poor direction)
+      else if (
+        (avg >= value && value >= avg - 0.5 * std && mult) ||
+        (avg <= value && value <= avg + 0.5 * std && !mult)
+      ) {
+        return '#fff3f3'; // Pale red
+      }
 
-    // Slightly poor values (0.5-1 std dev)
-    else if (
-      (avg - 0.5 * std >= value && value >= avg - 1 * std && mult) ||
-      (avg + 0.5 * std <= value && value <= avg + 1 * std && !mult)
-    ) {
-      return '#ffe1e1'; // Very light red
-    }
+      // Slightly poor values (0.5-1 std dev)
+      else if (
+        (avg - 0.5 * std >= value && value >= avg - 1 * std && mult) ||
+        (avg + 0.5 * std <= value && value <= avg + 1 * std && !mult)
+      ) {
+        return '#ffe1e1'; // Very light red
+      }
 
-    // Poor values (1-1.5 std dev)
-    else if (
-      (avg - 1 * std >= value && value >= avg - 1.5 * std && mult) ||
-      (avg + 1 * std <= value && value <= avg + 1.5 * std && !mult)
-    ) {
-      return '#fdc2c2'; // Light red
-    }
+      // Poor values (1-1.5 std dev)
+      else if (
+        (avg - 1 * std >= value && value >= avg - 1.5 * std && mult) ||
+        (avg + 1 * std <= value && value <= avg + 1.5 * std && !mult)
+      ) {
+        return '#fdc2c2'; // Light red
+      }
 
-    // Very poor values (1.5-2 std dev)
-    else if (
-      (avg - 1.5 * std >= value && value >= avg - 2 * std && mult) ||
-      (avg + 1.5 * std <= value && value <= avg + 2 * std && !mult)
-    ) {
-      return '#fda4a4'; // Red
-    }
+      // Very poor values (1.5-2 std dev)
+      else if (
+        (avg - 1.5 * std >= value && value >= avg - 2 * std && mult) ||
+        (avg + 1.5 * std <= value && value <= avg + 2 * std && !mult)
+      ) {
+        return '#fda4a4'; // Red
+      }
 
-    // Worst values (2+ standard deviations in poor direction)
-    else if (
-      (value < avg - 2 * std && mult) ||
-      (value > avg + 2 * std && !mult)
-    ) {
-      return '#fd7979'; // Bright red
-    }
+      // Worst values (2+ standard deviations in poor direction)
+      else if (
+        (value < avg - 2 * std && mult) ||
+        (value > avg + 2 * std && !mult)
+      ) {
+        return '#fd7979'; // Bright red
+      }
 
-    return '#ffffff'; // Default white
-  }, [data]);
+      return '#ffffff'; // Default white
+    },
+    [data]
+  );
 
   const getCellStyle = useCallback(
     (col, value) => {
@@ -718,13 +724,16 @@ function ModernStonkBoard() {
   };
 
   // Apply a strategy preset
-  const handleApplyPreset = useCallback((presetId) => {
-    const updatedParams = applyStrategyPreset(params, presetId);
-    setParams(updatedParams);
-    // Save to localStorage immediately
-    saveWeightPreferences(updatedParams);
-    console.info(`📊 Applied and saved strategy preset: ${presetId}`);
-  }, [params]);
+  const handleApplyPreset = useCallback(
+    presetId => {
+      const updatedParams = applyStrategyPreset(params, presetId);
+      setParams(updatedParams);
+      // Save to localStorage immediately
+      saveWeightPreferences(updatedParams);
+      console.info(`📊 Applied and saved strategy preset: ${presetId}`);
+    },
+    [params]
+  );
 
   // Cache refresh handler
   const handleCacheRefresh = async (forceRefresh = false) => {

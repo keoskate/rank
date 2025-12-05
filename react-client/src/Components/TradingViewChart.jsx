@@ -17,7 +17,7 @@ const TIMEFRAMES = [
   { label: '15m', value: '15', multiplier: 15 },
   { label: '1H', value: '60', multiplier: 60 },
   { label: '4H', value: '240', multiplier: 240 },
-  { label: '1D', value: 'day', multiplier: 1440 }
+  { label: '1D', value: 'day', multiplier: 1440 },
 ];
 
 const INDICATORS = [
@@ -26,7 +26,12 @@ const INDICATORS = [
   { id: 'ema50', label: 'EMA 50', color: '#FF9800', enabled: false },
   { id: 'ema200', label: 'EMA 200', color: '#9C27B0', enabled: false },
   { id: 'vwap', label: 'VWAP', color: '#E91E63', enabled: true },
-  { id: 'bollinger', label: 'Bollinger Bands', color: '#9C27B0', enabled: false }
+  {
+    id: 'bollinger',
+    label: 'Bollinger Bands',
+    color: '#9C27B0',
+    enabled: false,
+  },
 ];
 
 const TradingViewChart = ({
@@ -39,7 +44,7 @@ const TradingViewChart = ({
   showControls = true,
   showLegend = true,
   showToolbar = true,
-  title
+  title,
 }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState('5');
   const [activeIndicators, setActiveIndicators] = useState(
@@ -62,8 +67,10 @@ const TradingViewChart = ({
     subscribeCrosshairMove,
     fitContent,
     takeScreenshot,
-    setTheme
-  } = useTradingViewChart({ height: isFullscreen ? window.innerHeight - 150 : height });
+    setTheme,
+  } = useTradingViewChart({
+    height: isFullscreen ? window.innerHeight - 150 : height,
+  });
 
   // Set candle data when available
   useEffect(() => {
@@ -77,13 +84,13 @@ const TradingViewChart = ({
     if (!isReady || !indicators) return;
 
     // EMA indicators
-    ['ema9', 'ema21', 'ema50', 'ema200'].forEach((emaId) => {
+    ['ema9', 'ema21', 'ema50', 'ema200'].forEach(emaId => {
       const period = parseInt(emaId.replace('ema', ''));
       if (activeIndicators[emaId] && indicators[emaId]) {
-        const indicatorConfig = INDICATORS.find((i) => i.id === emaId);
+        const indicatorConfig = INDICATORS.find(i => i.id === emaId);
         addEMALine(emaId, indicators[emaId], {
           color: indicatorConfig?.color || '#2196F3',
-          title: `EMA ${period}`
+          title: `EMA ${period}`,
         });
       } else {
         removeIndicator(emaId);
@@ -112,7 +119,7 @@ const TradingViewChart = ({
     addEMALine,
     addVWAP,
     addBollingerBands,
-    removeIndicator
+    removeIndicator,
   ]);
 
   // Set trade markers
@@ -126,13 +133,13 @@ const TradingViewChart = ({
   useEffect(() => {
     if (!isReady) return;
 
-    const unsubscribe = subscribeCrosshairMove((param) => {
+    const unsubscribe = subscribeCrosshairMove(param => {
       if (param.time) {
         const data = param.seriesData.get(param.series);
         if (data) {
           setCrosshairData({
             time: param.time,
-            ...data
+            ...data,
           });
         }
       } else {
@@ -145,7 +152,7 @@ const TradingViewChart = ({
 
   // Handle timeframe change
   const handleTimeframeChange = useCallback(
-    (tf) => {
+    tf => {
       setSelectedTimeframe(tf);
       if (onTimeframeChange) {
         onTimeframeChange(tf);
@@ -155,10 +162,10 @@ const TradingViewChart = ({
   );
 
   // Toggle indicator
-  const toggleIndicator = useCallback((indicatorId) => {
-    setActiveIndicators((prev) => ({
+  const toggleIndicator = useCallback(indicatorId => {
+    setActiveIndicators(prev => ({
       ...prev,
-      [indicatorId]: !prev[indicatorId]
+      [indicatorId]: !prev[indicatorId],
     }));
   }, []);
 
@@ -175,16 +182,16 @@ const TradingViewChart = ({
 
   // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
-    setIsFullscreen((prev) => !prev);
+    setIsFullscreen(prev => !prev);
   }, []);
 
   // Format OHLCV for legend display
-  const formatPrice = (price) => {
+  const formatPrice = price => {
     if (price === undefined || price === null) return '-';
     return price.toFixed(2);
   };
 
-  const formatVolume = (volume) => {
+  const formatVolume = volume => {
     if (volume === undefined || volume === null) return '-';
     if (volume >= 1000000) return `${(volume / 1000000).toFixed(2)}M`;
     if (volume >= 1000) return `${(volume / 1000).toFixed(2)}K`;
@@ -201,15 +208,13 @@ const TradingViewChart = ({
         high: last.high,
         low: last.low,
         close: last.close,
-        volume: last.volume
+        volume: last.volume,
       };
     }
     return null;
   }, [crosshairData, candles]);
 
-  const priceChange = displayData
-    ? displayData.close - displayData.open
-    : 0;
+  const priceChange = displayData ? displayData.close - displayData.open : 0;
   const priceChangePercent = displayData?.open
     ? ((priceChange / displayData.open) * 100).toFixed(2)
     : 0;
@@ -223,7 +228,7 @@ const TradingViewChart = ({
         bottom: 0,
         zIndex: 1000,
         backgroundColor: '#1a1a2e',
-        padding: theme.spacing.md
+        padding: theme.spacing.md,
       }
     : {};
 
@@ -239,15 +244,21 @@ const TradingViewChart = ({
               alignItems: 'center',
               padding: theme.spacing.sm,
               borderBottom: `1px solid ${theme.colors.gray200}`,
-              backgroundColor: theme.colors.gray50
+              backgroundColor: theme.colors.gray50,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.md,
+              }}
+            >
               {title && (
                 <span
                   style={{
                     fontSize: theme.typography.fontSize.lg,
-                    fontWeight: theme.typography.fontWeight.bold
+                    fontWeight: theme.typography.fontWeight.bold,
                   }}
                 >
                   {title || symbol}
@@ -257,7 +268,7 @@ const TradingViewChart = ({
               {/* Timeframe selector */}
               {showControls && (
                 <div style={{ display: 'flex', gap: theme.spacing.xs }}>
-                  {TIMEFRAMES.map((tf) => (
+                  {TIMEFRAMES.map(tf => (
                     <button
                       key={tf.value}
                       onClick={() => handleTimeframeChange(tf.value)}
@@ -275,7 +286,7 @@ const TradingViewChart = ({
                             : theme.colors.gray600,
                         cursor: 'pointer',
                         fontSize: theme.typography.fontSize.sm,
-                        fontWeight: theme.typography.fontWeight.medium
+                        fontWeight: theme.typography.fontWeight.medium,
                       }}
                     >
                       {tf.label}
@@ -327,38 +338,43 @@ const TradingViewChart = ({
               backgroundColor: '#1a1a2e',
               color: '#d1d4dc',
               fontSize: theme.typography.fontSize.sm,
-              fontFamily: 'monospace'
+              fontFamily: 'monospace',
             }}
           >
             <span>
               O:{' '}
-              <span style={{ color: '#fff' }}>{formatPrice(displayData.open)}</span>
+              <span style={{ color: '#fff' }}>
+                {formatPrice(displayData.open)}
+              </span>
             </span>
             <span>
               H:{' '}
-              <span style={{ color: '#26a69a' }}>{formatPrice(displayData.high)}</span>
+              <span style={{ color: '#26a69a' }}>
+                {formatPrice(displayData.high)}
+              </span>
             </span>
             <span>
               L:{' '}
-              <span style={{ color: '#ef5350' }}>{formatPrice(displayData.low)}</span>
+              <span style={{ color: '#ef5350' }}>
+                {formatPrice(displayData.low)}
+              </span>
             </span>
             <span>
               C:{' '}
-              <span
-                style={{ color: priceChange >= 0 ? '#26a69a' : '#ef5350' }}
-              >
+              <span style={{ color: priceChange >= 0 ? '#26a69a' : '#ef5350' }}>
                 {formatPrice(displayData.close)}
               </span>
             </span>
-            <span
-              style={{ color: priceChange >= 0 ? '#26a69a' : '#ef5350' }}
-            >
+            <span style={{ color: priceChange >= 0 ? '#26a69a' : '#ef5350' }}>
               {priceChange >= 0 ? '+' : ''}
               {formatPrice(priceChange)} ({priceChangePercent}%)
             </span>
             {displayData.volume && (
               <span>
-                Vol: <span style={{ color: '#fff' }}>{formatVolume(displayData.volume)}</span>
+                Vol:{' '}
+                <span style={{ color: '#fff' }}>
+                  {formatVolume(displayData.volume)}
+                </span>
               </span>
             )}
           </div>
@@ -369,7 +385,7 @@ const TradingViewChart = ({
           ref={chartContainerRef}
           style={{
             width: '100%',
-            height: isFullscreen ? window.innerHeight - 200 : height
+            height: isFullscreen ? window.innerHeight - 200 : height,
           }}
         />
 
@@ -382,10 +398,10 @@ const TradingViewChart = ({
               gap: theme.spacing.sm,
               padding: theme.spacing.sm,
               borderTop: `1px solid ${theme.colors.gray200}`,
-              backgroundColor: theme.colors.gray50
+              backgroundColor: theme.colors.gray50,
             }}
           >
-            {INDICATORS.map((indicator) => (
+            {INDICATORS.map(indicator => (
               <button
                 key={indicator.id}
                 onClick={() => toggleIndicator(indicator.id)}
@@ -403,7 +419,7 @@ const TradingViewChart = ({
                   fontSize: theme.typography.fontSize.xs,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: theme.spacing.xs
+                  gap: theme.spacing.xs,
                 }}
               >
                 <span
@@ -412,7 +428,7 @@ const TradingViewChart = ({
                     height: 8,
                     borderRadius: '50%',
                     backgroundColor: indicator.color,
-                    opacity: activeIndicators[indicator.id] ? 1 : 0.3
+                    opacity: activeIndicators[indicator.id] ? 1 : 0.3,
                   }}
                 />
                 {indicator.label}

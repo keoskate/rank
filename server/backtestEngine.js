@@ -32,7 +32,9 @@ function calculateSharpeRatio(returns, riskFreeRate = 0.04) {
   if (returns.length === 0) return 0;
 
   const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
-  const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
+  const variance =
+    returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) /
+    returns.length;
   const stdDev = Math.sqrt(variance);
 
   if (stdDev === 0) return 0;
@@ -81,7 +83,7 @@ function calculateMaxDrawdown(portfolioValues) {
     maxDrawdownPercent,
     peak,
     peakIndex,
-    troughIndex
+    troughIndex,
   };
 }
 
@@ -104,10 +106,12 @@ async function backtestTopNStrategy(options) {
     endDate,
     topN = 5,
     rebalanceFrequency = 'daily',
-    initialCapital = 100000
+    initialCapital = 100000,
   } = options;
 
-  console.log(`🧪 Starting backtest: Top ${topN}, ${rebalanceFrequency} rebalance, ${startDate} to ${endDate}`);
+  console.log(
+    `🧪 Starting backtest: Top ${topN}, ${rebalanceFrequency} rebalance, ${startDate} to ${endDate}`
+  );
 
   // Load all snapshots in date range
   const snapshots = await snapshotManager.loadSnapshotRange(startDate, endDate);
@@ -132,7 +136,7 @@ async function backtestTopNStrategy(options) {
   const rebalanceDays = {
     daily: 1,
     weekly: 7,
-    monthly: 30
+    monthly: 30,
   };
 
   const rebalanceInterval = rebalanceDays[rebalanceFrequency] || 1;
@@ -170,7 +174,7 @@ async function backtestTopNStrategy(options) {
               buyDate: position.buyDate,
               holdDays: i - position.buyIndex,
               returnPct,
-              profit: proceeds - (position.quantity * position.buyPrice)
+              profit: proceeds - position.quantity * position.buyPrice,
             });
 
             console.log(`  💰 Sell ${symbol}: ${returnPct.toFixed(2)}% return`);
@@ -195,7 +199,7 @@ async function backtestTopNStrategy(options) {
             quantity,
             buyPrice: stock.price,
             buyDate: date,
-            buyIndex: i
+            buyIndex: i,
           });
 
           trades.push({
@@ -205,10 +209,12 @@ async function backtestTopNStrategy(options) {
             quantity,
             price: stock.price,
             cost,
-            rank: stock.rank
+            rank: stock.rank,
           });
 
-          console.log(`  🛒 Buy ${stock.symbol} (rank ${stock.rank}): ${quantity} shares @ $${stock.price}`);
+          console.log(
+            `  🛒 Buy ${stock.symbol} (rank ${stock.rank}): ${quantity} shares @ $${stock.price}`
+          );
         }
       }
 
@@ -230,13 +236,14 @@ async function backtestTopNStrategy(options) {
       date,
       value: portfolioValue,
       cash: capital,
-      positionsValue
+      positionsValue,
     });
 
     // Calculate daily return
     if (i > 0) {
       const previousValue = dailyPortfolioValues[i - 1].value;
-      const dailyReturn = ((portfolioValue - previousValue) / previousValue) * 100;
+      const dailyReturn =
+        ((portfolioValue - previousValue) / previousValue) * 100;
       dailyReturns.push(dailyReturn);
     }
 
@@ -265,7 +272,7 @@ async function backtestTopNStrategy(options) {
         buyDate: position.buyDate,
         holdDays: snapshots.length - 1 - position.buyIndex,
         returnPct,
-        profit: proceeds - (position.quantity * position.buyPrice)
+        profit: proceeds - position.quantity * position.buyPrice,
       });
     }
   }
@@ -280,12 +287,16 @@ async function backtestTopNStrategy(options) {
   // Win rate (percentage of profitable trades)
   const sellTrades = trades.filter(t => t.side === 'sell');
   const profitableTrades = sellTrades.filter(t => t.profit > 0);
-  const winRate = sellTrades.length > 0 ? (profitableTrades.length / sellTrades.length) * 100 : 0;
+  const winRate =
+    sellTrades.length > 0
+      ? (profitableTrades.length / sellTrades.length) * 100
+      : 0;
 
   // Average trade return
-  const avgReturn = sellTrades.length > 0
-    ? sellTrades.reduce((sum, t) => sum + t.returnPct, 0) / sellTrades.length
-    : 0;
+  const avgReturn =
+    sellTrades.length > 0
+      ? sellTrades.reduce((sum, t) => sum + t.returnPct, 0) / sellTrades.length
+      : 0;
 
   // Sharpe ratio
   const sharpeRatio = calculateSharpeRatio(dailyReturns);
@@ -297,9 +308,14 @@ async function backtestTopNStrategy(options) {
   // Calculate annualized return
   const days = snapshots.length;
   const years = days / 252; // Trading days per year
-  const annualizedReturn = years > 0 ? (Math.pow(finalValue / initialCapital, 1 / years) - 1) * 100 : 0;
+  const annualizedReturn =
+    years > 0
+      ? (Math.pow(finalValue / initialCapital, 1 / years) - 1) * 100
+      : 0;
 
-  console.log(`✅ Backtest complete: ${totalReturn.toFixed(2)}% return, ${winRate.toFixed(1)}% win rate`);
+  console.log(
+    `✅ Backtest complete: ${totalReturn.toFixed(2)}% return, ${winRate.toFixed(1)}% win rate`
+  );
 
   return {
     strategy: {
@@ -308,7 +324,7 @@ async function backtestTopNStrategy(options) {
       rebalanceFrequency,
       startDate,
       endDate,
-      days: snapshots.length
+      days: snapshots.length,
     },
     performance: {
       initialCapital,
@@ -316,7 +332,10 @@ async function backtestTopNStrategy(options) {
       totalReturn,
       totalProfit,
       annualizedReturn,
-      avgDailyReturn: dailyReturns.length > 0 ? dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length : 0
+      avgDailyReturn:
+        dailyReturns.length > 0
+          ? dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length
+          : 0,
     },
     trades: {
       total: trades.length,
@@ -326,27 +345,34 @@ async function backtestTopNStrategy(options) {
       losingTrades: sellTrades.length - profitableTrades.length,
       winRate,
       avgReturn,
-      avgProfit: sellTrades.length > 0 ? sellTrades.reduce((sum, t) => sum + t.profit, 0) / sellTrades.length : 0
+      avgProfit:
+        sellTrades.length > 0
+          ? sellTrades.reduce((sum, t) => sum + t.profit, 0) / sellTrades.length
+          : 0,
     },
     risk: {
       sharpeRatio,
       maxDrawdown: maxDrawdown.maxDrawdown,
       maxDrawdownPercent: maxDrawdown.maxDrawdownPercent,
-      volatility: dailyReturns.length > 0 ? Math.sqrt(
-        dailyReturns.reduce((sum, r) => {
-          const mean = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
-          return sum + Math.pow(r - mean, 2);
-        }, 0) / dailyReturns.length
-      ) * Math.sqrt(252) : 0 // Annualized volatility
+      volatility:
+        dailyReturns.length > 0
+          ? Math.sqrt(
+              dailyReturns.reduce((sum, r) => {
+                const mean =
+                  dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+                return sum + Math.pow(r - mean, 2);
+              }, 0) / dailyReturns.length
+            ) * Math.sqrt(252)
+          : 0, // Annualized volatility
     },
     timeline: {
       dailyValues: dailyPortfolioValues,
       dailyReturns: dailyReturns.map((ret, i) => ({
         date: dailyPortfolioValues[i + 1].date,
-        return: ret
-      }))
+        return: ret,
+      })),
     },
-    allTrades: trades
+    allTrades: trades,
   };
 }
 
@@ -366,7 +392,7 @@ function compareToSP500(backtestResults, spyReturn = 8.5) {
     strategyReturn: backtestResults.performance.annualizedReturn,
     alpha,
     outperformance,
-    outperformancePercent: alpha
+    outperformancePercent: alpha,
   };
 }
 
@@ -375,5 +401,5 @@ module.exports = {
   compareToSP500,
   calculateReturn,
   calculateSharpeRatio,
-  calculateMaxDrawdown
+  calculateMaxDrawdown,
 };

@@ -119,13 +119,16 @@ const WeightManager = ({
     return '#c3e6cb';
   };
 
-  const handleApplyPreset = useCallback((presetId) => {
-    if (onApplyPreset) {
-      onApplyPreset(presetId);
-    }
-    setShowPresets(false);
-    setLastSaved(new Date());
-  }, [onApplyPreset]);
+  const handleApplyPreset = useCallback(
+    presetId => {
+      if (onApplyPreset) {
+        onApplyPreset(presetId);
+      }
+      setShowPresets(false);
+      setLastSaved(new Date());
+    },
+    [onApplyPreset]
+  );
 
   const getStatusInfo = () => {
     if (activePreset) {
@@ -274,13 +277,14 @@ const WeightManager = ({
             flexWrap: 'wrap',
           }}
         >
-          {presetList.map((preset) => (
+          {presetList.map(preset => (
             <button
               key={preset.id}
               onClick={() => handleApplyPreset(preset.id)}
               style={{
                 padding: '6px 12px',
-                backgroundColor: activePreset?.id === preset.id ? '#007bff' : '#f8f9fa',
+                backgroundColor:
+                  activePreset?.id === preset.id ? '#007bff' : '#f8f9fa',
                 color: activePreset?.id === preset.id ? 'white' : '#495057',
                 border: `1px solid ${activePreset?.id === preset.id ? '#007bff' : '#dee2e6'}`,
                 borderRadius: '4px',
@@ -297,14 +301,19 @@ const WeightManager = ({
               <span>{preset.icon}</span>
               <span>{preset.name}</span>
               {preset.id === 'aiMomentum' && (
-                <span style={{
-                  fontSize: '9px',
-                  backgroundColor: activePreset?.id === preset.id ? 'rgba(255,255,255,0.3)' : '#9c27b0',
-                  color: 'white',
-                  padding: '1px 4px',
-                  borderRadius: '3px',
-                  marginLeft: '2px',
-                }}>
+                <span
+                  style={{
+                    fontSize: '9px',
+                    backgroundColor:
+                      activePreset?.id === preset.id
+                        ? 'rgba(255,255,255,0.3)'
+                        : '#9c27b0',
+                    color: 'white',
+                    padding: '1px 4px',
+                    borderRadius: '3px',
+                    marginLeft: '2px',
+                  }}
+                >
                   AI
                 </span>
               )}

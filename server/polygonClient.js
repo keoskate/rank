@@ -14,7 +14,8 @@
 const axios = require('axios');
 
 // Polygon API Configuration
-const POLYGON_API_KEY = process.env.POLYGON_API_KEY || 'trJFATg2fiHoUCMN6DUY2ldhCqifQO8_';
+const POLYGON_API_KEY =
+  process.env.POLYGON_API_KEY || 'trJFATg2fiHoUCMN6DUY2ldhCqifQO8_';
 const POLYGON_BASE_URL = 'https://api.polygon.io';
 
 // Rate limiting
@@ -29,7 +30,9 @@ async function rateLimit() {
   const timeSinceLastRequest = now - lastRequestTime;
 
   if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
-    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
+    await new Promise(resolve =>
+      setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest)
+    );
   }
 
   lastRequestTime = Date.now();
@@ -44,7 +47,12 @@ async function rateLimit() {
  * @param {string} timespan - day, week, month, etc.
  * @returns {Array} - Array of OHLCV bars
  */
-async function getHistoricalAggregates(symbol, startDate, endDate, timespan = 'day') {
+async function getHistoricalAggregates(
+  symbol,
+  startDate,
+  endDate,
+  timespan = 'day'
+) {
   await rateLimit();
 
   try {
@@ -54,9 +62,9 @@ async function getHistoricalAggregates(symbol, startDate, endDate, timespan = 'd
       params: {
         adjusted: 'true',
         sort: 'asc',
-        apiKey: POLYGON_API_KEY
+        apiKey: POLYGON_API_KEY,
       },
-      timeout: 30000 // 30 second timeout
+      timeout: 30000, // 30 second timeout
     });
 
     if (response.data.status === 'ERROR') {
@@ -64,7 +72,9 @@ async function getHistoricalAggregates(symbol, startDate, endDate, timespan = 'd
     }
 
     if (!response.data.results || response.data.results.length === 0) {
-      console.warn(`⚠️ No historical data found for ${symbol} (${startDate} to ${endDate})`);
+      console.warn(
+        `⚠️ No historical data found for ${symbol} (${startDate} to ${endDate})`
+      );
       return [];
     }
 
@@ -78,19 +88,23 @@ async function getHistoricalAggregates(symbol, startDate, endDate, timespan = 'd
       close: bar.c,
       volume: bar.v,
       vwap: bar.vw,
-      transactions: bar.n
+      transactions: bar.n,
     }));
 
-    console.log(`✅ Fetched ${bars.length} bars for ${symbol} (${startDate} to ${endDate})`);
+    console.log(
+      `✅ Fetched ${bars.length} bars for ${symbol} (${startDate} to ${endDate})`
+    );
     return bars;
-
   } catch (error) {
     if (error.response?.status === 429) {
       console.error(`❌ Rate limit exceeded for ${symbol}`);
       throw new Error('Rate limit exceeded - please wait before retrying');
     }
 
-    console.error(`❌ Error fetching historical data for ${symbol}:`, error.message);
+    console.error(
+      `❌ Error fetching historical data for ${symbol}:`,
+      error.message
+    );
     throw error;
   }
 }
@@ -109,9 +123,9 @@ async function getLatestQuote(symbol) {
 
     const response = await axios.get(url, {
       params: {
-        apiKey: POLYGON_API_KEY
+        apiKey: POLYGON_API_KEY,
       },
-      timeout: 10000
+      timeout: 10000,
     });
 
     if (response.data.status === 'ERROR') {
@@ -125,9 +139,8 @@ async function getLatestQuote(symbol) {
       size: result.s,
       exchange: result.x,
       timestamp: result.t,
-      conditions: result.c
+      conditions: result.c,
     };
-
   } catch (error) {
     console.error(`❌ Error fetching quote for ${symbol}:`, error.message);
     throw error;
@@ -149,9 +162,9 @@ async function getPreviousClose(symbol) {
     const response = await axios.get(url, {
       params: {
         adjusted: 'true',
-        apiKey: POLYGON_API_KEY
+        apiKey: POLYGON_API_KEY,
       },
-      timeout: 10000
+      timeout: 10000,
     });
 
     if (!response.data.results || response.data.results.length === 0) {
@@ -167,11 +180,13 @@ async function getPreviousClose(symbol) {
       low: result.l,
       close: result.c,
       volume: result.v,
-      vwap: result.vw
+      vwap: result.vw,
     };
-
   } catch (error) {
-    console.error(`❌ Error fetching previous close for ${symbol}:`, error.message);
+    console.error(
+      `❌ Error fetching previous close for ${symbol}:`,
+      error.message
+    );
     return null;
   }
 }
@@ -190,9 +205,9 @@ async function getStockDetails(symbol) {
 
     const response = await axios.get(url, {
       params: {
-        apiKey: POLYGON_API_KEY
+        apiKey: POLYGON_API_KEY,
       },
-      timeout: 10000
+      timeout: 10000,
     });
 
     if (response.data.status === 'ERROR') {
@@ -221,11 +236,13 @@ async function getStockDetails(symbol) {
       listDate: result.list_date,
       branding: result.branding,
       shareClassSharesOutstanding: result.share_class_shares_outstanding,
-      weightedSharesOutstanding: result.weighted_shares_outstanding
+      weightedSharesOutstanding: result.weighted_shares_outstanding,
     };
-
   } catch (error) {
-    console.error(`❌ Error fetching stock details for ${symbol}:`, error.message);
+    console.error(
+      `❌ Error fetching stock details for ${symbol}:`,
+      error.message
+    );
     return null;
   }
 }
@@ -242,7 +259,9 @@ function calculateTechnicalIndicators(bars) {
   }
 
   // Sort by date ascending
-  const sortedBars = [...bars].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const sortedBars = [...bars].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
 
   // RSI calculation (14-period)
   const rsi = calculateRSI(sortedBars, 14);
@@ -260,7 +279,7 @@ function calculateTechnicalIndicators(bars) {
     sma20,
     sma50,
     sma200,
-    volatility
+    volatility,
   };
 }
 
@@ -297,7 +316,7 @@ function calculateRSI(bars, period = 14) {
   }
 
   const rs = avgGain / avgLoss;
-  const rsi = 100 - (100 / (1 + rs));
+  const rsi = 100 - 100 / (1 + rs);
 
   return Math.round(rsi * 100) / 100;
 }
@@ -336,12 +355,14 @@ function calculateVolatility(bars, period = 20) {
   const returns = [];
 
   for (let i = 1; i < recentBars.length; i++) {
-    const dailyReturn = (recentBars[i].close - recentBars[i - 1].close) / recentBars[i - 1].close;
+    const dailyReturn =
+      (recentBars[i].close - recentBars[i - 1].close) / recentBars[i - 1].close;
     returns.push(dailyReturn);
   }
 
   const mean = returns.reduce((sum, r) => sum + r, 0) / returns.length;
-  const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / returns.length;
+  const variance =
+    returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / returns.length;
   const stdDev = Math.sqrt(variance);
 
   return Math.round(stdDev * 100 * 100) / 100; // Convert to percentage
@@ -387,11 +408,16 @@ async function batchGetHistoricalData(symbols, startDate, endDate) {
  * @param {Object} options - Optional parameters { from, to }
  * @returns {Array} - Array of OHLCV bars
  */
-async function getAggregates(symbol, multiplier = 1, timespan = 'day', options = {}) {
+async function getAggregates(
+  symbol,
+  multiplier = 1,
+  timespan = 'day',
+  options = {}
+) {
   await rateLimit();
 
   // Helper to convert date to YYYY-MM-DD string
-  const toDateString = (d) => {
+  const toDateString = d => {
     if (!d) return null;
     if (typeof d === 'string') return d.split('T')[0]; // Handle ISO strings or YYYY-MM-DD
     if (d instanceof Date) return d.toISOString().split('T')[0];
@@ -399,12 +425,15 @@ async function getAggregates(symbol, multiplier = 1, timespan = 'day', options =
   };
 
   // Default to last 30 days if no dates specified
-  const endDate = toDateString(options.to) || new Date().toISOString().split('T')[0];
-  const startDate = toDateString(options.from) || (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  })();
+  const endDate =
+    toDateString(options.to) || new Date().toISOString().split('T')[0];
+  const startDate =
+    toDateString(options.from) ||
+    (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      return d.toISOString().split('T')[0];
+    })();
 
   try {
     const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${startDate}/${endDate}`;
@@ -414,9 +443,9 @@ async function getAggregates(symbol, multiplier = 1, timespan = 'day', options =
         adjusted: 'true',
         sort: 'asc',
         limit: options.limit || 50000,
-        apiKey: POLYGON_API_KEY
+        apiKey: POLYGON_API_KEY,
       },
-      timeout: 30000
+      timeout: 30000,
     });
 
     if (response.data.status === 'ERROR') {
@@ -439,12 +468,13 @@ async function getAggregates(symbol, multiplier = 1, timespan = 'day', options =
       close: bar.c,
       volume: bar.v,
       vwap: bar.vw,
-      transactions: bar.n
+      transactions: bar.n,
     }));
 
-    console.log(`✅ Fetched ${bars.length} ${multiplier}${timespan} bars for ${symbol}`);
+    console.log(
+      `✅ Fetched ${bars.length} ${multiplier}${timespan} bars for ${symbol}`
+    );
     return bars;
-
   } catch (error) {
     if (error.response?.status === 429) {
       console.error(`❌ Rate limit exceeded for ${symbol}`);
@@ -466,5 +496,5 @@ module.exports = {
   calculateRSI,
   calculateSMA,
   calculateVolatility,
-  batchGetHistoricalData
+  batchGetHistoricalData,
 };

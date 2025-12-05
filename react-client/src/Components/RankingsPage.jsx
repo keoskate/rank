@@ -25,35 +25,40 @@ function RankingsPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: theme.colors.background,
-      padding: theme.spacing.lg,
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: theme.colors.background,
+        padding: theme.spacing.lg,
+      }}
+    >
       {/* Board Selection */}
-      <div style={{
-        marginBottom: theme.spacing.lg,
-        display: 'flex',
-        alignItems: 'center',
-        gap: theme.spacing.md,
-        flexWrap: 'wrap',
-      }}>
-        <Button
-          variant="primary"
-          onClick={handleBoardToggle}
-        >
+      <div
+        style={{
+          marginBottom: theme.spacing.lg,
+          display: 'flex',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          flexWrap: 'wrap',
+        }}
+      >
+        <Button variant="primary" onClick={handleBoardToggle}>
           {currentBoard === 'stock' ? 'Switch to Crypto' : 'Switch to Stocks'}
         </Button>
-        <span style={{
-          color: theme.colors.textLight,
-          fontSize: theme.typography.fontSize.base,
-          fontWeight: theme.typography.fontWeight.medium,
-        }}>
+        <span
+          style={{
+            color: theme.colors.textLight,
+            fontSize: theme.typography.fontSize.base,
+            fontWeight: theme.typography.fontWeight.medium,
+          }}
+        >
           Currently viewing:{' '}
-          <span style={{
-            color: theme.colors.text,
-            fontWeight: theme.typography.fontWeight.bold,
-          }}>
+          <span
+            style={{
+              color: theme.colors.text,
+              fontWeight: theme.typography.fontWeight.bold,
+            }}
+          >
             {currentBoard === 'stock' ? 'Stock Rankings' : 'Crypto Rankings'}
           </span>
         </span>
@@ -64,26 +69,33 @@ function RankingsPage() {
         <ModernStonkBoard />
       ) : (
         <Card padding="large" style={{ textAlign: 'center' }}>
-          <h3 style={{
-            margin: `0 0 ${theme.spacing.md} 0`,
-            color: theme.colors.text,
-            fontSize: theme.typography.fontSize.xl,
-            fontWeight: theme.typography.fontWeight.bold,
-          }}>
+          <h3
+            style={{
+              margin: `0 0 ${theme.spacing.md} 0`,
+              color: theme.colors.text,
+              fontSize: theme.typography.fontSize.xl,
+              fontWeight: theme.typography.fontWeight.bold,
+            }}
+          >
             Crypto Scoreboard
           </h3>
-          <p style={{
-            margin: `0 0 ${theme.spacing.sm} 0`,
-            color: theme.colors.textLight,
-            fontSize: theme.typography.fontSize.base,
-          }}>
-            Coming soon! The Crypto scoreboard will be modernized with the new table system.
+          <p
+            style={{
+              margin: `0 0 ${theme.spacing.sm} 0`,
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.base,
+            }}
+          >
+            Coming soon! The Crypto scoreboard will be modernized with the new
+            table system.
           </p>
-          <p style={{
-            margin: 0,
-            color: theme.colors.textLight,
-            fontSize: theme.typography.fontSize.base,
-          }}>
+          <p
+            style={{
+              margin: 0,
+              color: theme.colors.textLight,
+              fontSize: theme.typography.fontSize.base,
+            }}
+          >
             For now, please use the Stock Rankings.
           </p>
         </Card>
@@ -96,19 +108,23 @@ function RankingsPage() {
           textAlign: 'center',
         }}
       >
-        <div style={{
-          fontSize: theme.typography.fontSize.base,
-          color: theme.colors.textLight,
-          fontWeight: theme.typography.fontWeight.medium,
-          marginBottom: theme.spacing.xs,
-        }}>
+        <div
+          style={{
+            fontSize: theme.typography.fontSize.base,
+            color: theme.colors.textLight,
+            fontWeight: theme.typography.fontWeight.medium,
+            marginBottom: theme.spacing.xs,
+          }}
+        >
           KEO STONKS V2 • React 18 • Modern Security • TanStack Table
         </div>
-        <div style={{
-          fontSize: theme.typography.fontSize.sm,
-          color: theme.colors.textMuted,
-          lineHeight: '1.5',
-        }}>
+        <div
+          style={{
+            fontSize: theme.typography.fontSize.sm,
+            color: theme.colors.textMuted,
+            lineHeight: '1.5',
+          }}
+        >
           Investment rankings are calculated using dual algorithms: relative
           position ranking and statistical deviation analysis
         </div>

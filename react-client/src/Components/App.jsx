@@ -48,7 +48,10 @@ function App() {
                 <Route path="/backtest" element={<BacktestPage />} />
                 <Route path="/day-trading" element={<IntradayAnalyzerPage />} />
                 <Route path="/live-trading" element={<TradingSessionsList />} />
-                <Route path="/live-trading/:sessionId" element={<LiveTradingDashboard />} />
+                <Route
+                  path="/live-trading/:sessionId"
+                  element={<LiveTradingDashboard />}
+                />
                 <Route path="/import-trades" element={<TradeImportPage />} />
                 <Route path="/analytics" element={<PerformanceAnalytics />} />
 
@@ -56,7 +59,10 @@ function App() {
                 <Route path="/invest" element={<InvestTab />} />
                 <Route path="/paper-trading" element={<PaperTradingPage />} />
                 <Route path="/ai-research" element={<AIResearchPage />} />
-                <Route path="/test-validation" element={<DataValidationTest />} />
+                <Route
+                  path="/test-validation"
+                  element={<DataValidationTest />}
+                />
               </Routes>
             </ErrorBoundary>
           </div>

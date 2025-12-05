@@ -6,7 +6,12 @@
 import { useState, useEffect } from 'react';
 import theme from '../../theme';
 
-const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEnabled }) => {
+const StockQuoteHeader = ({
+  symbol,
+  companyName,
+  onToggleAutoTrade,
+  autoTradeEnabled,
+}) => {
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,21 +37,22 @@ const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEna
     return () => clearInterval(interval);
   }, [symbol]);
 
-  const formatPrice = (price) => {
+  const formatPrice = price => {
     if (!price && price !== 0) return '--';
     return `$${Number(price).toFixed(2)}`;
   };
 
   const formatChange = (change, changePercent) => {
-    if (!change && change !== 0) return { text: '--', color: theme.colors.gray500 };
+    if (!change && change !== 0)
+      return { text: '--', color: theme.colors.gray500 };
     const isPositive = change >= 0;
     return {
       text: `${isPositive ? '+' : ''}${change.toFixed(2)} (${isPositive ? '+' : ''}${changePercent.toFixed(2)}%)`,
-      color: isPositive ? theme.colors.success : theme.colors.error
+      color: isPositive ? theme.colors.success : theme.colors.error,
     };
   };
 
-  const formatVolume = (vol) => {
+  const formatVolume = vol => {
     if (!vol) return '--';
     if (vol >= 1e9) return `${(vol / 1e9).toFixed(2)}B`;
     if (vol >= 1e6) return `${(vol / 1e6).toFixed(2)}M`;
@@ -61,32 +67,40 @@ const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEna
   const changeInfo = formatChange(change, changePercent);
 
   return (
-    <div style={{
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.borderRadius.lg,
-      padding: theme.spacing.lg,
-      marginBottom: theme.spacing.md,
-      boxShadow: theme.shadows.sm
-    }}>
+    <div
+      style={{
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.lg,
+        padding: theme.spacing.lg,
+        marginBottom: theme.spacing.md,
+        boxShadow: theme.shadows.sm,
+      }}
+    >
       {/* Top Row: Symbol, Name, Auto-Trade Toggle */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: theme.spacing.md
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: theme.spacing.md,
+        }}
+      >
         <div>
-          <div style={{
-            fontSize: theme.typography.fontSize.xxl,
-            fontWeight: theme.typography.fontWeight.bold,
-            color: theme.colors.text
-          }}>
+          <div
+            style={{
+              fontSize: theme.typography.fontSize.xxl,
+              fontWeight: theme.typography.fontWeight.bold,
+              color: theme.colors.text,
+            }}
+          >
             {symbol}
           </div>
-          <div style={{
-            fontSize: theme.typography.fontSize.md,
-            color: theme.colors.gray600
-          }}>
+          <div
+            style={{
+              fontSize: theme.typography.fontSize.md,
+              color: theme.colors.gray600,
+            }}
+          >
             {companyName || 'Loading...'}
           </div>
         </div>
@@ -96,8 +110,12 @@ const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEna
             onClick={onToggleAutoTrade}
             style={{
               padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-              backgroundColor: autoTradeEnabled ? theme.colors.success : theme.colors.gray100,
-              color: autoTradeEnabled ? theme.colors.white : theme.colors.gray700,
+              backgroundColor: autoTradeEnabled
+                ? theme.colors.success
+                : theme.colors.gray100,
+              color: autoTradeEnabled
+                ? theme.colors.white
+                : theme.colors.gray700,
               border: 'none',
               borderRadius: theme.borderRadius.md,
               cursor: 'pointer',
@@ -105,7 +123,7 @@ const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEna
               fontWeight: theme.typography.fontWeight.medium,
               display: 'flex',
               alignItems: 'center',
-              gap: theme.spacing.xs
+              gap: theme.spacing.xs,
             }}
           >
             {autoTradeEnabled ? '● Auto-Trading ON' : '○ Auto-Trade'}
@@ -114,36 +132,44 @@ const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEna
       </div>
 
       {/* Price Row */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: theme.spacing.md,
-        marginBottom: theme.spacing.md
-      }}>
-        <span style={{
-          fontSize: '2.5rem',
-          fontWeight: theme.typography.fontWeight.bold,
-          color: theme.colors.text
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: theme.spacing.md,
+          marginBottom: theme.spacing.md,
+        }}
+      >
+        <span
+          style={{
+            fontSize: '2.5rem',
+            fontWeight: theme.typography.fontWeight.bold,
+            color: theme.colors.text,
+          }}
+        >
           {loading ? '--' : formatPrice(price)}
         </span>
-        <span style={{
-          fontSize: theme.typography.fontSize.lg,
-          fontWeight: theme.typography.fontWeight.medium,
-          color: changeInfo.color
-        }}>
+        <span
+          style={{
+            fontSize: theme.typography.fontSize.lg,
+            fontWeight: theme.typography.fontWeight.medium,
+            color: changeInfo.color,
+          }}
+        >
           {loading ? '' : changeInfo.text}
         </span>
       </div>
 
       {/* Stats Row */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-        gap: theme.spacing.md,
-        paddingTop: theme.spacing.md,
-        borderTop: `1px solid ${theme.colors.gray200}`
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: theme.spacing.md,
+          paddingTop: theme.spacing.md,
+          borderTop: `1px solid ${theme.colors.gray200}`,
+        }}
+      >
         <QuoteStat label="Open" value={formatPrice(quote?.open)} />
         <QuoteStat label="High" value={formatPrice(quote?.high)} />
         <QuoteStat label="Low" value={formatPrice(quote?.low)} />
@@ -173,19 +199,23 @@ const StockQuoteHeader = ({ symbol, companyName, onToggleAutoTrade, autoTradeEna
 
 const QuoteStat = ({ label, value }) => (
   <div>
-    <div style={{
-      fontSize: theme.typography.fontSize.xs,
-      color: theme.colors.gray500,
-      textTransform: 'uppercase',
-      marginBottom: '2px'
-    }}>
+    <div
+      style={{
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.gray500,
+        textTransform: 'uppercase',
+        marginBottom: '2px',
+      }}
+    >
       {label}
     </div>
-    <div style={{
-      fontSize: theme.typography.fontSize.md,
-      fontWeight: theme.typography.fontWeight.medium,
-      color: theme.colors.text
-    }}>
+    <div
+      style={{
+        fontSize: theme.typography.fontSize.md,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.text,
+      }}
+    >
       {value}
     </div>
   </div>

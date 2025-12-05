@@ -24,8 +24,14 @@ const path = require('path');
  * @param {string} stockListName - Name of the stock list
  * @returns {Array} - Generated snapshots
  */
-async function backfillRealHistory(symbols, days = 90, stockListName = 'Real Data') {
-  console.log(`\n🔄 Starting historical data backfill for ${symbols.length} stocks, ${days} days...`);
+async function backfillRealHistory(
+  symbols,
+  days = 90,
+  stockListName = 'Real Data'
+) {
+  console.log(
+    `\n🔄 Starting historical data backfill for ${symbols.length} stocks, ${days} days...`
+  );
 
   const endDate = new Date();
   const startDate = new Date(endDate);
@@ -38,7 +44,11 @@ async function backfillRealHistory(symbols, days = 90, stockListName = 'Real Dat
 
   // Step 1: Fetch historical price data for all symbols
   console.log('\n📊 Step 1: Fetching historical price data from Polygon...');
-  const historicalData = await polygonClient.batchGetHistoricalData(symbols, startDateStr, endDateStr);
+  const historicalData = await polygonClient.batchGetHistoricalData(
+    symbols,
+    startDateStr,
+    endDateStr
+  );
 
   // Step 2: Organize data by date
   console.log('\n📅 Step 2: Organizing data by date...');
@@ -76,7 +86,8 @@ async function backfillRealHistory(symbols, days = 90, stockListName = 'Real Dat
       const barsUpToDate = historicalData[symbol].filter(b => b.date <= date);
 
       // Calculate technical indicators
-      const indicators = polygonClient.calculateTechnicalIndicators(barsUpToDate);
+      const indicators =
+        polygonClient.calculateTechnicalIndicators(barsUpToDate);
 
       // Calculate score (simple version based on price momentum and volume)
       const score = calculateHistoricalScore(bar, indicators, barsUpToDate);
@@ -94,7 +105,7 @@ async function backfillRealHistory(symbols, days = 90, stockListName = 'Real Dat
         sma50: indicators?.sma50 || null,
         sma200: indicators?.sma200 || null,
         volatility: indicators?.volatility || null,
-        score: score
+        score: score,
       });
     }
 
@@ -102,7 +113,11 @@ async function backfillRealHistory(symbols, days = 90, stockListName = 'Real Dat
     stocks.sort((a, b) => b.score - a.score);
 
     // Generate and save snapshot
-    const snapshot = await snapshotManager.generateDailySnapshot(stocks, stockListName, new Date(date));
+    const snapshot = await snapshotManager.generateDailySnapshot(
+      stocks,
+      stockListName,
+      new Date(date)
+    );
     snapshots.push(snapshot);
 
     if ((i + 1) % 10 === 0) {
@@ -110,7 +125,9 @@ async function backfillRealHistory(symbols, days = 90, stockListName = 'Real Dat
     }
   }
 
-  console.log(`\n✅ Backfill complete! Generated ${snapshots.length} real historical snapshots`);
+  console.log(
+    `\n✅ Backfill complete! Generated ${snapshots.length} real historical snapshots`
+  );
   console.log(`📁 Snapshots saved to: data/snapshots/`);
 
   return snapshots;
@@ -132,7 +149,10 @@ function calculateHistoricalScore(bar, indicators, historicalBars) {
 
   // Price momentum (20-day)
   if (historicalBars.length >= 20) {
-    const priceChange20d = ((bar.close - historicalBars[historicalBars.length - 20].close) / historicalBars[historicalBars.length - 20].close) * 100;
+    const priceChange20d =
+      ((bar.close - historicalBars[historicalBars.length - 20].close) /
+        historicalBars[historicalBars.length - 20].close) *
+      100;
     score += Math.min(Math.max(priceChange20d, -20), 20); // Cap at +/- 20 points
   }
 
@@ -158,7 +178,8 @@ function calculateHistoricalScore(bar, indicators, historicalBars) {
 
   // Volume analysis (compare to 20-day average)
   if (historicalBars.length >= 20) {
-    const avgVolume = historicalBars.slice(-20).reduce((sum, b) => sum + b.volume, 0) / 20;
+    const avgVolume =
+      historicalBars.slice(-20).reduce((sum, b) => sum + b.volume, 0) / 20;
     if (bar.volume > avgVolume * 1.2) {
       score += 5; // High volume = interest
     }
@@ -197,7 +218,11 @@ async function getCurrentRankings(symbols) {
   for (const symbol of symbols) {
     try {
       // Get historical data for technical indicators
-      const bars = await polygonClient.getHistoricalAggregates(symbol, startDateStr, endDate);
+      const bars = await polygonClient.getHistoricalAggregates(
+        symbol,
+        startDateStr,
+        endDate
+      );
 
       if (!bars || bars.length === 0) {
         console.warn(`⚠️ No data for ${symbol}`);
@@ -221,9 +246,8 @@ async function getCurrentRankings(symbols) {
         sma50: indicators?.sma50 || null,
         sma200: indicators?.sma200 || null,
         volatility: indicators?.volatility || null,
-        score: score
+        score: score,
       });
-
     } catch (error) {
       console.error(`❌ Error fetching data for ${symbol}:`, error.message);
     }
@@ -244,10 +268,13 @@ async function getCurrentRankings(symbols) {
  * @returns {Object} - Generated snapshot
  */
 async function saveTodaySnapshot(symbols, stockListName = 'Real Data') {
-  console.log('\n💾 Saving today\'s snapshot...');
+  console.log("\n💾 Saving today's snapshot...");
 
   const stocks = await getCurrentRankings(symbols);
-  const snapshot = await snapshotManager.generateDailySnapshot(stocks, stockListName);
+  const snapshot = await snapshotManager.generateDailySnapshot(
+    stocks,
+    stockListName
+  );
 
   console.log(`✅ Today's snapshot saved: ${snapshot.date}`);
   return snapshot;
@@ -272,7 +299,7 @@ async function checkHistoricalDataAvailability(requiredDays = 90) {
     required: requiredDays,
     oldestDate,
     newestDate,
-    needsBackfill: !hasEnoughData
+    needsBackfill: !hasEnoughData,
   };
 }
 
@@ -281,5 +308,5 @@ module.exports = {
   getCurrentRankings,
   saveTodaySnapshot,
   checkHistoricalDataAvailability,
-  calculateHistoricalScore
+  calculateHistoricalScore,
 };

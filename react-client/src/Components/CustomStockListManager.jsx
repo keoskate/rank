@@ -28,7 +28,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
     }
   };
 
-  const saveCustomLists = (lists) => {
+  const saveCustomLists = lists => {
     try {
       localStorage.setItem(CUSTOM_STOCK_LISTS_KEY, JSON.stringify(lists));
       setCustomLists(lists);
@@ -37,9 +37,9 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
     }
   };
 
-  const handleAddStock = (e) => {
+  const handleAddStock = e => {
     e.preventDefault();
-    
+
     if (!stockInput.trim()) return;
 
     // Parse input - support comma/space separated symbols
@@ -56,7 +56,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
     }
   };
 
-  const handleRemoveStock = (symbol) => {
+  const handleRemoveStock = symbol => {
     setStocks(stocks.filter(s => s !== symbol));
   };
 
@@ -71,22 +71,24 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
       name: listName.trim(),
       description: listDescription.trim() || 'User-created stock list',
       stocks: [...stocks],
-      color: '#' + Math.floor(Math.random()*16777215).toString(16),
-      createdAt: editingListId ? 
-        customLists.find(l => l.id === editingListId)?.createdAt : 
-        new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+      createdAt: editingListId
+        ? customLists.find(l => l.id === editingListId)?.createdAt
+        : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     let updatedLists;
     if (editingListId) {
-      updatedLists = customLists.map(l => l.id === editingListId ? newList : l);
+      updatedLists = customLists.map(l =>
+        l.id === editingListId ? newList : l
+      );
     } else {
       updatedLists = [...customLists, newList];
     }
 
     saveCustomLists(updatedLists);
-    
+
     if (editingListId) {
       onListUpdated?.(newList);
     } else {
@@ -101,7 +103,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
     setActiveTab('manage');
   };
 
-  const handleEditList = (list) => {
+  const handleEditList = list => {
     setEditingListId(list.id);
     setListName(list.name);
     setListDescription(list.description);
@@ -109,7 +111,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
     setActiveTab('create');
   };
 
-  const handleDeleteList = (listId) => {
+  const handleDeleteList = listId => {
     if (confirm('Are you sure you want to delete this list?')) {
       const updatedLists = customLists.filter(l => l.id !== listId);
       saveCustomLists(updatedLists);
@@ -124,7 +126,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
         .split(/[\s,\n]+/)
         .filter(s => s.length > 0 && /^[A-Z]+$/.test(s))
         .filter(s => !stocks.includes(s));
-      
+
       if (pastedStocks.length > 0) {
         setStocks([...stocks, ...pastedStocks]);
       }
@@ -134,38 +136,51 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000,
-      padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '600px',
-        maxHeight: '80vh',
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '20px',
-          borderBottom: '1px solid #e9ecef',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+        padding: '20px',
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '80vh',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#2c3e50' }}>
+          flexDirection: 'column',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '20px',
+            borderBottom: '1px solid #e9ecef',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: '24px',
+              fontWeight: '600',
+              color: '#2c3e50',
+            }}
+          >
             Custom Stock Lists
           </h2>
           <button
@@ -181,7 +196,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
               height: '32px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
             }}
           >
             ×
@@ -189,23 +204,27 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
         </div>
 
         {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid #e9ecef',
-          backgroundColor: '#f8f9fa'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            borderBottom: '1px solid #e9ecef',
+            backgroundColor: '#f8f9fa',
+          }}
+        >
           <button
             onClick={() => setActiveTab('create')}
             style={{
               flex: 1,
               padding: '12px',
               border: 'none',
-              backgroundColor: activeTab === 'create' ? '#ffffff' : 'transparent',
-              borderBottom: activeTab === 'create' ? '2px solid #007bff' : 'none',
+              backgroundColor:
+                activeTab === 'create' ? '#ffffff' : 'transparent',
+              borderBottom:
+                activeTab === 'create' ? '2px solid #007bff' : 'none',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: activeTab === 'create' ? '600' : '500',
-              color: activeTab === 'create' ? '#007bff' : '#6c757d'
+              color: activeTab === 'create' ? '#007bff' : '#6c757d',
             }}
           >
             {editingListId ? '✏️ Edit List' : '➕ Create New List'}
@@ -216,12 +235,14 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
               flex: 1,
               padding: '12px',
               border: 'none',
-              backgroundColor: activeTab === 'manage' ? '#ffffff' : 'transparent',
-              borderBottom: activeTab === 'manage' ? '2px solid #007bff' : 'none',
+              backgroundColor:
+                activeTab === 'manage' ? '#ffffff' : 'transparent',
+              borderBottom:
+                activeTab === 'manage' ? '2px solid #007bff' : 'none',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: activeTab === 'manage' ? '600' : '500',
-              color: activeTab === 'manage' ? '#007bff' : '#6c757d'
+              color: activeTab === 'manage' ? '#007bff' : '#6c757d',
             }}
           >
             📋 Manage Lists ({customLists.length})
@@ -229,89 +250,100 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
         </div>
 
         {/* Content */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px'
-        }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+          }}
+        >
           {activeTab === 'create' ? (
             <div>
               {/* List Name */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#495057'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#495057',
+                  }}
+                >
                   List Name
                 </label>
                 <input
                   type="text"
                   value={listName}
-                  onChange={(e) => setListName(e.target.value)}
+                  onChange={e => setListName(e.target.value)}
                   placeholder="e.g., Tech Favorites, Growth Picks"
                   style={{
                     width: '100%',
                     padding: '10px',
                     border: '1px solid #ced4da',
                     borderRadius: '6px',
-                    fontSize: '14px'
+                    fontSize: '14px',
                   }}
                 />
               </div>
 
               {/* Description */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#495057'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#495057',
+                  }}
+                >
                   Description (optional)
                 </label>
                 <input
                   type="text"
                   value={listDescription}
-                  onChange={(e) => setListDescription(e.target.value)}
+                  onChange={e => setListDescription(e.target.value)}
                   placeholder="Brief description of your stock list"
                   style={{
                     width: '100%',
                     padding: '10px',
                     border: '1px solid #ced4da',
                     borderRadius: '6px',
-                    fontSize: '14px'
+                    fontSize: '14px',
                   }}
                 />
               </div>
 
               {/* Stock Input */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#495057'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#495057',
+                  }}
+                >
                   Add Stocks
                 </label>
-                <form onSubmit={handleAddStock} style={{ display: 'flex', gap: '8px' }}>
+                <form
+                  onSubmit={handleAddStock}
+                  style={{ display: 'flex', gap: '8px' }}
+                >
                   <input
                     ref={inputRef}
                     type="text"
                     value={stockInput}
-                    onChange={(e) => setStockInput(e.target.value.toUpperCase())}
+                    onChange={e => setStockInput(e.target.value.toUpperCase())}
                     placeholder="Enter symbols (e.g., AAPL MSFT GOOGL)"
                     style={{
                       flex: 1,
                       padding: '10px',
                       border: '1px solid #ced4da',
                       borderRadius: '6px',
-                      fontSize: '14px'
+                      fontSize: '14px',
                     }}
                   />
                   <button
@@ -324,7 +356,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      fontWeight: '600'
+                      fontWeight: '600',
                     }}
                   >
                     Add
@@ -340,43 +372,50 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      fontWeight: '600'
+                      fontWeight: '600',
                     }}
                     title="Paste symbols from clipboard"
                   >
                     📋 Paste
                   </button>
                 </form>
-                <div style={{
-                  marginTop: '6px',
-                  fontSize: '12px',
-                  color: '#6c757d'
-                }}>
-                  💡 Tip: Enter multiple symbols separated by spaces or commas. You can also paste a list.
+                <div
+                  style={{
+                    marginTop: '6px',
+                    fontSize: '12px',
+                    color: '#6c757d',
+                  }}
+                >
+                  💡 Tip: Enter multiple symbols separated by spaces or commas.
+                  You can also paste a list.
                 </div>
               </div>
 
               {/* Current Stocks */}
               {stocks.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#495057'
-                  }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#495057',
+                    }}
+                  >
                     Stocks in List ({stocks.length})
                   </label>
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                    padding: '12px',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '6px',
-                    border: '1px solid #e9ecef'
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      padding: '12px',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '6px',
+                      border: '1px solid #e9ecef',
+                    }}
+                  >
                     {stocks.map(symbol => (
                       <div
                         key={symbol}
@@ -389,7 +428,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                           border: '1px solid #dee2e6',
                           borderRadius: '20px',
                           fontSize: '13px',
-                          fontWeight: '500'
+                          fontWeight: '500',
                         }}
                       >
                         {symbol}
@@ -403,7 +442,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                             marginLeft: '4px',
                             color: '#dc3545',
                             fontSize: '16px',
-                            lineHeight: '1'
+                            lineHeight: '1',
                           }}
                         >
                           ×
@@ -421,14 +460,20 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: !listName.trim() || stocks.length === 0 ? '#6c757d' : '#007bff',
+                  backgroundColor:
+                    !listName.trim() || stocks.length === 0
+                      ? '#6c757d'
+                      : '#007bff',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
-                  cursor: !listName.trim() || stocks.length === 0 ? 'not-allowed' : 'pointer',
+                  cursor:
+                    !listName.trim() || stocks.length === 0
+                      ? 'not-allowed'
+                      : 'pointer',
                   fontSize: '16px',
                   fontWeight: '600',
-                  opacity: !listName.trim() || stocks.length === 0 ? 0.6 : 1
+                  opacity: !listName.trim() || stocks.length === 0 ? 0.6 : 1,
                 }}
               >
                 {editingListId ? 'Update List' : 'Create List'}
@@ -437,12 +482,16 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
           ) : (
             <div>
               {customLists.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#6c757d'
-                }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#6c757d',
+                  }}
+                >
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+                    📋
+                  </div>
                   <p style={{ fontSize: '16px', margin: '0 0 8px 0' }}>
                     No custom lists yet
                   </p>
@@ -451,7 +500,13 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                   </p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
                   {customLists.map(list => (
                     <div
                       key={list.id}
@@ -459,41 +514,47 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                         padding: '16px',
                         backgroundColor: '#f8f9fa',
                         borderRadius: '8px',
-                        border: '1px solid #e9ecef'
+                        border: '1px solid #e9ecef',
                       }}
                     >
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'start',
-                        marginBottom: '8px'
-                      }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'start',
+                          marginBottom: '8px',
+                        }}
+                      >
                         <div>
-                          <h4 style={{
-                            margin: '0 0 4px 0',
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: '#2c3e50',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}>
+                          <h4
+                            style={{
+                              margin: '0 0 4px 0',
+                              fontSize: '16px',
+                              fontWeight: '600',
+                              color: '#2c3e50',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
                             <span
                               style={{
                                 display: 'inline-block',
                                 width: '12px',
                                 height: '12px',
                                 borderRadius: '50%',
-                                backgroundColor: list.color
+                                backgroundColor: list.color,
                               }}
                             />
                             {list.name}
                           </h4>
-                          <p style={{
-                            margin: '0 0 8px 0',
-                            fontSize: '13px',
-                            color: '#6c757d'
-                          }}>
+                          <p
+                            style={{
+                              margin: '0 0 8px 0',
+                              fontSize: '13px',
+                              color: '#6c757d',
+                            }}
+                          >
                             {list.description}
                           </p>
                         </div>
@@ -508,7 +569,7 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                               borderRadius: '4px',
                               cursor: 'pointer',
                               fontSize: '12px',
-                              fontWeight: '600'
+                              fontWeight: '600',
                             }}
                           >
                             Edit
@@ -523,19 +584,23 @@ const CustomStockListManager = ({ onListCreated, onListUpdated, onClose }) => {
                               borderRadius: '4px',
                               cursor: 'pointer',
                               fontSize: '12px',
-                              fontWeight: '600'
+                              fontWeight: '600',
                             }}
                           >
                             Delete
                           </button>
                         </div>
                       </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#495057'
-                      }}>
-                        <strong>{list.stocks.length} stocks:</strong> {list.stocks.slice(0, 10).join(', ')}
-                        {list.stocks.length > 10 && ` ... +${list.stocks.length - 10} more`}
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#495057',
+                        }}
+                      >
+                        <strong>{list.stocks.length} stocks:</strong>{' '}
+                        {list.stocks.slice(0, 10).join(', ')}
+                        {list.stocks.length > 10 &&
+                          ` ... +${list.stocks.length - 10} more`}
                       </div>
                     </div>
                   ))}
@@ -562,7 +627,7 @@ export const getCustomStockLists = () => {
   }
 };
 
-export const getCustomStockList = (listId) => {
+export const getCustomStockList = listId => {
   const lists = getCustomStockLists();
   return lists.find(l => l.id === listId);
 };

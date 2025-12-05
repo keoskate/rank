@@ -18,12 +18,15 @@ const TradeImportPage = () => {
   const [loading, setLoading] = useState(false);
   const [trainingStatus, setTrainingStatus] = useState(null);
   const [error, setError] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'exitDate', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState({
+    key: 'exitDate',
+    direction: 'desc',
+  });
   const [filterStyle, setFilterStyle] = useState('all');
   const [showWinsOnly, setShowWinsOnly] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = e => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
@@ -31,7 +34,7 @@ const TradeImportPage = () => {
     }
   };
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = useCallback(e => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile && droppedFile.name.endsWith('.csv')) {
@@ -42,7 +45,7 @@ const TradeImportPage = () => {
     }
   }, []);
 
-  const handleDragOver = useCallback((e) => {
+  const handleDragOver = useCallback(e => {
     e.preventDefault();
   }, []);
 
@@ -58,7 +61,7 @@ const TradeImportPage = () => {
 
       const res = await fetch('/api/import/schwab', {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       const data = await res.json();
@@ -77,13 +80,16 @@ const TradeImportPage = () => {
   };
 
   const trainFromTrades = async () => {
-    setTrainingStatus({ status: 'training', message: 'Training AI on your trades...' });
+    setTrainingStatus({
+      status: 'training',
+      message: 'Training AI on your trades...',
+    });
 
     try {
       const res = await fetch('/api/import/schwab/train', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'default_user' })
+        body: JSON.stringify({ userId: 'default_user' }),
       });
 
       const data = await res.json();
@@ -95,22 +101,22 @@ const TradeImportPage = () => {
       setTrainingStatus({
         status: 'complete',
         message: `Training complete! Model accuracy: ${(data.finalAccuracy * 100).toFixed(1)}%`,
-        details: data
+        details: data,
       });
     } catch (err) {
       setTrainingStatus({ status: 'error', message: err.message });
     }
   };
 
-  const handleSort = (key) => {
-    setSortConfig((prev) => ({
+  const handleSort = key => {
+    setSortConfig(prev => ({
       key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
 
   const sortedTrades = [...trades]
-    .filter((t) => {
+    .filter(t => {
       if (showWinsOnly && !t.isWin) return false;
       if (filterStyle !== 'all' && t.tradingStyle !== filterStyle) return false;
       return true;
@@ -127,24 +133,24 @@ const TradeImportPage = () => {
         : String(bVal).localeCompare(String(aVal));
     });
 
-  const formatCurrency = (value) => {
+  const formatCurrency = value => {
     if (value === undefined || value === null) return '$0.00';
     const num = parseFloat(value);
     const sign = num >= 0 ? '+' : '';
     return `${sign}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatPercent = (value) => {
+  const formatPercent = value => {
     if (value === undefined || value === null) return '0.00%';
     const sign = parseFloat(value) >= 0 ? '+' : '';
     return `${sign}${parseFloat(value).toFixed(2)}%`;
   };
 
-  const formatDate = (dateStr) => {
+  const formatDate = dateStr => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
@@ -153,7 +159,7 @@ const TradeImportPage = () => {
       style={{
         padding: theme.spacing.lg,
         maxWidth: theme.layout.maxWidthWide,
-        margin: '0 auto'
+        margin: '0 auto',
       }}
     >
       {/* Header */}
@@ -162,7 +168,8 @@ const TradeImportPage = () => {
           Import Trade History
         </h1>
         <p style={{ color: theme.colors.gray600, marginTop: theme.spacing.sm }}>
-          Upload your Schwab CSV export to analyze your trading patterns and train the AI.
+          Upload your Schwab CSV export to analyze your trading patterns and
+          train the AI.
         </p>
       </div>
 
@@ -180,8 +187,10 @@ const TradeImportPage = () => {
             padding: theme.spacing.xl,
             textAlign: 'center',
             cursor: 'pointer',
-            backgroundColor: file ? theme.colors.success + '10' : theme.colors.gray50,
-            transition: 'all 0.2s'
+            backgroundColor: file
+              ? theme.colors.success + '10'
+              : theme.colors.gray50,
+            transition: 'all 0.2s',
           }}
         >
           <input
@@ -194,7 +203,12 @@ const TradeImportPage = () => {
 
           {file ? (
             <div>
-              <div style={{ fontSize: theme.typography.fontSize.lg, marginBottom: theme.spacing.sm }}>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.lg,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
                 {file.name}
               </div>
               <div style={{ color: theme.colors.gray500 }}>
@@ -203,7 +217,12 @@ const TradeImportPage = () => {
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: theme.typography.fontSize.lg, marginBottom: theme.spacing.sm }}>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.lg,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
                 Drop CSV file here or click to browse
               </div>
               <div style={{ color: theme.colors.gray500 }}>
@@ -221,14 +240,20 @@ const TradeImportPage = () => {
               backgroundColor: theme.colors.error + '10',
               border: `1px solid ${theme.colors.error}`,
               borderRadius: theme.borderRadius.sm,
-              color: theme.colors.error
+              color: theme.colors.error,
             }}
           >
             {error}
           </div>
         )}
 
-        <div style={{ marginTop: theme.spacing.md, display: 'flex', gap: theme.spacing.sm }}>
+        <div
+          style={{
+            marginTop: theme.spacing.md,
+            display: 'flex',
+            gap: theme.spacing.sm,
+          }}
+        >
           <Button onClick={uploadAndParse} disabled={!file || loading}>
             {loading ? 'Processing...' : 'Upload & Analyze'}
           </Button>
@@ -256,7 +281,7 @@ const TradeImportPage = () => {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
               gap: theme.spacing.md,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             <MetricCard
@@ -267,12 +292,20 @@ const TradeImportPage = () => {
               title="Win Rate"
               value={`${summary.overview?.winRate || 0}%`}
               subtitle={`${summary.overview?.wins}W / ${summary.overview?.losses}L`}
-              variant={parseFloat(summary.overview?.winRate) >= 50 ? 'success' : 'error'}
+              variant={
+                parseFloat(summary.overview?.winRate) >= 50
+                  ? 'success'
+                  : 'error'
+              }
             />
             <MetricCard
               title="Total P&L"
               value={formatCurrency(summary.overview?.totalProfit)}
-              variant={parseFloat(summary.overview?.totalProfit) >= 0 ? 'success' : 'error'}
+              variant={
+                parseFloat(summary.overview?.totalProfit) >= 0
+                  ? 'success'
+                  : 'error'
+              }
             />
             <MetricCard
               title="Avg Win"
@@ -287,7 +320,11 @@ const TradeImportPage = () => {
             <MetricCard
               title="Profit Factor"
               value={summary.overview?.profitFactor || 'N/A'}
-              variant={parseFloat(summary.overview?.profitFactor) > 1 ? 'success' : 'error'}
+              variant={
+                parseFloat(summary.overview?.profitFactor) > 1
+                  ? 'success'
+                  : 'error'
+              }
             />
           </div>
 
@@ -297,7 +334,7 @@ const TradeImportPage = () => {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: theme.spacing.lg,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             {/* Trading Style Breakdown */}
@@ -305,36 +342,81 @@ const TradeImportPage = () => {
               <h3 style={{ marginTop: 0 }}>Trading Style Performance</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: `1px solid ${theme.colors.gray200}` }}>
-                    <th style={{ textAlign: 'left', padding: theme.spacing.sm }}>Style</th>
-                    <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Trades</th>
-                    <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>Win Rate</th>
-                    <th style={{ textAlign: 'right', padding: theme.spacing.sm }}>P&L</th>
+                  <tr
+                    style={{
+                      borderBottom: `1px solid ${theme.colors.gray200}`,
+                    }}
+                  >
+                    <th
+                      style={{ textAlign: 'left', padding: theme.spacing.sm }}
+                    >
+                      Style
+                    </th>
+                    <th
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
+                      Trades
+                    </th>
+                    <th
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
+                      Win Rate
+                    </th>
+                    <th
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
+                      P&L
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(summary.byStyle || {}).map(([style, data]) => (
-                    <tr key={style} style={{ borderBottom: `1px solid ${theme.colors.gray100}` }}>
-                      <td style={{ padding: theme.spacing.sm, textTransform: 'capitalize' }}>
-                        {style}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                        {data.trades}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                        {data.winRate}%
-                      </td>
-                      <td
+                  {Object.entries(summary.byStyle || {}).map(
+                    ([style, data]) => (
+                      <tr
+                        key={style}
                         style={{
-                          textAlign: 'right',
-                          padding: theme.spacing.sm,
-                          color: parseFloat(data.profit) >= 0 ? theme.colors.success : theme.colors.error
+                          borderBottom: `1px solid ${theme.colors.gray100}`,
                         }}
                       >
-                        {formatCurrency(data.profit)}
-                      </td>
-                    </tr>
-                  ))}
+                        <td
+                          style={{
+                            padding: theme.spacing.sm,
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          {style}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: 'right',
+                            padding: theme.spacing.sm,
+                          }}
+                        >
+                          {data.trades}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: 'right',
+                            padding: theme.spacing.sm,
+                          }}
+                        >
+                          {data.winRate}%
+                        </td>
+                        <td
+                          style={{
+                            textAlign: 'right',
+                            padding: theme.spacing.sm,
+                            color:
+                              parseFloat(data.profit) >= 0
+                                ? theme.colors.success
+                                : theme.colors.error,
+                          }}
+                        >
+                          {formatCurrency(data.profit)}
+                        </td>
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             </Card>
@@ -349,17 +431,23 @@ const TradeImportPage = () => {
                     padding: theme.spacing.md,
                     backgroundColor: theme.colors.success + '10',
                     borderRadius: theme.borderRadius.sm,
-                    marginBottom: theme.spacing.md
+                    marginBottom: theme.spacing.md,
                   }}
                 >
-                  <div style={{ fontWeight: theme.typography.fontWeight.bold, color: theme.colors.success }}>
+                  <div
+                    style={{
+                      fontWeight: theme.typography.fontWeight.bold,
+                      color: theme.colors.success,
+                    }}
+                  >
                     Best Trade
                   </div>
                   <div style={{ fontSize: theme.typography.fontSize.lg }}>
                     {summary.bestTrade.symbol}
                   </div>
                   <div>
-                    Profit: {formatCurrency(summary.bestTrade.profit)} ({formatPercent(summary.bestTrade.profitPercent)})
+                    Profit: {formatCurrency(summary.bestTrade.profit)} (
+                    {formatPercent(summary.bestTrade.profitPercent)})
                   </div>
                   <div style={{ color: theme.colors.gray500 }}>
                     Held for {summary.bestTrade.holdingDays} days
@@ -372,17 +460,23 @@ const TradeImportPage = () => {
                   style={{
                     padding: theme.spacing.md,
                     backgroundColor: theme.colors.error + '10',
-                    borderRadius: theme.borderRadius.sm
+                    borderRadius: theme.borderRadius.sm,
                   }}
                 >
-                  <div style={{ fontWeight: theme.typography.fontWeight.bold, color: theme.colors.error }}>
+                  <div
+                    style={{
+                      fontWeight: theme.typography.fontWeight.bold,
+                      color: theme.colors.error,
+                    }}
+                  >
                     Worst Trade
                   </div>
                   <div style={{ fontSize: theme.typography.fontSize.lg }}>
                     {summary.worstTrade.symbol}
                   </div>
                   <div>
-                    Loss: {formatCurrency(summary.worstTrade.profit)} ({formatPercent(summary.worstTrade.profitPercent)})
+                    Loss: {formatCurrency(summary.worstTrade.profit)} (
+                    {formatPercent(summary.worstTrade.profitPercent)})
                   </div>
                   <div style={{ color: theme.colors.gray500 }}>
                     Held for {summary.worstTrade.holdingDays} days
@@ -398,7 +492,7 @@ const TradeImportPage = () => {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: theme.spacing.lg,
-              marginBottom: theme.spacing.lg
+              marginBottom: theme.spacing.lg,
             }}
           >
             <Card>
@@ -410,19 +504,34 @@ const TradeImportPage = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     padding: theme.spacing.sm,
-                    borderBottom: `1px solid ${theme.colors.gray100}`
+                    borderBottom: `1px solid ${theme.colors.gray100}`,
                   }}
                 >
                   <span>
-                    <span style={{ color: theme.colors.gray400, marginRight: theme.spacing.sm }}>
+                    <span
+                      style={{
+                        color: theme.colors.gray400,
+                        marginRight: theme.spacing.sm,
+                      }}
+                    >
                       #{i + 1}
                     </span>
                     <strong>{s.symbol}</strong>
-                    <span style={{ color: theme.colors.gray500, marginLeft: theme.spacing.sm }}>
+                    <span
+                      style={{
+                        color: theme.colors.gray500,
+                        marginLeft: theme.spacing.sm,
+                      }}
+                    >
                       ({s.trades} trades, {s.winRate}% win)
                     </span>
                   </span>
-                  <span style={{ color: theme.colors.success, fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{
+                      color: theme.colors.success,
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     {formatCurrency(s.profit)}
                   </span>
                 </div>
@@ -438,19 +547,34 @@ const TradeImportPage = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     padding: theme.spacing.sm,
-                    borderBottom: `1px solid ${theme.colors.gray100}`
+                    borderBottom: `1px solid ${theme.colors.gray100}`,
                   }}
                 >
                   <span>
-                    <span style={{ color: theme.colors.gray400, marginRight: theme.spacing.sm }}>
+                    <span
+                      style={{
+                        color: theme.colors.gray400,
+                        marginRight: theme.spacing.sm,
+                      }}
+                    >
                       #{i + 1}
                     </span>
                     <strong>{s.symbol}</strong>
-                    <span style={{ color: theme.colors.gray500, marginLeft: theme.spacing.sm }}>
+                    <span
+                      style={{
+                        color: theme.colors.gray500,
+                        marginLeft: theme.spacing.sm,
+                      }}
+                    >
                       ({s.trades} trades, {s.winRate}% win)
                     </span>
                   </span>
-                  <span style={{ color: theme.colors.error, fontWeight: theme.typography.fontWeight.bold }}>
+                  <span
+                    style={{
+                      color: theme.colors.error,
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
                     {formatCurrency(s.profit)}
                   </span>
                 </div>
@@ -464,7 +588,13 @@ const TradeImportPage = () => {
               <h3 style={{ marginTop: 0 }}>AI Insights</h3>
               <ul style={{ margin: 0, paddingLeft: theme.spacing.lg }}>
                 {summary.insights.map((insight, i) => (
-                  <li key={i} style={{ marginBottom: theme.spacing.sm, color: theme.colors.gray700 }}>
+                  <li
+                    key={i}
+                    style={{
+                      marginBottom: theme.spacing.sm,
+                      color: theme.colors.gray700,
+                    }}
+                  >
                     {insight}
                   </li>
                 ))}
@@ -476,12 +606,18 @@ const TradeImportPage = () => {
           <Card style={{ marginBottom: theme.spacing.lg }}>
             <h3 style={{ marginTop: 0 }}>Train AI from Your Trades</h3>
             <p style={{ color: theme.colors.gray600 }}>
-              Use your trading history to train the AI pattern recognition model.
-              This helps the AI learn from your successful trades and avoid your mistakes.
+              Use your trading history to train the AI pattern recognition
+              model. This helps the AI learn from your successful trades and
+              avoid your mistakes.
             </p>
 
-            <Button onClick={trainFromTrades} disabled={trainingStatus?.status === 'training'}>
-              {trainingStatus?.status === 'training' ? 'Training...' : 'Train AI Model'}
+            <Button
+              onClick={trainFromTrades}
+              disabled={trainingStatus?.status === 'training'}
+            >
+              {trainingStatus?.status === 'training'
+                ? 'Training...'
+                : 'Train AI Model'}
             </Button>
 
             {trainingStatus && (
@@ -495,7 +631,7 @@ const TradeImportPage = () => {
                       : trainingStatus.status === 'error'
                         ? theme.colors.error + '10'
                         : theme.colors.info + '10',
-                  borderRadius: theme.borderRadius.sm
+                  borderRadius: theme.borderRadius.sm,
                 }}
               >
                 {trainingStatus.message}
@@ -508,17 +644,32 @@ const TradeImportPage = () => {
       {/* Trade History Table */}
       {trades.length > 0 && (
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-            <h3 style={{ margin: 0 }}>Trade History ({sortedTrades.length} trades)</h3>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing.md,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>
+              Trade History ({sortedTrades.length} trades)
+            </h3>
 
-            <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: theme.spacing.sm,
+                alignItems: 'center',
+              }}
+            >
               <select
                 value={filterStyle}
-                onChange={(e) => setFilterStyle(e.target.value)}
+                onChange={e => setFilterStyle(e.target.value)}
                 style={{
                   padding: theme.spacing.sm,
                   border: `1px solid ${theme.colors.gray300}`,
-                  borderRadius: theme.borderRadius.sm
+                  borderRadius: theme.borderRadius.sm,
                 }}
               >
                 <option value="all">All Styles</option>
@@ -527,11 +678,17 @@ const TradeImportPage = () => {
                 <option value="swing">Swing</option>
               </select>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.spacing.xs,
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={showWinsOnly}
-                  onChange={(e) => setShowWinsOnly(e.target.checked)}
+                  onChange={e => setShowWinsOnly(e.target.checked)}
                 />
                 Wins only
               </label>
@@ -539,9 +696,17 @@ const TradeImportPage = () => {
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.typography.fontSize.sm }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: theme.typography.fontSize.sm,
+              }}
+            >
               <thead>
-                <tr style={{ borderBottom: `2px solid ${theme.colors.gray200}` }}>
+                <tr
+                  style={{ borderBottom: `2px solid ${theme.colors.gray200}` }}
+                >
                   {[
                     { key: 'symbol', label: 'Symbol' },
                     { key: 'entryDate', label: 'Entry' },
@@ -552,16 +717,19 @@ const TradeImportPage = () => {
                     { key: 'profit', label: 'P&L' },
                     { key: 'profitPercent', label: 'P&L %' },
                     { key: 'holdingDays', label: 'Days' },
-                    { key: 'tradingStyle', label: 'Style' }
-                  ].map((col) => (
+                    { key: 'tradingStyle', label: 'Style' },
+                  ].map(col => (
                     <th
                       key={col.key}
                       onClick={() => handleSort(col.key)}
                       style={{
-                        textAlign: col.key === 'symbol' || col.key === 'tradingStyle' ? 'left' : 'right',
+                        textAlign:
+                          col.key === 'symbol' || col.key === 'tradingStyle'
+                            ? 'left'
+                            : 'right',
                         padding: theme.spacing.sm,
                         cursor: 'pointer',
-                        userSelect: 'none'
+                        userSelect: 'none',
                       }}
                     >
                       {col.label}
@@ -575,38 +743,57 @@ const TradeImportPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {sortedTrades.map((trade) => (
+                {sortedTrades.map(trade => (
                   <tr
                     key={trade.id}
                     style={{
                       borderBottom: `1px solid ${theme.colors.gray100}`,
-                      backgroundColor: trade.isWin ? theme.colors.success + '05' : theme.colors.error + '05'
+                      backgroundColor: trade.isWin
+                        ? theme.colors.success + '05'
+                        : theme.colors.error + '05',
                     }}
                   >
-                    <td style={{ padding: theme.spacing.sm, fontWeight: theme.typography.fontWeight.bold }}>
+                    <td
+                      style={{
+                        padding: theme.spacing.sm,
+                        fontWeight: theme.typography.fontWeight.bold,
+                      }}
+                    >
                       {trade.symbol}
                     </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                    <td
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
                       {formatDate(trade.entryDate)}
                     </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                    <td
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
                       {formatDate(trade.exitDate)}
                     </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                    <td
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
                       ${trade.entryPrice.toFixed(2)}
                     </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                    <td
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
                       ${trade.exitPrice.toFixed(2)}
                     </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                    <td
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
                       {trade.quantity}
                     </td>
                     <td
                       style={{
                         textAlign: 'right',
                         padding: theme.spacing.sm,
-                        color: trade.isWin ? theme.colors.success : theme.colors.error,
-                        fontWeight: theme.typography.fontWeight.bold
+                        color: trade.isWin
+                          ? theme.colors.success
+                          : theme.colors.error,
+                        fontWeight: theme.typography.fontWeight.bold,
                       }}
                     >
                       {formatCurrency(trade.profit)}
@@ -615,19 +802,23 @@ const TradeImportPage = () => {
                       style={{
                         textAlign: 'right',
                         padding: theme.spacing.sm,
-                        color: trade.isWin ? theme.colors.success : theme.colors.error
+                        color: trade.isWin
+                          ? theme.colors.success
+                          : theme.colors.error,
                       }}
                     >
                       {formatPercent(trade.profitPercent)}
                     </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                    <td
+                      style={{ textAlign: 'right', padding: theme.spacing.sm }}
+                    >
                       {trade.holdingDays}
                     </td>
                     <td
                       style={{
                         padding: theme.spacing.sm,
                         textTransform: 'capitalize',
-                        color: theme.colors.gray600
+                        color: theme.colors.gray600,
                       }}
                     >
                       {trade.tradingStyle}

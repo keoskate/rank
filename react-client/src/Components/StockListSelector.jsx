@@ -268,7 +268,7 @@ const StockListSelector = ({
       {/* Custom List Manager Modal */}
       {showCustomListManager && (
         <CustomStockListManager
-          onListCreated={(list) => {
+          onListCreated={list => {
             // Refresh the selector and select the new list
             onStockListChange(list.id);
             setShowCustomListManager(false);

@@ -27,17 +27,17 @@ function initializeWebSocket(httpServer) {
   io = new Server(httpServer, {
     cors: {
       origin: ['http://localhost:3000', 'http://localhost:8080'],
-      methods: ['GET', 'POST']
+      methods: ['GET', 'POST'],
     },
     pingTimeout: 60000,
-    pingInterval: 25000
+    pingInterval: 25000,
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', socket => {
     console.log(`[WebSocket] Client connected: ${socket.id}`);
 
     // Handle user authentication/identification
-    socket.on('authenticate', (data) => {
+    socket.on('authenticate', data => {
       const { userId } = data;
       if (userId) {
         socket.userId = userId;
@@ -48,7 +48,7 @@ function initializeWebSocket(httpServer) {
     });
 
     // Start live trading simulation
-    socket.on('start_simulation', async (data) => {
+    socket.on('start_simulation', async data => {
       const { userId, config } = data;
       console.log(`[WebSocket] Starting simulation for user ${userId}`);
 
@@ -57,25 +57,25 @@ function initializeWebSocket(httpServer) {
         socketId: socket.id,
         config,
         startTime: new Date(),
-        status: 'running'
+        status: 'running',
       });
 
       // Notify client
       socket.emit('simulation_started', {
         sessionId: `session_${userId}_${Date.now()}`,
         config,
-        startTime: new Date().toISOString()
+        startTime: new Date().toISOString(),
       });
 
       // Start the AI trading engine (will be connected later)
       socket.emit('ai_status', {
         status: 'active',
-        message: 'AI trading engine initialized'
+        message: 'AI trading engine initialized',
       });
     });
 
     // Stop live trading simulation
-    socket.on('stop_simulation', (data) => {
+    socket.on('stop_simulation', data => {
       const { userId } = data;
       console.log(`[WebSocket] Stopping simulation for user ${userId}`);
 
@@ -87,12 +87,12 @@ function initializeWebSocket(httpServer) {
 
       socket.emit('simulation_stopped', {
         userId,
-        stopTime: new Date().toISOString()
+        stopTime: new Date().toISOString(),
       });
     });
 
     // Pause simulation
-    socket.on('pause_simulation', (data) => {
+    socket.on('pause_simulation', data => {
       const { userId } = data;
       const session = tradingSessions.get(userId);
       if (session) {
@@ -103,7 +103,7 @@ function initializeWebSocket(httpServer) {
     });
 
     // Resume simulation
-    socket.on('resume_simulation', (data) => {
+    socket.on('resume_simulation', data => {
       const { userId } = data;
       const session = tradingSessions.get(userId);
       if (session) {
@@ -114,26 +114,28 @@ function initializeWebSocket(httpServer) {
     });
 
     // Subscribe to price updates for specific symbols
-    socket.on('subscribe_prices', (data) => {
+    socket.on('subscribe_prices', data => {
       const { symbols } = data;
       if (!Array.isArray(symbols)) return;
 
-      symbols.forEach((symbol) => {
+      symbols.forEach(symbol => {
         if (!priceSubscriptions.has(symbol)) {
           priceSubscriptions.set(symbol, new Set());
         }
         priceSubscriptions.get(symbol).add(socket.id);
       });
 
-      console.log(`[WebSocket] ${socket.id} subscribed to: ${symbols.join(', ')}`);
+      console.log(
+        `[WebSocket] ${socket.id} subscribed to: ${symbols.join(', ')}`
+      );
     });
 
     // Unsubscribe from price updates
-    socket.on('unsubscribe_prices', (data) => {
+    socket.on('unsubscribe_prices', data => {
       const { symbols } = data;
       if (!Array.isArray(symbols)) return;
 
-      symbols.forEach((symbol) => {
+      symbols.forEach(symbol => {
         const subs = priceSubscriptions.get(symbol);
         if (subs) {
           subs.delete(socket.id);
@@ -145,7 +147,7 @@ function initializeWebSocket(httpServer) {
     });
 
     // Manual trade override
-    socket.on('manual_override', (data) => {
+    socket.on('manual_override', data => {
       const { userId, symbol, action, quantity } = data;
       console.log(
         `[WebSocket] Manual override: ${action} ${quantity} ${symbol} for ${userId}`
@@ -157,12 +159,12 @@ function initializeWebSocket(httpServer) {
         symbol,
         action,
         quantity,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     });
 
     // Update trading configuration
-    socket.on('update_config', (data) => {
+    socket.on('update_config', data => {
       const { userId, config } = data;
       const session = tradingSessions.get(userId);
       if (session) {
@@ -173,14 +175,14 @@ function initializeWebSocket(httpServer) {
     });
 
     // Request current positions
-    socket.on('get_positions', (data) => {
+    socket.on('get_positions', data => {
       const { userId } = data;
       // This will be filled by the AI trading engine
       socket.emit('positions_requested', { userId });
     });
 
     // Request AI decision history
-    socket.on('get_decisions', (data) => {
+    socket.on('get_decisions', data => {
       const { userId, limit = 50 } = data;
       socket.emit('decisions_requested', { userId, limit });
     });
@@ -204,7 +206,7 @@ function initializeWebSocket(httpServer) {
     });
 
     // Handle errors
-    socket.on('error', (error) => {
+    socket.on('error', error => {
       console.error(`[WebSocket] Error for ${socket.id}:`, error);
     });
   });
@@ -230,10 +232,10 @@ function broadcastPriceUpdate(symbol, priceData) {
     change: priceData.change,
     changePercent: priceData.changePercent,
     volume: priceData.volume,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
-  subscribers.forEach((socketId) => {
+  subscribers.forEach(socketId => {
     io.to(socketId).emit('price_update', data);
   });
 }
@@ -257,7 +259,7 @@ function sendAIDecision(userId, decision) {
     indicators: decision.indicators,
     pattern: decision.pattern,
     riskLevel: decision.riskLevel,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -281,7 +283,7 @@ function sendPositionUpdate(userId, position) {
     unrealizedPnL: position.unrealizedPnL,
     unrealizedPnLPercent: position.unrealizedPnLPercent,
     status: position.status,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -302,7 +304,7 @@ function sendAlert(userId, alert) {
     message: alert.message,
     severity: alert.severity, // 'low', 'medium', 'high', 'critical'
     actionRequired: alert.actionRequired || false,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -327,7 +329,7 @@ function sendTradeExecution(userId, trade) {
     pnl: trade.pnl, // Include profit/loss for sell announcements
     status: trade.status,
     sessionName: trade.sessionName,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -361,7 +363,7 @@ function sendDailySummary(userId, summary) {
     totalPnLPercent: summary.totalPnLPercent,
     bestTrade: summary.bestTrade,
     worstTrade: summary.worstTrade,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -418,5 +420,5 @@ module.exports = {
   getSessionStatus,
   isSimulationRunning,
   getActiveSessions,
-  getIO
+  getIO,
 };

@@ -16,11 +16,13 @@ The Model Context Protocol (MCP) allows AI assistants like Claude to interact di
 ## Available MCP Servers
 
 ### 1. Alpaca Paper Trading Server
+
 - **Purpose**: Safe testing with $100k virtual money
 - **Account**: PA3Q8Y2RHTID
 - **Endpoint**: https://paper-api.alpaca.markets
 
 ### 2. Alpaca Live Trading Server
+
 - **Purpose**: Real money trading
 - **Account**: 111972835
 - **Endpoint**: https://api.alpaca.markets
@@ -59,6 +61,7 @@ Add this to your MCP client configuration (e.g., `~/Library/Application Support/
 ## Testing MCP Server
 
 ### Test Paper Trading Connection:
+
 ```bash
 ALPACA_API_KEY="PKOS5B9EF0884GN7OU0V" \
 ALPACA_API_SECRET="IsLmeBTirFHtXqsG1u8FvFFdo9cVpKKmNxWIes2W" \
@@ -67,6 +70,7 @@ ALPACA_BASE_URL="https://paper-api.alpaca.markets" \
 ```
 
 ### Test Live Trading Connection:
+
 ```bash
 ALPACA_API_KEY="$ALPACA_LIVE_API_KEY" \
 ALPACA_API_SECRET="$ALPACA_LIVE_SECRET_KEY" \
@@ -79,17 +83,20 @@ ALPACA_BASE_URL="https://api.alpaca.markets" \
 The Alpaca MCP Server provides these categories of functions:
 
 ### Account Management
+
 - `get_account` - Get account details
 - `get_account_activities` - View account activity
 - `get_account_configurations` - Get trading settings
 
 ### Portfolio & Positions
+
 - `list_positions` - View all open positions
 - `get_position` - Get specific position details
 - `close_position` - Close a position
 - `close_all_positions` - Close all positions
 
 ### Orders
+
 - `list_orders` - View orders (open, filled, cancelled)
 - `get_order` - Get specific order details
 - `create_order` - Place new order (market, limit, stop, etc.)
@@ -97,6 +104,7 @@ The Alpaca MCP Server provides these categories of functions:
 - `replace_order` - Modify an existing order
 
 ### Market Data
+
 - `get_latest_quote` - Get latest bid/ask prices
 - `get_latest_trade` - Get latest executed trade
 - `get_bars` - Get historical OHLCV data
@@ -104,17 +112,20 @@ The Alpaca MCP Server provides these categories of functions:
 - `get_news` - Get market news for symbols
 
 ### Watchlists
+
 - `create_watchlist` - Create a new watchlist
 - `list_watchlists` - View all watchlists
 - `add_to_watchlist` - Add symbols to watchlist
 - `remove_from_watchlist` - Remove symbols
 
 ### Options (if enabled)
+
 - `get_option_contracts` - Search option contracts
 - `get_option_chain` - Get full option chain
 - `get_latest_option_quote` - Get option pricing
 
 ### Corporate Actions
+
 - `get_corporate_actions` - View dividends, splits, mergers
 
 ## Example Natural Language Commands
@@ -122,6 +133,7 @@ The Alpaca MCP Server provides these categories of functions:
 Once configured with Claude or another MCP client, you can use natural language:
 
 ### Paper Trading Examples:
+
 - "What's my current paper trading account balance?"
 - "Show me my open positions in the paper account"
 - "Buy 10 shares of AAPL in paper trading at market price"
@@ -129,6 +141,7 @@ Once configured with Claude or another MCP client, you can use natural language:
 - "Show me TSLA's performance over the last month"
 
 ### Live Trading Examples (use with caution):
+
 - "What's my live account balance?"
 - "Show me my real positions"
 - "Place a limit order to buy 5 shares of MSFT at $350"
@@ -137,12 +150,14 @@ Once configured with Claude or another MCP client, you can use natural language:
 ## Safety Considerations
 
 ### Paper Trading Server
+
 - ✅ Safe to experiment
 - ✅ No real money at risk
 - ✅ Full access to all features
 - ✅ Unlimited orders
 
 ### Live Trading Server
+
 - ⚠️ **REAL MONEY AT RISK**
 - ⚠️ All orders execute with actual funds
 - ⚠️ Use paper trading first to test strategies
@@ -165,6 +180,7 @@ The MCP server is complementary to the web-based trading interface:
    - Research and recommendations
 
 Both connect to the same Alpaca accounts, so:
+
 - Orders placed via MCP appear in the web UI
 - Orders placed via web UI appear in MCP
 - Account balances sync in real-time
@@ -185,18 +201,21 @@ Both connect to the same Alpaca accounts, so:
 ## Troubleshooting
 
 ### MCP Server Not Found
+
 ```bash
 # Add to PATH
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ### Permission Denied
+
 ```bash
 # Make executable
 chmod +x ~/.local/bin/uvx
 ```
 
 ### Connection Errors
+
 - Verify API keys are correct
 - Check that BASE_URL matches (paper vs live)
 - Ensure internet connection is active

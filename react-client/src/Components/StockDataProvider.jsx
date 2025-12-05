@@ -6,7 +6,11 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCachedStockData, cacheOrFetch, cacheWithBackgroundRefresh } from '../utils/cacheManager';
+import {
+  getCachedStockData,
+  cacheOrFetch,
+  cacheWithBackgroundRefresh,
+} from '../utils/cacheManager';
 import { STOCK_COLUMNS } from '../config/stockColumns';
 import { getStockList, DEFAULT_STOCK_LIST } from '../config/stockLists';
 import { getDebugPreference } from '../utils/debugPreference';
@@ -33,7 +37,7 @@ export const StockDataProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Clean data function (simplified version)
-  const cleanData = (data) => {
+  const cleanData = data => {
     return data.filter(item => item && item.ticker);
   };
 
@@ -43,14 +47,18 @@ export const StockDataProvider = ({ children }) => {
     const stockSymbols = currentStockList.stocks;
     const stocksKey = [...stockSymbols].sort().join('_');
     const cacheKey = `STOCKS_${stocksKey}_basic`; // ModernStonkBoard uses fetchFinancials=false initially
-    
+
     const cachedData = getCachedStockData(cacheKey);
     if (cachedData && cachedData.length > 0) {
-      console.log(`📂 Loaded ${cachedData.length} stocks from cache (${currentStockList.name})`);
+      console.log(
+        `📂 Loaded ${cachedData.length} stocks from cache (${currentStockList.name})`
+      );
       setStockData(cachedData);
       setIsLoading(false);
     } else {
-      console.log(`📭 No cached data found for ${currentStockList.name} stock list`);
+      console.log(
+        `📭 No cached data found for ${currentStockList.name} stock list`
+      );
       // Set loading to false even if no cache found, so StockDetailPage can show "Stock Not Found"
       setIsLoading(false);
     }

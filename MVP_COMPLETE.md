@@ -3,6 +3,7 @@
 ## ✅ What's Built and Working
 
 ### **Phase 1: Data Quality** (Complete)
+
 - ✅ Real 52-week highs from Polygon historical data
 - ✅ Multi-source data validation (Polygon + Yahoo Finance)
 - ✅ Confidence scoring and data quality badges
@@ -10,6 +11,7 @@
 - ✅ Time-series vs. snapshot metric separation
 
 ### **Phase 2: Backtesting System** (Complete)
+
 - ✅ Daily ranking snapshot storage system
 - ✅ Quarterly financial metrics storage
 - ✅ Synthetic historical data generation (90+ days)
@@ -19,6 +21,7 @@
 - ✅ Trade history and P&L tracking
 
 ### **Phase 3: Paper Trading** (Infrastructure Ready)
+
 - ✅ Paper trading API endpoints (in-memory simulation)
 - ✅ Portfolio management (buy/sell/positions)
 - ✅ P&L calculation
@@ -55,11 +58,13 @@ Navigate to: **http://localhost:8080**
 Click **"🧪 Backtest"** in navigation or go to `/backtest`
 
 #### **First Time Setup:**
+
 1. Click **"Generate History"** button
 2. Wait ~30 seconds for 90 days of synthetic data generation
 3. See "✅ Generated 90 days of historical data" alert
 
 #### **Run a Backtest:**
+
 1. Configure strategy:
    - **Top N Stocks**: How many top-ranked stocks to buy (default: 5)
    - **Rebalance Frequency**: How often to rebalance (daily/weekly/monthly)
@@ -77,6 +82,7 @@ Click **"🧪 Backtest"** in navigation or go to `/backtest`
 ### **4. Analyze Multi-Metric Correlations**
 
 On any stock detail page:
+
 1. Scroll to **"Metric Correlation Analysis"** section
 2. Select metrics to compare (up to 7 available):
    - Price
@@ -97,6 +103,7 @@ On any stock detail page:
 ## 📊 API Endpoints Available
 
 ### **Snapshot & Backtesting**
+
 ```bash
 GET  /api/snapshots/dates                    # List available snapshot dates
 GET  /api/snapshots/:date                    # Get specific snapshot
@@ -106,6 +113,7 @@ POST /api/backtest/run                       # Run backtest
 ```
 
 ### **Quarterly Metrics**
+
 ```bash
 GET  /api/quarterly/:symbol                  # Get quarterly history
 GET  /api/quarterly/:symbol/qoq/:metric      # Calculate QoQ
@@ -113,6 +121,7 @@ GET  /api/quarterly/:symbol/yoy/:metric      # Calculate YoY
 ```
 
 ### **Paper Trading** (Ready to use)
+
 ```bash
 POST /api/paper-trading/portfolio            # Create portfolio
 POST /api/paper-trading/order                # Execute trade
@@ -127,6 +136,7 @@ POST /api/paper-trading/portfolio/:userId/reset  # Reset portfolio
 ### **Quick Test Scenarios:**
 
 #### **Test 1: Default Strategy**
+
 - Top N: 5
 - Rebalance: Daily
 - Period: 90 days
@@ -135,6 +145,7 @@ POST /api/paper-trading/portfolio/:userId/reset  # Reset portfolio
 **Expected:** Results should show total return, win rate, Sharpe ratio, and trade count.
 
 #### **Test 2: Conservative Strategy**
+
 - Top N: 3
 - Rebalance: Monthly
 - Period: 90 days
@@ -143,6 +154,7 @@ POST /api/paper-trading/portfolio/:userId/reset  # Reset portfolio
 **Expected:** Fewer trades, different win rate compared to daily rebalance.
 
 #### **Test 3: Aggressive Strategy**
+
 - Top N: 10
 - Rebalance: Daily
 - Period: 90 days
@@ -162,6 +174,7 @@ POST /api/paper-trading/portfolio/:userId/reset  # Reset portfolio
 ## 📁 Key Files and Architecture
 
 ### **Backend (server/)**
+
 ```
 server/
 ├── index.js                  # Express server + API endpoints
@@ -170,6 +183,7 @@ server/
 ```
 
 ### **Frontend (react-client/src/Components/)**
+
 ```
 Components/
 ├── App.jsx                   # Router + routes
@@ -182,6 +196,7 @@ Components/
 ```
 
 ### **Data Storage**
+
 ```
 data/
 ├── snapshots/                # Daily ranking snapshots (JSON)
@@ -199,6 +214,7 @@ data/
 ## 🎯 What Works Right Now
 
 ### ✅ **Fully Functional:**
+
 1. **Stock Rankings**: View ranked stocks by custom criteria
 2. **Stock Details**: Deep dive into metrics with validation
 3. **Correlation Analysis**: Compare up to 7 daily metrics
@@ -207,12 +223,14 @@ data/
 6. **Performance Analysis**: Sharpe ratio, win rate, drawdown
 
 ### ✅ **Data Quality:**
+
 - Real 52-week highs (not estimated)
 - Multi-source validation with confidence scores
 - Proper metric categorization (daily vs. quarterly)
 - RSI calculation with warmup periods
 
 ### ✅ **Architecture:**
+
 - Clean separation of time-series vs. snapshot metrics
 - JSON-based storage (easy to inspect/debug)
 - RESTful API design
@@ -223,6 +241,7 @@ data/
 ## 🔍 Known Limitations (By Design)
 
 ### **MVP Scope:**
+
 1. **Synthetic Historical Data**: Uses random walk from current prices
    - Post-MVP: Fetch real historical rankings from APIs
 2. **In-Memory Paper Trading**: Resets on server restart
@@ -239,11 +258,13 @@ data/
 ## 📈 Performance Expectations
 
 ### **Backtest Performance:**
+
 - **Generation Time**: ~30 seconds for 90 days
 - **Backtest Execution**: ~2-5 seconds
 - **Data Storage**: ~50KB per day snapshot
 
 ### **UI Performance:**
+
 - **Initial Load**: 1-2 seconds
 - **Stock Detail Page**: <1 second
 - **Correlation Chart**: Real-time updates
@@ -253,26 +274,33 @@ data/
 ## 🚨 Troubleshooting
 
 ### **"No Historical Data Available"**
+
 **Solution:** Click "Generate History" button on backtest page. Waits ~30s.
 
 ### **Backtest Returns "No snapshots available"**
+
 **Solution:** Ensure synthetic history was generated. Check `data/snapshots/` directory.
 
 ### **Server Port 8080 in Use**
+
 **Solution:** Kill existing process:
+
 ```bash
 lsof -ti:8080 | xargs kill
 npm start
 ```
 
 ### **Build Errors**
+
 **Solution:** Rebuild:
+
 ```bash
 npm run build
 npm start
 ```
 
 ### **Data Validation Fails**
+
 **Solution:** Check API keys in environment variables. Polygon API may be rate-limited.
 
 ---
@@ -280,24 +308,28 @@ npm start
 ## 🎓 Understanding the Metrics
 
 ### **Sharpe Ratio**
+
 - **> 1.0**: Excellent risk-adjusted return
 - **0.5-1.0**: Good
 - **0-0.5**: Acceptable
 - **< 0**: Poor (losing strategy)
 
 ### **Win Rate**
+
 - **> 60%**: Very good
 - **50-60%**: Good
 - **40-50%**: Acceptable
 - **< 40%**: Poor
 
 ### **Max Drawdown**
+
 - **< 10%**: Excellent risk management
 - **10-20%**: Good
 - **20-30%**: Acceptable
 - **> 30%**: High risk
 
 ### **Annualized Return**
+
 - **> 15%**: Excellent (beats S&P 500 long-term avg)
 - **8-15%**: Good (matches market)
 - **0-8%**: Acceptable
@@ -310,6 +342,7 @@ npm start
 See **BACKLOG.md** for complete post-MVP roadmap.
 
 **Immediate Next Features:**
+
 1. Paper Trading Dashboard UI
 2. Auto-Trading Rules Engine
 3. Real Historical Data Integration
@@ -321,6 +354,7 @@ See **BACKLOG.md** for complete post-MVP roadmap.
 ## 🎉 Congratulations!
 
 You now have a **functional trading platform** that can:
+
 - Rank stocks based on financial metrics
 - Validate data from multiple sources
 - Backtest ranking strategies
@@ -334,6 +368,7 @@ You now have a **functional trading platform** that can:
 ## 📞 Support
 
 **Issues?** Check:
+
 1. Server running: `npm start`
 2. Port 8080 available
 3. Generated historical data
@@ -342,6 +377,7 @@ You now have a **functional trading platform** that can:
 **Want to contribute?** See BACKLOG.md for feature ideas.
 
 **Questions?** Review:
+
 - `MVP_ROADMAP.md` - Complete development plan
 - `METRIC_CATEGORIES.md` - Metric categorization guide
 - `TRADING_ARCHITECTURE.md` - System architecture

@@ -1,7 +1,9 @@
 # MVP Roadmap - Trading Platform
 
 ## 🎯 MVP Goal
+
 Build a functional trading platform that:
+
 1. **Ranks stocks** based on real financial metrics
 2. **Backtests strategies** ("If I bought top 5 stocks last month...")
 3. **Paper trades** automatically based on rankings
@@ -12,6 +14,7 @@ Build a functional trading platform that:
 ## 📊 Current Status
 
 ### ✅ Phase 1: Data Quality Foundation (COMPLETE)
+
 - [x] Yahoo Finance API integration for real data
 - [x] Data validator with confidence scoring
 - [x] Fix fake 52W highs (now using real historical data)
@@ -26,14 +29,17 @@ Build a functional trading platform that:
 ## 🚀 Phase 2: Snapshot System + Backtesting (MVP CORE)
 
 ### Problem to Solve
+
 Right now we have two types of metrics but they're mixed together:
 
 **Time-Series Metrics (Daily):**
+
 - Price, RSI, Volume, Daily Change %, SMAs, Volatility
 - Change every day
 - Can correlate over any timeframe
 
 **Snapshot Metrics (Quarterly/Static):**
+
 - P/E Ratio, Debt/EBITDA, ROE, Quick Ratio, Cash, etc.
 - Only update quarterly (earnings reports)
 - Need different comparison approach (QoQ, YoY)
@@ -41,6 +47,7 @@ Right now we have two types of metrics but they're mixed together:
 ### Solution: Dual Tracking System
 
 #### 1️⃣ **Daily Ranking Snapshots**
+
 Store daily rankings to enable backtesting:
 
 ```json
@@ -52,7 +59,7 @@ Store daily rankings to enable backtesting:
       "symbol": "NVDA",
       "rank": 1,
       "score": 95.2,
-      "price": 150.00,
+      "price": 150.0,
       "rsi": 68.5,
       "volume": 45000000,
       // Daily metrics included
@@ -62,19 +69,21 @@ Store daily rankings to enable backtesting:
       "debtEbitda": 0.2,
       "roe": 0.45,
       "lastQuarterUpdate": "2025-11-01"
-    },
+    }
     // ... more stocks
   ]
 }
 ```
 
 **Enables:**
+
 - ✅ "Show me top 10 stocks from 30 days ago"
 - ✅ "If I bought top 5 last month, what would my return be?"
 - ✅ "Which stocks stayed in top 10 for longest period?"
 - ✅ Historical ranking drift analysis
 
 #### 2️⃣ **Quarterly Metric Snapshots**
+
 Store quarterly financials separately:
 
 ```json
@@ -106,6 +115,7 @@ Store quarterly financials separately:
 ```
 
 **Enables:**
+
 - ✅ Quarter-over-Quarter (QoQ) comparison
 - ✅ Year-over-Year (YoY) comparison
 - ✅ Quarterly trend analysis (P/E improving over time?)
@@ -116,9 +126,11 @@ Store quarterly financials separately:
 ## 🏗️ Phase 2 Implementation Steps
 
 ### Step 1: Separate Snapshot Metrics in UI
+
 **Files:** `StockDetailPage.jsx`, new component `SnapshotMetricsCard.jsx`
 
 **What:**
+
 - Move quarterly metrics to separate card/section
 - Label clearly: "Quarterly Financials (Updated Q4 2025)"
 - Show last update date
@@ -126,6 +138,7 @@ Store quarterly financials separately:
 - Add QoQ/YoY comparison arrows
 
 **UI Example:**
+
 ```
 📊 Daily Metrics (Real-Time)
 ├─ Price: $150.00 ▲ 2.3%
@@ -141,15 +154,18 @@ Store quarterly financials separately:
 ```
 
 ### Step 2: Build Snapshot Storage System
+
 **Files:** New `snapshotManager.js`, background job script
 
 **What:**
+
 - Cron job (or manual trigger) to save daily snapshots
 - Store in `data/snapshots/YYYY-MM-DD.json`
 - Store quarterly financials in `data/quarterly/SYMBOL.json`
 - Include timestamp, data source, confidence scores
 
 **API Endpoints:**
+
 ```javascript
 GET /api/snapshots?date=2025-11-03  // Get rankings from specific date
 GET /api/snapshots/range?start=2025-11-01&end=2025-12-03  // Date range
@@ -157,29 +173,35 @@ GET /api/quarterly/:symbol  // Get quarterly history for stock
 ```
 
 ### Step 3: Quarterly Metric Comparison UI
+
 **Files:** New `QuarterlyMetricsChart.jsx`
 
 **What:**
+
 - Bar chart showing P/E ratio over last 8 quarters
 - QoQ percentage change indicators
 - YoY comparison highlighting
 - Trend lines (improving/declining)
 
 **Features:**
+
 - Select multiple quarterly metrics to overlay
 - Correlation analysis (quarterly granularity)
 - Industry average comparison
 
 ### Step 4: Backtesting Engine
+
 **Files:** New `backtestEngine.js`, `BacktestDashboard.jsx`
 
 **What:**
+
 - Load historical snapshots
 - Simulate buying "top N stocks X days ago"
 - Calculate returns based on current prices
 - Track win rate, average return, max drawdown
 
 **Example Backtest:**
+
 ```
 Strategy: Buy top 5 stocks by rank
 Period: Last 30 days (30 tests)
@@ -195,9 +217,11 @@ Results:
 ```
 
 ### Step 5: Backtesting UI
+
 **Files:** `BacktestDashboard.jsx`
 
 **What:**
+
 - Select strategy parameters (top N stocks, rebalance frequency)
 - Date range selector
 - Run backtest button
@@ -209,33 +233,40 @@ Results:
 ## 💰 Phase 3: Paper Trading (MVP Finalization)
 
 ### Step 6: Alpaca Integration
+
 **Files:** New `alpacaClient.js`, update `server/index.js`
 
 **What:**
+
 - Alpaca SDK integration (paper trading mode)
 - Authentication and account connection
 - Order placement API
 - Position tracking API
 
 ### Step 7: Paper Trading Dashboard
+
 **Files:** New `PaperTradingDashboard.jsx`
 
 **What:**
+
 - Real-time P&L display
 - Current positions table
 - Order history
 - Performance metrics (updated live)
 
 ### Step 8: Auto-Trading Rules
+
 **Files:** New `tradingEngine.js`
 
 **What:**
+
 - Monitor rankings daily
 - Execute trades based on strategy
 - Position sizing logic (equal weight, risk-based, etc.)
 - Risk management (stop losses, position limits)
 
 **Example Auto-Strategy:**
+
 ```javascript
 {
   "name": "Top 5 Daily Rebalance",
@@ -254,6 +285,7 @@ Results:
 ## 📋 Implementation Priority
 
 ### 🔴 Critical Path (Must Have for MVP)
+
 1. ✅ Multi-metric correlation (DONE)
 2. Separate snapshot metrics in UI
 3. Build daily ranking snapshot storage
@@ -264,6 +296,7 @@ Results:
 8. Paper trading dashboard
 
 ### 🟡 Important (Nice to Have)
+
 - QoQ/YoY comparison UI for quarterly metrics
 - Quarterly metric correlation analysis
 - Auto-trading rule engine
@@ -271,6 +304,7 @@ Results:
 - Sector/industry comparison
 
 ### 🟢 Future Enhancements
+
 - Live trading mode (post-MVP)
 - Mobile app
 - Alerts and notifications
@@ -282,6 +316,7 @@ Results:
 ## 🎯 MVP Success Criteria
 
 ### Minimum Viable Product Must:
+
 1. ✅ Rank stocks based on real financial data
 2. ✅ Show correlation between daily metrics
 3. ⬜ Store daily ranking snapshots
@@ -291,6 +326,7 @@ Results:
 7. ⬜ Display paper trading P&L
 
 ### MVP Demo Flow:
+
 ```
 1. User views stock rankings (updated daily)
 2. User clicks "Backtest Strategy"
@@ -307,6 +343,7 @@ Results:
 ## 📊 Data Architecture
 
 ### Daily Metrics (Time-Series)
+
 ```javascript
 // Stored in historical API responses (Polygon/Yahoo)
 // Fetched on-demand for charts
@@ -319,6 +356,7 @@ Results:
 ```
 
 ### Snapshot Metrics (Quarterly)
+
 ```javascript
 // Stored in files: data/quarterly/SYMBOL.json
 {
@@ -331,6 +369,7 @@ Results:
 ```
 
 ### Daily Ranking Snapshots
+
 ```javascript
 // Stored in files: data/snapshots/YYYY-MM-DD.json
 {
@@ -343,6 +382,7 @@ Results:
 ```
 
 ### Backtest Results
+
 ```javascript
 // Stored in files: data/backtests/STRATEGY_ID.json
 {
@@ -362,16 +402,19 @@ Results:
 ## 🚀 Next Steps (Starting Now)
 
 ### Immediate (Today/This Week):
+
 1. **Separate snapshot metrics in UI** - Create new section for quarterly metrics
 2. **Design snapshot data structure** - Finalize JSON schema
 3. **Build snapshot storage** - Implement daily ranking save functionality
 
 ### Short Term (This Sprint):
+
 4. **Implement backtesting engine** - Core calculation logic
 5. **Create backtesting UI** - Basic results display
 6. **Test with historical data** - Validate backtest accuracy
 
 ### Medium Term (Next Sprint):
+
 7. **Alpaca integration** - Paper trading API connection
 8. **Paper trading dashboard** - Real-time P&L display
 9. **Auto-trading rules** - Basic strategy execution
@@ -381,17 +424,20 @@ Results:
 ## 💡 Key Insights
 
 ### Why This Order?
+
 1. **Snapshots First** - Foundation for everything else
 2. **Backtesting Second** - Validates strategies before real money
 3. **Paper Trading Last** - Proof of concept before live trading
 
 ### Why Separate Time-Series vs. Snapshot?
+
 - **Different update frequencies** - Daily vs. Quarterly
 - **Different visualization** - Charts vs. Comparisons
 - **Different analysis** - Correlation vs. Trend
 - **Different use cases** - Real-time monitoring vs. Fundamental analysis
 
 ### Why Backtesting Matters?
+
 - Validates ranking algorithm effectiveness
 - Builds confidence before risking real money
 - Identifies winning strategies
@@ -402,16 +448,19 @@ Results:
 ## 📈 Expected Outcomes
 
 ### After Phase 2 (Backtesting):
+
 - "I can see that buying top 5 stocks last month would have returned +12%"
 - "My ranking algorithm has a 73% win rate over 30 days"
 - "I know which strategy works best (daily vs. weekly rebalance)"
 
 ### After Phase 3 (Paper Trading):
+
 - "My paper trading account is up $1,230 (12.3%) in 30 days"
 - "I can validate my strategy in real-time before using real money"
 - "I have confidence in the system to go live"
 
 ### After MVP:
+
 - "I have a proven, automated trading system"
 - "I can rank stocks, backtest strategies, and execute trades"
 - "I'm ready to scale to live trading with real capital"

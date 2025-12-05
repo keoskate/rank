@@ -23,13 +23,13 @@ async function runEnhancedBacktest(params) {
     positionSizePercent = 10,
     profitTarget = 5,
     stopLoss = 3,
-    timeframe = 'day'
+    timeframe = 'day',
   } = params;
 
   // Fetch historical data
   const candles = await polygonClient.getAggregates(symbol, 1, timeframe, {
     from: new Date(startDate),
-    to: new Date(endDate)
+    to: new Date(endDate),
   });
 
   if (!candles || candles.length < 50) {
@@ -43,14 +43,14 @@ async function runEnhancedBacktest(params) {
     positionSizePercent,
     profitTarget,
     stopLoss,
-    strategy
+    strategy,
   });
 
   // Run what-if scenarios
   const whatIfResults = await runWhatIfScenarios(candles, baseResults, {
     initialCapital,
     positionSizePercent,
-    strategy
+    strategy,
   });
 
   // Run Monte Carlo simulation
@@ -62,7 +62,7 @@ async function runEnhancedBacktest(params) {
     baseResults,
     whatIfResults,
     monteCarloResults,
-    recommendations: generateRecommendations(baseResults, whatIfResults)
+    recommendations: generateRecommendations(baseResults, whatIfResults),
   };
 }
 
@@ -78,7 +78,7 @@ async function runBacktest(params) {
     positionSizePercent,
     profitTarget,
     stopLoss,
-    strategy
+    strategy,
   } = params;
 
   let capital = initialCapital;
@@ -95,13 +95,15 @@ async function runBacktest(params) {
     const currentPrice = candle.close;
 
     // Get indicator values at this point
-    const rsiIdx = i - (candles.length - (indicators.rsi?.history?.length || 0));
+    const rsiIdx =
+      i - (candles.length - (indicators.rsi?.history?.length || 0));
     const rsi = indicators.rsi?.history?.[rsiIdx] || 50;
     const macd = indicators.macd?.history?.[rsiIdx]?.histogram || 0;
 
     // Check for exit if in position
     if (position) {
-      const pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
+      const pnlPercent =
+        ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
 
       // Check profit target
       if (pnlPercent >= profitTarget) {
@@ -113,7 +115,7 @@ async function runBacktest(params) {
           pnl,
           pnlPercent,
           exitReason: 'profit_target',
-          holdingBars: i - position.entryIndex
+          holdingBars: i - position.entryIndex,
         });
         capital += position.quantity * currentPrice;
         position = null;
@@ -128,7 +130,7 @@ async function runBacktest(params) {
           pnl,
           pnlPercent,
           exitReason: 'stop_loss',
-          holdingBars: i - position.entryIndex
+          holdingBars: i - position.entryIndex,
         });
         capital += position.quantity * currentPrice;
         position = null;
@@ -137,7 +139,12 @@ async function runBacktest(params) {
 
     // Check for entry if not in position
     if (!position) {
-      const shouldEnter = evaluateEntry(strategy, { rsi, macd, candle, prevCandle });
+      const shouldEnter = evaluateEntry(strategy, {
+        rsi,
+        macd,
+        candle,
+        prevCandle,
+      });
 
       if (shouldEnter) {
         const positionSize = capital * (positionSizePercent / 100);
@@ -150,7 +157,7 @@ async function runBacktest(params) {
             quantity,
             entryIndex: i,
             entryRsi: rsi,
-            entryMacd: macd
+            entryMacd: macd,
           };
           capital -= quantity * currentPrice;
         }
@@ -158,7 +165,8 @@ async function runBacktest(params) {
     }
 
     // Record equity curve
-    const currentValue = capital + (position ? position.quantity * currentPrice : 0);
+    const currentValue =
+      capital + (position ? position.quantity * currentPrice : 0);
     equityCurve.push({ date: candle.date, value: currentValue });
   }
 
@@ -166,7 +174,8 @@ async function runBacktest(params) {
   if (position) {
     const lastCandle = candles[candles.length - 1];
     const pnl = (lastCandle.close - position.entryPrice) * position.quantity;
-    const pnlPercent = ((lastCandle.close - position.entryPrice) / position.entryPrice) * 100;
+    const pnlPercent =
+      ((lastCandle.close - position.entryPrice) / position.entryPrice) * 100;
 
     trades.push({
       ...position,
@@ -175,7 +184,7 @@ async function runBacktest(params) {
       pnl,
       pnlPercent,
       exitReason: 'end_of_period',
-      holdingBars: candles.length - 1 - position.entryIndex
+      holdingBars: candles.length - 1 - position.entryIndex,
     });
     capital += position.quantity * lastCandle.close;
   }
@@ -188,7 +197,7 @@ async function runBacktest(params) {
     equityCurve,
     stats,
     finalCapital: capital,
-    totalReturn: ((capital - initialCapital) / initialCapital) * 100
+    totalReturn: ((capital - initialCapital) / initialCapital) * 100,
   };
 }
 
@@ -210,7 +219,10 @@ function evaluateEntry(strategy, { rsi, macd, candle, prevCandle }) {
 
     case 'breakout':
       // Price breaking above previous high with volume
-      return candle.close > prevCandle.high && candle.volume > prevCandle.volume * 1.5;
+      return (
+        candle.close > prevCandle.high &&
+        candle.volume > prevCandle.volume * 1.5
+      );
 
     case 'trend':
       // RSI bullish and MACD positive crossover
@@ -233,12 +245,12 @@ async function runWhatIfScenarios(candles, baseResults, params) {
 
   // Scenario 1: What if entered 1 bar earlier?
   scenarios.earlyEntry = await runBacktestWithModification(candles, params, {
-    entryOffset: -1
+    entryOffset: -1,
   });
 
   // Scenario 2: What if entered 1 bar later?
   scenarios.lateEntry = await runBacktestWithModification(candles, params, {
-    entryOffset: 1
+    entryOffset: 1,
   });
 
   // Scenario 3: What if used tighter stop loss?
@@ -246,7 +258,7 @@ async function runWhatIfScenarios(candles, baseResults, params) {
     candles,
     ...params,
     profitTarget: 5,
-    stopLoss: 2
+    stopLoss: 2,
   });
 
   // Scenario 4: What if used wider stop loss?
@@ -254,7 +266,7 @@ async function runWhatIfScenarios(candles, baseResults, params) {
     candles,
     ...params,
     profitTarget: 5,
-    stopLoss: 5
+    stopLoss: 5,
   });
 
   // Scenario 5: What if held for higher profit target?
@@ -262,24 +274,30 @@ async function runWhatIfScenarios(candles, baseResults, params) {
     candles,
     ...params,
     profitTarget: 8,
-    stopLoss: 3
+    stopLoss: 3,
   });
 
   // Scenario 6: What if used trailing stop?
   scenarios.trailingStop = await runBacktestWithTrailingStop(candles, params);
 
   // Scenario 7: What if doubled down on losers?
-  scenarios.averageDown = await runBacktestWithAveraging(candles, params, 'down');
+  scenarios.averageDown = await runBacktestWithAveraging(
+    candles,
+    params,
+    'down'
+  );
 
   // Scenario 8: What if scaled into winners?
   scenarios.scaleUp = await runBacktestWithAveraging(candles, params, 'up');
 
   // Calculate improvement/degradation
-  Object.keys(scenarios).forEach((key) => {
+  Object.keys(scenarios).forEach(key => {
     scenarios[key].improvement =
       scenarios[key].totalReturn - baseResults.totalReturn;
     scenarios[key].improvementPercent =
-      ((scenarios[key].totalReturn - baseResults.totalReturn) / Math.abs(baseResults.totalReturn)) * 100;
+      ((scenarios[key].totalReturn - baseResults.totalReturn) /
+        Math.abs(baseResults.totalReturn)) *
+      100;
   });
 
   return scenarios;
@@ -308,7 +326,8 @@ async function runBacktestWithModification(candles, params, modification) {
 
     // Exit logic (same as base)
     if (position) {
-      const pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
+      const pnlPercent =
+        ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
 
       if (pnlPercent >= 5 || pnlPercent <= -3) {
         const pnl = (currentPrice - position.entryPrice) * position.quantity;
@@ -317,7 +336,7 @@ async function runBacktestWithModification(candles, params, modification) {
           exitDate: candle.date,
           exitPrice: currentPrice,
           pnl,
-          pnlPercent
+          pnlPercent,
         });
         capital += position.quantity * currentPrice;
         position = null;
@@ -328,7 +347,9 @@ async function runBacktestWithModification(candles, params, modification) {
     if (!position) {
       const entryIndex = i + entryOffset;
       if (entryIndex >= 50 && entryIndex < candles.length) {
-        const rsiIdx = entryIndex - (candles.length - (indicators.rsi?.history?.length || 0));
+        const rsiIdx =
+          entryIndex -
+          (candles.length - (indicators.rsi?.history?.length || 0));
         const rsi = indicators.rsi?.history?.[rsiIdx] || 50;
         const macd = indicators.macd?.history?.[rsiIdx]?.histogram || 0;
 
@@ -336,7 +357,7 @@ async function runBacktestWithModification(candles, params, modification) {
           rsi,
           macd,
           candle: candles[entryIndex],
-          prevCandle: candles[entryIndex - 1]
+          prevCandle: candles[entryIndex - 1],
         });
 
         if (shouldEnter) {
@@ -349,7 +370,7 @@ async function runBacktestWithModification(candles, params, modification) {
               entryDate: candles[entryIndex].date,
               entryPrice,
               quantity,
-              entryIndex: entryIndex
+              entryIndex: entryIndex,
             };
             capital -= quantity * entryPrice;
           }
@@ -357,7 +378,8 @@ async function runBacktestWithModification(candles, params, modification) {
       }
     }
 
-    const currentValue = capital + (position ? position.quantity * currentPrice : 0);
+    const currentValue =
+      capital + (position ? position.quantity * currentPrice : 0);
     equityCurve.push({ date: candle.date, value: currentValue });
   }
 
@@ -373,7 +395,8 @@ async function runBacktestWithModification(candles, params, modification) {
     trades,
     stats,
     finalCapital: capital,
-    totalReturn: ((capital - params.initialCapital) / params.initialCapital) * 100
+    totalReturn:
+      ((capital - params.initialCapital) / params.initialCapital) * 100,
   };
 }
 
@@ -406,7 +429,8 @@ async function runBacktestWithTrailingStop(candles, params) {
       // Check trailing stop
       if (currentPrice <= position.trailingStop) {
         const pnl = (currentPrice - position.entryPrice) * position.quantity;
-        const pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
+        const pnlPercent =
+          ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
 
         trades.push({
           ...position,
@@ -414,7 +438,7 @@ async function runBacktestWithTrailingStop(candles, params) {
           exitPrice: currentPrice,
           pnl,
           pnlPercent,
-          exitReason: 'trailing_stop'
+          exitReason: 'trailing_stop',
         });
         capital += position.quantity * currentPrice;
         position = null;
@@ -422,7 +446,8 @@ async function runBacktestWithTrailingStop(candles, params) {
     }
 
     if (!position) {
-      const rsiIdx = i - (candles.length - (indicators.rsi?.history?.length || 0));
+      const rsiIdx =
+        i - (candles.length - (indicators.rsi?.history?.length || 0));
       const rsi = indicators.rsi?.history?.[rsiIdx] || 50;
       const macd = indicators.macd?.history?.[rsiIdx]?.histogram || 0;
 
@@ -430,7 +455,7 @@ async function runBacktestWithTrailingStop(candles, params) {
         rsi,
         macd,
         candle,
-        prevCandle: candles[i - 1]
+        prevCandle: candles[i - 1],
       });
 
       if (shouldEnter) {
@@ -443,14 +468,15 @@ async function runBacktestWithTrailingStop(candles, params) {
             entryPrice: currentPrice,
             quantity,
             highSinceEntry: currentPrice,
-            trailingStop: currentPrice * (1 - trailingStopPercent / 100)
+            trailingStop: currentPrice * (1 - trailingStopPercent / 100),
           };
           capital -= quantity * currentPrice;
         }
       }
     }
 
-    const currentValue = capital + (position ? position.quantity * currentPrice : 0);
+    const currentValue =
+      capital + (position ? position.quantity * currentPrice : 0);
     equityCurve.push({ date: candle.date, value: currentValue });
   }
 
@@ -464,7 +490,8 @@ async function runBacktestWithTrailingStop(candles, params) {
     trades,
     stats,
     finalCapital: capital,
-    totalReturn: ((capital - params.initialCapital) / params.initialCapital) * 100
+    totalReturn:
+      ((capital - params.initialCapital) / params.initialCapital) * 100,
   };
 }
 
@@ -490,17 +517,22 @@ async function runBacktestWithAveraging(candles, params, direction) {
     const currentPrice = candle.close;
 
     if (position) {
-      const pnlPercent = ((currentPrice - position.avgPrice) / position.avgPrice) * 100;
+      const pnlPercent =
+        ((currentPrice - position.avgPrice) / position.avgPrice) * 100;
 
       // Average into position
       if (!hasAveraged) {
-        if ((direction === 'down' && pnlPercent <= averageThreshold) ||
-            (direction === 'up' && pnlPercent >= averageThreshold)) {
+        if (
+          (direction === 'down' && pnlPercent <= averageThreshold) ||
+          (direction === 'up' && pnlPercent >= averageThreshold)
+        ) {
           const addSize = capital * (params.positionSizePercent / 200); // Half size
           const addQuantity = Math.floor(addSize / currentPrice);
 
           if (addQuantity > 0 && capital > addSize) {
-            const totalCost = position.avgPrice * position.quantity + currentPrice * addQuantity;
+            const totalCost =
+              position.avgPrice * position.quantity +
+              currentPrice * addQuantity;
             position.quantity += addQuantity;
             position.avgPrice = totalCost / position.quantity;
             capital -= addQuantity * currentPrice;
@@ -517,7 +549,7 @@ async function runBacktestWithAveraging(candles, params, direction) {
           exitDate: candle.date,
           exitPrice: currentPrice,
           pnl,
-          pnlPercent
+          pnlPercent,
         });
         capital += position.quantity * currentPrice;
         position = null;
@@ -526,7 +558,8 @@ async function runBacktestWithAveraging(candles, params, direction) {
     }
 
     if (!position) {
-      const rsiIdx = i - (candles.length - (indicators.rsi?.history?.length || 0));
+      const rsiIdx =
+        i - (candles.length - (indicators.rsi?.history?.length || 0));
       const rsi = indicators.rsi?.history?.[rsiIdx] || 50;
       const macd = indicators.macd?.history?.[rsiIdx]?.histogram || 0;
 
@@ -534,7 +567,7 @@ async function runBacktestWithAveraging(candles, params, direction) {
         rsi,
         macd,
         candle,
-        prevCandle: candles[i - 1]
+        prevCandle: candles[i - 1],
       });
 
       if (shouldEnter) {
@@ -546,14 +579,15 @@ async function runBacktestWithAveraging(candles, params, direction) {
             entryDate: candle.date,
             entryPrice: currentPrice,
             avgPrice: currentPrice,
-            quantity
+            quantity,
           };
           capital -= quantity * currentPrice;
         }
       }
     }
 
-    const currentValue = capital + (position ? position.quantity * currentPrice : 0);
+    const currentValue =
+      capital + (position ? position.quantity * currentPrice : 0);
     equityCurve.push({ date: candle.date, value: currentValue });
   }
 
@@ -567,7 +601,8 @@ async function runBacktestWithAveraging(candles, params, direction) {
     trades,
     stats,
     finalCapital: capital,
-    totalReturn: ((capital - params.initialCapital) / params.initialCapital) * 100
+    totalReturn:
+      ((capital - params.initialCapital) / params.initialCapital) * 100,
   };
 }
 
@@ -582,7 +617,7 @@ function runMonteCarloSimulation(trades, simulations = 1000) {
     return { error: 'No trades for simulation' };
   }
 
-  const returns = trades.map((t) => t.pnlPercent);
+  const returns = trades.map(t => t.pnlPercent);
   const results = [];
 
   for (let sim = 0; sim < simulations; sim++) {
@@ -592,7 +627,7 @@ function runMonteCarloSimulation(trades, simulations = 1000) {
     for (let i = 0; i < trades.length; i++) {
       const randomIndex = Math.floor(Math.random() * returns.length);
       const tradeReturn = returns[randomIndex];
-      equity *= (1 + tradeReturn / 100);
+      equity *= 1 + tradeReturn / 100;
     }
 
     results.push(equity);
@@ -620,7 +655,10 @@ function runMonteCarloSimulation(trades, simulations = 1000) {
     percentile95: percentile(results, 0.95) - 100,
     worstCase: results[0] - 100,
     bestCase: results[results.length - 1] - 100,
-    probabilityOfProfit: (results.filter((r) => r > 100).length / results.length * 100).toFixed(1)
+    probabilityOfProfit: (
+      (results.filter(r => r > 100).length / results.length) *
+      100
+    ).toFixed(1),
   };
 }
 
@@ -636,15 +674,15 @@ function calculateStats(trades, equityCurve, initialCapital) {
     return { totalTrades: 0 };
   }
 
-  const wins = trades.filter((t) => t.pnl > 0);
-  const losses = trades.filter((t) => t.pnl <= 0);
+  const wins = trades.filter(t => t.pnl > 0);
+  const losses = trades.filter(t => t.pnl <= 0);
 
-  const avgWin = wins.length > 0
-    ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length
-    : 0;
-  const avgLoss = losses.length > 0
-    ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length)
-    : 0;
+  const avgWin =
+    wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+  const avgLoss =
+    losses.length > 0
+      ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length)
+      : 0;
 
   // Calculate max drawdown
   let peak = initialCapital;
@@ -659,7 +697,7 @@ function calculateStats(trades, equityCurve, initialCapital) {
   }
 
   // Calculate Sharpe ratio (simplified)
-  const returns = trades.map((t) => t.pnlPercent);
+  const returns = trades.map(t => t.pnlPercent);
   const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
   const stdReturn = Math.sqrt(
     returns.reduce((s, r) => s + Math.pow(r - avgReturn, 2), 0) / returns.length
@@ -669,10 +707,12 @@ function calculateStats(trades, equityCurve, initialCapital) {
   // Calculate profit factor
   const grossProfit = wins.reduce((s, t) => s + t.pnl, 0);
   const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
+  const profitFactor =
+    grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
 
   // Average holding period
-  const avgHoldingBars = trades.reduce((s, t) => s + (t.holdingBars || 0), 0) / trades.length;
+  const avgHoldingBars =
+    trades.reduce((s, t) => s + (t.holdingBars || 0), 0) / trades.length;
 
   return {
     totalTrades: trades.length,
@@ -688,7 +728,7 @@ function calculateStats(trades, equityCurve, initialCapital) {
     expectancy: (
       (wins.length / trades.length) * avgWin -
       (losses.length / trades.length) * avgLoss
-    ).toFixed(2)
+    ).toFixed(2),
   };
 }
 
@@ -721,12 +761,12 @@ function generateRecommendations(baseResults, whatIfResults) {
       higherTarget: 'holding for higher profit targets (8%)',
       trailingStop: 'using a trailing stop',
       averageDown: 'averaging down on losers',
-      scaleUp: 'scaling into winners'
+      scaleUp: 'scaling into winners',
     };
 
     recommendations.push({
       type: 'improvement',
-      message: `Consider ${scenarioNames[bestScenario]}. This could improve returns by ${bestImprovement.toFixed(1)}%.`
+      message: `Consider ${scenarioNames[bestScenario]}. This could improve returns by ${bestImprovement.toFixed(1)}%.`,
     });
   }
 
@@ -735,7 +775,8 @@ function generateRecommendations(baseResults, whatIfResults) {
   if (winRate < 40) {
     recommendations.push({
       type: 'warning',
-      message: 'Win rate is below 40%. Consider more selective entry criteria or improving timing.'
+      message:
+        'Win rate is below 40%. Consider more selective entry criteria or improving timing.',
     });
   }
 
@@ -746,13 +787,14 @@ function generateRecommendations(baseResults, whatIfResults) {
   if (avgLoss > avgWin * 1.5) {
     recommendations.push({
       type: 'warning',
-      message: 'Average loss is larger than average win. Consider tighter stop losses.'
+      message:
+        'Average loss is larger than average win. Consider tighter stop losses.',
     });
 
     if (whatIfResults.tighterStop?.improvement > 0) {
       recommendations.push({
         type: 'suggestion',
-        message: `A 2% stop loss would have improved returns by ${whatIfResults.tighterStop.improvement.toFixed(1)}%.`
+        message: `A 2% stop loss would have improved returns by ${whatIfResults.tighterStop.improvement.toFixed(1)}%.`,
       });
     }
   }
@@ -761,7 +803,8 @@ function generateRecommendations(baseResults, whatIfResults) {
   if (whatIfResults.trailingStop?.improvement > baseResults.totalReturn * 0.1) {
     recommendations.push({
       type: 'suggestion',
-      message: 'A trailing stop would have significantly improved results. Consider implementing one.'
+      message:
+        'A trailing stop would have significantly improved results. Consider implementing one.',
     });
   }
 
@@ -769,7 +812,7 @@ function generateRecommendations(baseResults, whatIfResults) {
   if (parseFloat(baseResults.stats.maxDrawdown) > 20) {
     recommendations.push({
       type: 'warning',
-      message: `Maximum drawdown of ${baseResults.stats.maxDrawdown}% is high. Consider smaller position sizes.`
+      message: `Maximum drawdown of ${baseResults.stats.maxDrawdown}% is high. Consider smaller position sizes.`,
     });
   }
 
@@ -786,7 +829,7 @@ async function optimizeStrategy(params) {
 
   const candles = await polygonClient.getAggregates(symbol, 1, 'day', {
     from: new Date(startDate),
-    to: new Date(endDate)
+    to: new Date(endDate),
   });
 
   if (!candles || candles.length < 100) {
@@ -814,13 +857,18 @@ async function optimizeStrategy(params) {
               positionSizePercent: positionSize,
               profitTarget,
               stopLoss,
-              strategy
+              strategy,
             });
 
             // Score based on return and risk-adjusted metrics
-            const score = result.totalReturn - parseFloat(result.stats.maxDrawdown) * 0.5;
+            const score =
+              result.totalReturn - parseFloat(result.stats.maxDrawdown) * 0.5;
 
-            if (score > bestResult.totalReturn - parseFloat(bestResult.stats?.maxDrawdown || 0) * 0.5) {
+            if (
+              score >
+              bestResult.totalReturn -
+                parseFloat(bestResult.stats?.maxDrawdown || 0) * 0.5
+            ) {
               bestResult = result;
               bestParams = { strategy, profitTarget, stopLoss, positionSize };
             }
@@ -836,7 +884,7 @@ async function optimizeStrategy(params) {
     optimalParameters: bestParams,
     expectedReturn: bestResult.totalReturn,
     stats: bestResult.stats,
-    trades: bestResult.trades.length
+    trades: bestResult.trades.length,
   };
 }
 
@@ -846,5 +894,5 @@ module.exports = {
   runMonteCarloSimulation,
   optimizeStrategy,
   calculateStats,
-  generateRecommendations
+  generateRecommendations,
 };

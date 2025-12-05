@@ -135,7 +135,7 @@ const getCustomLists = () => {
           description: list.description,
           stocks: list.stocks,
           color: list.color,
-          isCustom: true
+          isCustom: true,
         };
         return acc;
       }, {});
@@ -152,13 +152,13 @@ export const getStockList = listId => {
   if (STOCK_LISTS[listId]) {
     return STOCK_LISTS[listId];
   }
-  
+
   // Check custom lists
   const customLists = getCustomLists();
   if (customLists[listId]) {
     return customLists[listId];
   }
-  
+
   return STOCK_LISTS[DEFAULT_STOCK_LIST];
 };
 
@@ -180,7 +180,7 @@ export const getStockListNames = () => {
     description: config.description,
     count: config.stocks.length,
     color: config.color,
-    isCustom: config.isCustom || false
+    isCustom: config.isCustom || false,
   }));
 };
 
@@ -189,7 +189,7 @@ export const isValidStockListId = listId => {
   if (listId && Object.prototype.hasOwnProperty.call(STOCK_LISTS, listId)) {
     return true;
   }
-  
+
   const customLists = getCustomLists();
   return listId && Object.prototype.hasOwnProperty.call(customLists, listId);
 };
