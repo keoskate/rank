@@ -1,36 +1,31 @@
 /**
  * Lightweight Charts Shim
  *
- * This shim handles the UMD/standalone build of lightweight-charts
- * which doesn't export properly for webpack 4.
+ * Uses the CDN version loaded via script tag in index.html
+ * Do NOT import from node_modules - it's v5 which has different API
  */
 
-// Import the standalone build - this attaches to window.LightweightCharts
-import 'lightweight-charts/dist/lightweight-charts.standalone.production.js';
-
-// Get reference after import
+// Get reference from window (CDN loads v3.8.0 with correct API)
 const getLightweightCharts = () => {
   if (typeof window !== 'undefined' && window.LightweightCharts) {
     return window.LightweightCharts;
   }
-  return {};
+  return null;
 };
 
-const LightweightCharts = getLightweightCharts();
-
-// Export createChart as a function that retrieves from window at call time
-// This ensures it's available even if the script loads async
+// Export createChart - retrieves from window at call time
 export const createChart = (...args) => {
-  const lwc = typeof window !== 'undefined' && window.LightweightCharts;
+  const lwc = getLightweightCharts();
   if (lwc && typeof lwc.createChart === 'function') {
     return lwc.createChart(...args);
   }
-  throw new Error('lightweight-charts not loaded');
+  throw new Error('lightweight-charts not loaded from CDN');
 };
 
-export const ColorType = LightweightCharts.ColorType;
-export const CrosshairMode = LightweightCharts.CrosshairMode;
-export const LineStyle = LightweightCharts.LineStyle;
-export const PriceScaleMode = LightweightCharts.PriceScaleMode;
+// Export other constants
+export const ColorType = getLightweightCharts()?.ColorType;
+export const CrosshairMode = getLightweightCharts()?.CrosshairMode;
+export const LineStyle = getLightweightCharts()?.LineStyle;
+export const PriceScaleMode = getLightweightCharts()?.PriceScaleMode;
 
-export default LightweightCharts;
+export default getLightweightCharts;
