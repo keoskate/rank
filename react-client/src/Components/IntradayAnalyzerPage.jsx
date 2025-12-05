@@ -1328,7 +1328,7 @@ const IntradayAnalyzerPage = () => {
                             </div>
                           </div>
                         )}
-                      </div>
+                      </Card>
                     )}
 
                     {/* All Results Table */}
@@ -1396,7 +1396,7 @@ const IntradayAnalyzerPage = () => {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
