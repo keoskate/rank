@@ -1,207 +1,79 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from './common/Button';
+import theme from '../theme';
 
+/**
+ * NAVIGATION BAR COMPONENT
+ *
+ * Clean, simplified navigation using design system.
+ * Groups related features for better UX.
+ */
 const NavBar = () => {
   const navigate = useNavigate();
 
+  const navItems = [
+    { path: '/', label: 'Rankings', icon: '📊' },
+    { path: '/backtest', label: 'Backtest', icon: '🧪' },
+    { path: '/day-trading', label: 'Day Trading', icon: '📈' },
+    { path: '/paper-trading', label: 'Paper Trading', icon: '📝' },
+    { path: '/ai-research', label: 'AI Research', icon: '🤖' },
+    { path: '/invest', label: 'Brokerage', icon: '🏦' },
+  ];
+
   return (
     <header style={{
-      backgroundColor: '#2c3e50',
-      padding: '16px 24px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      borderBottom: '1px solid #34495e'
+      backgroundColor: theme.colors.primary,
+      padding: theme.spacing.md + ' ' + theme.spacing.lg,
+      boxShadow: theme.shadows.md,
+      borderBottom: `1px solid ${theme.colors.primaryLight}`,
     }}>
       <div style={{
+        maxWidth: theme.layout.maxWidthWide,
+        margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: theme.spacing.lg,
       }}>
-        <button
+        {/* Logo/Brand */}
+        <Button
+          variant="ghost"
           onClick={() => navigate('/')}
           style={{
-            background: 'none',
-            border: 'none',
-            color: '#ffffff',
-            fontSize: '24px',
-            fontWeight: '700',
-            cursor: 'pointer',
+            color: theme.colors.surface,
+            fontSize: theme.typography.fontSize.xxl,
+            fontWeight: theme.typography.fontWeight.bold,
             letterSpacing: '1px',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.backgroundColor = '#34495e';
-            e.target.style.transform = 'scale(1.02)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = 'transparent';
-            e.target.style.transform = 'scale(1)';
+            padding: theme.spacing.sm + ' ' + theme.spacing.md,
           }}
         >
           KEO STONKS V2
-        </button>
-        
-        <div style={{
+        </Button>
+
+        {/* Navigation Links */}
+        <nav style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '16px'
+          gap: theme.spacing.sm,
+          flexWrap: 'wrap',
         }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              background: 'none',
-              border: '2px solid #3498db',
-              color: '#3498db',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              marginRight: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#3498db';
-              e.target.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#3498db';
-            }}
-          >
-            📊 Rankings
-          </button>
-          
-          <button
-            onClick={() => navigate('/backtest')}
-            style={{
-              background: 'none',
-              border: '2px solid #9b59b6',
-              color: '#9b59b6',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              marginRight: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#9b59b6';
-              e.target.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#9b59b6';
-            }}
-          >
-            🧪 Backtest
-          </button>
-
-          <button
-            onClick={() => navigate('/paper-trading')}
-            style={{
-              background: 'none',
-              border: '2px solid #e67e22',
-              color: '#e67e22',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              marginRight: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#e67e22';
-              e.target.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#e67e22';
-            }}
-          >
-            📝 Paper Trading
-          </button>
-
-          <button
-            onClick={() => navigate('/ai-research')}
-            style={{
-              background: 'none',
-              border: '2px solid #6f42c1',
-              color: '#6f42c1',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              marginRight: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#6f42c1';
-              e.target.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#6f42c1';
-            }}
-          >
-            🤖 AI Research
-          </button>
-
-          <button
-            onClick={() => navigate('/day-trading')}
-            style={{
-              background: 'none',
-              border: '2px solid #fd7e14',
-              color: '#fd7e14',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              marginRight: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#fd7e14';
-              e.target.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#fd7e14';
-            }}
-          >
-            📈 Day Trading
-          </button>
-
-          <button
-            onClick={() => navigate('/invest')}
-            style={{
-              background: 'none',
-              border: '2px solid #27ae60',
-              color: '#27ae60',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#27ae60';
-              e.target.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#27ae60';
-            }}
-          >
-            💰 Invest
-          </button>
-        </div>
+          {navItems.map((item) => (
+            <Button
+              key={item.path}
+              variant="outline"
+              size="small"
+              onClick={() => navigate(item.path)}
+              style={{
+                borderColor: theme.colors.surface,
+                color: theme.colors.surface,
+                backgroundColor: 'transparent',
+              }}
+            >
+              {item.icon} {item.label}
+            </Button>
+          ))}
+        </nav>
       </div>
     </header>
   );
