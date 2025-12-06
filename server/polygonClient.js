@@ -13,10 +13,14 @@
 
 const axios = require('axios');
 
-// Polygon API Configuration
-const POLYGON_API_KEY =
-  process.env.POLYGON_API_KEY || 'trJFATg2fiHoUCMN6DUY2ldhCqifQO8_';
+// Polygon API Configuration - Must be set via environment variables
+// See .env.example for setup instructions
+const POLYGON_API_KEY = process.env.POLYGON_API_KEY;
 const POLYGON_BASE_URL = 'https://api.polygon.io';
+
+if (!POLYGON_API_KEY) {
+  console.warn('⚠️  POLYGON_API_KEY not set in environment variables. Market data features will not work.');
+}
 
 // Rate limiting
 const RATE_LIMIT_DELAY = 100; // 100ms between requests (10 req/sec)

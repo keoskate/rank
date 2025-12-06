@@ -26,22 +26,18 @@ const ALPACA_ENDPOINTS = {
   [TRADING_MODES.LIVE]: 'https://api.alpaca.markets',
 };
 
-// API Credentials (NEVER commit real keys to git!)
-// TODO: FIX THIS PRIVACY ISSUE BEFORE COMMIT
+// API Credentials - Must be set via environment variables
+// See .env.example for setup instructions
 const CREDENTIALS = {
   [TRADING_MODES.PAPER]: {
-    apiKey: process.env.ALPACA_PAPER_API_KEY || 'PKOS5B9EF0884GN7OU0V',
-    secretKey:
-      process.env.ALPACA_PAPER_SECRET_KEY ||
-      'IsLmeBTirFHtXqsG1u8FvFFdo9cVpKKmNxWIes2W',
-    expectedAccountNumber: 'PA3Q8Y2RHTID', // Paper account for verification
+    apiKey: process.env.ALPACA_PAPER_API_KEY,
+    secretKey: process.env.ALPACA_PAPER_SECRET_KEY,
+    expectedAccountNumber: process.env.ALPACA_PAPER_ACCOUNT || 'PA3Q8Y2RHTID',
   },
   [TRADING_MODES.LIVE]: {
-    apiKey: process.env.ALPACA_LIVE_API_KEY || 'AKJCLEN5A4NMAKWYH336YI7GF3',
-    secretKey:
-      process.env.ALPACA_LIVE_SECRET_KEY ||
-      'Cjm3zSA52SGt1Si4beP5etTXD2byaBegadTzsT93CJ8D',
-    expectedAccountNumber: '111972835', // Live brokerage account
+    apiKey: process.env.ALPACA_LIVE_API_KEY,
+    secretKey: process.env.ALPACA_LIVE_SECRET_KEY,
+    expectedAccountNumber: process.env.ALPACA_LIVE_ACCOUNT || '',
   },
 };
 

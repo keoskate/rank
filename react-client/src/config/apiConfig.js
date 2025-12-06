@@ -15,10 +15,11 @@ export const API_PROVIDERS = {
 export const PRIMARY_PROVIDER = API_PROVIDERS.POLYGON;
 
 // API provider configurations
+// API keys must be set via environment variables - see .env.example
 export const PROVIDER_CONFIG = {
   [API_PROVIDERS.ALPHA_VANTAGE]: {
     name: 'Alpha Vantage',
-    apiKey: process.env.REACT_APP_ALPHA_VANTAGE_API_KEY || '1KEVFA9KIQVOBJUE',
+    apiKey: process.env.REACT_APP_ALPHA_VANTAGE_API_KEY || '',
     dailyLimit: 500,
     rateLimit: '5 calls/minute',
     features: ['fundamentals', 'real-time', 'historical'],
@@ -29,9 +30,7 @@ export const PROVIDER_CONFIG = {
   },
   [API_PROVIDERS.POLYGON]: {
     name: 'Polygon.io',
-    apiKey:
-      process.env.REACT_APP_POLYGON_API_KEY ||
-      'trJFATg2fiHoUCMN6DUY2ldhCqifQO8_',
+    apiKey: process.env.REACT_APP_POLYGON_API_KEY || '',
     dailyLimit: 'unlimited',
     rateLimit: 'unlimited (paid subscription)',
     features: ['fundamentals', 'real-time', 'technical-indicators', 'options'],
