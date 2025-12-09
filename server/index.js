@@ -5632,6 +5632,209 @@ app.delete('/api/monitors/:symbol/:versionId', (req, res) => {
   }
 });
 
+// ==========================================
+// TECHNICAL INDICATORS & PATTERN DETECTION
+// ==========================================
+
+// Get composite trading signals for a symbol
+app.get('/api/indicators/:symbol/signals', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { timeframe = '1D', bars = 100 } = req.query;
+
+    // Fetch historical data for indicator calculation
+    let candles = [];
+    try {
+      // Try to get intraday data from Polygon or cached data
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - Math.ceil(bars / 7)); // Rough estimate for trading days
+
+      const data = await polygonClient.getDailyBars(
+        symbol,
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0]
+      );
+
+      if (data && data.results) {
+        candles = data.results.map(bar => ({
+          open: bar.o,
+          high: bar.h,
+          low: bar.l,
+          close: bar.c,
+          volume: bar.v,
+          timestamp: bar.t,
+        }));
+      }
+    } catch (dataError) {
+      console.warn(`Could not fetch data for ${symbol}:`, dataError.message);
+    }
+
+    // If we have enough data, calculate indicators
+    if (candles.length >= 50) {
+      const indicators = technicalIndicatorsService.getAllIndicators(candles);
+      res.json({
+        success: true,
+        symbol,
+        timeframe,
+        signal: indicators.signals?.signal || 'HOLD',
+        confidence: indicators.signals?.confidence || 50,
+        bullishScore: indicators.signals?.bullishScore || 0,
+        bearishScore: indicators.signals?.bearishScore || 0,
+        reasons: indicators.signals?.reasons || [],
+        indicators: {
+          rsi: indicators.rsi?.value,
+          macd: indicators.macd,
+          bollingerBands: indicators.bollingerBands,
+          ema: indicators.ema,
+          vwap: indicators.vwap,
+          adx: indicators.adx,
+          stochastic: indicators.stochastic,
+          volume: indicators.volume,
+        },
+        trend: indicators.trend,
+        timestamp: indicators.timestamp,
+      });
+    } else {
+      // Return default values if not enough data
+      res.json({
+        success: true,
+        symbol,
+        timeframe,
+        signal: 'HOLD',
+        confidence: 50,
+        bullishScore: 0,
+        bearishScore: 0,
+        reasons: ['Insufficient data for analysis'],
+        indicators: {},
+        trend: {},
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    console.error(`Error fetching signals for ${req.params.symbol}:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Detect patterns for a symbol
+app.get('/api/patterns/:symbol/detect', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { timeframe = '1D', bars = 100 } = req.query;
+
+    // Fetch historical data for pattern detection
+    let candles = [];
+    let indicators = {};
+
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - Math.ceil(bars / 7));
+
+      const data = await polygonClient.getDailyBars(
+        symbol,
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0]
+      );
+
+      if (data && data.results) {
+        candles = data.results.map(bar => ({
+          open: bar.o,
+          high: bar.h,
+          low: bar.l,
+          close: bar.c,
+          volume: bar.v,
+          timestamp: bar.t,
+        }));
+      }
+
+      // Calculate indicators for pattern detection
+      if (candles.length >= 50) {
+        indicators = technicalIndicatorsService.getAllIndicators(candles);
+      }
+    } catch (dataError) {
+      console.warn(`Could not fetch data for ${symbol}:`, dataError.message);
+    }
+
+    // Detect patterns
+    if (candles.length >= 20) {
+      const patternResult = patternRecognitionService.detectHeuristicPatterns(candles, indicators);
+
+      res.json({
+        success: true,
+        symbol,
+        timeframe,
+        signal: patternResult.signal,
+        confidence: patternResult.confidence,
+        patterns: patternResult.patterns || [],
+        probabilities: patternResult.probabilities || {
+          BUY_SIGNAL: 33,
+          HOLD: 34,
+          SELL_SIGNAL: 33,
+        },
+        bullishScore: patternResult.bullishScore || 0,
+        bearishScore: patternResult.bearishScore || 0,
+        isMLPrediction: false,
+        timestamp: patternResult.timestamp || new Date(),
+      });
+    } else {
+      res.json({
+        success: true,
+        symbol,
+        timeframe,
+        signal: 'HOLD',
+        confidence: 50,
+        patterns: [],
+        probabilities: { BUY_SIGNAL: 33, HOLD: 34, SELL_SIGNAL: 33 },
+        bullishScore: 0,
+        bearishScore: 0,
+        isMLPrediction: false,
+        timestamp: new Date(),
+      });
+    }
+  } catch (error) {
+    console.error(`Error detecting patterns for ${req.params.symbol}:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get ML pattern prediction (uses TensorFlow.js model)
+app.post('/api/patterns/:symbol/predict', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { candles, indicators } = req.body;
+
+    if (!candles || candles.length < 60) {
+      return res.status(400).json({
+        error: 'Need at least 60 candles for ML prediction',
+      });
+    }
+
+    const prediction = await patternRecognitionService.predictPattern(candles, indicators);
+
+    res.json({
+      success: true,
+      symbol,
+      ...prediction,
+      isMLPrediction: true,
+    });
+  } catch (error) {
+    console.error(`Error predicting patterns for ${req.params.symbol}:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get ML model info
+app.get('/api/patterns/model/info', (req, res) => {
+  try {
+    const info = patternRecognitionService.getModelInfo();
+    res.json({ success: true, ...info });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static files from React build
 app.use(express.static(`${__dirname}/../react-client/dist`));
 
