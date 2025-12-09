@@ -3,6 +3,12 @@
  *
  * Comprehensive trading performance analysis with charts,
  * metrics, and insights.
+ *
+ * Enhanced with advanced analytics:
+ * - Monte Carlo simulation
+ * - MFE/MAE exit optimization
+ * - Time-based performance heatmap
+ * - Trade distribution analysis
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -25,6 +31,9 @@ import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
 import theme from '../../theme';
 
+// Advanced Analytics Components
+import { StrategyAnalyticsDashboard } from '../Analytics';
+
 // Register ChartJS components
 ChartJS.register(
   CategoryScale,
@@ -44,6 +53,7 @@ const PerformanceAnalytics = () => {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sessionStats, setSessionStats] = useState(null);
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -325,6 +335,28 @@ const PerformanceAnalytics = () => {
     },
   };
 
+  // Transform trades for advanced analytics (needs pnl field)
+  const analyticsReadyTrades = useMemo(() => {
+    return filteredTrades.map(t => ({
+      ...t,
+      pnl: t.profit || t.pnl || 0,
+      exitDate: t.exitDate || t.date,
+      entryDate: t.entryDate || t.date,
+    }));
+  }, [filteredTrades]);
+
+  // Show advanced analytics dashboard
+  if (showAdvancedAnalytics) {
+    return (
+      <StrategyAnalyticsDashboard
+        trades={analyticsReadyTrades}
+        strategyName="Trading Performance"
+        startingCapital={10000}
+        onClose={() => setShowAdvancedAnalytics(false)}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div
@@ -367,7 +399,7 @@ const PerformanceAnalytics = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+        <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
           {['week', 'month', 'quarter', 'year', 'all'].map(range => (
             <Button
               key={range}
@@ -380,6 +412,15 @@ const PerformanceAnalytics = () => {
                 : range.charAt(0).toUpperCase() + range.slice(1)}
             </Button>
           ))}
+          <div style={{ borderLeft: `1px solid ${theme.colors.gray300}`, height: '24px', marginLeft: theme.spacing.sm }} />
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={() => setShowAdvancedAnalytics(true)}
+            disabled={filteredTrades.length === 0}
+          >
+            Advanced Analytics
+          </Button>
         </div>
       </div>
 
