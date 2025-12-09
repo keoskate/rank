@@ -2,6 +2,18 @@ const path = require('path');
 const SRC_DIR = path.join(__dirname, '/react-client/src');
 const DIST_DIR = path.join(__dirname, '/react-client/dist');
 const webpack = require('webpack');
+const dotenv = require('dotenv');
+
+// Load .env file
+const env = dotenv.config().parsed || {};
+
+// Create env vars for DefinePlugin (only REACT_APP_* vars)
+const envKeys = Object.keys(env).reduce((prev, next) => {
+  if (next.startsWith('REACT_APP_')) {
+    prev[`process.env.${next}`] = JSON.stringify(env[next]);
+  }
+  return prev;
+}, {});
 
 module.exports = {
   mode: 'development', // Enable development mode for better debugging
@@ -70,6 +82,7 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('development'),
+      ...envKeys,
     }),
     new webpack.HotModuleReplacementPlugin(),
   ],

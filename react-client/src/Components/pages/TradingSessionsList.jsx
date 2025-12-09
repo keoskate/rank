@@ -128,6 +128,32 @@ const TradingSessionsList = () => {
     }
   };
 
+  const deleteSession = async (sessionId, sessionName, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete "${sessionName}"? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/ai/session/${sessionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchSessions();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete session');
+      }
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+      setError('Failed to delete session');
+    }
+  };
+
   const formatCurrency = value => {
     if (value == null || isNaN(value)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
@@ -342,6 +368,7 @@ const TradingSessionsList = () => {
                 onStop={stopSession}
                 onPause={pauseSession}
                 onResume={resumeSession}
+                onDelete={deleteSession}
                 formatCurrency={formatCurrency}
                 getStatusColor={getStatusColor}
                 getStatusBg={getStatusBg}
@@ -371,6 +398,7 @@ const TradingSessionsList = () => {
                 onStop={stopSession}
                 onPause={pauseSession}
                 onResume={resumeSession}
+                onDelete={deleteSession}
                 formatCurrency={formatCurrency}
                 getStatusColor={getStatusColor}
                 getStatusBg={getStatusBg}
@@ -400,6 +428,7 @@ const TradingSessionsList = () => {
                 onStop={stopSession}
                 onPause={pauseSession}
                 onResume={resumeSession}
+                onDelete={deleteSession}
                 formatCurrency={formatCurrency}
                 getStatusColor={getStatusColor}
                 getStatusBg={getStatusBg}
@@ -412,12 +441,30 @@ const TradingSessionsList = () => {
   );
 };
 
+// Format relative time
+const formatRelativeTime = dateStr => {
+  if (!dateStr) return 'Never';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+};
+
 // Session Card Component
 const SessionCard = ({
   session,
   onStop,
   onPause,
   onResume,
+  onDelete,
   formatCurrency,
   getStatusColor,
   getStatusBg,
@@ -477,8 +524,21 @@ const SessionCard = ({
             </span>
           </div>
 
+          {/* Last Activity */}
+          <p
+            style={{
+              margin: '4px 0 0',
+              color: theme.colors.gray500,
+              fontSize: theme.typography.fontSize.xs,
+            }}
+          >
+            Last activity: {formatRelativeTime(session.lastActivity)}
+            {session.totalDecisions > 0 &&
+              ` | ${session.totalDecisions} decisions`}
+          </p>
+
           {/* Watchlist preview */}
-          {session.watchlist && (
+          {session.watchlist && session.watchlist.length > 0 && (
             <p
               style={{
                 margin: '8px 0 0',
@@ -490,6 +550,41 @@ const SessionCard = ({
               {session.watchlist.length > 5 &&
                 ` +${session.watchlist.length - 5} more`}
             </p>
+          )}
+
+          {/* Recent Decisions */}
+          {session.recentDecisions && session.recentDecisions.length > 0 && (
+            <div
+              style={{
+                margin: '8px 0 0',
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.gray50,
+                borderRadius: theme.borderRadius.sm,
+                fontSize: theme.typography.fontSize.xs,
+              }}
+            >
+              <strong style={{ color: theme.colors.gray700 }}>
+                Recent Activity:
+              </strong>
+              {session.recentDecisions.map((decision, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    marginTop: '4px',
+                    color:
+                      decision.action === 'BUY'
+                        ? theme.colors.success
+                        : decision.action === 'SELL'
+                          ? theme.colors.error
+                          : theme.colors.gray600,
+                  }}
+                >
+                  {decision.action} {decision.symbol} -{' '}
+                  {decision.reason?.substring(0, 40)}
+                  {decision.reason?.length > 40 ? '...' : ''}
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Stats row */}
@@ -537,7 +632,12 @@ const SessionCard = ({
 
         {/* Actions */}
         <div
-          style={{ display: 'flex', gap: theme.spacing.sm }}
+          style={{
+            display: 'flex',
+            gap: theme.spacing.sm,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+          }}
           onClick={e => e.stopPropagation()}
         >
           {session.status === 'running' && (
@@ -573,6 +673,14 @@ const SessionCard = ({
             onClick={() => navigate(`/live-trading/${session.sessionId}`)}
           >
             View
+          </Button>
+          <Button
+            size="small"
+            variant="danger"
+            onClick={e => onDelete(session.sessionId, session.name, e)}
+            title="Delete session permanently"
+          >
+            Delete
           </Button>
         </div>
       </div>

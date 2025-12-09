@@ -189,15 +189,30 @@ function getAllUserSessions(userId) {
   const userSessions = [];
   sessions.forEach((session, sessionId) => {
     if (session.userId === userId) {
+      // Get recent decisions (last 3) for preview
+      const recentDecisions = (session.decisions || [])
+        .slice(-3)
+        .map(d => ({
+          action: d.action,
+          symbol: d.symbol,
+          reason: d.reason,
+          timestamp: d.timestamp,
+        }));
+
       userSessions.push({
         sessionId,
         name: session.name || session.config?.name || 'Unnamed',
         status: session.status,
         startTime: session.startTime,
+        endTime: session.endTime,
+        lastActivity: session.lastActivity || session.endTime || session.startTime,
         stats: session.stats,
         config: session.config,
+        watchlist: session.config?.watchlist || [],
         watchlistCount: session.config?.watchlist?.length || 0,
         positionCount: session.portfolio?.positions?.size || 0,
+        totalDecisions: (session.decisions || []).length,
+        recentDecisions,
       });
     }
   });
@@ -244,6 +259,36 @@ function stopSession(sessionId) {
   saveSessions();
 
   return summary;
+}
+
+/**
+ * Delete a trading session permanently
+ * @param {string} sessionId - Session identifier
+ * @returns {object} Deletion result
+ */
+function deleteSession(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) {
+    return { error: 'Session not found', sessionId };
+  }
+
+  const sessionName = session.name;
+
+  // Remove from memory
+  sessions.delete(sessionId);
+  decisionHistory.delete(sessionId);
+
+  // Save to disk
+  saveSessions();
+
+  console.log(`[AI Engine] Session "${sessionName}" deleted: ${sessionId}`);
+
+  return {
+    success: true,
+    sessionId,
+    name: sessionName,
+    message: `Session "${sessionName}" has been permanently deleted`,
+  };
 }
 
 /**
@@ -1110,11 +1155,15 @@ function logDecision(sessionId, decision) {
   const session = sessions.get(sessionId);
   if (!session) return;
 
+  const timestamp = new Date();
   session.decisions.push({
     ...decision,
     id: uuidv4(),
-    timestamp: new Date(),
+    timestamp,
   });
+
+  // Track last activity for session
+  session.lastActivity = timestamp;
 
   // Keep only last 1000 decisions
   if (session.decisions.length > 1000) {
@@ -1233,6 +1282,7 @@ function getDailySummary(sessionId) {
 module.exports = {
   startSession,
   stopSession,
+  deleteSession,
   pauseSession,
   resumeSession,
   getSessionStatus,
