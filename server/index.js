@@ -35,6 +35,16 @@ const websocketServer = require('./websocketServer');
 const http = require('http');
 const multer = require('multer');
 
+// Sprint 1: Self-Improving Trading System modules
+const TransactionCostModel = require('./transactionCostModel');
+const LeveragedEtfRules = require('./leveragedEtfRules');
+const RegimeDetector = require('./regimeDetector');
+
+// Initialize Sprint 1 modules
+const transactionCostModel = new TransactionCostModel();
+const leveragedEtfRules = new LeveragedEtfRules();
+const regimeDetector = new RegimeDetector();
+
 const app = express();
 
 // Configure multer for file uploads
@@ -3216,6 +3226,24 @@ app.post('/api/ai/session/resume', async (req, res) => {
   }
 });
 
+// Delete AI trading session permanently
+app.delete('/api/ai/session/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    const result = aiTradingEngine.deleteSession(sessionId);
+    if (result.error) {
+      return res.status(404).json(result);
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all sessions for a user
 app.get('/api/ai/sessions/:userId', async (req, res) => {
   try {
@@ -3751,6 +3779,315 @@ app.get(
     }
   }
 );
+
+// ================================
+// SPRINT 1: SELF-IMPROVING TRADING SYSTEM APIs
+// ================================
+
+/**
+ * Transaction Cost Model APIs
+ * Get realistic slippage/spread costs for symbols
+ */
+
+// Get transaction costs for a symbol
+app.get('/api/costs/:symbol', (req, res) => {
+  const { symbol } = req.params;
+  const { price } = req.query;
+
+  try {
+    const profile = transactionCostModel.getProfile(symbol);
+    const roundTripCost = transactionCostModel.getRoundTripCost(symbol, parseFloat(price) || 100);
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      profile,
+      roundTripCost,
+      executionPrices: {
+        buy: transactionCostModel.getExecutionPrice(symbol, parseFloat(price) || 100, 'BUY'),
+        sell: transactionCostModel.getExecutionPrice(symbol, parseFloat(price) || 100, 'SELL'),
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all symbol costs
+app.get('/api/costs', (req, res) => {
+  try {
+    res.json(transactionCostModel.getAllSymbolCosts());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Adjust strategy config for transaction costs
+app.post('/api/costs/adjust', (req, res) => {
+  const { symbol, config } = req.body;
+
+  if (!symbol || !config) {
+    return res.status(400).json({ error: 'symbol and config required' });
+  }
+
+  try {
+    const adjusted = transactionCostModel.adjustTargetsForCosts(symbol, config);
+    res.json(adjusted);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Apply costs to a trade
+app.post('/api/costs/apply-trade', (req, res) => {
+  const { symbol, trade } = req.body;
+
+  if (!symbol || !trade) {
+    return res.status(400).json({ error: 'symbol and trade required' });
+  }
+
+  try {
+    const result = transactionCostModel.applyToTrade(trade, symbol);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Leveraged ETF Rules APIs
+ * Enforce day trading constraints for leveraged ETFs
+ */
+
+// Check if symbol is leveraged ETF
+app.get('/api/leveraged/:symbol', (req, res) => {
+  const { symbol } = req.params;
+
+  try {
+    const isLeveraged = leveragedEtfRules.isLeveraged(symbol);
+    const info = leveragedEtfRules.getInfo(symbol);
+
+    if (isLeveraged) {
+      const decay = leveragedEtfRules.calculateExpectedDecay(symbol, 1);
+      const backtest = leveragedEtfRules.getBacktestProxy(symbol);
+
+      res.json({
+        symbol: symbol.toUpperCase(),
+        isLeveraged: true,
+        info,
+        decay,
+        backtestProxy: backtest,
+        rules: leveragedEtfRules.getRulesSummary()
+      });
+    } else {
+      res.json({
+        symbol: symbol.toUpperCase(),
+        isLeveraged: false,
+        message: `${symbol} is not a leveraged ETF - no special rules apply`
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all leveraged ETFs with their details
+app.get('/api/leveraged', (req, res) => {
+  try {
+    res.json({
+      etfs: leveragedEtfRules.getAllLeveragedEtfs(),
+      rules: leveragedEtfRules.getRulesSummary()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Apply leveraged ETF constraints to a trading decision
+app.post('/api/leveraged/apply-constraints', (req, res) => {
+  const { symbol, decision, currentTime, currentPosition, vix } = req.body;
+
+  if (!symbol || !decision) {
+    return res.status(400).json({ error: 'symbol and decision required' });
+  }
+
+  try {
+    const time = currentTime ? new Date(currentTime) : new Date();
+    const result = leveragedEtfRules.applyConstraints(symbol, decision, time, currentPosition, vix);
+
+    // Add timing info
+    result.timing = {
+      currentTime: time.toISOString(),
+      isMarketHours: leveragedEtfRules.isMarketHours(time),
+      timeUntilForcedExit: leveragedEtfRules.getTimeUntilForcedExit(time)
+    };
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get expected decay for holding a leveraged ETF
+app.get('/api/leveraged/:symbol/decay', (req, res) => {
+  const { symbol } = req.params;
+  const { days } = req.query;
+
+  try {
+    const decay = leveragedEtfRules.calculateExpectedDecay(symbol, parseInt(days) || 1);
+
+    if (!decay) {
+      return res.status(404).json({ error: `${symbol} is not a leveraged ETF` });
+    }
+
+    res.json(decay);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Market Regime Detection APIs
+ * Detect bull/bear/sideways market conditions
+ */
+
+// Detect current regime for a symbol (uses recent data)
+app.get('/api/regime/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  const { days } = req.query;
+  const lookbackDays = parseInt(days) || 90;
+
+  try {
+    // Get historical data for regime detection
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - lookbackDays);
+
+    // Format dates for polygon API
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    const candles = await polygonClient.getHistoricalAggregates(
+      symbol,
+      formatDate(startDate),
+      formatDate(endDate),
+      'day'
+    ).catch(() => []);
+
+    if (!candles || candles.length < 50) {
+      return res.status(400).json({
+        error: 'Insufficient data for regime detection',
+        candlesAvailable: candles?.length || 0,
+        required: 50
+      });
+    }
+
+    const regime = regimeDetector.detectRegime(candles);
+
+    // Add default config recommendation
+    regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(regime.regime);
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      ...regime,
+      dataRange: {
+        start: formatDate(startDate),
+        end: formatDate(endDate),
+        candlesUsed: candles.length
+      }
+    });
+  } catch (error) {
+    console.error(`Error detecting regime for ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get regime timeline for visualization
+app.get('/api/regime/:symbol/timeline', async (req, res) => {
+  const { symbol } = req.params;
+  const { days } = req.query;
+  const lookbackDays = parseInt(days) || 180;
+
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - lookbackDays);
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    const candles = await polygonClient.getHistoricalAggregates(
+      symbol,
+      formatDate(startDate),
+      formatDate(endDate),
+      'day'
+    ).catch(() => []);
+
+    if (!candles || candles.length < 60) {
+      return res.status(400).json({
+        error: 'Insufficient data for timeline',
+        candlesAvailable: candles?.length || 0,
+        required: 60
+      });
+    }
+
+    const timeline = regimeDetector.getRegimeTimeline(candles);
+    const analysis = regimeDetector.analyzeRegimes(timeline);
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      timeline,
+      analysis,
+      dataRange: {
+        start: formatDate(startDate),
+        end: formatDate(endDate),
+        totalDays: candles.length
+      }
+    });
+  } catch (error) {
+    console.error(`Error getting regime timeline for ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Detect regime from provided candles (for backtesting)
+app.post('/api/regime/detect', (req, res) => {
+  const { candles, options } = req.body;
+
+  if (!candles || !Array.isArray(candles)) {
+    return res.status(400).json({ error: 'candles array required' });
+  }
+
+  try {
+    const regime = regimeDetector.detectRegime(candles, options);
+    regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(regime.regime);
+    res.json(regime);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get default config for a specific regime
+app.get('/api/regime/config/:regime', (req, res) => {
+  const { regime } = req.params;
+
+  const validRegimes = ['bull', 'bear', 'sideways'];
+  if (!validRegimes.includes(regime.toLowerCase())) {
+    return res.status(400).json({
+      error: `Invalid regime. Must be one of: ${validRegimes.join(', ')}`
+    });
+  }
+
+  try {
+    const config = regimeDetector.getDefaultConfigForRegime(regime.toLowerCase());
+    const recommendation = regimeDetector.getStrategyRecommendation(regime.toLowerCase(), 'moderate', 0.015);
+
+    res.json({
+      regime: regime.toLowerCase(),
+      config,
+      recommendation
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Serve static files from React build
 app.use(express.static(`${__dirname}/../react-client/dist`));
