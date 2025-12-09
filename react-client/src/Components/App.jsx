@@ -7,6 +7,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import NavBar from './NavBar';
 import StockDataProvider from './StockDataProvider';
+import { TradingConfigProvider } from '../contexts/TradingConfigContext';
 import ErrorBoundary from './common/ErrorBoundary';
 
 // Primary Pages (MVP flow)
@@ -21,6 +22,10 @@ import TradingSessionsList from './pages/TradingSessionsList';
 import LiveTradingDashboard from './pages/LiveTradingDashboard';
 import TradeImportPage from './pages/TradeImportPage';
 import PerformanceAnalytics from './pages/PerformanceAnalytics';
+import ABTestPage from './pages/ABTestPage';
+import WalkForwardPage from './pages/WalkForwardPage';
+import StrategyLabPage from './pages/StrategyLabPage';
+import OvernightOptimizationPage from './pages/OvernightOptimizationPage';
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -31,8 +36,9 @@ import DataValidationTest from './DataValidationTest';
 function App() {
   return (
     <ErrorBoundary message="The application encountered an unexpected error. Please refresh the page.">
-      <StockDataProvider>
-        <Router>
+      <TradingConfigProvider>
+        <StockDataProvider>
+          <Router>
           <div style={{ margin: 0, padding: 0 }}>
             {/* Navigation bar - appears on all pages */}
             <NavBar />
@@ -54,6 +60,10 @@ function App() {
                 />
                 <Route path="/import-trades" element={<TradeImportPage />} />
                 <Route path="/analytics" element={<PerformanceAnalytics />} />
+                <Route path="/ab-testing" element={<ABTestPage />} />
+                <Route path="/walk-forward" element={<WalkForwardPage />} />
+                <Route path="/strategy-lab" element={<StrategyLabPage />} />
+                <Route path="/overnight" element={<OvernightOptimizationPage />} />
 
                 {/* Legacy routes (keep accessible) */}
                 <Route path="/invest" element={<InvestTab />} />
@@ -66,8 +76,9 @@ function App() {
               </Routes>
             </ErrorBoundary>
           </div>
-        </Router>
-      </StockDataProvider>
+          </Router>
+        </StockDataProvider>
+      </TradingConfigProvider>
     </ErrorBoundary>
   );
 }

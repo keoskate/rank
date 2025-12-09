@@ -3,19 +3,33 @@
  *
  * Compresses a full trading day (6.5 hours) into a configurable duration
  * with real-time visualization of price movement and AI decisions.
+ *
+ * Features:
+ * - Uses config from TradingConfigContext
+ * - Shows current config being tested prominently
+ * - Generates AI recommendations after simulation
+ * - Allows applying recommendations to trading config
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
+import ConfigPanel from './common/ConfigPanel';
 import theme from '../theme';
+import { useTradingConfig } from '../contexts/TradingConfigContext';
 
 // Simulation constants
 const MARKET_OPEN_HOUR = 9.5; // 9:30 AM
 const MARKET_CLOSE_HOUR = 16; // 4:00 PM
 const DEFAULT_SIMULATION_DURATION = 6000; // 6 seconds in ms
 
-const TradingSimulator = ({ config, onComplete }) => {
+const TradingSimulator = ({ onComplete }) => {
+  // Use config DIRECTLY from context - this ensures ConfigPanel edits are immediately used
+  const { config, updateConfig: updateGlobalConfig } = useTradingConfig();
+
+  // State for config recommendations
+  const [recommendations, setRecommendations] = useState([]);
+
   // Simulation state
   const [simulationDate, setSimulationDate] = useState('');
   const [symbol, setSymbol] = useState('AAPL');
@@ -33,10 +47,13 @@ const TradingSimulator = ({ config, onComplete }) => {
   const [dayHigh, setDayHigh] = useState(0);
   const [dayLow, setDayLow] = useState(Infinity);
 
-  // Trading state
+  // Get initial capital from config, with fallback
+  const getInitialCapital = () => config?.allocatedCapital || 100000;
+
+  // Trading state - initialized from config
   const [portfolio, setPortfolio] = useState({
-    cash: 100000,
-    startingCash: 100000,
+    cash: getInitialCapital(),
+    startingCash: getInitialCapital(),
     positions: [],
     trades: [],
   });
@@ -47,6 +64,18 @@ const TradingSimulator = ({ config, onComplete }) => {
   // Analysis results
   const [analysis, setAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+
+  // Current indicators (what the ML is seeing)
+  const [currentIndicators, setCurrentIndicators] = useState({
+    rsi: 50,
+    vwap: 0,
+    priceVsVwap: 0,
+    volumeRatio: 1,
+    momentum: 0,
+    priceChange: 0,
+    ma20: 0,
+    priceVsMa: 0,
+  });
 
   // Refs for simulation control
   const simulationRef = useRef(null);
@@ -212,15 +241,51 @@ const TradingSimulator = ({ config, onComplete }) => {
     }
     const vwap = cumulativeVol > 0 ? cumulativeTPV / cumulativeVol : price;
 
+    // Calculate 20-period moving average
+    let ma20Sum = 0;
+    const ma20Lookback = Math.min(20, index + 1);
+    for (let i = index - ma20Lookback + 1; i <= index; i++) {
+      if (i >= 0) {
+        const cd = getCandle(allCandles[i]);
+        if (cd) ma20Sum += cd.close;
+      }
+    }
+    const ma20 = ma20Lookback > 0 ? ma20Sum / ma20Lookback : price;
+
+    // Calculate average volume (10-period)
+    const recentCandles = allCandles.slice(Math.max(0, index - 10), index);
+    const avgVolume =
+      recentCandles.reduce((s, c) => {
+        const cd = getCandle(c);
+        return s + (cd ? cd.volume : 0);
+      }, 0) / Math.max(recentCandles.length, 1);
+    const volumeRatio = avgVolume > 0 ? volume / avgVolume : 1;
+
     const decision = {
       timestamp,
       price,
       rsi: Math.round(rsi),
-      vwap: vwap.toFixed(2),
-      priceVsVwap: ((price / vwap - 1) * 100).toFixed(2),
+      vwap: parseFloat(vwap.toFixed(2)),
+      priceVsVwap: parseFloat(((price / vwap - 1) * 100).toFixed(2)),
+      ma20: parseFloat(ma20.toFixed(2)),
+      priceVsMa: parseFloat(((price / ma20 - 1) * 100).toFixed(2)),
+      volumeRatio: parseFloat(volumeRatio.toFixed(2)),
+      priceChange: parseFloat((priceChange * 100).toFixed(2)),
       action: 'HOLD',
       confidence: 50,
       reasons: [],
+      // Store all indicators for UI display
+      indicators: {
+        rsi: Math.round(rsi),
+        vwap: parseFloat(vwap.toFixed(2)),
+        priceVsVwap: parseFloat(((price / vwap - 1) * 100).toFixed(2)),
+        ma20: parseFloat(ma20.toFixed(2)),
+        priceVsMa: parseFloat(((price / ma20 - 1) * 100).toFixed(2)),
+        volumeRatio: parseFloat(volumeRatio.toFixed(2)),
+        volume: volume,
+        avgVolume: Math.round(avgVolume),
+        momentum: parseFloat((priceChange * 100).toFixed(2)),
+      },
     };
 
     // BUY signals
@@ -325,7 +390,11 @@ const TradingSimulator = ({ config, onComplete }) => {
         const newPortfolio = { ...prev };
 
         if (decision.action === 'BUY' && prev.positions.length === 0) {
-          const positionSize = Math.floor((prev.cash * 0.5) / price);
+          // Use config position sizing, with fallbacks
+          const maxPositionPercent = (config?.maxPositionSizePercent || 50) / 100;
+          const maxPositionDollars = config?.maxPositionSize || prev.cash;
+          const positionValue = Math.min(prev.cash * maxPositionPercent, maxPositionDollars);
+          const positionSize = Math.floor(positionValue / price);
 
           if (positionSize > 0) {
             const cost = positionSize * price;
@@ -420,53 +489,57 @@ const TradingSimulator = ({ config, onComplete }) => {
   };
 
   // Process single candle
-  const processCandle = useCallback(
-    (index, data) => {
-      if (index >= data.length) {
-        completeSimulation(data);
-        return;
-      }
+  // Process each candle during simulation
+  // NOT using useCallback because makeAiDecision and config need fresh references
+  const processCandle = (index, data) => {
+    if (index >= data.length) {
+      completeSimulation(data);
+      return;
+    }
 
-      const candle = data[index];
-      const c = getCandle(candle);
-      if (!c) {
-        // Skip invalid candle
-        indexRef.current = index + 1;
-        return;
-      }
-
-      const { close: price, high, low, timestamp } = c;
-
-      setCurrentPrice(price);
-      setCurrentCandleIndex(index);
-      setProgress((index / data.length) * 100);
-
-      setDayHigh(prev => Math.max(prev, high));
-      setDayLow(prev => Math.min(prev === Infinity ? low : prev, low));
-
-      const time = new Date(timestamp);
-      setCurrentTime(
-        time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      );
-
-      // Make AI decision
-      setPortfolio(prev => {
-        const currentPosition = prev.positions[0] || null;
-        const decision = makeAiDecision(candle, index, data, currentPosition);
-
-        setAiDecisions(prevDecisions => [...prevDecisions, decision]);
-
-        if (decision.action !== 'HOLD') {
-          executeTrade(decision, candle);
-        }
-
-        return prev;
-      });
-
+    const candle = data[index];
+    const c = getCandle(candle);
+    if (!c) {
+      // Skip invalid candle
       indexRef.current = index + 1;
-    },
-    [executeTrade]
-  );
+      return;
+    }
+
+    const { close: price, high, low, timestamp } = c;
+
+    setCurrentPrice(price);
+    setCurrentCandleIndex(index);
+    setProgress((index / data.length) * 100);
+
+    setDayHigh(prev => Math.max(prev, high));
+    setDayLow(prev => Math.min(prev === Infinity ? low : prev, low));
+
+    const time = new Date(timestamp);
+    setCurrentTime(
+      time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    );
+
+    // Make AI decision
+    setPortfolio(prev => {
+      const currentPosition = prev.positions[0] || null;
+      const decision = makeAiDecision(candle, index, data, currentPosition);
+
+      // Update current indicators for visualization
+      if (decision.indicators) {
+        setCurrentIndicators(decision.indicators);
+      }
+
+      setAiDecisions(prevDecisions => [...prevDecisions, decision]);
+
+      if (decision.action !== 'HOLD') {
+        executeTrade(decision, candle);
+      }
+
+      return prev;
+    });
+
+    indexRef.current = index + 1;
+  };
 
   // Start simulation
   const startSimulation = async () => {
@@ -481,9 +554,10 @@ const TradingSimulator = ({ config, onComplete }) => {
     setAnalysis(null);
     setShowAnalysis(false);
     setRealizedPnL(0);
+    const initialCapital = config?.allocatedCapital || 100000;
     setPortfolio({
-      cash: 100000,
-      startingCash: 100000,
+      cash: initialCapital,
+      startingCash: initialCapital,
       positions: [],
       trades: [],
     });
@@ -621,6 +695,9 @@ const TradingSimulator = ({ config, onComplete }) => {
 
         setAnalysis(analysisResult);
         setShowAnalysis(true);
+
+        // Generate config recommendations based on results
+        generateRecommendations(analysisResult, prev.trades);
 
         return prev;
       });
@@ -813,6 +890,123 @@ const TradingSimulator = ({ config, onComplete }) => {
     );
   };
 
+  // Generate recommendations based on simulation results
+  const generateRecommendations = useCallback((analysisData, trades) => {
+    const recs = [];
+    const currentTP = config?.takeProfitPercent || 2;
+    const currentSL = config?.stopLossPercent || 1;
+    const currentConf = config?.minConfidence || 70;
+
+    if (!analysisData || trades.length === 0) {
+      setRecommendations([]);
+      return;
+    }
+
+    // Analyze trade outcomes
+    const wins = trades.filter(t => t.pnl > 0);
+    const losses = trades.filter(t => t.pnl < 0);
+    const winRate = wins.length / trades.length;
+    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+
+    // Recommendation 1: Take Profit adjustment
+    if (winRate >= 0.6 && avgWin < avgLoss * 1.5) {
+      // High win rate but profits not large enough
+      recs.push({
+        id: 'increase_tp',
+        title: 'Increase Take Profit Target',
+        description: `Your win rate is ${(winRate * 100).toFixed(0)}% but average win ($${avgWin.toFixed(0)}) is less than 1.5x average loss ($${avgLoss.toFixed(0)}). Consider letting winners run longer.`,
+        field: 'takeProfitPercent',
+        currentValue: currentTP,
+        suggestedValue: Math.min(currentTP * 1.5, 5),
+        impact: '+0.5-1% potential daily return',
+      });
+    } else if (winRate < 0.4 && avgWin > avgLoss * 2) {
+      // Low win rate but big winners - maybe targets too high
+      recs.push({
+        id: 'decrease_tp',
+        title: 'Decrease Take Profit Target',
+        description: `Your win rate is only ${(winRate * 100).toFixed(0)}% but winners are ${(avgWin / avgLoss).toFixed(1)}x larger than losses. Consider smaller targets to improve consistency.`,
+        field: 'takeProfitPercent',
+        currentValue: currentTP,
+        suggestedValue: Math.max(currentTP * 0.75, 1),
+        impact: '+5-15% expected win rate improvement',
+      });
+    }
+
+    // Recommendation 2: Stop Loss adjustment
+    if (losses.length > 0) {
+      const avgLossPercent = (avgLoss / (config?.allocatedCapital || 100000)) * 100;
+      if (avgLossPercent > currentSL * 1.2) {
+        recs.push({
+          id: 'tighten_sl',
+          title: 'Tighten Stop Loss',
+          description: `Average loss (${avgLossPercent.toFixed(2)}%) exceeds your stop loss setting (${currentSL}%). Either slippage is high or stops aren't triggering properly.`,
+          field: 'stopLossPercent',
+          currentValue: currentSL,
+          suggestedValue: Math.max(currentSL * 0.8, 0.5),
+          impact: 'Better risk control per trade',
+        });
+      } else if (avgLossPercent < currentSL * 0.5 && winRate < 0.5) {
+        recs.push({
+          id: 'widen_sl',
+          title: 'Widen Stop Loss',
+          description: `You might be getting stopped out too early. Average loss (${avgLossPercent.toFixed(2)}%) is much less than your stop (${currentSL}%). Giving trades more room might improve win rate.`,
+          field: 'stopLossPercent',
+          currentValue: currentSL,
+          suggestedValue: Math.min(currentSL * 1.25, 3),
+          impact: '+5-10% potential win rate improvement',
+        });
+      }
+    }
+
+    // Recommendation 3: Confidence threshold
+    if (trades.length < 3 && analysisData.returnPercent < 0) {
+      recs.push({
+        id: 'lower_confidence',
+        title: 'Lower Confidence Threshold',
+        description: `Only ${trades.length} trades executed. Consider lowering confidence threshold to capture more opportunities.`,
+        field: 'minConfidence',
+        currentValue: currentConf,
+        suggestedValue: Math.max(currentConf - 10, 50),
+        impact: 'More trading opportunities',
+      });
+    } else if (trades.length > 8 && winRate < 0.45) {
+      recs.push({
+        id: 'raise_confidence',
+        title: 'Raise Confidence Threshold',
+        description: `${trades.length} trades with only ${(winRate * 100).toFixed(0)}% win rate. Be more selective by raising confidence threshold.`,
+        field: 'minConfidence',
+        currentValue: currentConf,
+        suggestedValue: Math.min(currentConf + 10, 85),
+        impact: 'Higher quality signals, fewer false positives',
+      });
+    }
+
+    // Recommendation 4: R:R Ratio
+    const rrRatio = avgWin / (avgLoss || 1);
+    if (rrRatio < 1 && winRate < 0.6) {
+      recs.push({
+        id: 'improve_rr',
+        title: 'Improve Risk/Reward Ratio',
+        description: `Current R:R is ${rrRatio.toFixed(2)}:1 with ${(winRate * 100).toFixed(0)}% win rate. This combination is not profitable. Need either higher R:R or higher win rate.`,
+        field: 'takeProfitPercent',
+        currentValue: currentTP,
+        suggestedValue: currentSL * 2, // Aim for 2:1 R:R
+        impact: 'Profitable expectancy',
+      });
+    }
+
+    setRecommendations(recs);
+  }, [config]);
+
+  // Apply a recommendation
+  const applyRecommendation = (rec) => {
+    updateGlobalConfig({ [rec.field]: rec.suggestedValue });
+    // Remove applied recommendation from list
+    setRecommendations(prev => prev.filter(r => r.id !== rec.id));
+  };
+
   // Save results
   const saveResults = async () => {
     if (!analysis) return;
@@ -893,6 +1087,12 @@ const TradingSimulator = ({ config, onComplete }) => {
           </div>
         </div>
       </div>
+
+      {/* EDITABLE CONFIG PANEL - Set what you want to test */}
+      <ConfigPanel
+        mode={isRunning ? 'view' : 'edit'}
+        title="Trading Config (Edit Before Running)"
+      />
 
       {/* Controls */}
       <div
@@ -1283,6 +1483,477 @@ const TradingSimulator = ({ config, onComplete }) => {
         </div>
       )}
 
+      {/* ML Indicators Panel - What the Strategy Sees */}
+      {(isRunning || progress > 0) && (
+        <div
+          style={{
+            marginBottom: theme.spacing.md,
+            padding: theme.spacing.md,
+            backgroundColor: theme.colors.gray50,
+            borderRadius: theme.borderRadius.md,
+            border: `1px solid ${theme.colors.gray200}`,
+          }}
+        >
+          <h4
+            style={{
+              margin: 0,
+              marginBottom: theme.spacing.md,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.gray600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>🔍</span>
+            What the Strategy Sees
+          </h4>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gap: theme.spacing.md,
+            }}
+          >
+            {/* RSI Indicator */}
+            <div
+              style={{
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                  marginBottom: '4px',
+                }}
+              >
+                RSI (14)
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    currentIndicators.rsi <= 30
+                      ? theme.colors.success
+                      : currentIndicators.rsi >= 70
+                        ? theme.colors.error
+                        : theme.colors.text,
+                }}
+              >
+                {currentIndicators.rsi}
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color:
+                    currentIndicators.rsi <= 30
+                      ? theme.colors.success
+                      : currentIndicators.rsi >= 70
+                        ? theme.colors.error
+                        : theme.colors.gray500,
+                }}
+              >
+                {currentIndicators.rsi <= 30
+                  ? 'Oversold'
+                  : currentIndicators.rsi >= 70
+                    ? 'Overbought'
+                    : 'Neutral'}
+              </div>
+              {/* RSI Bar */}
+              <div
+                style={{
+                  marginTop: '6px',
+                  height: '4px',
+                  backgroundColor: theme.colors.gray200,
+                  borderRadius: '2px',
+                  position: 'relative',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${currentIndicators.rsi}%`,
+                    top: '-2px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor:
+                      currentIndicators.rsi <= 30
+                        ? theme.colors.success
+                        : currentIndicators.rsi >= 70
+                          ? theme.colors.error
+                          : theme.colors.primary,
+                    transform: 'translateX(-50%)',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Price vs VWAP */}
+            <div
+              style={{
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                  marginBottom: '4px',
+                }}
+              >
+                Price vs VWAP
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    currentIndicators.priceVsVwap >= 0
+                      ? theme.colors.success
+                      : theme.colors.error,
+                }}
+              >
+                {currentIndicators.priceVsVwap >= 0 ? '+' : ''}
+                {currentIndicators.priceVsVwap}%
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                }}
+              >
+                VWAP: ${currentIndicators.vwap}
+              </div>
+            </div>
+
+            {/* Price vs MA20 */}
+            <div
+              style={{
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                  marginBottom: '4px',
+                }}
+              >
+                Price vs MA(20)
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    currentIndicators.priceVsMa >= 0
+                      ? theme.colors.success
+                      : theme.colors.error,
+                }}
+              >
+                {currentIndicators.priceVsMa >= 0 ? '+' : ''}
+                {currentIndicators.priceVsMa}%
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                }}
+              >
+                MA20: ${currentIndicators.ma20}
+              </div>
+            </div>
+
+            {/* Volume Ratio */}
+            <div
+              style={{
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                  marginBottom: '4px',
+                }}
+              >
+                Volume Ratio
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    currentIndicators.volumeRatio >= 1.5
+                      ? theme.colors.success
+                      : currentIndicators.volumeRatio <= 0.5
+                        ? theme.colors.warning
+                        : theme.colors.text,
+                }}
+              >
+                {currentIndicators.volumeRatio}x
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color:
+                    currentIndicators.volumeRatio >= 1.5
+                      ? theme.colors.success
+                      : theme.colors.gray500,
+                }}
+              >
+                {currentIndicators.volumeRatio >= 1.5
+                  ? 'High Volume'
+                  : currentIndicators.volumeRatio <= 0.5
+                    ? 'Low Volume'
+                    : 'Normal'}
+              </div>
+              {/* Volume bar visualization */}
+              <div
+                style={{
+                  marginTop: '6px',
+                  height: '16px',
+                  backgroundColor: theme.colors.gray200,
+                  borderRadius: '2px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.min(currentIndicators.volumeRatio * 50, 100)}%`,
+                    backgroundColor:
+                      currentIndicators.volumeRatio >= 1.5
+                        ? theme.colors.success
+                        : currentIndicators.volumeRatio <= 0.5
+                          ? theme.colors.warning
+                          : theme.colors.primary,
+                    transition: 'width 0.2s ease',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Momentum */}
+            <div
+              style={{
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                  marginBottom: '4px',
+                }}
+              >
+                Momentum (1m)
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color:
+                    currentIndicators.momentum >= 0
+                      ? theme.colors.success
+                      : theme.colors.error,
+                }}
+              >
+                {currentIndicators.momentum >= 0 ? '+' : ''}
+                {currentIndicators.momentum}%
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                }}
+              >
+                {currentIndicators.momentum >= 0.5
+                  ? 'Strong Up'
+                  : currentIndicators.momentum <= -0.5
+                    ? 'Strong Down'
+                    : 'Flat'}
+              </div>
+            </div>
+
+            {/* Current Volume */}
+            <div
+              style={{
+                padding: theme.spacing.sm,
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                  marginBottom: '4px',
+                }}
+              >
+                Volume
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.lg,
+                  fontWeight: theme.typography.fontWeight.bold,
+                }}
+              >
+                {currentIndicators.volume
+                  ? (currentIndicators.volume / 1000).toFixed(0) + 'K'
+                  : '-'}
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray500,
+                }}
+              >
+                Avg: {currentIndicators.avgVolume
+                  ? (currentIndicators.avgVolume / 1000).toFixed(0) + 'K'
+                  : '-'}
+              </div>
+            </div>
+          </div>
+
+          {/* Signal Summary */}
+          <div
+            style={{
+              marginTop: theme.spacing.md,
+              padding: theme.spacing.sm,
+              backgroundColor:
+                currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
+                  ? `${theme.colors.success}15`
+                  : currentIndicators.rsi >= 70 && currentIndicators.priceVsVwap > 0
+                    ? `${theme.colors.error}15`
+                    : theme.colors.surface,
+              borderRadius: theme.borderRadius.sm,
+              border: `1px solid ${
+                currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
+                  ? theme.colors.success + '40'
+                  : currentIndicators.rsi >= 70 && currentIndicators.priceVsVwap > 0
+                    ? theme.colors.error + '40'
+                    : theme.colors.gray200
+              }`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.gray600,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: theme.spacing.sm,
+              }}
+            >
+              <strong>Signals:</strong>
+              {currentIndicators.rsi <= 30 && (
+                <span
+                  style={{
+                    backgroundColor: theme.colors.success + '20',
+                    color: theme.colors.success,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.xs,
+                  }}
+                >
+                  RSI Oversold
+                </span>
+              )}
+              {currentIndicators.rsi >= 70 && (
+                <span
+                  style={{
+                    backgroundColor: theme.colors.error + '20',
+                    color: theme.colors.error,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.xs,
+                  }}
+                >
+                  RSI Overbought
+                </span>
+              )}
+              {currentIndicators.priceVsVwap < -0.5 && (
+                <span
+                  style={{
+                    backgroundColor: theme.colors.success + '20',
+                    color: theme.colors.success,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.xs,
+                  }}
+                >
+                  Below VWAP
+                </span>
+              )}
+              {currentIndicators.priceVsVwap > 0.5 && (
+                <span
+                  style={{
+                    backgroundColor: theme.colors.warning + '20',
+                    color: theme.colors.warning,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.xs,
+                  }}
+                >
+                  Above VWAP
+                </span>
+              )}
+              {currentIndicators.volumeRatio >= 1.5 && (
+                <span
+                  style={{
+                    backgroundColor: theme.colors.info + '20',
+                    color: theme.colors.info,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.xs,
+                  }}
+                >
+                  Volume Spike
+                </span>
+              )}
+              {currentIndicators.rsi > 35 &&
+                currentIndicators.rsi < 65 &&
+                currentIndicators.priceVsVwap >= -0.5 &&
+                currentIndicators.priceVsVwap <= 0.5 &&
+                currentIndicators.volumeRatio < 1.5 && (
+                  <span
+                    style={{
+                      backgroundColor: theme.colors.gray200,
+                      color: theme.colors.gray600,
+                      padding: '2px 8px',
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.xs,
+                    }}
+                  >
+                    No Strong Signals
+                  </span>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mini Chart */}
       {candles.length > 0 && (
         <div style={{ marginBottom: theme.spacing.md }}>
@@ -1646,6 +2317,71 @@ const TradingSimulator = ({ config, onComplete }) => {
               </div>
             )}
           </div>
+
+          {/* AI RECOMMENDATIONS - Specific config adjustments with Apply buttons */}
+          {recommendations.length > 0 && (
+            <div
+              style={{
+                marginTop: theme.spacing.lg,
+                padding: theme.spacing.md,
+                backgroundColor: theme.colors.primary + '08',
+                borderRadius: theme.borderRadius.md,
+                border: `2px solid ${theme.colors.primary}40`,
+              }}
+            >
+              <h4 style={{ margin: 0, marginBottom: theme.spacing.md, color: theme.colors.primary }}>
+                Recommended Config Adjustments
+              </h4>
+              <div style={{ display: 'grid', gap: theme.spacing.md }}>
+                {recommendations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    style={{
+                      padding: theme.spacing.md,
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: theme.borderRadius.md,
+                      border: `1px solid ${theme.colors.gray200}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h5 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.text }}>
+                          {rec.title}
+                        </h5>
+                        <p style={{ margin: 0, marginBottom: theme.spacing.sm, color: theme.colors.gray600, fontSize: theme.typography.fontSize.sm }}>
+                          {rec.description}
+                        </p>
+                        <div style={{ display: 'flex', gap: theme.spacing.lg, fontSize: theme.typography.fontSize.sm }}>
+                          <span>
+                            <strong>Current:</strong> {rec.currentValue}
+                            {rec.field.includes('Percent') || rec.field.includes('Confidence') ? '%' : ''}
+                          </span>
+                          <span style={{ color: theme.colors.success }}>
+                            <strong>Suggested:</strong> {typeof rec.suggestedValue === 'number' ? rec.suggestedValue.toFixed(2) : rec.suggestedValue}
+                            {rec.field.includes('Percent') || rec.field.includes('Confidence') ? '%' : ''}
+                          </span>
+                          <span style={{ color: theme.colors.info }}>
+                            <strong>Impact:</strong> {rec.impact}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="small"
+                        variant="primary"
+                        onClick={() => applyRecommendation(rec)}
+                        style={{ marginLeft: theme.spacing.md }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ margin: 0, marginTop: theme.spacing.md, color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                Click "Apply" to update your trading config. Run another simulation to test the changes.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </Card>

@@ -19,10 +19,14 @@ const NavBar = () => {
   ];
 
   const toolsNav = [
+    { path: '/strategy-lab', label: 'Strategy Lab' },
+    { path: '/overnight', label: 'Overnight Optimizer' },
     { path: '/backtest', label: 'Backtesting' },
     { path: '/day-trading', label: 'Day Trading Lab' },
     { path: '/import-trades', label: 'Import Trades' },
     { path: '/analytics', label: 'Analytics' },
+    { path: '/ab-testing', label: 'A/B Testing' },
+    { path: '/walk-forward', label: 'Walk-Forward' },
   ];
 
   const isActive = path => {

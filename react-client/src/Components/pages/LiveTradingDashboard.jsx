@@ -14,7 +14,10 @@ import TradingSimulator from '../TradingSimulator';
 import Button from '../common/Button';
 import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
+import StrategyMonitorPanel from '../common/StrategyMonitorPanel';
+import RegimeConfigPanel from '../common/RegimeConfigPanel';
 import theme from '../../theme';
+import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 import {
   loadAudioSettings,
   saveAudioSettings,
@@ -29,128 +32,9 @@ import {
 // Socket connection
 let socket = null;
 
-// LocalStorage key for trading config persistence
-const TRADING_CONFIG_KEY = 'keo-stocks-trading-config';
-
-// Default config values
-const DEFAULT_CONFIG = {
-  // === CAPITAL ALLOCATION ===
-  watchlist: [
-    // Tech Giants
-    'NVDA',
-    'AMD',
-    'TSLA',
-    'AMZN',
-    'META',
-    'GOOG',
-    'MSFT',
-    'PLTR',
-    // Quantum Computing
-    'IONQ',
-    'RGTI',
-    'QBTS',
-    'RGTX',
-    'QBTX',
-    'QBTZ',
-    // Semiconductors & ETFs
-    'SOXL',
-    'SOXS',
-    'SOXX',
-    'AMDL',
-    'HIMX',
-    'ARBE',
-    // Volatility & Commodities
-    'SPY',
-    'UVIX',
-    'TSLQ',
-    // Crypto & Other
-    'BTC-USD',
-    'MSTR',
-    // Other stocks
-    'RR',
-    'UURAF',
-    'PLTU',
-    'CRVW',
-    'PLTZ',
-  ],
-  allocatedCapital: 100000,
-  maxLeverage: 1.0,
-  reserveCashPercent: 20,
-
-  // === POSITION MANAGEMENT ===
-  maxPositions: 5,
-  maxPositionSizePercent: 10,
-  minPositionSize: 100,
-  maxPositionSize: 25000,
-
-  // === RISK MANAGEMENT ===
-  riskPerTradePercent: 2,
-  dailyLossLimitPercent: 5,
-  weeklyLossLimitPercent: 10,
-  maxConsecutiveLosses: 3,
-  trailingStopPercent: 0,
-
-  // === AI MODEL PARAMETERS ===
-  minConfidence: 70,
-  rsiOversold: 30,
-  rsiOverbought: 70,
-  vwapDeviationPercent: 0.5,
-  volumeMultiplier: 1.5,
-  adxMinStrength: 20,
-  macdSensitivity: 'normal',
-  patternRecognition: true,
-
-  // === ENTRY CONDITIONS ===
-  entryStrategy: 'balanced',
-  requireVolumeSpike: true,
-  requireTrendAlignment: true,
-  requireRsiSignal: true,
-  minSignalsRequired: 3,
-
-  // === EXIT CONDITIONS ===
-  takeProfitPercent: 2.0,
-  stopLossPercent: 1.0,
-  useAdaptiveTargets: true,
-  exitOnRsiExtreme: true,
-  exitBeforeClose: true,
-  exitBeforeCloseMinutes: 15,
-
-  // === TIMEFRAMES ===
-  timeframes: ['dayTrading'],
-  preferredTimeframe: '5min',
-
-  // === AUTO-TRADE ===
-  autoTrade: false,
-  paperTradeOnly: true,
-};
-
-// Load config from localStorage
-const loadTradingConfig = () => {
-  try {
-    const saved = localStorage.getItem(TRADING_CONFIG_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Merge with defaults to ensure new config options are included
-      console.info('📂 Trading config loaded from localStorage');
-      return { ...DEFAULT_CONFIG, ...parsed };
-    }
-  } catch (error) {
-    console.error('Failed to load trading config:', error);
-  }
-  return DEFAULT_CONFIG;
-};
-
-// Save config to localStorage
-const saveTradingConfig = config => {
-  try {
-    localStorage.setItem(TRADING_CONFIG_KEY, JSON.stringify(config));
-    console.info('💾 Trading config saved to localStorage');
-    return true;
-  } catch (error) {
-    console.error('Failed to save trading config:', error);
-    return false;
-  }
-};
+// Trading config is now managed by TradingConfigContext (../contexts/TradingConfigContext.jsx)
+// Use useTradingConfig() hook to access config, updateConfig, resetConfig
+// DEFAULT_CONFIG is now DEFAULT_TRADING_CONFIG from the context
 
 const LiveTradingDashboard = () => {
   // Get sessionId from URL params
@@ -200,10 +84,10 @@ const LiveTradingDashboard = () => {
   const [chartSymbol, setChartSymbol] = useState('');
   const [chartIndicators, setChartIndicators] = useState({});
 
-  // Configuration state - load from localStorage on init
+  // Configuration state - use shared context
+  const { config, updateConfig: contextUpdateConfig, resetConfig: resetConfigContext, lastSaved } = useTradingConfig();
   const [showConfig, setShowConfig] = useState(false);
   const [configSection, setConfigSection] = useState('capital'); // 'capital', 'risk', 'ai', 'entry', 'exit'
-  const [config, setConfig] = useState(() => loadTradingConfig());
   const [configLoaded, setConfigLoaded] = useState(false); // Track if we've loaded config from server
 
   // Loading states - separate for each section to avoid full page re-renders
@@ -220,10 +104,7 @@ const LiveTradingDashboard = () => {
 
   const decisionsEndRef = useRef(null);
 
-  // Save config to localStorage whenever it changes
-  useEffect(() => {
-    saveTradingConfig(config);
-  }, [config]);
+  // Config is now saved automatically by TradingConfigContext
 
   // Initialize socket connection
   useEffect(() => {
@@ -456,7 +337,7 @@ const LiveTradingDashboard = () => {
           !isEditingConfigRef.current &&
           (!configLoaded || forceLoadConfig)
         ) {
-          setConfig(prevConfig => ({ ...prevConfig, ...data.config }));
+          contextUpdateConfig(data.config);
           setConfigLoaded(true);
         }
         // Restore alerts from server session (only on initial load)
@@ -686,7 +567,8 @@ const LiveTradingDashboard = () => {
       isEditingConfigRef.current = false;
     }, 60000);
 
-    setConfig(prev => ({ ...prev, [key]: value }));
+    // Use context to update config (auto-saves to localStorage)
+    contextUpdateConfig({ [key]: value });
   };
 
   const saveConfig = async () => {
@@ -1424,7 +1306,7 @@ const LiveTradingDashboard = () => {
                       .split(',')
                       .map(s => s.trim().toUpperCase())
                       .filter(s => s);
-                    setConfig(prev => ({ ...prev, watchlist: newWatchlist }));
+                    contextUpdateConfig({ watchlist: newWatchlist });
                     // Keep editing flag for a bit longer to allow saves
                     setTimeout(() => {
                       setIsEditingConfig(false);
@@ -2731,13 +2613,43 @@ const LiveTradingDashboard = () => {
       {/* Trading Day Simulator */}
       {showSimulator && (
         <TradingSimulator
-          config={config}
           onComplete={results => {
             // Optionally handle simulation results
             console.log('Simulation completed:', results);
           }}
         />
       )}
+
+      {/* Strategy Monitor & Regime Config */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+          gap: theme.spacing.md,
+          marginBottom: theme.spacing.lg,
+        }}
+      >
+        <StrategyMonitorPanel
+          symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
+          versionId={'default'}
+          onAlert={(alertsList) => {
+            // Handle strategy alerts
+            alertsList.forEach(alert => {
+              addAlert({
+                type: 'warning',
+                title: 'Strategy Alert',
+                message: alert.message,
+              });
+            });
+          }}
+        />
+        <RegimeConfigPanel
+          symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
+          onRegimeChange={(data) => {
+            console.log('Regime changed:', data.regime);
+          }}
+        />
+      </div>
 
       {/* Performance Metrics - Connected to real account data */}
       <div
