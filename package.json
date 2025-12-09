@@ -66,6 +66,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "json-loader": "^0.5.7",
     "prettier": "^3.6.2",
+    "puppeteer": "^24.32.1",
     "webpack-cli": "^3.3.12",
     "webpack-dev-server": "^3.11.3"
   }

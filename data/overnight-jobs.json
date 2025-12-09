@@ -1,0 +1,204 @@
+{
+  "jobs": [],
+  "completedJobs": [
+    {
+      "id": "6edba523-2416-4b42-9cae-8bb748aab188",
+      "status": "completed",
+      "createdAt": "2025-12-09T07:28:19.519Z",
+      "startedAt": "2025-12-09T08:05:58.276Z",
+      "completedAt": "2025-12-09T08:05:58.279Z",
+      "config": {
+        "symbols": [
+          "SOXL",
+          "TQQQ"
+        ],
+        "startDate": "2025-06-09",
+        "endDate": "2025-12-09",
+        "method": "random",
+        "maxIterations": 50,
+        "minWinRate": 0.45,
+        "minProfitFactor": 1.2,
+        "minExpectancy": 0.5,
+        "maxDrawdown": 20,
+        "walkForward": true,
+        "trainDays": 60,
+        "testDays": 20,
+        "optimizeByRegime": true,
+        "randomValidationDays": 10,
+        "parameterRanges": null
+      },
+      "progress": {
+        "phase": "completed",
+        "symbolsCompleted": 1,
+        "totalSymbols": 2,
+        "currentIteration": 0,
+        "totalIterations": 50,
+        "currentSymbol": "TQQQ",
+        "message": "Optimization complete! Found 0 optimized strategies.",
+        "lastUpdate": "2025-12-09T08:05:58.278Z"
+      },
+      "symbols": [
+        "SOXL",
+        "TQQQ"
+      ],
+      "results": {
+        "jobId": "6edba523-2416-4b42-9cae-8bb748aab188",
+        "startedAt": "2025-12-09T08:05:58.276Z",
+        "completedAt": "2025-12-09T08:05:58.279Z",
+        "config": {
+          "symbols": [
+            "SOXL",
+            "TQQQ"
+          ],
+          "startDate": "2025-06-09",
+          "endDate": "2025-12-09",
+          "method": "random",
+          "maxIterations": 50,
+          "minWinRate": 0.45,
+          "minProfitFactor": 1.2,
+          "minExpectancy": 0.5,
+          "maxDrawdown": 20,
+          "walkForward": true,
+          "trainDays": 60,
+          "testDays": 20,
+          "optimizeByRegime": true,
+          "randomValidationDays": 10,
+          "parameterRanges": null
+        },
+        "strategies": [],
+        "symbolResults": {},
+        "regimeStrategies": {},
+        "summary": {
+          "totalSymbols": 0,
+          "totalStrategiesFound": 0,
+          "bestStrategy": null,
+          "regimeRecommendations": {},
+          "readyForTomorrow": null,
+          "recommendations": [
+            {
+              "type": "warning",
+              "message": "No strategies met the minimum thresholds. Consider relaxing parameters or adding more data."
+            }
+          ]
+        }
+      },
+      "errors": [
+        {
+          "timestamp": "2025-12-09T08:05:58.278Z",
+          "message": "No data available for SOXL"
+        },
+        {
+          "timestamp": "2025-12-09T08:05:58.278Z",
+          "message": "No data available for TQQQ"
+        }
+      ]
+    },
+    {
+      "id": "db959792-d412-4d67-bef0-4e6ca4f6cfbe",
+      "status": "completed",
+      "createdAt": "2025-12-09T07:57:45.225Z",
+      "startedAt": "2025-12-09T07:57:50.113Z",
+      "completedAt": "2025-12-09T07:57:50.118Z",
+      "config": {
+        "symbols": [
+          "SOXL",
+          "SOXS",
+          "QBTX",
+          "QBTS"
+        ],
+        "startDate": "2025-06-09",
+        "endDate": "2025-12-09",
+        "method": "random",
+        "maxIterations": 100,
+        "minWinRate": 0.45,
+        "minProfitFactor": 1.2,
+        "minExpectancy": 0.5,
+        "maxDrawdown": 20,
+        "walkForward": true,
+        "trainDays": 60,
+        "testDays": 20,
+        "optimizeByRegime": true,
+        "randomValidationDays": 10,
+        "parameterRanges": null
+      },
+      "progress": {
+        "phase": "completed",
+        "symbolsCompleted": 3,
+        "totalSymbols": 4,
+        "currentIteration": 0,
+        "totalIterations": 100,
+        "currentSymbol": "QBTS",
+        "message": "Optimization complete! Found 0 optimized strategies.",
+        "lastUpdate": "2025-12-09T07:57:50.117Z"
+      },
+      "symbols": [
+        "SOXL",
+        "SOXS",
+        "QBTX",
+        "QBTS"
+      ],
+      "results": {
+        "jobId": "db959792-d412-4d67-bef0-4e6ca4f6cfbe",
+        "startedAt": "2025-12-09T07:57:50.113Z",
+        "completedAt": "2025-12-09T07:57:50.118Z",
+        "config": {
+          "symbols": [
+            "SOXL",
+            "SOXS",
+            "QBTX",
+            "QBTS"
+          ],
+          "startDate": "2025-06-09",
+          "endDate": "2025-12-09",
+          "method": "random",
+          "maxIterations": 100,
+          "minWinRate": 0.45,
+          "minProfitFactor": 1.2,
+          "minExpectancy": 0.5,
+          "maxDrawdown": 20,
+          "walkForward": true,
+          "trainDays": 60,
+          "testDays": 20,
+          "optimizeByRegime": true,
+          "randomValidationDays": 10,
+          "parameterRanges": null
+        },
+        "strategies": [],
+        "symbolResults": {},
+        "regimeStrategies": {},
+        "summary": {
+          "totalSymbols": 0,
+          "totalStrategiesFound": 0,
+          "bestStrategy": null,
+          "regimeRecommendations": {},
+          "readyForTomorrow": null,
+          "recommendations": [
+            {
+              "type": "warning",
+              "message": "No strategies met the minimum thresholds. Consider relaxing parameters or adding more data."
+            }
+          ]
+        }
+      },
+      "errors": [
+        {
+          "timestamp": "2025-12-09T07:57:50.116Z",
+          "message": "No data available for SOXL"
+        },
+        {
+          "timestamp": "2025-12-09T07:57:50.116Z",
+          "message": "No data available for SOXS"
+        },
+        {
+          "timestamp": "2025-12-09T07:57:50.117Z",
+          "message": "No data available for QBTX"
+        },
+        {
+          "timestamp": "2025-12-09T07:57:50.118Z",
+          "message": "No data available for QBTS"
+        }
+      ],
+      "name": "Mon night test"
+    }
+  ]
+}
