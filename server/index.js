@@ -45,6 +45,10 @@ const WalkForwardOptimizer = require('./walkForwardOptimizer');
 const StrategyVersionControl = require('./strategyVersionControl');
 const RegimeAwareConfigStore = require('./regimeAwareConfigStore');
 
+// Sprint 3: A/B Testing and Monitoring modules
+const ABTestingEngine = require('./abTestingEngine');
+const StrategyMonitor = require('./strategyMonitor');
+
 // Initialize Sprint 1 modules
 const transactionCostModel = new TransactionCostModel();
 const leveragedEtfRules = new LeveragedEtfRules();
@@ -54,6 +58,10 @@ const regimeDetector = new RegimeDetector();
 const walkForwardOptimizer = new WalkForwardOptimizer();
 const strategyVersionControl = new StrategyVersionControl();
 const regimeAwareConfigStore = new RegimeAwareConfigStore();
+
+// Initialize Sprint 3 modules
+const abTestingEngine = new ABTestingEngine();
+const strategyMonitor = new StrategyMonitor();
 
 const app = express();
 
@@ -4534,6 +4542,422 @@ app.get('/api/optimize/parameters', (req, res) => {
   try {
     const ranges = walkForwardOptimizer.getDefaultParameterRanges();
     res.json({ parameterRanges: ranges });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// SPRINT 3: A/B TESTING & STRATEGY MONITORING API ENDPOINTS
+// ================================
+
+// --- A/B Testing Endpoints ---
+
+// Get all tests
+app.get('/api/ab-tests', (req, res) => {
+  try {
+    const tests = abTestingEngine.getAllTests();
+    res.json({ tests, count: tests.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get active tests
+app.get('/api/ab-tests/active', (req, res) => {
+  try {
+    const tests = abTestingEngine.getActiveTests();
+    res.json({ tests, count: tests.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get tests for a symbol
+app.get('/api/ab-tests/symbol/:symbol', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const tests = abTestingEngine.getTestsForSymbol(symbol);
+    res.json({ symbol: symbol.toUpperCase(), tests, count: tests.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new test
+app.post('/api/ab-tests', (req, res) => {
+  try {
+    const {
+      name,
+      symbol,
+      variants,
+      primaryMetric,
+      minTrades,
+      confidenceThreshold,
+      description,
+    } = req.body;
+
+    if (!name || !symbol || !variants || variants.length < 2) {
+      return res.status(400).json({
+        error: 'name, symbol, and at least 2 variants are required',
+      });
+    }
+
+    const result = abTestingEngine.createTest({
+      name,
+      symbol,
+      variants,
+      primaryMetric,
+      minTrades,
+      confidenceThreshold,
+      description,
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific test
+app.get('/api/ab-tests/:testId', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const test = abTestingEngine.getTest(testId);
+
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json(test);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get test summary with leaderboard
+app.get('/api/ab-tests/:testId/summary', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const summary = abTestingEngine.getTestSummary(testId);
+
+    if (!summary) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start a test
+app.post('/api/ab-tests/:testId/start', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const result = abTestingEngine.startTest(testId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Pause a test
+app.post('/api/ab-tests/:testId/pause', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const result = abTestingEngine.pauseTest(testId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cancel a test
+app.post('/api/ab-tests/:testId/cancel', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const result = abTestingEngine.cancelTest(testId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Record a trade for a variant
+app.post('/api/ab-tests/:testId/variants/:variantId/trade', (req, res) => {
+  try {
+    const { testId, variantId } = req.params;
+    const trade = req.body;
+
+    if (!trade || typeof trade.pnl === 'undefined') {
+      return res.status(400).json({ error: 'Trade with pnl is required' });
+    }
+
+    const result = abTestingEngine.recordTrade(testId, variantId, trade);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Record backtest results for a variant
+app.post('/api/ab-tests/:testId/variants/:variantId/backtest', (req, res) => {
+  try {
+    const { testId, variantId } = req.params;
+    const { trades } = req.body;
+
+    if (!trades || !Array.isArray(trades)) {
+      return res.status(400).json({ error: 'trades array is required' });
+    }
+
+    const result = abTestingEngine.recordBacktestResults(testId, variantId, trades);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Evaluate test results
+app.get('/api/ab-tests/:testId/evaluate', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const result = abTestingEngine.evaluateTest(testId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Declare winner
+app.post('/api/ab-tests/:testId/declare-winner', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const { variantId } = req.body;
+
+    const result = abTestingEngine.declareWinner(testId, variantId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Clone a test
+app.post('/api/ab-tests/:testId/clone', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const { newName } = req.body;
+
+    const result = abTestingEngine.cloneTest(testId, newName);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a test
+app.delete('/api/ab-tests/:testId', (req, res) => {
+  try {
+    const { testId } = req.params;
+    const result = abTestingEngine.deleteTest(testId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Strategy Monitor Endpoints ---
+
+// Get all active monitors
+app.get('/api/monitors', (req, res) => {
+  try {
+    const monitors = strategyMonitor.getActiveMonitors();
+    res.json({ monitors, count: monitors.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get monitors for a symbol
+app.get('/api/monitors/symbol/:symbol', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const monitors = strategyMonitor.getMonitorsForSymbol(symbol);
+    res.json({ symbol: symbol.toUpperCase(), monitors, count: monitors.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start monitoring a strategy
+app.post('/api/monitors/:symbol/:versionId/start', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const { thresholds, historicalMetrics, startingEquity } = req.body;
+
+    const result = strategyMonitor.startMonitoring(symbol, versionId, {
+      thresholds,
+      historicalMetrics,
+      startingEquity,
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stop monitoring
+app.post('/api/monitors/:symbol/:versionId/stop', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const result = strategyMonitor.stopMonitoring(symbol, versionId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific monitor
+app.get('/api/monitors/:symbol/:versionId', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const monitor = strategyMonitor.getMonitor(symbol, versionId);
+
+    if (!monitor) {
+      return res.status(404).json({ error: 'Monitor not found' });
+    }
+
+    res.json(monitor);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get performance report
+app.get('/api/monitors/:symbol/:versionId/report', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const report = strategyMonitor.getPerformanceReport(symbol, versionId);
+
+    if (!report) {
+      return res.status(404).json({ error: 'Monitor not found' });
+    }
+
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get daily summary
+app.get('/api/monitors/:symbol/:versionId/daily', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const { date } = req.query;
+
+    const summary = strategyMonitor.getDailySummary(symbol, versionId, date);
+
+    if (!summary) {
+      return res.status(404).json({ error: 'Monitor not found' });
+    }
+
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Record a trade
+app.post('/api/monitors/:symbol/:versionId/trade', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const trade = req.body;
+
+    if (!trade || typeof trade.pnl === 'undefined') {
+      return res.status(400).json({ error: 'Trade with pnl is required' });
+    }
+
+    const result = strategyMonitor.recordTrade(symbol, versionId, trade);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all unacknowledged alerts
+app.get('/api/monitors/alerts', (req, res) => {
+  try {
+    const { symbol, versionId } = req.query;
+    const alerts = strategyMonitor.getUnacknowledgedAlerts(symbol, versionId);
+    res.json({ alerts, count: alerts.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Acknowledge an alert
+app.post('/api/monitors/:symbol/:versionId/alerts/:alertId/acknowledge', (req, res) => {
+  try {
+    const { symbol, versionId, alertId } = req.params;
+    const result = strategyMonitor.acknowledgeAlert(symbol, versionId, alertId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update thresholds
+app.put('/api/monitors/:symbol/:versionId/thresholds', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const { thresholds } = req.body;
+
+    if (!thresholds) {
+      return res.status(400).json({ error: 'thresholds object is required' });
+    }
+
+    const result = strategyMonitor.updateThresholds(symbol, versionId, thresholds);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set historical baseline
+app.post('/api/monitors/:symbol/:versionId/baseline', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const { metrics } = req.body;
+
+    if (!metrics) {
+      return res.status(400).json({ error: 'metrics object is required' });
+    }
+
+    const result = strategyMonitor.setHistoricalBaseline(symbol, versionId, metrics);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset monitor
+app.post('/api/monitors/:symbol/:versionId/reset', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const result = strategyMonitor.resetMonitor(symbol, versionId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete monitor
+app.delete('/api/monitors/:symbol/:versionId', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const result = strategyMonitor.deleteMonitor(symbol, versionId);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
