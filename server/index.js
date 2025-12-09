@@ -40,10 +40,20 @@ const TransactionCostModel = require('./transactionCostModel');
 const LeveragedEtfRules = require('./leveragedEtfRules');
 const RegimeDetector = require('./regimeDetector');
 
+// Sprint 2: Optimization and Versioning modules
+const WalkForwardOptimizer = require('./walkForwardOptimizer');
+const StrategyVersionControl = require('./strategyVersionControl');
+const RegimeAwareConfigStore = require('./regimeAwareConfigStore');
+
 // Initialize Sprint 1 modules
 const transactionCostModel = new TransactionCostModel();
 const leveragedEtfRules = new LeveragedEtfRules();
 const regimeDetector = new RegimeDetector();
+
+// Initialize Sprint 2 modules
+const walkForwardOptimizer = new WalkForwardOptimizer();
+const strategyVersionControl = new StrategyVersionControl();
+const regimeAwareConfigStore = new RegimeAwareConfigStore();
 
 const app = express();
 
@@ -4084,6 +4094,446 @@ app.get('/api/regime/config/:regime', (req, res) => {
       config,
       recommendation
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// SPRINT 2: STRATEGY VERSIONING & OPTIMIZATION API ENDPOINTS
+// ================================
+
+// --- Strategy Version Control Endpoints ---
+
+// Get all versions for a symbol
+app.get('/api/versions/:symbol', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const versions = strategyVersionControl.getVersions(symbol);
+    res.json(versions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all symbols with versions
+app.get('/api/versions', (req, res) => {
+  try {
+    const symbols = strategyVersionControl.getAllSymbols();
+    res.json({ symbols });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new version
+app.post('/api/versions/:symbol', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { config, description, tag, metrics, walkForwardResults } = req.body;
+
+    if (!config) {
+      return res.status(400).json({ error: 'Config is required' });
+    }
+
+    const result = strategyVersionControl.createVersion(symbol, config, {
+      description,
+      tag,
+      metrics,
+      walkForwardResults,
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific version
+app.get('/api/versions/:symbol/:versionId', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const version = strategyVersionControl.getVersion(symbol, versionId);
+
+    if (!version) {
+      return res.status(404).json({ error: 'Version not found' });
+    }
+
+    res.json(version);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get active config for a symbol
+app.get('/api/versions/:symbol/active/config', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const config = strategyVersionControl.getActiveConfig(symbol);
+
+    if (!config) {
+      return res.status(404).json({ error: 'No active config found' });
+    }
+
+    res.json({ symbol: symbol.toUpperCase(), config });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get production config for a symbol
+app.get('/api/versions/:symbol/production/config', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const config = strategyVersionControl.getProductionConfig(symbol);
+
+    if (!config) {
+      return res.status(404).json({ error: 'No production config found' });
+    }
+
+    res.json({ symbol: symbol.toUpperCase(), config });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set active version
+app.put('/api/versions/:symbol/active', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { versionId } = req.body;
+
+    if (!versionId) {
+      return res.status(400).json({ error: 'versionId is required' });
+    }
+
+    const result = strategyVersionControl.setActiveVersion(symbol, versionId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Promote version to production
+app.put('/api/versions/:symbol/promote', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { versionId } = req.body;
+
+    if (!versionId) {
+      return res.status(400).json({ error: 'versionId is required' });
+    }
+
+    const result = strategyVersionControl.promoteToProduction(symbol, versionId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rollback to a previous version
+app.post('/api/versions/:symbol/rollback', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { versionId } = req.body;
+
+    if (!versionId) {
+      return res.status(400).json({ error: 'versionId is required' });
+    }
+
+    const result = strategyVersionControl.rollback(symbol, versionId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update metrics for a version
+app.put('/api/versions/:symbol/:versionId/metrics', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const { metrics } = req.body;
+
+    if (!metrics) {
+      return res.status(400).json({ error: 'metrics is required' });
+    }
+
+    const result = strategyVersionControl.updateMetrics(symbol, versionId, metrics);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Compare two versions
+app.get('/api/versions/:symbol/compare', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { versionA, versionB } = req.query;
+
+    if (!versionA || !versionB) {
+      return res.status(400).json({ error: 'versionA and versionB query params required' });
+    }
+
+    const result = strategyVersionControl.compareVersions(symbol, versionA, versionB);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Clone a version
+app.post('/api/versions/:symbol/:versionId/clone', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const { modifications, description, tag } = req.body;
+
+    const result = strategyVersionControl.cloneVersion(symbol, versionId, modifications, {
+      description,
+      tag,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Archive a version
+app.delete('/api/versions/:symbol/:versionId', (req, res) => {
+  try {
+    const { symbol, versionId } = req.params;
+    const result = strategyVersionControl.archiveVersion(symbol, versionId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Regime-Aware Config Store Endpoints ---
+
+// Get config for symbol (optionally with regime adjustment)
+app.get('/api/config/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { regime, applyAdjustments } = req.query;
+
+    const config = regimeAwareConfigStore.getConfig(
+      symbol,
+      regime || null,
+      applyAdjustments !== 'false'
+    );
+
+    res.json({ symbol: symbol.toUpperCase(), config });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get config with live regime detection
+app.post('/api/config/:symbol/detect', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    let { candles } = req.body;
+
+    // If no candles provided, fetch recent data
+    if (!candles || candles.length === 0) {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+    }
+
+    const result = regimeAwareConfigStore.getConfigWithDetection(symbol, candles);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set base config for a symbol
+app.post('/api/config/:symbol/base', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { config } = req.body;
+
+    if (!config) {
+      return res.status(400).json({ error: 'config is required' });
+    }
+
+    const result = regimeAwareConfigStore.setBaseConfig(symbol, config);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set regime-specific config for a symbol
+app.post('/api/config/:symbol/regime/:regime', (req, res) => {
+  try {
+    const { symbol, regime } = req.params;
+    const { config } = req.body;
+
+    if (!config) {
+      return res.status(400).json({ error: 'config is required' });
+    }
+
+    const result = regimeAwareConfigStore.setRegimeConfig(symbol, regime, config);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all configs for a symbol
+app.get('/api/config/:symbol/all', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const configs = regimeAwareConfigStore.getAllConfigs(symbol);
+    res.json(configs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Preview regime configs
+app.get('/api/config/:symbol/preview', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const preview = regimeAwareConfigStore.previewRegimeConfigs(symbol);
+    res.json(preview);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Enable/disable regime adaptation
+app.put('/api/config/:symbol/adaptation', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'enabled (boolean) is required' });
+    }
+
+    const result = regimeAwareConfigStore.setRegimeAdaptation(symbol, enabled);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get config store summary
+app.get('/api/config', (req, res) => {
+  try {
+    const summary = regimeAwareConfigStore.getSummary();
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete config for a symbol
+app.delete('/api/config/:symbol', (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const result = regimeAwareConfigStore.deleteConfig(symbol);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Walk-Forward Optimization Endpoints ---
+
+// Run walk-forward optimization
+app.post('/api/optimize/walk-forward', async (req, res) => {
+  try {
+    const { symbol, baseStrategy, historicalData, options } = req.body;
+
+    if (!symbol) {
+      return res.status(400).json({ error: 'symbol is required' });
+    }
+
+    // Get historical data if not provided
+    let data = historicalData;
+    if (!data || data.length === 0) {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+      data = candles.map(c => ({ date: c.date || c.t, ...c }));
+    }
+
+    // Create optimizer with custom options if provided
+    const optimizer = options ? new WalkForwardOptimizer(options) : walkForwardOptimizer;
+
+    // Define backtest function using existing backtest engine
+    const backtestFn = async (config, windowData) => {
+      const result = await backtestEngine.runBacktest({
+        symbol,
+        ...config,
+        historicalData: windowData,
+      });
+      return {
+        trades: result.trades || [],
+        metrics: result.metrics || {},
+      };
+    };
+
+    const result = await optimizer.runOptimization(
+      data,
+      baseStrategy || regimeAwareConfigStore.getDefaultConfig(),
+      backtestFn
+    );
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Quick validation
+app.post('/api/optimize/quick-validate', async (req, res) => {
+  try {
+    const { symbol, config, historicalData } = req.body;
+
+    if (!symbol || !config) {
+      return res.status(400).json({ error: 'symbol and config are required' });
+    }
+
+    // Get historical data if not provided
+    let data = historicalData;
+    if (!data || data.length === 0) {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+      data = candles.map(c => ({ date: c.date || c.t, ...c }));
+    }
+
+    // Define backtest function
+    const backtestFn = async (cfg, windowData) => {
+      const result = await backtestEngine.runBacktest({
+        symbol,
+        ...cfg,
+        historicalData: windowData,
+      });
+      return {
+        trades: result.trades || [],
+        metrics: result.metrics || {},
+      };
+    };
+
+    const result = await walkForwardOptimizer.quickValidation(data, config, backtestFn);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get optimizer default parameter ranges
+app.get('/api/optimize/parameters', (req, res) => {
+  try {
+    const ranges = walkForwardOptimizer.getDefaultParameterRanges();
+    res.json({ parameterRanges: ranges });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
