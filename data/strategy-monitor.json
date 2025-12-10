@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "description": "Strategy performance monitoring data",
+    "lastUpdated": "2025-12-09T19:35:53.337Z",
+    "version": "1.0"
+  },
+  "monitors": {
+    "AAPL_default": {
+      "symbol": "AAPL",
+      "versionId": "default",
+      "status": "active",
+      "thresholds": {
+        "minWinRate": 40,
+        "minExpectancy": 0,
+        "maxDrawdown": 15,
+        "maxConsecutiveLosses": 5,
+        "minProfitFactor": 0.8,
+        "degradationThreshold": 25
+      },
+      "trades": [],
+      "alerts": [],
+      "metrics": {
+        "current": null,
+        "rolling": {},
+        "historical": null
+      },
+      "stats": {
+        "consecutiveLosses": 0,
+        "consecutiveWins": 0,
+        "peakEquity": 0,
+        "currentEquity": 0,
+        "maxDrawdown": 0
+      },
+      "createdAt": "2025-12-09T19:34:47.350Z",
+      "lastUpdated": "2025-12-09T19:34:47.350Z"
+    },
+    "SOXL_default": {
+      "symbol": "SOXL",
+      "versionId": "default",
+      "status": "active",
+      "thresholds": {
+        "minWinRate": 40,
+        "minExpectancy": 0,
+        "maxDrawdown": 15,
+        "maxConsecutiveLosses": 5,
+        "minProfitFactor": 0.8,
+        "degradationThreshold": 25
+      },
+      "trades": [],
+      "alerts": [],
+      "metrics": {
+        "current": null,
+        "rolling": {},
+        "historical": null
+      },
+      "stats": {
+        "consecutiveLosses": 0,
+        "consecutiveWins": 0,
+        "peakEquity": 0,
+        "currentEquity": 0,
+        "maxDrawdown": 0
+      },
+      "createdAt": "2025-12-09T19:35:53.337Z",
+      "lastUpdated": "2025-12-09T19:35:53.337Z"
+    }
+  }
+}
