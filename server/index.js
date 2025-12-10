@@ -4942,14 +4942,22 @@ app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
 // ================================
 
 // Get flow sentiment from CheddarFlow (scraping)
+// Query params: date, useProfile (use existing Chrome profile)
 app.get('/api/cheddarflow/:symbol', async (req, res) => {
   const { symbol } = req.params;
-  const { date } = req.query;
+  const { date, useProfile } = req.query;
 
   try {
-    // Lazy initialize the scraper
-    if (!cheddarFlowScraper) {
-      cheddarFlowScraper = new CheddarFlowScraper({ headless: true });
+    // Lazy initialize the scraper with profile option
+    if (!cheddarFlowScraper || (useProfile === 'true' && !cheddarFlowScraper.useExistingProfile)) {
+      // Close existing scraper if config changed
+      if (cheddarFlowScraper) {
+        await cheddarFlowScraper.close();
+      }
+      cheddarFlowScraper = new CheddarFlowScraper({
+        headless: useProfile !== 'true', // Can't be headless with profile
+        useExistingProfile: useProfile === 'true',
+      });
     }
 
     const flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
@@ -4967,15 +4975,57 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
   }
 });
 
+// Initialize CheddarFlow with credentials (POST)
+app.post('/api/cheddarflow/auth', async (req, res) => {
+  const { email, password, cookies } = req.body;
+
+  try {
+    // Close existing scraper
+    if (cheddarFlowScraper) {
+      await cheddarFlowScraper.close();
+    }
+
+    // Create new scraper with auth
+    cheddarFlowScraper = new CheddarFlowScraper({
+      headless: true,
+      credentials: email && password ? { email, password } : null,
+      cookies: cookies || null,
+    });
+
+    // Initialize and attempt login
+    await cheddarFlowScraper.init();
+
+    // Export cookies for future use
+    const sessionCookies = await cheddarFlowScraper.exportCookies();
+
+    res.json({
+      success: true,
+      message: 'CheddarFlow scraper initialized',
+      cookieCount: sessionCookies.length,
+      // Return cookies so user can save them
+      cookies: sessionCookies,
+    });
+  } catch (error) {
+    console.error('Error initializing CheddarFlow:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Take screenshot of CheddarFlow page
 app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
   const { symbol } = req.params;
-  const { date } = req.query;
+  const { date, useProfile } = req.query;
 
   try {
-    // Lazy initialize the scraper
-    if (!cheddarFlowScraper) {
-      cheddarFlowScraper = new CheddarFlowScraper({ headless: true });
+    // Lazy initialize the scraper with profile option
+    if (!cheddarFlowScraper || (useProfile === 'true' && !cheddarFlowScraper.useExistingProfile)) {
+      if (cheddarFlowScraper) {
+        await cheddarFlowScraper.close();
+      }
+      cheddarFlowScraper = new CheddarFlowScraper({
+        headless: useProfile !== 'true',
+        useExistingProfile: useProfile === 'true',
+      });
     }
 
     const screenshotPath = await cheddarFlowScraper.takeScreenshot(symbol, date);

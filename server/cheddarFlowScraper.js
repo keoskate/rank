@@ -22,18 +22,40 @@ class CheddarFlowScraper {
     this.browser = null;
     this.page = null;
 
+    // Authentication options
+    this.useExistingProfile = options.useExistingProfile || false;
+    this.chromeProfilePath = options.chromeProfilePath || null;
+    this.cookies = options.cookies || null;
+    this.credentials = options.credentials || null; // { email, password }
+
     // Cache to avoid too many requests
     this.cache = new Map();
     this.cacheTimeout = options.cacheTimeout || 5 * 60 * 1000; // 5 minutes
   }
 
   /**
-   * Initialize browser
+   * Get the default Chrome profile path for macOS
    */
-  async init() {
+  static getDefaultChromeProfilePath() {
+    const os = require('os');
+    const path = require('path');
+    const homeDir = os.homedir();
+
+    // macOS Chrome profile path
+    return path.join(homeDir, 'Library', 'Application Support', 'Google', 'Chrome');
+  }
+
+  /**
+   * Initialize browser
+   * @param {Object} options - Override constructor options
+   */
+  async init(options = {}) {
     if (this.browser) return;
 
-    this.browser = await puppeteer.launch({
+    const useProfile = options.useExistingProfile ?? this.useExistingProfile;
+    const profilePath = options.chromeProfilePath ?? this.chromeProfilePath;
+
+    const launchOptions = {
       headless: this.headless,
       args: [
         '--no-sandbox',
@@ -42,17 +64,96 @@ class CheddarFlowScraper {
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
       ],
-    });
+    };
 
-    this.page = await this.browser.newPage();
+    // Use existing Chrome profile if specified
+    if (useProfile) {
+      const chromePath = profilePath || CheddarFlowScraper.getDefaultChromeProfilePath();
+      console.log(`[CheddarFlow] Using Chrome profile at: ${chromePath}`);
+      launchOptions.userDataDir = chromePath;
+      launchOptions.args.push('--profile-directory=Default');
 
-    // Set viewport
-    await this.page.setViewport({ width: 1920, height: 1080 });
+      // Can't run headless with user data dir easily, and need to avoid conflicts
+      // with running Chrome instance
+      console.log('[CheddarFlow] Note: Using existing profile. Make sure Chrome is closed.');
+    }
 
-    // Set user agent to avoid detection
-    await this.page.setUserAgent(
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    );
+    try {
+      this.browser = await puppeteer.launch(launchOptions);
+      this.page = await this.browser.newPage();
+
+      // Set viewport
+      await this.page.setViewport({ width: 1920, height: 1080 });
+
+      // Set user agent to avoid detection
+      await this.page.setUserAgent(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
+
+      // Inject cookies if provided
+      if (this.cookies && this.cookies.length > 0) {
+        console.log(`[CheddarFlow] Injecting ${this.cookies.length} cookies`);
+        await this.page.setCookie(...this.cookies);
+      }
+
+      // Handle login if credentials provided
+      if (this.credentials && this.credentials.email && this.credentials.password) {
+        await this.login(this.credentials.email, this.credentials.password);
+      }
+
+    } catch (error) {
+      console.error('[CheddarFlow] Failed to launch browser:', error.message);
+      if (error.message.includes('user data directory is already in use')) {
+        console.error('[CheddarFlow] Please close Chrome browser and try again.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Login to CheddarFlow with credentials
+   */
+  async login(email, password) {
+    console.log('[CheddarFlow] Attempting to login...');
+
+    try {
+      // Navigate to login page
+      await this.page.goto('https://cheddarflow.com/login', {
+        waitUntil: 'networkidle2',
+        timeout: this.timeout,
+      });
+
+      // Wait for and fill email field
+      await this.page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
+      await this.page.type('input[type="email"], input[name="email"]', email);
+
+      // Fill password field
+      await this.page.waitForSelector('input[type="password"], input[name="password"]', { timeout: 10000 });
+      await this.page.type('input[type="password"], input[name="password"]', password);
+
+      // Click login button
+      await this.page.click('button[type="submit"]');
+
+      // Wait for navigation
+      await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+
+      console.log('[CheddarFlow] Login successful');
+      return true;
+
+    } catch (error) {
+      console.error('[CheddarFlow] Login failed:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Export current cookies (useful for saving session)
+   */
+  async exportCookies() {
+    if (!this.page) {
+      throw new Error('Browser not initialized');
+    }
+    return await this.page.cookies();
   }
 
   /**
