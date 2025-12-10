@@ -49,6 +49,9 @@ const RegimeAwareConfigStore = require('./regimeAwareConfigStore');
 const ABTestingEngine = require('./abTestingEngine');
 const StrategyMonitor = require('./strategyMonitor');
 
+// Strategy Backtester for multi-day validation
+const StrategyBacktester = require('./strategyBacktester');
+
 // Overnight Optimization module
 const OvernightOptimizer = require('./overnightOptimizer');
 
@@ -5053,6 +5056,90 @@ app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
     }
   } catch (error) {
     console.error(`Error taking screenshot for ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// STRATEGY BACKTESTING API ENDPOINTS
+// ================================
+
+// Initialize backtester with dependencies
+const regimeDetectorInstance = new RegimeDetector();
+const strategyBacktester = new StrategyBacktester(polygonClient, regimeDetectorInstance);
+
+/**
+ * Run multi-day backtest to validate a strategy
+ * POST /api/backtest/run
+ * Body: { symbol, startDate, endDate, config }
+ */
+app.post('/api/backtest/run', async (req, res) => {
+  try {
+    const { symbol, startDate, endDate, config } = req.body;
+
+    if (!symbol || !startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required fields: symbol, startDate, endDate',
+      });
+    }
+
+    // Validate date range (max 90 days to prevent timeout)
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = (end - start) / (1000 * 60 * 60 * 24);
+
+    if (daysDiff > 90) {
+      return res.status(400).json({
+        error: 'Date range too large. Maximum 90 days per backtest.',
+      });
+    }
+
+    if (daysDiff < 5) {
+      return res.status(400).json({
+        error: 'Date range too small. Minimum 5 days for meaningful statistics.',
+      });
+    }
+
+    console.log(`[Backtest API] Running backtest for ${symbol} from ${startDate} to ${endDate}`);
+
+    const results = await strategyBacktester.runBacktest(
+      symbol.toUpperCase(),
+      startDate,
+      endDate,
+      config || {}
+    );
+
+    res.json(results);
+  } catch (error) {
+    console.error('[Backtest API] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get quick stats for a date range (without full simulation)
+ * GET /api/backtest/range/:symbol?startDate=X&endDate=Y
+ */
+app.get('/api/backtest/range/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate required' });
+    }
+
+    const tradingDays = await strategyBacktester.getTradingDays(symbol, startDate, endDate);
+    const buyAndHold = await strategyBacktester.calculateBuyAndHold(symbol, startDate, endDate);
+
+    res.json({
+      symbol,
+      startDate,
+      endDate,
+      tradingDays: tradingDays.length,
+      buyAndHold,
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

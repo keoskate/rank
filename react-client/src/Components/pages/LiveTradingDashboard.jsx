@@ -17,6 +17,7 @@ import MetricCard from '../common/MetricCard';
 import StrategyMonitorPanel from '../common/StrategyMonitorPanel';
 import RegimeConfigPanel from '../common/RegimeConfigPanel';
 import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
+import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 import {
@@ -2720,6 +2721,10 @@ const LiveTradingDashboard = () => {
           onFamilyChange={(family) => {
             setSelectedEtfFamily(family);
           }}
+        />
+        <StrategyValidatorPanel
+          symbol={simulationSymbol || chartSymbol}
+          config={config}
         />
       </div>
 

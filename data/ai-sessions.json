@@ -650,10 +650,10 @@
             "symbol": "SOXL",
             "quantity": 210,
             "averageCost": 47.677952,
-            "currentPrice": 47.9099,
-            "marketValue": 10061.079,
-            "unrealizedPnL": 48.70908,
-            "unrealizedPnLPercent": 0.48648901697790997,
+            "currentPrice": 47.8313,
+            "marketValue": 10044.573,
+            "unrealizedPnL": 32.20308,
+            "unrealizedPnLPercent": 0.32163294262304,
             "side": "long",
             "entryTime": "2025-12-09T20:55:16.740Z"
           }
@@ -664,16 +664,16 @@
             "symbol": "SOXS",
             "quantity": 1000,
             "averageCost": 2.946667,
-            "currentPrice": 2.93,
-            "marketValue": 2930,
-            "unrealizedPnL": -16.667,
-            "unrealizedPnLPercent": -0.5656221079613,
+            "currentPrice": 2.9301,
+            "marketValue": 2930.1,
+            "unrealizedPnL": -16.567,
+            "unrealizedPnLPercent": -0.56222844318683,
             "side": "long",
             "entryTime": "2025-12-09T20:57:40.986Z"
           }
         ]
       ],
-      "initialValue": 100177.95
+      "initialValue": 100161.54
     },
     "stats": {
       "totalTrades": 7,
