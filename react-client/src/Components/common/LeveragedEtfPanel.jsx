@@ -7,6 +7,7 @@
  * - PLTR: PLTU (2x bull), PLTZ (2x bear)
  *
  * Combines technical regime + flow sentiment for trading decisions.
+ * Automatically fetches CheddarFlow data when possible.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -26,12 +27,78 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Manual flow sentiment input
+  // CheddarFlow state
+  const [flowLoading, setFlowLoading] = useState(false);
+  const [flowError, setFlowError] = useState(null);
+  const [flowData, setFlowData] = useState(null);
+  const [autoFetchFlow, setAutoFetchFlow] = useState(true);
+
+  // Manual flow sentiment input (populated by auto-fetch or manual entry)
   const [flowSentiment, setFlowSentiment] = useState('neutral');
   const [putCallRatio, setPutCallRatio] = useState('');
   const [callFlowPercent, setCallFlowPercent] = useState('');
 
-  // Fetch analysis for selected family
+  // Fetch CheddarFlow data automatically
+  const fetchCheddarFlow = useCallback(async (symbol) => {
+    setFlowLoading(true);
+    setFlowError(null);
+
+    try {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Use Chrome profile for authentication
+      const response = await fetch(
+        `/api/cheddarflow/${symbol}?date=${today}&useProfile=true`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setFlowData(data);
+
+        // Auto-populate the form fields
+        if (data.flowData) {
+          const fd = data.flowData;
+
+          // Set sentiment
+          if (fd.sentimentText) {
+            const sentiment = fd.sentimentText.toLowerCase();
+            if (sentiment.includes('bullish')) setFlowSentiment('bullish');
+            else if (sentiment.includes('bearish')) setFlowSentiment('bearish');
+            else setFlowSentiment('neutral');
+          }
+
+          // Set P/C ratio
+          if (fd.putCallRatio !== undefined) {
+            setPutCallRatio(fd.putCallRatio.toString());
+          }
+
+          // Set call flow %
+          if (fd.callFlowPercent !== undefined) {
+            setCallFlowPercent(fd.callFlowPercent.toString());
+          }
+        }
+
+        return data;
+      } else {
+        const err = await response.json();
+        // Don't show error for auth issues - just means Chrome isn't available
+        if (err.error?.includes('Chrome') || err.error?.includes('auth')) {
+          setFlowError('CheddarFlow requires Chrome to be closed. Close Chrome and retry.');
+        } else {
+          setFlowError(err.error || 'Failed to fetch flow data');
+        }
+        return null;
+      }
+    } catch (err) {
+      setFlowError('Could not connect to CheddarFlow');
+      return null;
+    } finally {
+      setFlowLoading(false);
+    }
+  }, []);
+
+  // Fetch full analysis with flow data
   const fetchAnalysis = useCallback(async (withFlow = false) => {
     setLoading(true);
     setError(null);
@@ -41,7 +108,7 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
 
       if (withFlow && (flowSentiment !== 'neutral' || putCallRatio || callFlowPercent)) {
         // POST with flow data
-        const flowData = {
+        const flowDataPayload = {
           sentimentText: flowSentiment.charAt(0).toUpperCase() + flowSentiment.slice(1),
           putCallRatio: putCallRatio ? parseFloat(putCallRatio) : undefined,
           callFlowPercent: callFlowPercent ? parseFloat(callFlowPercent) : undefined,
@@ -51,7 +118,7 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
         response = await fetch(`/api/leveraged-etf/analyze/${selectedFamily.base}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flowData }),
+          body: JSON.stringify({ flowData: flowDataPayload }),
         });
       } else {
         // GET without flow data
@@ -72,10 +139,33 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
     }
   }, [selectedFamily, flowSentiment, putCallRatio, callFlowPercent]);
 
-  // Fetch on family change
+  // Auto-fetch flow and analysis when family changes
   useEffect(() => {
-    fetchAnalysis(false);
-  }, [selectedFamily]);
+    const fetchAll = async () => {
+      // First fetch technical analysis
+      await fetchAnalysis(false);
+
+      // Then try to fetch CheddarFlow data if auto-fetch is enabled
+      if (autoFetchFlow) {
+        const flowResult = await fetchCheddarFlow(selectedFamily.base);
+
+        // If we got flow data, re-fetch analysis with it
+        if (flowResult?.flowData) {
+          // Small delay to let state update
+          setTimeout(() => fetchAnalysis(true), 100);
+        }
+      }
+    };
+
+    fetchAll();
+  }, [selectedFamily, autoFetchFlow]);
+
+  // Re-analyze when flow inputs change
+  useEffect(() => {
+    if (flowSentiment !== 'neutral' || putCallRatio || callFlowPercent) {
+      fetchAnalysis(true);
+    }
+  }, [flowSentiment, putCallRatio, callFlowPercent]);
 
   // Handle applying the recommendation
   const applyRecommendation = () => {
@@ -113,14 +203,25 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
             Leveraged ETF Strategy
           </span>
         </div>
-        <Button
-          size="small"
-          variant="outline"
-          onClick={() => fetchAnalysis(true)}
-          disabled={loading}
-        >
-          {loading ? 'Analyzing...' : 'Refresh'}
-        </Button>
+        <div style={{ display: 'flex', gap: theme.spacing.xs }}>
+          <Button
+            size="small"
+            variant="outline"
+            onClick={() => fetchCheddarFlow(selectedFamily.base)}
+            disabled={flowLoading}
+            title="Fetch latest CheddarFlow data"
+          >
+            {flowLoading ? '...' : '📊'}
+          </Button>
+          <Button
+            size="small"
+            variant="outline"
+            onClick={() => fetchAnalysis(true)}
+            disabled={loading}
+          >
+            {loading ? 'Analyzing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* ETF Family Selector */}
@@ -225,27 +326,97 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
         </div>
       )}
 
-      {/* Manual Flow Sentiment Input */}
+      {/* CheddarFlow Data Section */}
       <div style={{
         marginBottom: theme.spacing.md,
         padding: theme.spacing.sm,
-        backgroundColor: '#f0f9ff',
-        border: '1px solid #0ea5e9',
+        backgroundColor: flowData ? '#dcfce7' : '#f0f9ff',
+        border: `1px solid ${flowData ? '#22c55e' : '#0ea5e9'}`,
         borderRadius: theme.borderRadius.md,
       }}>
         <div style={{
           fontSize: theme.typography.fontSize.xs,
-          color: '#0369a1',
+          color: flowData ? '#166534' : '#0369a1',
           textTransform: 'uppercase',
           marginBottom: theme.spacing.sm,
           display: 'flex',
           alignItems: 'center',
-          gap: theme.spacing.xs,
+          justifyContent: 'space-between',
         }}>
-          <span>📊</span> CheddarFlow Sentiment (Manual Input)
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+            <span>📊</span>
+            CheddarFlow Sentiment
+            {flowData && <span style={{ marginLeft: '4px' }}>✓ Auto-fetched</span>}
+          </div>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            cursor: 'pointer',
+          }}>
+            <input
+              type="checkbox"
+              checked={autoFetchFlow}
+              onChange={(e) => setAutoFetchFlow(e.target.checked)}
+            />
+            Auto-fetch
+          </label>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.sm }}>
+        {/* Flow Error */}
+        {flowError && (
+          <div style={{
+            padding: theme.spacing.xs,
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            borderRadius: theme.borderRadius.sm,
+            marginBottom: theme.spacing.sm,
+            fontSize: theme.typography.fontSize.xs,
+          }}>
+            {flowError}
+          </div>
+        )}
+
+        {/* Flow Loading */}
+        {flowLoading && (
+          <div style={{
+            padding: theme.spacing.sm,
+            textAlign: 'center',
+            color: theme.colors.textMuted,
+            fontSize: theme.typography.fontSize.sm,
+          }}>
+            Fetching CheddarFlow data...
+          </div>
+        )}
+
+        {/* Flow Data Display (when auto-fetched) */}
+        {flowData?.flowData && (
+          <div style={{
+            marginBottom: theme.spacing.sm,
+            padding: theme.spacing.xs,
+            backgroundColor: 'white',
+            borderRadius: theme.borderRadius.sm,
+            fontSize: theme.typography.fontSize.xs,
+          }}>
+            <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+              <span><strong>Sentiment:</strong> {flowData.flowData.sentimentText}</span>
+              <span><strong>P/C:</strong> {flowData.flowData.putCallRatio?.toFixed(3)}</span>
+              <span><strong>Calls:</strong> {flowData.flowData.callFlowPercent?.toFixed(1)}%</span>
+              {flowData.flowData.totalCallFlow && (
+                <span><strong>Call $:</strong> ${(flowData.flowData.totalCallFlow / 1000000).toFixed(2)}M</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Manual Input Fields */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: theme.spacing.sm,
+          opacity: flowData ? 0.7 : 1,
+        }}>
           {/* Sentiment Dropdown */}
           <div>
             <label style={{ fontSize: '10px', color: theme.colors.textMuted }}>Sentiment</label>
@@ -305,15 +476,17 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
           </div>
         </div>
 
-        <Button
-          size="small"
-          variant="primary"
-          onClick={() => fetchAnalysis(true)}
-          style={{ marginTop: theme.spacing.sm, width: '100%' }}
-          disabled={loading}
-        >
-          Apply Flow Sentiment & Re-analyze
-        </Button>
+        {!flowData && (
+          <Button
+            size="small"
+            variant="primary"
+            onClick={() => fetchCheddarFlow(selectedFamily.base)}
+            style={{ marginTop: theme.spacing.sm, width: '100%' }}
+            disabled={flowLoading}
+          >
+            {flowLoading ? 'Fetching...' : 'Fetch from CheddarFlow'}
+          </Button>
+        )}
       </div>
 
       {/* Trading Recommendation */}
@@ -449,9 +622,9 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
       }}>
         <strong>Tips:</strong>
         <ul style={{ margin: '4px 0 0 0', paddingLeft: theme.spacing.md }}>
-          <li>Enter CheddarFlow data for better signals</li>
+          <li><strong>First time:</strong> Close Chrome, fetch once to save session (works automatically after)</li>
           <li>P/C ratio &lt; 0.5 = bullish, &gt; 1.2 = bearish</li>
-          <li>Leveraged ETFs decay in sideways markets</li>
+          <li>Leveraged ETFs decay in sideways markets - avoid holding overnight</li>
         </ul>
       </div>
     </Card>

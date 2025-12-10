@@ -4963,6 +4963,18 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
     const flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
     const sentiment = cheddarFlowScraper.analyzeSentiment(flowData);
 
+    // Save cookies after successful fetch (for future headless use)
+    if (useProfile === 'true' && flowData) {
+      try {
+        const cookies = await cheddarFlowScraper.exportCookies();
+        CheddarFlowScraper.saveCookies(cookies);
+        console.log('[CheddarFlow] Saved session cookies for future headless use');
+      } catch (e) {
+        // Non-fatal, just log
+        console.log('[CheddarFlow] Could not save cookies:', e.message);
+      }
+    }
+
     res.json({
       symbol: symbol.toUpperCase(),
       date: date || new Date().toISOString().split('T')[0],

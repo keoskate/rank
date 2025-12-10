@@ -13,6 +13,11 @@
  */
 
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+
+// Persistent cookie storage path
+const COOKIE_FILE = path.join(__dirname, '../data/cheddarflow-cookies.json');
 
 class CheddarFlowScraper {
   constructor(options = {}) {
@@ -31,6 +36,43 @@ class CheddarFlowScraper {
     // Cache to avoid too many requests
     this.cache = new Map();
     this.cacheTimeout = options.cacheTimeout || 5 * 60 * 1000; // 5 minutes
+  }
+
+  /**
+   * Load saved cookies from file
+   */
+  static loadSavedCookies() {
+    try {
+      if (fs.existsSync(COOKIE_FILE)) {
+        const data = fs.readFileSync(COOKIE_FILE, 'utf8');
+        const parsed = JSON.parse(data);
+        // Check if cookies are less than 7 days old
+        if (parsed.savedAt && Date.now() - parsed.savedAt < 7 * 24 * 60 * 60 * 1000) {
+          console.log('[CheddarFlow] Loaded saved cookies from file');
+          return parsed.cookies;
+        }
+        console.log('[CheddarFlow] Saved cookies expired');
+      }
+    } catch (error) {
+      console.log('[CheddarFlow] No saved cookies found');
+    }
+    return null;
+  }
+
+  /**
+   * Save cookies to file for reuse
+   */
+  static saveCookies(cookies) {
+    try {
+      const data = {
+        savedAt: Date.now(),
+        cookies: cookies,
+      };
+      fs.writeFileSync(COOKIE_FILE, JSON.stringify(data, null, 2));
+      console.log('[CheddarFlow] Saved cookies to file');
+    } catch (error) {
+      console.error('[CheddarFlow] Failed to save cookies:', error.message);
+    }
   }
 
   /**
@@ -90,15 +132,27 @@ class CheddarFlowScraper {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       );
 
-      // Inject cookies if provided
-      if (this.cookies && this.cookies.length > 0) {
-        console.log(`[CheddarFlow] Injecting ${this.cookies.length} cookies`);
-        await this.page.setCookie(...this.cookies);
+      // Try to load and inject cookies in this priority:
+      // 1. Cookies passed in options
+      // 2. Saved cookies from file
+      let cookiesToUse = this.cookies;
+      if (!cookiesToUse || cookiesToUse.length === 0) {
+        cookiesToUse = CheddarFlowScraper.loadSavedCookies();
       }
 
-      // Handle login if credentials provided
+      if (cookiesToUse && cookiesToUse.length > 0) {
+        console.log(`[CheddarFlow] Injecting ${cookiesToUse.length} cookies`);
+        await this.page.setCookie(...cookiesToUse);
+      }
+
+      // Handle login if credentials provided (and no cookies)
       if (this.credentials && this.credentials.email && this.credentials.password) {
-        await this.login(this.credentials.email, this.credentials.password);
+        const loginSuccess = await this.login(this.credentials.email, this.credentials.password);
+        if (loginSuccess) {
+          // Save cookies for future use
+          const newCookies = await this.exportCookies();
+          CheddarFlowScraper.saveCookies(newCookies);
+        }
       }
 
     } catch (error) {

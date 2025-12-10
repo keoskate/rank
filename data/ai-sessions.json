@@ -636,10 +636,10 @@
             "symbol": "QBTX",
             "quantity": 206,
             "averageCost": 47.87,
-            "currentPrice": 46.3,
-            "marketValue": 9537.8,
-            "unrealizedPnL": -323.42,
-            "unrealizedPnLPercent": -3.2797158972216396,
+            "currentPrice": 47.27,
+            "marketValue": 9737.62,
+            "unrealizedPnL": -123.6,
+            "unrealizedPnLPercent": -1.25339461040318,
             "side": "long",
             "entryTime": "2025-12-09T20:19:16.251Z"
           }
@@ -650,10 +650,10 @@
             "symbol": "SOXL",
             "quantity": 210,
             "averageCost": 47.677952,
-            "currentPrice": 47.5,
-            "marketValue": 9975,
-            "unrealizedPnL": -37.36992,
-            "unrealizedPnLPercent": -0.37323750818827,
+            "currentPrice": 47.63,
+            "marketValue": 10002.3,
+            "unrealizedPnL": -10.06992,
+            "unrealizedPnLPercent": -0.10057478978963,
             "side": "long",
             "entryTime": "2025-12-09T20:55:16.740Z"
           }
@@ -664,16 +664,16 @@
             "symbol": "SOXS",
             "quantity": 1000,
             "averageCost": 2.946667,
-            "currentPrice": 2.955,
-            "marketValue": 2955,
-            "unrealizedPnL": 8.333,
-            "unrealizedPnLPercent": 0.28279408565678,
+            "currentPrice": 2.95,
+            "marketValue": 2950,
+            "unrealizedPnL": 3.333,
+            "unrealizedPnLPercent": 0.11311084693316001,
             "side": "long",
             "entryTime": "2025-12-09T20:57:40.986Z"
           }
         ]
       ],
-      "initialValue": 100015.93
+      "initialValue": 100238.05
     },
     "stats": {
       "totalTrades": 7,
@@ -3415,5 +3415,93 @@
     "alerts": [],
     "circuitBreakerTriggered": false,
     "lastActivity": "2025-12-09T20:58:37.912Z"
+  },
+  "6a89e559-3807-4952-9280-25db8a80a883": {
+    "sessionId": "6a89e559-3807-4952-9280-25db8a80a883",
+    "userId": "default_user",
+    "name": "Strategy 4",
+    "status": "stopped",
+    "startTime": "2025-12-10T13:05:39.317Z",
+    "config": {
+      "name": "Strategy 4",
+      "timeframes": [
+        "scalping",
+        "dayTrading",
+        "swing"
+      ],
+      "maxPositions": 5,
+      "maxPositionSizePercent": 10,
+      "riskPerTradePercent": 2,
+      "dailyLossLimitPercent": 5,
+      "consecutiveLossLimit": 3,
+      "profitTargetMultiplier": 2,
+      "stopLossMultiplier": 1.5,
+      "minConfidence": 40,
+      "watchlist": [],
+      "autoTrade": true,
+      "simulationMode": true
+    },
+    "portfolio": {
+      "cash": 77548.13,
+      "positions": [
+        [
+          "QBTX",
+          {
+            "symbol": "QBTX",
+            "quantity": 206,
+            "averageCost": 47.87,
+            "currentPrice": 47.27,
+            "marketValue": 9737.62,
+            "unrealizedPnL": -123.6,
+            "unrealizedPnLPercent": -1.25339461040318,
+            "side": "long",
+            "entryTime": "2025-12-10T13:05:39.614Z"
+          }
+        ],
+        [
+          "SOXL",
+          {
+            "symbol": "SOXL",
+            "quantity": 210,
+            "averageCost": 47.677952,
+            "currentPrice": 47.63,
+            "marketValue": 10002.3,
+            "unrealizedPnL": -10.06992,
+            "unrealizedPnLPercent": -0.10057478978963,
+            "side": "long",
+            "entryTime": "2025-12-10T13:05:39.614Z"
+          }
+        ],
+        [
+          "SOXS",
+          {
+            "symbol": "SOXS",
+            "quantity": 1000,
+            "averageCost": 2.946667,
+            "currentPrice": 2.9521,
+            "marketValue": 2952.1,
+            "unrealizedPnL": 5.433,
+            "unrealizedPnLPercent": 0.18437780719708002,
+            "side": "long",
+            "entryTime": "2025-12-10T13:05:39.614Z"
+          }
+        ]
+      ],
+      "initialValue": 100240.15
+    },
+    "stats": {
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "totalPnL": 0,
+      "consecutiveLosses": 0,
+      "peakValue": 100240.15,
+      "maxDrawdown": 0,
+      "winRate": 0
+    },
+    "decisions": [],
+    "alerts": [],
+    "circuitBreakerTriggered": false,
+    "endTime": "2025-12-10T13:05:50.382Z"
   }
 }
