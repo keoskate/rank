@@ -5061,7 +5061,7 @@ app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
 });
 
 // ================================
-// STRATEGY BACKTESTING API ENDPOINTS
+// STRATEGY VALIDATOR API ENDPOINTS
 // ================================
 
 // Initialize backtester with dependencies
@@ -5069,11 +5069,11 @@ const regimeDetectorInstance = new RegimeDetector();
 const strategyBacktester = new StrategyBacktester(polygonClient, regimeDetectorInstance);
 
 /**
- * Run multi-day backtest to validate a strategy
- * POST /api/backtest/run
+ * Run multi-day strategy validation
+ * POST /api/strategy-validator/run
  * Body: { symbol, startDate, endDate, config }
  */
-app.post('/api/backtest/run', async (req, res) => {
+app.post('/api/strategy-validator/run', async (req, res) => {
   try {
     const { symbol, startDate, endDate, config } = req.body;
 
@@ -5118,9 +5118,9 @@ app.post('/api/backtest/run', async (req, res) => {
 
 /**
  * Get quick stats for a date range (without full simulation)
- * GET /api/backtest/range/:symbol?startDate=X&endDate=Y
+ * GET /api/strategy-validator/range/:symbol?startDate=X&endDate=Y
  */
-app.get('/api/backtest/range/:symbol', async (req, res) => {
+app.get('/api/strategy-validator/range/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
     const { startDate, endDate } = req.query;

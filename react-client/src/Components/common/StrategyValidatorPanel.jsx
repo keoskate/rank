@@ -40,7 +40,7 @@ const StrategyValidatorPanel = ({ symbol, config, onConfigApply }) => {
     setResults(null);
 
     try {
-      const response = await fetch('/api/backtest/run', {
+      const response = await fetch('/api/strategy-validator/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
