@@ -59,35 +59,83 @@ class RegimeDetector {
     const currentADX = adx[adx.length - 1];
     const priceToMA = ((currentPrice - currentMA) / currentMA) * 100;
 
-    // Classify regime
-    let regime, confidence, description;
+    // Calculate short-term momentum (5-day and 10-day returns)
+    const fiveDayReturn = closes.length >= 5
+      ? ((closes[closes.length - 1] - closes[closes.length - 5]) / closes[closes.length - 5]) * 100
+      : 0;
+    const tenDayReturn = closes.length >= 10
+      ? ((closes[closes.length - 1] - closes[closes.length - 10]) / closes[closes.length - 10]) * 100
+      : 0;
 
+    // Calculate short-term MA (20-day) for faster signals
+    const shortMA = this.calculateSMA(closes, Math.min(20, closes.length));
+    const currentShortMA = shortMA[shortMA.length - 1];
+    const priceToShortMA = ((currentPrice - currentShortMA) / currentShortMA) * 100;
+
+    // Classify regime using multiple signals
+    let regime, confidence, description;
+    let signals = { bullish: 0, bearish: 0, sideways: 0 };
+
+    // Signal 1: ADX trend strength
     if (currentADX < config.adxTrendThreshold) {
-      // Low ADX = no clear trend = sideways
-      regime = 'sideways';
-      confidence = Math.min(95, 50 + (config.adxTrendThreshold - currentADX) * 2);
-      description = `ADX (${currentADX.toFixed(1)}) below threshold (${config.adxTrendThreshold}) indicates ranging/choppy market`;
-    } else if (currentPrice > currentMA) {
-      // Price above MA with trend strength = bullish
-      regime = 'bull';
-      confidence = Math.min(95, 50 + Math.abs(priceToMA) * 2 + (currentADX - config.adxTrendThreshold));
-      description = `Price ${priceToMA.toFixed(1)}% above ${config.maPeriod}-day MA with ADX ${currentADX.toFixed(1)}`;
+      signals.sideways += 2;
+    } else if (currentADX >= config.adxStrongTrendThreshold) {
+      // Strong trend - weight direction signals more
+      if (currentPrice > currentMA) signals.bullish += 2;
+      else signals.bearish += 2;
     } else {
-      // Price below MA with trend strength = bearish
+      // Moderate trend
+      if (currentPrice > currentMA) signals.bullish += 1;
+      else signals.bearish += 1;
+    }
+
+    // Signal 2: Price vs 50-day MA
+    if (priceToMA > 5) signals.bullish += 2;
+    else if (priceToMA > 2) signals.bullish += 1;
+    else if (priceToMA < -5) signals.bearish += 2;
+    else if (priceToMA < -2) signals.bearish += 1;
+    else signals.sideways += 1;
+
+    // Signal 3: Short-term momentum (5-day return)
+    if (fiveDayReturn > 5) signals.bullish += 2;
+    else if (fiveDayReturn > 2) signals.bullish += 1;
+    else if (fiveDayReturn < -5) signals.bearish += 2;
+    else if (fiveDayReturn < -2) signals.bearish += 1;
+    else signals.sideways += 1;
+
+    // Signal 4: Price vs short-term MA (faster signal)
+    if (priceToShortMA > 3) signals.bullish += 1;
+    else if (priceToShortMA < -3) signals.bearish += 1;
+    else signals.sideways += 1;
+
+    // Determine regime from signal weights
+    const maxSignal = Math.max(signals.bullish, signals.bearish, signals.sideways);
+    if (signals.bullish === maxSignal && signals.bullish > signals.bearish) {
+      regime = 'bull';
+      confidence = Math.min(95, 40 + signals.bullish * 10 + Math.abs(priceToMA) + Math.abs(fiveDayReturn));
+      description = `Bullish: ${priceToMA > 0 ? '+' : ''}${priceToMA.toFixed(1)}% vs MA, ${fiveDayReturn > 0 ? '+' : ''}${fiveDayReturn.toFixed(1)}% 5d momentum`;
+    } else if (signals.bearish === maxSignal && signals.bearish > signals.bullish) {
       regime = 'bear';
-      confidence = Math.min(95, 50 + Math.abs(priceToMA) * 2 + (currentADX - config.adxTrendThreshold));
-      description = `Price ${priceToMA.toFixed(1)}% below ${config.maPeriod}-day MA with ADX ${currentADX.toFixed(1)}`;
+      confidence = Math.min(95, 40 + signals.bearish * 10 + Math.abs(priceToMA) + Math.abs(fiveDayReturn));
+      description = `Bearish: ${priceToMA.toFixed(1)}% vs MA, ${fiveDayReturn.toFixed(1)}% 5d momentum`;
+    } else {
+      regime = 'sideways';
+      confidence = Math.min(95, 40 + signals.sideways * 10);
+      description = `Sideways: Mixed signals (ADX: ${currentADX.toFixed(1)}, 5d: ${fiveDayReturn > 0 ? '+' : ''}${fiveDayReturn.toFixed(1)}%)`;
     }
 
     // Determine trend strength
     let trendStrength;
-    if (currentADX >= config.adxStrongTrendThreshold) {
+    if (currentADX >= config.adxStrongTrendThreshold || Math.abs(fiveDayReturn) > 10) {
       trendStrength = 'strong';
-    } else if (currentADX >= config.adxTrendThreshold) {
+    } else if (currentADX >= config.adxTrendThreshold || Math.abs(fiveDayReturn) > 5) {
       trendStrength = 'moderate';
     } else {
       trendStrength = 'weak';
     }
+
+    // Generate leveraged ETF recommendation for QBTS family
+    const leveragedRecommendation = this.getLeveragedETFRecommendation(regime, trendStrength, confidence);
 
     return {
       regime,
@@ -98,12 +146,67 @@ class RegimeDetector {
         price: currentPrice,
         ma: currentMA,
         priceToMA: priceToMA.toFixed(2) + '%',
+        priceVs50MA: priceToMA,
         adx: currentADX.toFixed(2),
         volatility: (volatility * 100).toFixed(2) + '%',
+        fiveDayReturn: fiveDayReturn.toFixed(2) + '%',
+        tenDayReturn: tenDayReturn.toFixed(2) + '%',
+        signals,
       },
       recommendedStrategy: this.getStrategyRecommendation(regime, trendStrength, volatility),
+      leveragedRecommendation,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Get leveraged ETF recommendation based on regime
+   * For QBTS family: QBTS (base), QBTX (2x bull), QBTZ (2x bear)
+   */
+  getLeveragedETFRecommendation(regime, trendStrength, confidence) {
+    if (regime === 'bull') {
+      return {
+        symbol: 'QBTX',
+        name: 'T-Rex 2X Long MSTR Daily Target ETF',
+        direction: 'long',
+        leverage: '2x',
+        reason: `Bullish regime detected (${confidence}% confidence). Use leveraged bull ETF to maximize gains.`,
+        riskLevel: trendStrength === 'strong' ? 'moderate' : 'high',
+        tips: [
+          'Best for strong uptrend days',
+          'Consider position sizing based on confidence',
+          trendStrength === 'strong' ? 'Full position OK' : 'Reduce position size due to weaker trend',
+        ],
+      };
+    } else if (regime === 'bear') {
+      return {
+        symbol: 'QBTZ',
+        name: 'T-Rex 2X Inverse MSTR Daily Target ETF',
+        direction: 'short',
+        leverage: '2x',
+        reason: `Bearish regime detected (${confidence}% confidence). Use inverse ETF to profit from decline.`,
+        riskLevel: trendStrength === 'strong' ? 'moderate' : 'high',
+        tips: [
+          'Best for strong downtrend days',
+          'Consider hedging with small QBTX position',
+          trendStrength === 'strong' ? 'Full position OK' : 'Reduce position size due to weaker trend',
+        ],
+      };
+    } else {
+      return {
+        symbol: 'CASH',
+        name: 'Stay in Cash',
+        direction: 'neutral',
+        leverage: 'none',
+        reason: `Sideways/choppy regime (${confidence}% confidence). Leveraged ETFs lose value in chop due to decay.`,
+        riskLevel: 'low',
+        tips: [
+          'Avoid leveraged ETFs in sideways markets',
+          'If must trade, use base stock (QBTS/MSTR) with tight stops',
+          'Wait for clearer trend signal',
+        ],
+      };
+    }
   }
 
   /**

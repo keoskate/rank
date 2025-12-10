@@ -52,6 +52,10 @@ const StrategyMonitor = require('./strategyMonitor');
 // Overnight Optimization module
 const OvernightOptimizer = require('./overnightOptimizer');
 
+// Leveraged ETF Strategy and CheddarFlow modules
+const LeveragedEtfStrategy = require('./leveragedEtfStrategy');
+const CheddarFlowScraper = require('./cheddarFlowScraper');
+
 // Initialize Sprint 1 modules
 const transactionCostModel = new TransactionCostModel();
 const leveragedEtfRules = new LeveragedEtfRules();
@@ -68,6 +72,10 @@ const strategyMonitor = new StrategyMonitor();
 
 // Initialize Overnight Optimizer
 const overnightOptimizer = new OvernightOptimizer();
+
+// Initialize Leveraged ETF Strategy and CheddarFlow Scraper
+const leveragedEtfStrategy = new LeveragedEtfStrategy();
+let cheddarFlowScraper = null; // Lazy init to avoid starting browser on server start
 
 const app = express();
 
@@ -4772,6 +4780,216 @@ app.get('/api/regime/config/:regime', (req, res) => {
       recommendation
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// LEVERAGED ETF STRATEGY API ENDPOINTS
+// ================================
+
+// Get all supported leveraged ETF families
+app.get('/api/leveraged-etf/families', (req, res) => {
+  try {
+    const families = leveragedEtfStrategy.getSupportedFamilies();
+    res.json({
+      families,
+      totalFamilies: families.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get family info for a symbol
+app.get('/api/leveraged-etf/family/:symbol', (req, res) => {
+  const { symbol } = req.params;
+
+  try {
+    const family = leveragedEtfStrategy.getFamily(symbol);
+    if (!family) {
+      return res.status(404).json({
+        error: `Symbol ${symbol} is not part of a supported leveraged ETF family`,
+        supportedFamilies: Object.keys(leveragedEtfStrategy.families),
+      });
+    }
+    res.json(family);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get full analysis and recommendation for a symbol
+app.get('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  const { date } = req.query;
+
+  try {
+    // Check if symbol is supported
+    const family = leveragedEtfStrategy.getFamily(symbol);
+    if (!family) {
+      return res.status(400).json({
+        error: `Symbol ${symbol} is not supported. Use one of: QBTS, SOXX, PLTR (or their leveraged variants)`,
+      });
+    }
+
+    // Get technical regime
+    const endDate = date ? new Date(date) : new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 90);
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    const candles = await polygonClient.getHistoricalAggregates(
+      family.baseSymbol,
+      formatDate(startDate),
+      formatDate(endDate),
+      'day'
+    ).catch(() => []);
+
+    let technicalRegime = { regime: 'unknown', confidence: 0 };
+    if (candles && candles.length >= 50) {
+      technicalRegime = regimeDetector.detectRegime(candles);
+    }
+
+    // Try to get flow sentiment (if CheddarFlow scraper is available)
+    let flowSentiment = { sentiment: 'neutral', confidence: 0, reasons: ['Flow data not available'] };
+    // Note: CheddarFlow scraping requires browser - skip for now in basic analysis
+    // Use manual flow input via POST endpoint instead
+
+    // Make decision
+    const decision = leveragedEtfStrategy.makeDecision(technicalRegime, flowSentiment, family);
+
+    // Get position sizing recommendation
+    const positionSizing = leveragedEtfStrategy.getPositionSizing(decision, 25000, 2);
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      family,
+      analysis: {
+        technical: technicalRegime,
+        flow: flowSentiment,
+      },
+      decision,
+      positionSizing,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(`Error analyzing ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Analyze with manual flow sentiment input
+app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  const { flowData, accountValue = 25000, riskPercent = 2 } = req.body;
+
+  try {
+    // Check if symbol is supported
+    const family = leveragedEtfStrategy.getFamily(symbol);
+    if (!family) {
+      return res.status(400).json({
+        error: `Symbol ${symbol} is not supported. Use one of: QBTS, SOXX, PLTR (or their leveraged variants)`,
+      });
+    }
+
+    // Get technical regime
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 90);
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    const candles = await polygonClient.getHistoricalAggregates(
+      family.baseSymbol,
+      formatDate(startDate),
+      formatDate(endDate),
+      'day'
+    ).catch(() => []);
+
+    let technicalRegime = { regime: 'unknown', confidence: 0 };
+    if (candles && candles.length >= 50) {
+      technicalRegime = regimeDetector.detectRegime(candles);
+    }
+
+    // Analyze provided flow data
+    const flowSentiment = leveragedEtfStrategy.analyzeFlowSentiment(flowData);
+
+    // Make decision
+    const decision = leveragedEtfStrategy.makeDecision(technicalRegime, flowSentiment, family);
+
+    // Get position sizing recommendation
+    const positionSizing = leveragedEtfStrategy.getPositionSizing(decision, accountValue, riskPercent);
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      family,
+      analysis: {
+        technical: technicalRegime,
+        flow: flowSentiment,
+      },
+      decision,
+      positionSizing,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(`Error analyzing ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// CHEDDARFLOW SCRAPING API ENDPOINTS
+// ================================
+
+// Get flow sentiment from CheddarFlow (scraping)
+app.get('/api/cheddarflow/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  const { date } = req.query;
+
+  try {
+    // Lazy initialize the scraper
+    if (!cheddarFlowScraper) {
+      cheddarFlowScraper = new CheddarFlowScraper({ headless: true });
+    }
+
+    const flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
+    const sentiment = cheddarFlowScraper.analyzeSentiment(flowData);
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      date: date || new Date().toISOString().split('T')[0],
+      flowData,
+      sentiment,
+    });
+  } catch (error) {
+    console.error(`Error fetching CheddarFlow for ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Take screenshot of CheddarFlow page
+app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
+  const { symbol } = req.params;
+  const { date } = req.query;
+
+  try {
+    // Lazy initialize the scraper
+    if (!cheddarFlowScraper) {
+      cheddarFlowScraper = new CheddarFlowScraper({ headless: true });
+    }
+
+    const screenshotPath = await cheddarFlowScraper.takeScreenshot(symbol, date);
+    if (screenshotPath) {
+      res.json({
+        success: true,
+        path: screenshotPath,
+        message: `Screenshot saved to ${screenshotPath}`,
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to take screenshot' });
+    }
+  } catch (error) {
+    console.error(`Error taking screenshot for ${symbol}:`, error);
     res.status(500).json({ error: error.message });
   }
 });

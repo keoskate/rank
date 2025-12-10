@@ -151,24 +151,30 @@ const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
   const currentRegime = regime ? REGIME_INFO[regime] : null;
 
   return (
-    <Card
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-          <span>Market Regime</span>
-          {currentRegime && (
-            <span style={{
-              fontSize: theme.typography.fontSize.sm,
-              padding: `2px ${theme.spacing.sm}`,
-              backgroundColor: `${currentRegime.color}20`,
-              color: currentRegime.color,
-              borderRadius: theme.borderRadius.sm,
-            }}>
-              {currentRegime.icon} {currentRegime.label}
-            </span>
-          )}
-        </div>
-      }
-    >
+    <Card>
+      {/* Card Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
+        paddingBottom: theme.spacing.sm,
+        borderBottom: `1px solid ${theme.colors.gray200}`,
+      }}>
+        <span style={{ fontWeight: 'bold', fontSize: theme.typography.fontSize.md }}>Market Regime</span>
+        {currentRegime && (
+          <span style={{
+            fontSize: theme.typography.fontSize.sm,
+            padding: `2px ${theme.spacing.sm}`,
+            backgroundColor: `${currentRegime.color}20`,
+            color: currentRegime.color,
+            borderRadius: theme.borderRadius.sm,
+          }}>
+            {currentRegime.icon} {currentRegime.label}
+          </span>
+        )}
+      </div>
+
       {loading && !regime ? (
         <p style={{ color: theme.colors.textMuted }}>Detecting market regime...</p>
       ) : !symbol ? (
@@ -204,8 +210,95 @@ const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
                 color: theme.colors.textSecondary,
                 margin: 0,
               }}>
-                {currentRegime?.description}
+                {lastDetection.description || currentRegime?.description}
               </p>
+            </div>
+          )}
+
+          {/* Leveraged ETF Recommendation */}
+          {lastDetection?.leveragedRecommendation && (
+            <div style={{
+              marginBottom: theme.spacing.md,
+              padding: theme.spacing.md,
+              backgroundColor: lastDetection.leveragedRecommendation.direction === 'long'
+                ? '#dcfce7'
+                : lastDetection.leveragedRecommendation.direction === 'short'
+                ? '#fee2e2'
+                : '#fef9c3',
+              border: `2px solid ${
+                lastDetection.leveragedRecommendation.direction === 'long'
+                  ? '#22c55e'
+                  : lastDetection.leveragedRecommendation.direction === 'short'
+                  ? '#ef4444'
+                  : '#eab308'
+              }`,
+              borderRadius: theme.borderRadius.md,
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: theme.spacing.sm,
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.textMuted,
+                    textTransform: 'uppercase',
+                    marginBottom: '4px',
+                  }}>
+                    Recommended Trade
+                  </div>
+                  <div style={{
+                    fontSize: theme.typography.fontSize.xl,
+                    fontWeight: 'bold',
+                    color: lastDetection.leveragedRecommendation.direction === 'long'
+                      ? '#166534'
+                      : lastDetection.leveragedRecommendation.direction === 'short'
+                      ? '#991b1b'
+                      : '#854d0e',
+                  }}>
+                    {lastDetection.leveragedRecommendation.direction === 'long' && '📈 '}
+                    {lastDetection.leveragedRecommendation.direction === 'short' && '📉 '}
+                    {lastDetection.leveragedRecommendation.direction === 'neutral' && '⏸️ '}
+                    {lastDetection.leveragedRecommendation.symbol}
+                  </div>
+                </div>
+                {lastDetection.leveragedRecommendation.leverage !== 'none' && (
+                  <div style={{
+                    padding: '4px 12px',
+                    backgroundColor: lastDetection.leveragedRecommendation.direction === 'long'
+                      ? '#22c55e'
+                      : '#ef4444',
+                    color: '#fff',
+                    borderRadius: theme.borderRadius.sm,
+                    fontWeight: 'bold',
+                    fontSize: theme.typography.fontSize.sm,
+                  }}>
+                    {lastDetection.leveragedRecommendation.leverage} {lastDetection.leveragedRecommendation.direction.toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <p style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: theme.colors.textSecondary,
+                margin: 0,
+                marginBottom: theme.spacing.sm,
+              }}>
+                {lastDetection.leveragedRecommendation.reason}
+              </p>
+              {lastDetection.leveragedRecommendation.tips && (
+                <ul style={{
+                  margin: 0,
+                  paddingLeft: theme.spacing.md,
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textMuted,
+                }}>
+                  {lastDetection.leveragedRecommendation.tips.map((tip, i) => (
+                    <li key={i} style={{ marginBottom: '2px' }}>{tip}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
@@ -313,28 +406,62 @@ const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
                       : `${theme.colors.error}20`,
                     borderRadius: theme.borderRadius.sm,
                   }}>
-                    50MA: {lastDetection.indicators.priceVs50MA > 0 ? '↑' : '↓'}
+                    50MA: {lastDetection.indicators.priceVs50MA > 0 ? '+' : ''}{parseFloat(lastDetection.indicators.priceVs50MA).toFixed(1)}%
                   </span>
                 )}
-                {typeof lastDetection.indicators.adx === 'number' && (
+                {lastDetection.indicators.fiveDayReturn && (
+                  <span style={{
+                    padding: `2px ${theme.spacing.xs}`,
+                    backgroundColor: parseFloat(lastDetection.indicators.fiveDayReturn) > 0
+                      ? `${theme.colors.success}20`
+                      : `${theme.colors.error}20`,
+                    borderRadius: theme.borderRadius.sm,
+                  }}>
+                    5d: {lastDetection.indicators.fiveDayReturn}
+                  </span>
+                )}
+                {lastDetection.indicators.tenDayReturn && (
+                  <span style={{
+                    padding: `2px ${theme.spacing.xs}`,
+                    backgroundColor: parseFloat(lastDetection.indicators.tenDayReturn) > 0
+                      ? `${theme.colors.success}20`
+                      : `${theme.colors.error}20`,
+                    borderRadius: theme.borderRadius.sm,
+                  }}>
+                    10d: {lastDetection.indicators.tenDayReturn}
+                  </span>
+                )}
+                {lastDetection.indicators.adx && (
+                  <span style={{
+                    padding: `2px ${theme.spacing.xs}`,
+                    backgroundColor: parseFloat(lastDetection.indicators.adx) >= 20
+                      ? `${theme.colors.primary}20`
+                      : theme.colors.surface,
+                    borderRadius: theme.borderRadius.sm,
+                  }}>
+                    ADX: {parseFloat(lastDetection.indicators.adx).toFixed(0)}
+                  </span>
+                )}
+                {lastDetection.indicators.volatility && (
                   <span style={{
                     padding: `2px ${theme.spacing.xs}`,
                     backgroundColor: theme.colors.surface,
                     borderRadius: theme.borderRadius.sm,
                   }}>
-                    ADX: {lastDetection.indicators.adx.toFixed(0)}
-                  </span>
-                )}
-                {typeof lastDetection.indicators.volatility === 'number' && (
-                  <span style={{
-                    padding: `2px ${theme.spacing.xs}`,
-                    backgroundColor: theme.colors.surface,
-                    borderRadius: theme.borderRadius.sm,
-                  }}>
-                    Vol: {(lastDetection.indicators.volatility * 100).toFixed(1)}%
+                    Vol: {lastDetection.indicators.volatility}
                   </span>
                 )}
               </div>
+              {/* Signal breakdown */}
+              {lastDetection.indicators.signals && (
+                <div style={{
+                  marginTop: theme.spacing.sm,
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textMuted,
+                }}>
+                  Signals: Bull {lastDetection.indicators.signals.bullish} / Bear {lastDetection.indicators.signals.bearish} / Sideways {lastDetection.indicators.signals.sideways}
+                </div>
+              )}
             </div>
           )}
         </>
