@@ -26,14 +26,225 @@ const DEFAULT_SIMULATION_DURATION = 6000; // 6 seconds in ms
 // Convert timestamp to EST hour (handles timezone correctly)
 const getEstHour = timestamp => {
   const date = new Date(timestamp);
-  // Get UTC hours and minutes
   const utcHours = date.getUTCHours();
   const utcMinutes = date.getUTCMinutes();
-  // EST is UTC-5 (ignoring daylight saving for simplicity - market hours are always EST)
   let estHours = utcHours - 5;
   if (estHours < 0) estHours += 24;
   return estHours + utcMinutes / 60;
 };
+
+// ============================================
+// SHARED TRADING LOGIC - Used by BOTH optimizer AND full simulation
+// This ensures 100% parity between predicted and actual results
+// ============================================
+
+// Helper for boolean config values
+const toBool = val => val === true || val === 'Yes' || val === 'yes';
+
+// Calculate indicators from candle data
+// MUST match full simulation's calculations EXACTLY
+const calculateIndicatorsShared = (index, allCandles) => {
+  // Helper to safely get candle values
+  const getVal = (c, field) => c?.[field] ?? c?.[field[0]] ?? 0;
+  const getClose = c => getVal(c, 'close') || getVal(c, 'c') || 0;
+  const getHigh = c => getVal(c, 'high') || getVal(c, 'h') || 0;
+  const getLow = c => getVal(c, 'low') || getVal(c, 'l') || 0;
+  const getVolume = c => getVal(c, 'volume') || getVal(c, 'v') || 0;
+
+  // RSI calculation - MATCHES full simulation exactly
+  const lookback = Math.min(14, index);
+  let gains = 0, losses = 0;
+  for (let i = index - lookback; i < index; i++) {
+    if (i > 0 && allCandles[i] && allCandles[i - 1]) {
+      const currClose = getClose(allCandles[i]);
+      const prevClose = getClose(allCandles[i - 1]);
+      if (prevClose > 0) {
+        const change = currClose - prevClose;
+        if (change > 0) gains += change;
+        else losses -= change;
+      }
+    }
+  }
+  const avgGain = lookback > 0 ? gains / lookback : 0;
+  const avgLoss = lookback > 0 ? losses / lookback : 0.001;
+  const rs = avgGain / Math.max(avgLoss, 0.001);
+  const rsi = 100 - 100 / (1 + rs);
+
+  // VWAP calculation - MATCHES full simulation exactly
+  let cumulativeTPV = 0, cumulativeVol = 0;
+  for (let i = 0; i <= index; i++) {
+    const c = allCandles[i];
+    const vol = getVolume(c);
+    if (vol > 0) {
+      const tp = (getHigh(c) + getLow(c) + getClose(c)) / 3;
+      cumulativeTPV += tp * vol;
+      cumulativeVol += vol;
+    }
+  }
+  const price = getClose(allCandles[index]);
+  const vwap = cumulativeVol > 0 ? cumulativeTPV / cumulativeVol : price;
+
+  // MA20 calculation - MATCHES full simulation exactly
+  let ma20Sum = 0;
+  const ma20Lookback = Math.min(20, index + 1);
+  for (let i = index - ma20Lookback + 1; i <= index; i++) {
+    if (i >= 0 && allCandles[i]) {
+      ma20Sum += getClose(allCandles[i]);
+    }
+  }
+  const ma20 = ma20Lookback > 0 ? ma20Sum / ma20Lookback : price;
+
+  // Volume ratio - MATCHES full simulation exactly (uses 10 candles)
+  const volLookback = Math.min(10, index);
+  let totalVol = 0;
+  for (let i = index - volLookback; i < index; i++) {
+    if (i >= 0 && allCandles[i]) {
+      totalVol += getVolume(allCandles[i]);
+    }
+  }
+  const avgVolume = volLookback > 0 ? totalVol / volLookback : 1;
+  const currentVol = getVolume(allCandles[index]);
+  const volumeRatio = avgVolume > 0 ? currentVol / avgVolume : 1;
+
+  // Price change from previous candle
+  const prevPrice = index > 0 ? getClose(allCandles[index - 1]) : price;
+  const priceChange = prevPrice > 0 ? (price - prevPrice) / prevPrice : 0;
+
+  return { rsi, vwap, ma20, volumeRatio, priceChange };
+};
+
+// SHARED BUY DECISION LOGIC
+const shouldBuy = (price, indicators, cfg, position) => {
+  if (position) return { shouldBuy: false, signals: 0, reasons: [] };
+
+  const strategy = cfg.entryStrategy || 'balanced';
+  const rsiOversold = cfg.rsiOversold || 30;
+  const vwapDeviation = (cfg.vwapDeviationPercent || 0.5) / 100;
+  const volumeMultiplier = cfg.volumeMultiplier || 1.5;
+  const minSignalsRequired = cfg.minSignalsRequired || 2;
+  const minConfidence = cfg.minConfidence || 70;
+  const requireVolumeSpike = toBool(cfg.requireVolumeSpike);
+  const requireTrendAlign = toBool(cfg.requireTrendAlignment) || toBool(cfg.requireTrendAlign);
+  const requireRsiSignal = toBool(cfg.requireRsiSignal);
+
+  let signals = 0;
+  const reasons = [];
+  let hasRsiSignal = false;
+  let hasTrendSignal = false;
+  let hasVolumeSpike = false;
+
+  const { rsi, vwap, ma20, volumeRatio, priceChange } = indicators;
+
+  // DIP SIGNALS (for: dip, balanced, conservative)
+  if (strategy === 'dip' || strategy === 'balanced' || strategy === 'conservative') {
+    if (rsi < rsiOversold) {
+      signals++;
+      hasRsiSignal = true;
+      reasons.push(`RSI oversold (${Math.round(rsi)})`);
+    }
+    if (price < vwap * (1 - vwapDeviation)) {
+      signals++;
+      hasTrendSignal = true;
+      reasons.push(`Below VWAP by ${(vwapDeviation * 100).toFixed(1)}%`);
+    }
+    if (priceChange < -0.005 && priceChange > -0.02 && price > ma20) {
+      signals++;
+      hasTrendSignal = true;
+      reasons.push('Pullback in uptrend');
+    }
+  }
+
+  // MOMENTUM SIGNALS (for: momentum, balanced, aggressive)
+  if (strategy === 'momentum' || strategy === 'balanced' || strategy === 'aggressive') {
+    if (rsi > 50 && rsi < 65) {
+      signals++;
+      hasRsiSignal = true;
+      reasons.push(`RSI momentum (${Math.round(rsi)})`);
+    }
+    if (price > vwap * (1 + vwapDeviation) && priceChange > 0) {
+      signals++;
+      hasTrendSignal = true;
+      reasons.push(`Breakout above VWAP (+${((price/vwap - 1) * 100).toFixed(1)}%)`);
+    }
+    if (price > ma20 * 1.005) {
+      signals++;
+      hasTrendSignal = true;
+      reasons.push('Above MA20 uptrend');
+    }
+  }
+
+  // VOLUME SPIKE (applies to all strategies)
+  if (volumeRatio > volumeMultiplier) {
+    signals++;
+    hasVolumeSpike = true;
+    reasons.push(`Volume spike (${volumeRatio.toFixed(1)}x)`);
+  }
+
+  // Check requirements
+  let meetsRequirements = true;
+  if (requireRsiSignal && !hasRsiSignal) meetsRequirements = false;
+  if (requireVolumeSpike && !hasVolumeSpike) meetsRequirements = false;
+  if (requireTrendAlign && !hasTrendSignal) meetsRequirements = false;
+
+  // Calculate confidence
+  const confidence = Math.min(95, 50 + signals * 15);
+
+  const buy = signals >= minSignalsRequired && meetsRequirements && confidence >= minConfidence;
+
+  return { shouldBuy: buy, signals, reasons, confidence, meetsRequirements };
+};
+
+// SHARED SELL DECISION LOGIC
+const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex, timestamp) => {
+  const pnlPercent = ((price - entryPrice) / entryPrice) * 100;
+  const minConfidence = cfg.minConfidence || 70;
+  const rsiOverbought = cfg.rsiOverbought || 70;
+  const profitTargetPercent = cfg.takeProfitPercent || 2;
+  const stopLossPercent = cfg.stopLossPercent || 1;
+
+  const estHour = getEstHour(timestamp);
+  const { rsi, vwap, priceChange } = indicators;
+
+  // Minimum hold time (5 candles, except stop loss or EOD)
+  const candlesSinceEntry = candleIndex - (entryIndex || 0);
+  const minHoldCandles = 5;
+  const holdTimeExempt = pnlPercent <= -stopLossPercent || estHour >= 15.75;
+
+  // Score-based sell system
+  let sellScore = 0;
+  const reasons = [];
+
+  if (pnlPercent >= profitTargetPercent) {
+    sellScore += 30;
+    reasons.push(`Profit target hit (+${pnlPercent.toFixed(2)}%)`);
+  }
+  if (pnlPercent <= -stopLossPercent) {
+    sellScore += 40;
+    reasons.push(`Stop loss triggered (${pnlPercent.toFixed(2)}%)`);
+  }
+  if (rsi > rsiOverbought) {
+    sellScore += 20;
+    reasons.push(`RSI overbought (${Math.round(rsi)} > ${rsiOverbought})`);
+  }
+  if (price > vwap * 1.01 && priceChange < 0) {
+    sellScore += 15;
+    reasons.push('Momentum fading above VWAP');
+  }
+  if (estHour >= 15.75) {
+    sellScore += 50;
+    reasons.push('End of day liquidation');
+  }
+
+  const confidence = Math.min(95, 50 + sellScore);
+  const canSell = (candlesSinceEntry >= minHoldCandles || holdTimeExempt) &&
+                  (confidence >= minConfidence || estHour >= 15.75);
+
+  return { shouldSell: canSell, sellScore, reasons, confidence, pnlPercent };
+};
+
+// ============================================
+// END SHARED TRADING LOGIC
+// ============================================
 
 const TradingSimulator = ({ onComplete }) => {
   // Use config DIRECTLY from context - this ensures ConfigPanel edits are immediately used
@@ -120,6 +331,10 @@ const TradingSimulator = ({ onComplete }) => {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [optimizerPrediction, setOptimizerPrediction] = useState(null);
   const debugLogRef = useRef([]);
+
+  // Config diff state - shows what changed when applying optimizer result
+  const [configDiff, setConfigDiff] = useState(null);
+  const [showConfigDiff, setShowConfigDiff] = useState(false);
 
   // Get yesterday's date as default (only if no saved date)
   useEffect(() => {
@@ -387,98 +602,17 @@ const TradingSimulator = ({ onComplete }) => {
       },
     };
 
-    // BUY signals - using config values and entry strategy
+    // Use SHARED indicator calculation for consistency with optimizer
+    const sharedIndicators = calculateIndicatorsShared(index, allCandles);
+
+    // BUY signals - USE SHARED FUNCTION for parity with optimizer
     if (!currentPosition) {
-      let signalCount = 0;
-      const buyReasons = [];
-      let isDipEntry = false;
-      let isMomentumEntry = false;
+      const buyResult = shouldBuy(price, sharedIndicators, cfg, null);
 
-      // === DIP BUYING SIGNALS (for pullbacks/oversold) ===
-      // Used by: dip, balanced, conservative
-      if (entryStrategy === 'dip' || entryStrategy === 'balanced' || entryStrategy === 'conservative') {
-        // RSI oversold signal
-        if (rsi < rsiOversold) {
-          signalCount++;
-          isDipEntry = true;
-          buyReasons.push(`RSI oversold (${Math.round(rsi)} < ${rsiOversold})`);
-        }
-
-        // Below VWAP signal
-        if (price < vwap * (1 - vwapDeviation)) {
-          signalCount++;
-          isDipEntry = true;
-          buyReasons.push(`Below VWAP by ${(vwapDeviation * 100).toFixed(1)}%`);
-        }
-
-        // Pullback signal in uptrend
-        if (priceChange < -0.005 && priceChange > -0.02 && price > ma20) {
-          signalCount++;
-          isDipEntry = true;
-          buyReasons.push('Pullback in uptrend');
-        }
-      }
-
-      // === MOMENTUM BUYING SIGNALS (for breakouts/strong trends) ===
-      // Used by: momentum, balanced, aggressive
-      if (entryStrategy === 'momentum' || entryStrategy === 'balanced' || entryStrategy === 'aggressive') {
-        // Strong RSI (momentum, not oversold)
-        if (rsi > 50 && rsi < 65) {
-          signalCount++;
-          isMomentumEntry = true;
-          buyReasons.push(`RSI momentum (${Math.round(rsi)})`);
-        }
-
-        // Price above VWAP with strength (breakout)
-        if (price > vwap * (1 + vwapDeviation) && priceChange > 0) {
-          signalCount++;
-          isMomentumEntry = true;
-          buyReasons.push(`Breakout above VWAP (+${((price/vwap - 1) * 100).toFixed(1)}%)`);
-        }
-
-        // Price above MA20 (uptrend confirmation)
-        if (price > ma20 * 1.005) {
-          signalCount++;
-          isMomentumEntry = true;
-          buyReasons.push('Above MA20 uptrend');
-        }
-      }
-
-      // Volume spike signal (applies to both strategies)
-      const hasVolumeSpike = volumeRatio > volumeMultiplier;
-      if (hasVolumeSpike) {
-        signalCount++;
-        buyReasons.push(`Volume spike (${volumeRatio.toFixed(1)}x)`);
-      }
-
-      // Check required conditions based on config
-      let meetsRequirements = true;
-      const hasRsiSignal = rsi < rsiOversold || (isMomentumEntry && rsi > 50);
-      const hasTrendSignal = price < vwap * (1 - vwapDeviation) || price > vwap * (1 + vwapDeviation) || price > ma20;
-
-      if (requireRsiSignal && !hasRsiSignal) {
-        meetsRequirements = false;
-      }
-      if (requireVolumeSpike && !hasVolumeSpike) {
-        meetsRequirements = false;
-      }
-      if (requireTrendAlign && !hasTrendSignal) {
-        meetsRequirements = false;
-      }
-
-      // Calculate confidence based on signal count
-      const baseConfidence = 50;
-      const perSignalBoost = 15;
-      decision.confidence = Math.min(95, baseConfidence + signalCount * perSignalBoost);
-
-      // Only trigger buy if we have enough signals AND meet requirements
-      if (
-        signalCount >= minSignalsRequired &&
-        meetsRequirements &&
-        decision.confidence >= minConfidence
-      ) {
+      if (buyResult.shouldBuy) {
         decision.action = 'BUY';
-        decision.reasons = buyReasons;
+        decision.reasons = buyResult.reasons;
+        decision.confidence = buyResult.confidence;
 
         // Debug log for BUY
         debugLogRef.current.push({
@@ -486,83 +620,48 @@ const TradingSimulator = ({ onComplete }) => {
           index,
           price,
           timestamp,
-          signalCount,
+          signalCount: buyResult.signals,
           minSignalsRequired,
-          confidence: decision.confidence,
+          confidence: buyResult.confidence,
           minConfidence,
-          meetsRequirements,
-          hasRsiSignal,
-          hasVolumeSpike,
-          hasTrendSignal,
-          requireRsiSignal,
-          requireVolumeSpike,
-          requireTrendAlign,
-          reasons: buyReasons,
-          indicators: { rsi, vwap, ma20, volumeRatio, priceChange },
+          meetsRequirements: buyResult.meetsRequirements,
+          reasons: buyResult.reasons,
+          indicators: sharedIndicators,
           entryStrategy,
         });
       }
     }
 
-    // SELL signals - using config values for profit target and stop loss
+    // SELL signals - USE SHARED FUNCTION for parity with optimizer
     if (currentPosition) {
-      let sellScore = 0;
-      const sellReasons = [];
-      const entryPrice = currentPosition.entryPrice;
-      const pnlPercent = ((price - entryPrice) / entryPrice) * 100;
+      const sellResult = shouldSell(
+        price,
+        currentPosition.entryPrice,
+        sharedIndicators,
+        cfg,
+        index,
+        currentPosition.entryIndex,
+        timestamp
+      );
 
-      // Profit target from config (default 2%)
-      if (pnlPercent >= profitTargetPercent) {
-        sellScore += 30;
-        sellReasons.push(`Profit target hit (+${pnlPercent.toFixed(2)}%)`);
-      }
-
-      // Stop loss from config (default 1%)
-      if (pnlPercent <= -stopLossPercent) {
-        sellScore += 40;
-        sellReasons.push(`Stop loss triggered (${pnlPercent.toFixed(2)}%)`);
-      }
-
-      if (rsi > rsiOverbought) {
-        sellScore += 20;
-        sellReasons.push(`RSI overbought (${Math.round(rsi)} > ${rsiOverbought})`);
-      }
-
-      if (price > vwap * 1.01 && priceChange < 0) {
-        sellScore += 15;
-        sellReasons.push('Momentum fading above VWAP');
-      }
-
-      // End of day check (must use EST for market hours)
-      const estHour = getEstHour(timestamp);
-      if (estHour >= 15.75) {
-        sellScore += 50;
-        sellReasons.push('End of day liquidation');
-      }
-
-      decision.confidence = Math.min(95, 50 + sellScore);
-
-      if (decision.confidence >= minConfidence || estHour >= 15.75) {
+      if (sellResult.shouldSell) {
         decision.action = 'SELL';
-        decision.reasons = sellReasons;
+        decision.reasons = sellResult.reasons;
+        decision.confidence = sellResult.confidence;
 
         // Debug log for SELL
         debugLogRef.current.push({
           type: 'SELL',
           index,
           price,
-          entryPrice,
-          pnlPercent,
+          entryPrice: currentPosition.entryPrice,
+          pnlPercent: sellResult.pnlPercent,
           timestamp,
-          sellScore,
-          confidence: decision.confidence,
+          sellScore: sellResult.sellScore,
+          confidence: sellResult.confidence,
           minConfidence,
-          profitTargetPercent,
-          stopLossPercent,
-          rsiOverbought,
-          estHour,
-          reasons: sellReasons,
-          indicators: { rsi, vwap, priceChange },
+          reasons: sellResult.reasons,
+          indicators: sharedIndicators,
         });
       }
     }
@@ -572,7 +671,7 @@ const TradingSimulator = ({ onComplete }) => {
 
   // Execute trade
   const executeTrade = useCallback(
-    (decision, candle) => {
+    (decision, candle, candleIndex) => {
       const c = getCandle(candle);
       if (!c) return;
 
@@ -602,6 +701,7 @@ const TradingSimulator = ({ onComplete }) => {
                 quantity: positionSize,
                 entryPrice: price,
                 entryTime: timestamp,
+                entryIndex: candleIndex, // Track candle index for minimum hold time
                 reasons: reasons,
               },
             ];
@@ -620,10 +720,16 @@ const TradingSimulator = ({ onComplete }) => {
               },
             ];
 
+            // Format market time in EST for event log
+            const marketTime = new Date(timestamp).toLocaleTimeString('en-US', {
+              timeZone: 'America/New_York',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
             addEvent(
               'trade',
               'BUY Order Filled',
-              `Bought ${positionSize} ${symbol} @ $${price.toFixed(2)}`,
+              `Bought ${positionSize} ${symbol} @ $${price.toFixed(2)} [${marketTime} EST]`,
               reasonsText,
               decision.confidence
             );
@@ -654,10 +760,16 @@ const TradingSimulator = ({ onComplete }) => {
           ];
 
           setRealizedPnL(prev => prev + pnl);
+          // Format market time in EST for event log
+          const sellMarketTime = new Date(timestamp).toLocaleTimeString('en-US', {
+            timeZone: 'America/New_York',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
           addEvent(
             pnl >= 0 ? 'success' : 'error',
             'SELL Order Filled',
-            `Sold ${position.quantity} ${symbol} @ $${price.toFixed(2)} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)})`,
+            `Sold ${position.quantity} ${symbol} @ $${price.toFixed(2)} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}) [${sellMarketTime} EST]`,
             reasonsText,
             decision.confidence
           );
@@ -734,7 +846,7 @@ const TradingSimulator = ({ onComplete }) => {
       setAiDecisions(prevDecisions => [...prevDecisions, decision]);
 
       if (decision.action !== 'HOLD') {
-        executeTrade(decision, candle);
+        executeTrade(decision, candle, index);
       }
 
       return prev;
@@ -1330,189 +1442,61 @@ const TradingSimulator = ({ onComplete }) => {
   // Runs multiple simulations to find optimal config
   // ============================================
 
-  // Config variations to test - include aggressive options for big move days
+  // Config variations to test - comprehensive coverage
   const CONFIG_VARIATIONS = {
-    entryStrategy: ['balanced', 'aggressive', 'momentum'],
-    minSignalsRequired: [1, 2],
-    takeProfitPercent: [2, 3, 5, 8],
-    stopLossPercent: [1, 2, 3],
-    minConfidence: [50, 60, 70],
-    maxPositionSizePercent: [25, 50, 80],
-    // Test with NO requirements for maximum trading
+    entryStrategy: ['dip', 'conservative', 'balanced', 'aggressive', 'momentum'],
+    minSignalsRequired: [1, 2, 3],
+    takeProfitPercent: [1, 1.5, 2, 3, 5, 8, 10],
+    stopLossPercent: [0.5, 1, 1.5, 2, 3],
+    minConfidence: [40, 50, 60, 70, 80],
+    maxPositionSizePercent: [10, 25, 50, 80, 100],
+    // Test different requirement combinations
     requireFlags: [
       { requireVolumeSpike: false, requireTrendAlignment: false, requireRsiSignal: false },
+      { requireVolumeSpike: true, requireTrendAlignment: false, requireRsiSignal: false },
+      { requireVolumeSpike: true, requireTrendAlignment: true, requireRsiSignal: false },
     ],
   };
+  // Total combinations: 5 × 3 × 7 × 5 × 5 × 5 × 3 = 39,375
 
   // Run a fast simulation with a given config (no UI updates)
+  // USES SHARED FUNCTIONS to guarantee parity with full simulation
   const runFastSimulation = (candleData, testConfig) => {
     const initialCash = testConfig.allocatedCapital || 25000;
     let cash = initialCash;
     let position = null;
     let trades = [];
-    let entryPrice = 0;
 
-    // Calculate indicators for each candle
-    const calculateIndicators = (index, allCandles) => {
-      const lookback = Math.min(index + 1, 14);
-      const recentCandles = allCandles.slice(Math.max(0, index - lookback + 1), index + 1);
-
-      // RSI calculation
-      let gains = 0, losses = 0;
-      for (let i = 1; i < recentCandles.length; i++) {
-        const change = (recentCandles[i].close || recentCandles[i].c) - (recentCandles[i-1].close || recentCandles[i-1].c);
-        if (change > 0) gains += change;
-        else losses -= change;
-      }
-      const avgGain = gains / lookback;
-      const avgLoss = losses / lookback;
-      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-      const rsi = 100 - (100 / (1 + rs));
-
-      // VWAP calculation
-      let vwapSum = 0, volSum = 0;
-      for (let i = 0; i <= index; i++) {
-        const c = allCandles[i];
-        const price = (c.high || c.h) + (c.low || c.l) + (c.close || c.c);
-        const vol = c.volume || c.v || 1;
-        vwapSum += (price / 3) * vol;
-        volSum += vol;
-      }
-      const vwap = volSum > 0 ? vwapSum / volSum : 0;
-
-      // MA20
-      const ma20Candles = allCandles.slice(Math.max(0, index - 19), index + 1);
-      const ma20 = ma20Candles.reduce((s, c) => s + (c.close || c.c), 0) / ma20Candles.length;
-
-      // Volume ratio
-      const avgVol = recentCandles.reduce((s, c) => s + (c.volume || c.v || 0), 0) / recentCandles.length;
-      const currentVol = allCandles[index].volume || allCandles[index].v || 0;
-      const volumeRatio = avgVol > 0 ? currentVol / avgVol : 1;
-
-      return { rsi, vwap, ma20, volumeRatio };
-    };
-
-    // Process each candle
+    // Process each candle (start at 20 for indicator warm-up)
     for (let i = 20; i < candleData.length; i++) {
       const candle = candleData[i];
       const price = candle.close || candle.c;
-      const indicators = calculateIndicators(i, candleData);
+      const timestamp = candle.timestamp || candle.t;
 
-      // BUY logic - matches makeAiDecision logic exactly
+      // Use SHARED indicator calculation (same as full simulation)
+      const indicators = calculateIndicatorsShared(i, candleData);
+
+      // BUY logic - use SHARED function
       if (!position) {
-        let signals = 0;
-        const strategy = testConfig.entryStrategy || 'balanced';
-        const rsiOversold = testConfig.rsiOversold || 30;
-        const volumeMultiplier = testConfig.volumeMultiplier || 1.5;
-
-        // Helper for boolean config values
-        const toBool = val => val === true || val === 'Yes' || val === 'yes';
-        const requireVolumeSpike = toBool(testConfig.requireVolumeSpike);
-        const requireTrendAlign = toBool(testConfig.requireTrendAlignment) || toBool(testConfig.requireTrendAlign);
-        const requireRsiSignal = toBool(testConfig.requireRsiSignal);
-
-        let hasRsiSignal = false;
-        let hasTrendSignal = false;
-        let hasVolumeSpike = false;
-
-        // Dip signals
-        if (strategy === 'dip' || strategy === 'balanced' || strategy === 'conservative') {
-          if (indicators.rsi < rsiOversold) {
-            signals++;
-            hasRsiSignal = true;
-          }
-          if (price < indicators.vwap * 0.995) {
-            signals++;
-            hasTrendSignal = true;
-          }
-        }
-
-        // Momentum signals
-        if (strategy === 'momentum' || strategy === 'balanced' || strategy === 'aggressive') {
-          if (indicators.rsi > 50 && indicators.rsi < 70) {
-            signals++;
-            hasRsiSignal = true;
-          }
-          if (price > indicators.vwap * 1.005) {
-            signals++;
-            hasTrendSignal = true;
-          }
-          if (price > indicators.ma20 * 1.005) {
-            signals++;
-            hasTrendSignal = true;
-          }
-        }
-
-        // Volume spike
-        if (indicators.volumeRatio > volumeMultiplier) {
-          signals++;
-          hasVolumeSpike = true;
-        }
-
-        // Check required conditions (same as makeAiDecision)
-        let meetsRequirements = true;
-        if (requireRsiSignal && !hasRsiSignal) meetsRequirements = false;
-        if (requireVolumeSpike && !hasVolumeSpike) meetsRequirements = false;
-        if (requireTrendAlign && !hasTrendSignal) meetsRequirements = false;
-
-        // Calculate BUY confidence same as full simulation
-        const baseConfidence = 50;
-        const perSignalBoost = 15;
-        const buyConfidence = Math.min(95, baseConfidence + signals * perSignalBoost);
-        const minConfidence = testConfig.minConfidence || 70;
-
-        // Check if we should buy (same conditions as full simulation)
-        if (
-          signals >= (testConfig.minSignalsRequired || 2) &&
-          meetsRequirements &&
-          buyConfidence >= minConfidence
-        ) {
-          // Use SAME position sizing as full simulation
+        const buyResult = shouldBuy(price, indicators, testConfig, null);
+        if (buyResult.shouldBuy) {
+          // Position sizing (same as full simulation)
           const maxPositionPercent = (testConfig.maxPositionSizePercent || 50) / 100;
           const maxPositionDollars = testConfig.maxPositionSize || cash;
           const positionValue = Math.min(cash * maxPositionPercent, maxPositionDollars);
           const positionSize = Math.floor(positionValue / price);
           if (positionSize > 0) {
-            position = { quantity: positionSize, entryPrice: price };
-            entryPrice = price;
+            position = { quantity: positionSize, entryPrice: price, entryIndex: i };
             cash -= positionSize * price;
           }
         }
       }
-      // SELL logic - matches makeAiDecision's score-based system exactly
+      // SELL logic - use SHARED function
       else if (position) {
-        const pnlPercent = ((price - entryPrice) / entryPrice) * 100;
-        const minConfidence = testConfig.minConfidence || 70;
-        const rsiOverbought = testConfig.rsiOverbought || 70;
-        const profitTargetPercent = testConfig.takeProfitPercent || 2;
-        const stopLossPercent = testConfig.stopLossPercent || 1;
-
-        // Get EST hour for end-of-day check (same as full simulation)
-        const timestamp = candle.timestamp || candle.t;
-        const estHour = timestamp ? (new Date(timestamp).getUTCHours() - 5 + 24) % 24 + (new Date(timestamp).getUTCMinutes() / 60) : 12;
-
-        // Score-based sell system (matches full simulation)
-        let sellScore = 0;
-
-        // Profit target
-        if (pnlPercent >= profitTargetPercent) sellScore += 30;
-        // Stop loss
-        if (pnlPercent <= -stopLossPercent) sellScore += 40;
-        // RSI overbought
-        if (indicators.rsi > rsiOverbought) sellScore += 20;
-        // Momentum fading (price above VWAP but dropping)
-        const priceChange = i > 0 ? (price - (candleData[i-1].close || candleData[i-1].c)) / (candleData[i-1].close || candleData[i-1].c) : 0;
-        if (price > indicators.vwap * 1.01 && priceChange < 0) sellScore += 15;
-        // End of day liquidation (after 3:45 PM EST)
-        if (estHour >= 15.75) sellScore += 50;
-
-        // Calculate confidence same as full simulation
-        const sellConfidence = Math.min(95, 50 + sellScore);
-
-        // Sell if confidence meets threshold OR end of day (matches full simulation)
-        if (sellConfidence >= minConfidence || estHour >= 15.75) {
-          const pnl = position.quantity * (price - entryPrice);
-          trades.push({ pnl, entryPrice, exitPrice: price });
+        const sellResult = shouldSell(price, position.entryPrice, indicators, testConfig, i, position.entryIndex, timestamp);
+        if (sellResult.shouldSell) {
+          const pnl = position.quantity * (price - position.entryPrice);
+          trades.push({ pnl, entryPrice: position.entryPrice, exitPrice: price });
           cash += position.quantity * price;
           position = null;
         }
@@ -1522,8 +1506,8 @@ const TradingSimulator = ({ onComplete }) => {
     // Close any remaining position at end
     if (position && candleData.length > 0) {
       const lastPrice = candleData[candleData.length - 1].close || candleData[candleData.length - 1].c;
-      const pnl = position.quantity * (lastPrice - entryPrice);
-      trades.push({ pnl, entryPrice, exitPrice: lastPrice });
+      const pnl = position.quantity * (lastPrice - position.entryPrice);
+      trades.push({ pnl, entryPrice: position.entryPrice, exitPrice: lastPrice });
       cash += position.quantity * lastPrice;
     }
 
@@ -1623,7 +1607,59 @@ const TradingSimulator = ({ onComplete }) => {
 
   // Apply an optimizer result
   const applyOptimizerResult = (result) => {
+    // Calculate diff between current config and new config
+    const oldConfig = { ...config };
+    const newConfig = result.config;
+
+    // Fields to compare
+    const fieldsToCompare = [
+      { key: 'entryStrategy', label: 'Strategy' },
+      { key: 'minSignalsRequired', label: 'Min Signals' },
+      { key: 'takeProfitPercent', label: 'Take Profit %' },
+      { key: 'stopLossPercent', label: 'Stop Loss %' },
+      { key: 'minConfidence', label: 'Min Confidence %' },
+      { key: 'maxPositionSizePercent', label: 'Position Size %' },
+      { key: 'rsiOversold', label: 'RSI Oversold' },
+      { key: 'rsiOverbought', label: 'RSI Overbought' },
+      { key: 'requireVolumeSpike', label: 'Require Volume Spike' },
+      { key: 'requireTrendAlignment', label: 'Require Trend Align' },
+      { key: 'requireRsiSignal', label: 'Require RSI Signal' },
+    ];
+
+    const changes = [];
+    fieldsToCompare.forEach(({ key, label }) => {
+      const oldVal = oldConfig[key];
+      const newVal = newConfig[key];
+      if (oldVal !== newVal && newVal !== undefined) {
+        changes.push({
+          field: label,
+          key,
+          oldValue: oldVal,
+          newValue: newVal,
+          direction: typeof newVal === 'number' && typeof oldVal === 'number'
+            ? (newVal > oldVal ? 'up' : 'down')
+            : 'changed',
+        });
+      }
+    });
+
+    // Store the diff
+    setConfigDiff({
+      oldConfig,
+      newConfig,
+      changes,
+      prediction: {
+        returnPercent: result.returnPercent,
+        totalPnL: result.totalPnL,
+        numTrades: result.numTrades,
+        winRate: result.winRate,
+      },
+    });
+    setShowConfigDiff(true);
+
+    // Apply the new config
     updateGlobalConfig(result.config);
+
     // Store the prediction for comparison after simulation
     setOptimizerPrediction({
       returnPercent: result.returnPercent,
@@ -2846,6 +2882,99 @@ const TradingSimulator = ({ onComplete }) => {
           <p style={{ margin: 0, marginTop: theme.spacing.md, fontSize: theme.typography.fontSize.xs, color: '#5b21b6' }}>
             💡 Click "Apply" on the best config, then run a full simulation to verify the results.
           </p>
+        </div>
+      )}
+
+      {/* CONFIG DIFF PANEL - Shows what changed when applying optimizer result */}
+      {showConfigDiff && configDiff && configDiff.changes.length > 0 && (
+        <div
+          style={{
+            marginBottom: theme.spacing.lg,
+            padding: theme.spacing.md,
+            backgroundColor: '#fefce8',
+            border: '1px solid #fbbf24',
+            borderRadius: theme.borderRadius.lg,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+            <h4 style={{ margin: 0, color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📊 Config Changes Applied
+            </h4>
+            <button
+              onClick={() => setShowConfigDiff(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '18px',
+                color: '#92400e',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.sm }}>
+            {configDiff.changes.map((change, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: theme.spacing.sm,
+                  backgroundColor: 'white',
+                  borderRadius: theme.borderRadius.md,
+                  border: `1px solid ${
+                    change.direction === 'up' ? '#22c55e' :
+                    change.direction === 'down' ? '#ef4444' : '#6b7280'
+                  }`,
+                }}
+              >
+                <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', fontWeight: 500 }}>
+                  {change.field}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#fef2f2',
+                    color: '#991b1b',
+                    fontSize: '12px',
+                    textDecoration: 'line-through',
+                  }}>
+                    {typeof change.oldValue === 'boolean' ? (change.oldValue ? 'Yes' : 'No') : change.oldValue}
+                  </span>
+                  <span style={{ color: '#6b7280', fontSize: '14px' }}>→</span>
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: change.direction === 'up' ? '#dcfce7' :
+                      change.direction === 'down' ? '#fef2f2' : '#f3f4f6',
+                    color: change.direction === 'up' ? '#166534' :
+                      change.direction === 'down' ? '#991b1b' : '#374151',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}>
+                    {typeof change.newValue === 'boolean' ? (change.newValue ? 'Yes' : 'No') : change.newValue}
+                    {change.direction === 'up' && ' ▲'}
+                    {change.direction === 'down' && ' ▼'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            marginTop: theme.spacing.md,
+            padding: theme.spacing.sm,
+            backgroundColor: '#fef9c3',
+            borderRadius: theme.borderRadius.md,
+            fontSize: '12px',
+            color: '#854d0e',
+          }}>
+            <strong>Expected Results:</strong> {configDiff.prediction.returnPercent.toFixed(2)}% return,
+            ${configDiff.prediction.totalPnL.toFixed(0)} P&L,
+            {configDiff.prediction.winRate.toFixed(0)}% win rate,
+            {configDiff.prediction.numTrades} trades
+          </div>
         </div>
       )}
 

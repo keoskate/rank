@@ -55,7 +55,7 @@
         "AMZN",
         "MSTR"
       ],
-      "autoTrade": false,
+      "autoTrade": true,
       "simulationMode": true,
       "allocatedCapital": 25000,
       "maxLeverage": 1,
@@ -119,91 +119,13 @@
     "decisions": [],
     "alerts": [],
     "circuitBreakerTriggered": false,
-    "intervalId": {
-      "_idleTimeout": -1,
-      "_idlePrev": null,
-      "_idleNext": null,
-      "_idleStart": 92181,
-      "_onTimeout": null,
-      "_repeat": 30000,
-      "_destroyed": true
-    },
     "endTime": "2025-12-09T07:25:25.708Z"
-  },
-  "d64512c6-fae1-419b-92e8-fe5ad6acbff5": {
-    "sessionId": "d64512c6-fae1-419b-92e8-fe5ad6acbff5",
-    "userId": "default_user",
-    "name": "Strategy 2",
-    "status": "stopped",
-    "startTime": "2025-12-09T07:26:24.061Z",
-    "config": {
-      "name": "Strategy 2",
-      "timeframes": [
-        "scalping",
-        "dayTrading",
-        "swing"
-      ],
-      "maxPositions": 5,
-      "maxPositionSizePercent": 10,
-      "riskPerTradePercent": 2,
-      "dailyLossLimitPercent": 5,
-      "consecutiveLossLimit": 3,
-      "profitTargetMultiplier": 2,
-      "stopLossMultiplier": 1.5,
-      "minConfidence": 70,
-      "watchlist": [],
-      "autoTrade": false,
-      "simulationMode": true
-    },
-    "portfolio": {
-      "cash": 99536.52,
-      "positions": [
-        [
-          "QBTX",
-          {
-            "symbol": "QBTX",
-            "quantity": 12,
-            "averageCost": 46.4,
-            "currentPrice": 47.86,
-            "marketValue": 574.32,
-            "unrealizedPnL": 17.52,
-            "unrealizedPnLPercent": 3.1465517241379297,
-            "side": "long",
-            "entryTime": "2025-12-09T07:26:24.584Z"
-          }
-        ]
-      ],
-      "initialValue": 100110.84
-    },
-    "stats": {
-      "totalTrades": 0,
-      "wins": 0,
-      "losses": 0,
-      "totalPnL": 0,
-      "consecutiveLosses": 0,
-      "peakValue": 100110.84,
-      "maxDrawdown": 0,
-      "winRate": 0
-    },
-    "decisions": [],
-    "alerts": [],
-    "circuitBreakerTriggered": false,
-    "intervalId": {
-      "_idleTimeout": -1,
-      "_idlePrev": null,
-      "_idleNext": null,
-      "_idleStart": 571048,
-      "_onTimeout": null,
-      "_repeat": 30000,
-      "_destroyed": true
-    },
-    "endTime": "2025-12-09T08:25:35.727Z"
   },
   "cba07a6c-24e4-4f7e-9e6e-e3c35e03879e": {
     "sessionId": "cba07a6c-24e4-4f7e-9e6e-e3c35e03879e",
     "userId": "default_user",
     "name": "Strategy 3",
-    "status": "running",
+    "status": "stopped",
     "startTime": "2025-12-09T08:25:39.520Z",
     "config": {
       "name": "Strategy 3",
@@ -221,28 +143,56 @@
       "stopLossMultiplier": 1.5,
       "minConfidence": 70,
       "watchlist": [],
-      "autoTrade": false,
-      "simulationMode": true
+      "autoTrade": true,
+      "simulationMode": true,
+      "allocatedCapital": 25000,
+      "maxLeverage": 1,
+      "reserveCashPercent": 5,
+      "minPositionSize": 100,
+      "maxPositionSize": 25000,
+      "weeklyLossLimitPercent": 10,
+      "maxConsecutiveLosses": 3,
+      "trailingStopPercent": 0,
+      "rsiOversold": 30,
+      "rsiOverbought": 70,
+      "vwapDeviationPercent": 0.5,
+      "volumeMultiplier": 1.5,
+      "adxMinStrength": 20,
+      "macdSensitivity": "normal",
+      "patternRecognition": true,
+      "entryStrategy": "aggressive",
+      "requireVolumeSpike": true,
+      "requireTrendAlignment": true,
+      "requireRsiSignal": true,
+      "minSignalsRequired": 3,
+      "takeProfitPercent": 5,
+      "stopLossPercent": 1,
+      "useAdaptiveTargets": true,
+      "exitOnRsiExtreme": true,
+      "exitBeforeClose": true,
+      "exitBeforeCloseMinutes": 15,
+      "preferredTimeframe": "5min",
+      "paperTradeOnly": true
     },
     "portfolio": {
-      "cash": 99536.52,
+      "cash": 90329.33,
       "positions": [
         [
-          "QBTX",
+          "QBTZ",
           {
-            "symbol": "QBTX",
-            "quantity": 12,
-            "averageCost": 46.4,
-            "currentPrice": 47.41,
-            "marketValue": 568.92,
-            "unrealizedPnL": 12.12,
-            "unrealizedPnLPercent": 2.1767241379310303,
+            "symbol": "QBTZ",
+            "quantity": 885,
+            "averageCost": 11.06,
+            "currentPrice": 11.16,
+            "marketValue": 9876.6,
+            "unrealizedPnL": 88.5,
+            "unrealizedPnLPercent": 0.90415913200723,
             "side": "long",
-            "entryTime": "2025-12-09T08:25:39.845Z"
+            "entryTime": "2025-12-09T20:00:23.742Z"
           }
         ]
       ],
-      "initialValue": 100105.44
+      "initialValue": 100205.93
     },
     "stats": {
       "totalTrades": 0,
@@ -250,12 +200,3220 @@
       "losses": 0,
       "totalPnL": 0,
       "consecutiveLosses": 0,
-      "peakValue": 100110.84,
+      "peakValue": 100205.93,
       "maxDrawdown": 0,
       "winRate": 0
     },
-    "decisions": [],
+    "decisions": [
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.25,
+        "pnlPercent": -0.09041591320072,
+        "pnl": -8.85,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 34.96,
+          "macd": -0.0647804656894454,
+          "adx": 25.442638319008704
+        },
+        "timestamp": "2025-12-09T20:05:24.603Z",
+        "id": "8da70e9e-b352-4ded-9f0a-2746f01e812b"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 33.55,
+          "macd": -0.06797134888032905,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:06:26.976Z",
+        "id": "bbf65798-8968-46c8-a575-5753ef4cb3de"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 33.55,
+          "macd": -0.06797134888032905,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:06:56.962Z",
+        "id": "3249e0e6-5465-4033-b8d1-c2175e0a0ac8"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.26,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 35.26,
+          "macd": -0.06414228905126754,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:07:26.997Z",
+        "id": "7cb69921-4138-4119-b9d4-7f94ae37330d"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.26,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 35.26,
+          "macd": -0.06414228905126754,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:07:56.809Z",
+        "id": "6ccdaafb-497a-466a-bb89-466fd45be9e1"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2501,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 34.97,
+          "macd": -0.06477408392306391,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:08:27.039Z",
+        "id": "dba9e8df-d209-44c5-adde-725ddca663ff"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2501,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 34.97,
+          "macd": -0.06477408392306391,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:08:57.008Z",
+        "id": "35a8593f-b463-4526-acfe-52db02212fd3"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.265,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 35.41,
+          "macd": -0.06382320073218073,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:09:26.997Z",
+        "id": "d0f37917-a4ad-49f9-9d4f-f4fdea4390f4"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.265,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 35.41,
+          "macd": -0.06382320073218073,
+          "adx": 25.676042101967603
+        },
+        "timestamp": "2025-12-09T20:09:57.142Z",
+        "id": "1c678c80-0559-4c83-a1a4-5359013a7761"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.24,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 34.61,
+          "macd": -0.06200200886354024,
+          "adx": 26.217427034843546
+        },
+        "timestamp": "2025-12-09T20:10:27.020Z",
+        "id": "b1952317-3236-4fcc-a824-3018eb2a1a63"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.24,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 34.61,
+          "macd": -0.06200200886354024,
+          "adx": 26.217427034843546
+        },
+        "timestamp": "2025-12-09T20:10:56.999Z",
+        "id": "ca561bba-58a3-451d-9aae-33c0e610b780"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.08,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 30.26,
+          "macd": -0.07221283507436764,
+          "adx": 26.842111082778057
+        },
+        "timestamp": "2025-12-09T20:11:27.064Z",
+        "id": "192ca725-b750-4692-a4d3-d0275e9eaece"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.08,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 30.26,
+          "macd": -0.07221283507436764,
+          "adx": 26.842111082778057
+        },
+        "timestamp": "2025-12-09T20:11:56.982Z",
+        "id": "f2a68435-9413-4db1-9b17-f0a6673a651d"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.13,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 31.5,
+          "macd": -0.06902195188348399,
+          "adx": 26.842111082778057
+        },
+        "timestamp": "2025-12-09T20:12:27.014Z",
+        "id": "e8fbd865-3897-496e-b931-3a321094e0ee"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.13,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 31.5,
+          "macd": -0.06902195188348399,
+          "adx": 26.842111082778057
+        },
+        "timestamp": "2025-12-09T20:12:57.076Z",
+        "id": "00f8c7d5-182e-4f7e-b4cb-ef143439d91b"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.12,
+        "pnlPercent": 0.90415913200723,
+        "pnl": 88.5,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 31.25,
+          "macd": -0.06966012852166044,
+          "adx": 26.842111082778057
+        },
+        "timestamp": "2025-12-09T20:13:26.817Z",
+        "id": "9da5b79d-0ce9-4d61-99dd-bd508cf221cc"
+      }
+    ],
     "alerts": [],
-    "circuitBreakerTriggered": false
+    "circuitBreakerTriggered": false,
+    "lastActivity": "2025-12-09T20:13:26.817Z",
+    "endTime": "2025-12-09T20:13:31.705Z"
+  },
+  "9e871bf2-fb16-47cf-b443-5a834749c71f": {
+    "sessionId": "9e871bf2-fb16-47cf-b443-5a834749c71f",
+    "userId": "default_user",
+    "name": "Strategy 4",
+    "status": "running",
+    "startTime": "2025-12-09T20:15:43.423Z",
+    "config": {
+      "name": "Strategy 4",
+      "timeframes": [
+        "scalping",
+        "dayTrading",
+        "swing"
+      ],
+      "maxPositions": 5,
+      "maxPositionSizePercent": 10,
+      "riskPerTradePercent": 2,
+      "dailyLossLimitPercent": 5,
+      "consecutiveLossLimit": 3,
+      "profitTargetMultiplier": 2,
+      "stopLossMultiplier": 1.5,
+      "minConfidence": 40,
+      "watchlist": [
+        "SOXL",
+        "QBTZ",
+        "QBTX",
+        "SOXS"
+      ],
+      "autoTrade": true,
+      "simulationMode": true,
+      "allocatedCapital": 25000,
+      "maxLeverage": 1,
+      "reserveCashPercent": 5,
+      "minPositionSize": 100,
+      "maxPositionSize": 25000,
+      "weeklyLossLimitPercent": 10,
+      "maxConsecutiveLosses": 3,
+      "trailingStopPercent": 0,
+      "rsiOversold": 30,
+      "rsiOverbought": 70,
+      "vwapDeviationPercent": 0.5,
+      "volumeMultiplier": 1.5,
+      "adxMinStrength": 20,
+      "macdSensitivity": "normal",
+      "patternRecognition": true,
+      "entryStrategy": "balanced",
+      "requireVolumeSpike": true,
+      "requireTrendAlignment": true,
+      "requireRsiSignal": true,
+      "minSignalsRequired": 3,
+      "takeProfitPercent": 2,
+      "stopLossPercent": 1,
+      "useAdaptiveTargets": true,
+      "exitOnRsiExtreme": true,
+      "exitBeforeClose": true,
+      "exitBeforeCloseMinutes": 15,
+      "preferredTimeframe": "5min",
+      "paperTradeOnly": true
+    },
+    "portfolio": {
+      "cash": 77548.13,
+      "positions": [
+        [
+          "QBTX",
+          {
+            "symbol": "QBTX",
+            "quantity": 206,
+            "averageCost": 47.87,
+            "currentPrice": 46.51,
+            "marketValue": 9581.06,
+            "unrealizedPnL": -280.16,
+            "unrealizedPnLPercent": -2.84102778358053,
+            "side": "long",
+            "entryTime": "2025-12-09T20:19:16.251Z"
+          }
+        ],
+        [
+          "SOXL",
+          {
+            "symbol": "SOXL",
+            "quantity": 210,
+            "averageCost": 47.677952,
+            "currentPrice": 47.55,
+            "marketValue": 9985.5,
+            "unrealizedPnL": -26.86992,
+            "unrealizedPnLPercent": -0.2683672318811,
+            "side": "long",
+            "entryTime": "2025-12-09T20:55:16.740Z"
+          }
+        ],
+        [
+          "SOXS",
+          {
+            "symbol": "SOXS",
+            "quantity": 1000,
+            "averageCost": 2.946667,
+            "currentPrice": 2.959,
+            "marketValue": 2959,
+            "unrealizedPnL": 12.333,
+            "unrealizedPnLPercent": 0.41854067663567,
+            "side": "long",
+            "entryTime": "2025-12-09T20:57:40.986Z"
+          }
+        ]
+      ],
+      "initialValue": 100073.69
+    },
+    "stats": {
+      "totalTrades": 7,
+      "wins": 1,
+      "losses": 4,
+      "totalPnL": 373.09,
+      "consecutiveLosses": 0,
+      "peakValue": 100365.55,
+      "maxDrawdown": 0,
+      "winRate": 0
+    },
+    "decisions": [
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6,
+        "profitTarget": 47.89019366698902,
+        "stopLoss": 47.382354749758235,
+        "atr": 0.14509683349450853,
+        "indicators": {
+          "rsi": 46.36,
+          "macd": 0.0014876137649716785,
+          "bbPercentB": 0.41582649002891653,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.2334464259698397
+        },
+        "timestamp": "2025-12-09T20:16:14.275Z",
+        "id": "dee3e259-0c07-4bc6-b513-66defc4fc7cb"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTX",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "MACD bullish",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.815,
+        "profitTarget": 50.533289156141706,
+        "stopLoss": 47.955855421929144,
+        "atr": 0.5727630520472358,
+        "indicators": {
+          "rsi": 73.5,
+          "macd": 0.3317000964189047,
+          "bbPercentB": 0.999489575879329,
+          "adx": 25.768559823591307,
+          "volumeRatio": 0.9059003428786991
+        },
+        "timestamp": "2025-12-09T20:16:14.406Z",
+        "id": "d4072237-bf48-49d7-82de-24bb0016efea"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.9716559206275615,
+        "stopLoss": 2.9250080595293286,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 50.22,
+          "macd": -0.00040182764728152666,
+          "bbPercentB": 0.4463219332994265,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.0821915610843005
+        },
+        "timestamp": "2025-12-09T20:16:14.570Z",
+        "id": "1d928a98-3799-4685-b787-9d14defc0856"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6,
+        "profitTarget": 47.89019366698902,
+        "stopLoss": 47.382354749758235,
+        "atr": 0.14509683349450853,
+        "indicators": {
+          "rsi": 46.36,
+          "macd": 0.0014876137649716785,
+          "bbPercentB": 0.41582649002891653,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.2334464259698397
+        },
+        "timestamp": "2025-12-09T20:16:43.812Z",
+        "id": "945576ba-7591-4d19-8ecc-766cde69b97e"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTX",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "MACD bullish",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.815,
+        "profitTarget": 50.533289156141706,
+        "stopLoss": 47.955855421929144,
+        "atr": 0.5727630520472358,
+        "indicators": {
+          "rsi": 73.5,
+          "macd": 0.3317000964189047,
+          "bbPercentB": 0.999489575879329,
+          "adx": 25.768559823591307,
+          "volumeRatio": 0.9059003428786991
+        },
+        "timestamp": "2025-12-09T20:16:43.947Z",
+        "id": "c76729e0-c698-448f-89ca-cb7b3a1a8041"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.9716559206275615,
+        "stopLoss": 2.9250080595293286,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 50.22,
+          "macd": -0.00040182764728152666,
+          "bbPercentB": 0.4463219332994265,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.0821915610843005
+        },
+        "timestamp": "2025-12-09T20:16:44.112Z",
+        "id": "20397156-cd00-40a6-9dbf-9ea770ac0951"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.655,
+        "profitTarget": 47.94519366698902,
+        "stopLoss": 47.437354749758235,
+        "atr": 0.14509683349450853,
+        "indicators": {
+          "rsi": 49.39,
+          "macd": 0.004997585274942134,
+          "bbPercentB": 0.5753947948089434,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.38064482736356925
+        },
+        "timestamp": "2025-12-09T20:17:13.776Z",
+        "id": "a3433dee-08fc-4014-bd04-1236d5368b66"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTX",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "MACD bullish",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.8601,
+        "profitTarget": 50.582674870427425,
+        "stopLoss": 47.99881256478629,
+        "atr": 0.5741916234758069,
+        "indicators": {
+          "rsi": 73.75,
+          "macd": 0.3345782730570816,
+          "bbPercentB": 1.0066729513782917,
+          "adx": 25.783684920876414,
+          "volumeRatio": 1.0554668128137092
+        },
+        "timestamp": "2025-12-09T20:17:13.921Z",
+        "id": "c95d6d37-f216-4585-aa65-8fee395549b6"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.9716559206275615,
+        "stopLoss": 2.9250080595293286,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 50.22,
+          "macd": -0.00040182764728152666,
+          "bbPercentB": 0.4463219332994265,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.10356033081101083
+        },
+        "timestamp": "2025-12-09T20:17:14.094Z",
+        "id": "677feec5-e3eb-40c6-8746-27f7acc8e770"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.655,
+        "profitTarget": 47.94519366698902,
+        "stopLoss": 47.437354749758235,
+        "atr": 0.14509683349450853,
+        "indicators": {
+          "rsi": 49.39,
+          "macd": 0.004997585274942134,
+          "bbPercentB": 0.5753947948089434,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.38064482736356925
+        },
+        "timestamp": "2025-12-09T20:17:43.800Z",
+        "id": "eec7f18a-1d82-43d3-80b1-4bc744f465cb"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTX",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "MACD bullish",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.8601,
+        "profitTarget": 50.582674870427425,
+        "stopLoss": 47.99881256478629,
+        "atr": 0.5741916234758069,
+        "indicators": {
+          "rsi": 73.75,
+          "macd": 0.3345782730570816,
+          "bbPercentB": 1.0066729513782917,
+          "adx": 25.783684920876414,
+          "volumeRatio": 1.0554668128137092
+        },
+        "timestamp": "2025-12-09T20:17:43.944Z",
+        "id": "e8b5de0f-ce87-475a-a61d-862fe960015c"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.9716559206275615,
+        "stopLoss": 2.9250080595293286,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 50.22,
+          "macd": -0.00040182764728152666,
+          "bbPercentB": 0.4463219332994265,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.10356033081101083
+        },
+        "timestamp": "2025-12-09T20:17:44.143Z",
+        "id": "038c1a6e-6fe0-44e8-98d7-604d1caf8cbb"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6451,
+        "profitTarget": 47.93529366698902,
+        "stopLoss": 47.42745474975823,
+        "atr": 0.14509683349450853,
+        "indicators": {
+          "rsi": 48.81,
+          "macd": 0.004365790403148589,
+          "bbPercentB": 0.5467325682650616,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.4895473369238283
+        },
+        "timestamp": "2025-12-09T20:18:13.807Z",
+        "id": "770376fd-7f1c-454b-bdf9-d4be4b2d17f9"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTX",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "MACD bullish",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.89,
+        "profitTarget": 50.63186058471314,
+        "stopLoss": 48.01906970764343,
+        "atr": 0.5806201949043786,
+        "indicators": {
+          "rsi": 73.91,
+          "macd": 0.33648642120522804,
+          "bbPercentB": 1.0113894013123768,
+          "adx": 25.850150085077473,
+          "volumeRatio": 1.4490002945122549
+        },
+        "timestamp": "2025-12-09T20:18:13.931Z",
+        "id": "ddf8f8fa-76b0-44a8-87e6-6de60724346b"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.94,
+        "profitTarget": 2.9666559206275616,
+        "stopLoss": 2.9200080595293287,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 46.07,
+          "macd": -0.0007209159663697499,
+          "bbPercentB": 0.2541045402666596,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.10616478083768487
+        },
+        "timestamp": "2025-12-09T20:18:14.097Z",
+        "id": "4263cce6-3dcc-4f8d-b536-349ba137bf8e"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6451,
+        "profitTarget": 47.93529366698902,
+        "stopLoss": 47.42745474975823,
+        "atr": 0.14509683349450853,
+        "indicators": {
+          "rsi": 48.81,
+          "macd": 0.004365790403148589,
+          "bbPercentB": 0.5467325682650616,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.4895473369238283
+        },
+        "timestamp": "2025-12-09T20:18:43.800Z",
+        "id": "effe5e86-f552-4696-8a3c-342e8941c934"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTX",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "MACD bullish",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.89,
+        "profitTarget": 50.63186058471314,
+        "stopLoss": 48.01906970764343,
+        "atr": 0.5806201949043786,
+        "indicators": {
+          "rsi": 73.91,
+          "macd": 0.33648642120522804,
+          "bbPercentB": 1.0113894013123768,
+          "adx": 25.850150085077473,
+          "volumeRatio": 1.4490002945122549
+        },
+        "timestamp": "2025-12-09T20:18:43.943Z",
+        "id": "02495e16-3bcc-4c16-bf08-31c53204b8a5"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.94,
+        "profitTarget": 2.9666559206275616,
+        "stopLoss": 2.9200080595293287,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 46.07,
+          "macd": -0.0007209159663697499,
+          "bbPercentB": 0.2541045402666596,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.10616478083768487
+        },
+        "timestamp": "2025-12-09T20:18:44.144Z",
+        "id": "4ddf274d-7878-4882-8bc7-388f9a2078b8"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6515,
+        "profitTarget": 47.94597938127473,
+        "stopLoss": 47.43064046404395,
+        "atr": 0.14723969063736575,
+        "indicators": {
+          "rsi": 49.19,
+          "macd": 0.004774223451586061,
+          "bbPercentB": 0.565276544003523,
+          "adx": 10.043594752322615,
+          "volumeRatio": 0.6730931471725009
+        },
+        "timestamp": "2025-12-09T20:19:13.814Z",
+        "id": "4eaabbea-417a-498a-aa36-c286bf5d4dc9"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "QBTX",
+        "confidence": 85,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP",
+          "Strong bullish trend (ADX)",
+          "High volume confirmation",
+          "EMA alignment bullish"
+        ],
+        "currentPrice": 48.46,
+        "profitTarget": 50.26306058471314,
+        "stopLoss": 47.55846970764343,
+        "atr": 0.6010201949043787,
+        "indicators": {
+          "rsi": 69.02,
+          "macd": 0.3090448257636352,
+          "bbPercentB": 0.9400361880585621,
+          "adx": 25.850150085077473,
+          "volumeRatio": 1.7700628995536576
+        },
+        "timestamp": "2025-12-09T20:19:13.941Z",
+        "id": "3154fd44-acf7-4538-82ed-b7f85ff5fe84"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.9448,
+        "profitTarget": 2.9714559206275615,
+        "stopLoss": 2.9248080595293287,
+        "atr": 0.013327960313780748,
+        "indicators": {
+          "rsi": 50.04,
+          "macd": -0.0004145911800448424,
+          "bbPercentB": 0.4384088243635135,
+          "adx": 24.565625422301554,
+          "volumeRatio": 0.2119371570076418
+        },
+        "timestamp": "2025-12-09T20:19:14.232Z",
+        "id": "b204f74b-6e96-4544-ba4d-2c60697e587e"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.67,
+        "profitTarget": 47.95487371118368,
+        "stopLoss": 47.45634471661224,
+        "atr": 0.1424368555918395,
+        "indicators": {
+          "rsi": 50.32,
+          "macd": 0.005581848333578859,
+          "bbPercentB": 0.6513124886062398,
+          "adx": 9.975050135809493,
+          "volumeRatio": 0.12744432626155774
+        },
+        "timestamp": "2025-12-09T20:20:33.121Z",
+        "id": "75f0bd10-9064-49f2-886e-6679a7b3543f"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.9711804977255927,
+        "stopLoss": 2.925364626705805,
+        "atr": 0.013090248862796425,
+        "indicators": {
+          "rsi": 50.23,
+          "macd": -0.00035290555138677005,
+          "bbPercentB": 0.39235999679873024,
+          "adx": 23.400850156911776,
+          "volumeRatio": 0.013033028745271853
+        },
+        "timestamp": "2025-12-09T20:20:34.002Z",
+        "id": "a90c024c-e1e4-477f-8a00-5dbe19274cbf"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.16,
+        "pnlPercent": 1.36075949367089,
+        "pnl": 133.1925,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 35.81,
+          "macd": -0.06576471158728038,
+          "adx": 28.512783718973463
+        },
+        "timestamp": "2025-12-09T20:21:03.092Z",
+        "id": "4cdc2caf-d0de-4312-898f-9bd4080a5bd1"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.62,
+        "profitTarget": 47.904873711183676,
+        "stopLoss": 47.40634471661224,
+        "atr": 0.1424368555918395,
+        "indicators": {
+          "rsi": 47.34,
+          "macd": 0.002390965142696627,
+          "bbPercentB": 0.4927740504911347,
+          "adx": 9.975050135809493,
+          "volumeRatio": 0.26732622917384147
+        },
+        "timestamp": "2025-12-09T20:21:03.315Z",
+        "id": "43e09370-4a56-48d6-8d00-0b2c50e25287"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 35,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Near lower Bollinger Band",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.94,
+        "profitTarget": 2.966180497725593,
+        "stopLoss": 2.920364626705805,
+        "atr": 0.013090248862796425,
+        "indicators": {
+          "rsi": 45.79,
+          "macd": -0.0006719938704753486,
+          "bbPercentB": 0.15654595230555918,
+          "adx": 23.400850156911776,
+          "volumeRatio": 0.05208233438417361
+        },
+        "timestamp": "2025-12-09T20:21:03.844Z",
+        "id": "92cafbe8-aee0-45e8-b99e-cc8a8ea60e59"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.16,
+        "pnlPercent": 1.36075949367089,
+        "pnl": 133.1925,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 35.81,
+          "macd": -0.06576471158728038,
+          "adx": 28.512783718973463
+        },
+        "timestamp": "2025-12-09T20:21:33.089Z",
+        "id": "2e7b60b7-fffb-4953-a8af-6a58b3436b02"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 35,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Near lower Bollinger Band",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.94,
+        "profitTarget": 2.966180497725593,
+        "stopLoss": 2.920364626705805,
+        "atr": 0.013090248862796425,
+        "indicators": {
+          "rsi": 45.79,
+          "macd": -0.0006719938704753486,
+          "bbPercentB": 0.15654595230555918,
+          "adx": 23.400850156911776,
+          "volumeRatio": 0.05208233438417361
+        },
+        "timestamp": "2025-12-09T20:21:33.291Z",
+        "id": "f7c4ccff-3ec5-4c98-91e7-50cdf889edd4"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.3054,
+        "pnlPercent": 1.36075949367089,
+        "pnl": 133.1925,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 42.57,
+          "macd": -0.05648562326819315,
+          "adx": 27.20015523295773
+        },
+        "timestamp": "2025-12-09T20:22:03.146Z",
+        "id": "444ca1e4-7c79-4cea-b8b2-c6949065c2b4"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "SOXS",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.9711804977255927,
+        "stopLoss": 2.925364626705805,
+        "atr": 0.013090248862796425,
+        "indicators": {
+          "rsi": 50.23,
+          "macd": -0.00035290555138677005,
+          "bbPercentB": 0.39235999679873024,
+          "adx": 23.400850156911776,
+          "volumeRatio": 0.07765411623068279
+        },
+        "timestamp": "2025-12-09T20:22:03.390Z",
+        "id": "a7f792f3-caf0-457f-9ce9-1957261708cc"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.3054,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 42.57,
+          "macd": -0.05648562326819315,
+          "adx": 27.20015523295773
+        },
+        "timestamp": "2025-12-09T20:22:33.078Z",
+        "id": "ffd437c7-087c-40a8-bcc5-5a0f74d01883"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.19,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 37.33,
+          "macd": -0.06385018167275104,
+          "adx": 27.20015523295773
+        },
+        "timestamp": "2025-12-09T20:23:03.087Z",
+        "id": "e1fcea54-f1b3-4b82-b529-8129577ec47f"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.19,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 37.33,
+          "macd": -0.06385018167275104,
+          "adx": 27.20015523295773
+        },
+        "timestamp": "2025-12-09T20:23:33.085Z",
+        "id": "e2b8a34c-39cd-4671-ae49-0c1cde0e17a6"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.225,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 39.02,
+          "macd": -0.06161656343913348,
+          "adx": 27.20015523295773
+        },
+        "timestamp": "2025-12-09T20:24:03.322Z",
+        "id": "856a3c83-42d6-479c-8f8c-7fa58fa3e84e"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48.0478,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 63.32,
+          "macd": 0.2595198902498224,
+          "adx": 25.91164291802144
+        },
+        "timestamp": "2025-12-09T20:24:32.915Z",
+        "id": "1bf0563f-f174-4aa0-8279-92c8c8c635df"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.225,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 39.02,
+          "macd": -0.06161656343913348,
+          "adx": 27.20015523295773
+        },
+        "timestamp": "2025-12-09T20:24:33.054Z",
+        "id": "54ca3339-bb43-4ed9-a642-8c0a17dfc6e5"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.1825,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.35,
+          "macd": 0.22041430053786476,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:25:02.904Z",
+        "id": "f8f6542e-0036-4813-9129-5fefbd55d4aa"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 38.23,
+          "macd": -0.05053005057937911,
+          "adx": 26.29775887938275
+        },
+        "timestamp": "2025-12-09T20:25:03.071Z",
+        "id": "54caeac4-5117-41a5-aaa0-90bdbfc73cee"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.1825,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.35,
+          "macd": 0.22041430053786476,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:25:32.910Z",
+        "id": "3a0f961b-9ea7-44c5-aab6-2c1d3da41295"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 38.23,
+          "macd": -0.05053005057937911,
+          "adx": 26.29775887938275
+        },
+        "timestamp": "2025-12-09T20:25:33.055Z",
+        "id": "834a5ba9-8fad-44ff-8850-f3fcce114032"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.195,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.45,
+          "macd": 0.22121202133558532,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:26:02.893Z",
+        "id": "020ad658-217e-420c-b2bb-23b9c2bd8aba"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.17,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 37.32,
+          "macd": -0.052444580493908446,
+          "adx": 26.29775887938275
+        },
+        "timestamp": "2025-12-09T20:26:03.035Z",
+        "id": "b09d8942-8bfd-4140-ae70-091da31fb436"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.195,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.45,
+          "macd": 0.22121202133558532,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:26:32.900Z",
+        "id": "a36a0bba-d39c-45bd-ad45-282ae52e6c66"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.17,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 37.32,
+          "macd": -0.052444580493908446,
+          "adx": 26.29775887938275
+        },
+        "timestamp": "2025-12-09T20:26:33.033Z",
+        "id": "0cd113e4-cd1e-4d3a-9e8c-e9721edf5893"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.625,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 47.6,
+          "macd": 0.0015984218697057129,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:26:33.389Z",
+        "id": "cb39fdbd-66a3-4027-a4f3-a7f7437233da"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.1751,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.3,
+          "macd": 0.21994204982561533,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:27:02.909Z",
+        "id": "d34c5708-7672-4d33-9fa3-8e920e45c8d7"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.13,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 36.17,
+          "macd": -0.05499728704661565,
+          "adx": 26.322888892921977
+        },
+        "timestamp": "2025-12-09T20:27:03.036Z",
+        "id": "66e182ad-b182-46e3-ae94-6f311037dfd0"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.6398,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 48.57,
+          "macd": 0.00254292329420458,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:27:03.263Z",
+        "id": "d1b4b32b-62f0-4350-a81a-f6f83c0979d6"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.1751,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.3,
+          "macd": 0.21994204982561533,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:27:32.894Z",
+        "id": "1746324d-4a4c-40fb-84e3-44bedfaf664e"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.13,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 36.17,
+          "macd": -0.05499728704661565,
+          "adx": 26.322888892921977
+        },
+        "timestamp": "2025-12-09T20:27:33.036Z",
+        "id": "b1d3d2a1-78f2-4cf4-9645-ef2d3b4c96b8"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.6398,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 48.57,
+          "macd": 0.00254292329420458,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:27:33.207Z",
+        "id": "ee424eb4-3809-4ec0-8fbb-1bd7cf6ae9f5"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXS",
+        "action": "SELL",
+        "exitScore": 15,
+        "reasons": [
+          "MACD bearish momentum"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 2.945,
+        "pnlPercent": -0.16949152542373,
+        "pnl": -4.985,
+        "quantity": 997,
+        "indicators": {
+          "rsi": 50.23,
+          "macd": -0.0003014653901598828,
+          "adx": 22.319273124764127
+        },
+        "timestamp": "2025-12-09T20:27:33.390Z",
+        "id": "e0aa36aa-3cfb-4e0b-81e0-d2c3a368654d"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.235,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.74,
+          "macd": 0.2237647278882911,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:28:03.024Z",
+        "id": "5e79668a-1512-4b73-ac88-003d0e9cc5f3"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.16,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 37.03,
+          "macd": -0.05308275713208631,
+          "adx": 26.322888892921977
+        },
+        "timestamp": "2025-12-09T20:28:03.159Z",
+        "id": "342ae227-0db4-4bf7-a570-8a6caea50b9b"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.6001,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 46.13,
+          "macd": 0.000009362040641813438,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:28:03.331Z",
+        "id": "8c242503-c34e-4b8e-b9d4-595e16a50c5d"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXS",
+        "action": "SELL",
+        "exitScore": 15,
+        "reasons": [
+          "MACD bearish momentum"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 2.945,
+        "pnlPercent": -0.16949152542373,
+        "pnl": -4.985,
+        "quantity": 997,
+        "indicators": {
+          "rsi": 50.23,
+          "macd": -0.0003014653901598828,
+          "adx": 22.319273124764127
+        },
+        "timestamp": "2025-12-09T20:28:03.744Z",
+        "id": "62a7e816-7001-48fe-a1e0-1be161ed4d5f"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 0,
+        "reasons": [
+          "Stochastic overbought",
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "Stochastic overbought",
+        "currentPrice": 48.235,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 64.74,
+          "macd": 0.2237647278882911,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:28:32.901Z",
+        "id": "ecff6fc3-08e0-405c-8032-fb9e4b368bb9"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.16,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 37.03,
+          "macd": -0.05308275713208631,
+          "adx": 26.322888892921977
+        },
+        "timestamp": "2025-12-09T20:28:33.046Z",
+        "id": "38ba06f0-3311-4e40-b131-636710d49119"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.6001,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 46.13,
+          "macd": 0.000009362040641813438,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:28:33.202Z",
+        "id": "163841b1-27d8-43a6-9fc8-f57ee54e097d"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXS",
+        "action": "SELL",
+        "exitScore": 15,
+        "reasons": [
+          "MACD bearish momentum"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 2.945,
+        "pnlPercent": -0.16949152542373,
+        "pnl": -4.985,
+        "quantity": 997,
+        "indicators": {
+          "rsi": 50.23,
+          "macd": -0.0003014653901598828,
+          "adx": 22.319273124764127
+        },
+        "timestamp": "2025-12-09T20:28:33.383Z",
+        "id": "bc28ce45-7b21-4b11-8e30-8d1778265bf8"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 62.67,
+          "macd": 0.2087675768911389,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:29:02.948Z",
+        "id": "b9553c40-e7a6-42aa-a126-e4497b44dda7"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.203671,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 38.34,
+          "macd": -0.050295775935504855,
+          "adx": 26.322888892921977
+        },
+        "timestamp": "2025-12-09T20:29:03.074Z",
+        "id": "0fde338c-c62f-41db-a46c-de6d3ab3e974"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.6082,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 46.6,
+          "macd": 0.0005262851175658716,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:29:03.235Z",
+        "id": "08b1de5f-7e16-4b67-9e55-1b51e7169959"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 62.67,
+          "macd": 0.2087675768911389,
+          "adx": 25.96874340575512
+        },
+        "timestamp": "2025-12-09T20:29:32.904Z",
+        "id": "10a37303-aec9-41b7-9684-f67dea82c642"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.203671,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 38.34,
+          "macd": -0.050295775935504855,
+          "adx": 26.322888892921977
+        },
+        "timestamp": "2025-12-09T20:29:33.066Z",
+        "id": "ec17b331-d385-46cc-8bf7-37d2e0147d9d"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 25,
+        "reasons": [
+          "Bearish RSI divergence"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.6082,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 46.6,
+          "macd": 0.0005262851175658716,
+          "adx": 9.314894247264874
+        },
+        "timestamp": "2025-12-09T20:29:33.232Z",
+        "id": "19512b44-1c92-46b8-9127-8834d53766a7"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48.0302,
+        "pnlPercent": -0.91121788176311,
+        "pnl": -89.8572,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 62.93,
+          "macd": 0.1644084412487456,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:30:02.932Z",
+        "id": "6ece0244-eb77-4a62-8520-773bb9e408b6"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 35,
+        "reasons": [
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 11.2,
+        "pnlPercent": 2.2603978300180803,
+        "pnl": 221.25,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 38.22,
+          "macd": -0.03998887867756225,
+          "adx": 25.50828443431735
+        },
+        "timestamp": "2025-12-09T20:30:03.068Z",
+        "id": "a76d2fe5-fc14-4366-ae4b-87727c4e521d"
+      },
+      {
+        "shouldExit": true,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 40,
+        "reasons": [
+          "Bearish RSI divergence",
+          "MACD bearish momentum"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.57,
+        "pnlPercent": -0.02389381150282,
+        "pnl": -2.39,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 44.3,
+          "macd": -0.003368135545338137,
+          "adx": 9.463092034919628
+        },
+        "timestamp": "2025-12-09T20:30:03.232Z",
+        "id": "0cacc628-ae66-44d3-ad2b-64d6b66f4ca8"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48.0302,
+        "pnlPercent": -1.59640693545018,
+        "pnl": -157.4252,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 62.93,
+          "macd": 0.1644084412487456,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:30:33.128Z",
+        "id": "78d33667-03ff-4b18-9f5c-2e73f44d87aa"
+      },
+      {
+        "shouldExit": true,
+        "symbol": "QBTZ",
+        "action": "SELL",
+        "exitScore": 85,
+        "reasons": [
+          "Profit target 2.5% reached",
+          "MACD bearish momentum",
+          "Price significantly below VWAP",
+          "Low volume on advance (distribution)"
+        ],
+        "exitReason": "Profit target reached",
+        "currentPrice": 11.2,
+        "pnlPercent": 3.97830018083183,
+        "pnl": 389.4,
+        "quantity": 885,
+        "indicators": {
+          "rsi": 38.22,
+          "macd": -0.03998887867756225,
+          "adx": 25.50828443431735
+        },
+        "timestamp": "2025-12-09T20:30:33.382Z",
+        "id": "b3de4efd-a3a1-40b8-9488-711b168c8a91"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 47.57,
+        "profitTarget": 47.8418787174419,
+        "stopLoss": 47.36609096191857,
+        "atr": 0.13593935872095075,
+        "indicators": {
+          "rsi": 44.3,
+          "macd": -0.003368135545338137,
+          "bbPercentB": 0.3238743767339857,
+          "adx": 9.463092034919628,
+          "volumeRatio": 0.2896746809290394
+        },
+        "timestamp": "2025-12-09T20:30:33.880Z",
+        "id": "24813af4-76d4-42e9-8465-afa5b15d57a3"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 47.9,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 61.26,
+          "macd": 0.15609938141968033,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:31:02.921Z",
+        "id": "ca945774-d423-4a7f-898c-f6bcd4d46ac3"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 47.5355,
+        "profitTarget": 47.808193003156184,
+        "stopLoss": 47.33098024763286,
+        "atr": 0.13634650157809391,
+        "indicators": {
+          "rsi": 42.41,
+          "macd": -0.005569844947046879,
+          "bbPercentB": 0.2159698568486961,
+          "adx": 9.514182888169788,
+          "volumeRatio": 0.3927730256383482
+        },
+        "timestamp": "2025-12-09T20:31:03.289Z",
+        "id": "e1b226ae-c620-4353-b3ba-cc3db9740025"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2,
+        "profitTarget": 11.619951853953454,
+        "stopLoss": 10.990024073023273,
+        "atr": 0.13998395131781805,
+        "indicators": {
+          "rsi": 38.22,
+          "macd": -0.03998887867756225,
+          "bbPercentB": 0.24147993675615526,
+          "adx": 25.50828443431735,
+          "volumeRatio": 0.09561905236617693
+        },
+        "timestamp": "2025-12-09T20:31:03.425Z",
+        "id": "586139df-6935-4bb5-b381-f4f9d6d6bf4c"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 47.9,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 61.26,
+          "macd": 0.15609938141968033,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:31:32.941Z",
+        "id": "1698334a-b813-4d30-a995-d7ada73ee307"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 47.5355,
+        "profitTarget": 47.808193003156184,
+        "stopLoss": 47.33098024763286,
+        "atr": 0.13634650157809391,
+        "indicators": {
+          "rsi": 42.41,
+          "macd": -0.005569844947046879,
+          "bbPercentB": 0.2159698568486961,
+          "adx": 9.514182888169788,
+          "volumeRatio": 0.3927730256383482
+        },
+        "timestamp": "2025-12-09T20:31:33.309Z",
+        "id": "ca37a885-6862-4e40-8590-c847c7388ed9"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2,
+        "profitTarget": 11.619951853953454,
+        "stopLoss": 10.990024073023273,
+        "atr": 0.13998395131781805,
+        "indicators": {
+          "rsi": 38.22,
+          "macd": -0.03998887867756225,
+          "bbPercentB": 0.24147993675615526,
+          "adx": 25.50828443431735,
+          "volumeRatio": 0.09561905236617693
+        },
+        "timestamp": "2025-12-09T20:31:33.446Z",
+        "id": "ad64cd2f-69f5-4677-9605-b25cb037e148"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48.05,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 63.09,
+          "macd": 0.1656720309923327,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:32:02.917Z",
+        "id": "69ea4ebf-85c7-40a0-82dc-d7c0dfd99474"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6,
+        "profitTarget": 47.87776443172762,
+        "stopLoss": 47.39167667620429,
+        "atr": 0.13888221586380814,
+        "indicators": {
+          "rsi": 46.08,
+          "macd": -0.0014536056308087977,
+          "bbPercentB": 0.4223579328517329,
+          "adx": 9.814703519519274,
+          "volumeRatio": 0.7074630294779531
+        },
+        "timestamp": "2025-12-09T20:32:03.277Z",
+        "id": "74525833-607f-44d6-afed-4eadbdb9492d"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:32:03.423Z",
+        "id": "da366567-7c1c-4085-ba28-bb7cc65c5a8f"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 48.05,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 63.09,
+          "macd": 0.1656720309923327,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:32:32.924Z",
+        "id": "b3afd6c6-5eb9-401e-90bd-ccf32be459a9"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6,
+        "profitTarget": 47.87776443172762,
+        "stopLoss": 47.39167667620429,
+        "atr": 0.13888221586380814,
+        "indicators": {
+          "rsi": 46.08,
+          "macd": -0.0014536056308087977,
+          "bbPercentB": 0.4223579328517329,
+          "adx": 9.814703519519274,
+          "volumeRatio": 0.7074630294779531
+        },
+        "timestamp": "2025-12-09T20:32:33.322Z",
+        "id": "e7a5dd76-a32c-4a65-a5d8-de093966be22"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:32:33.478Z",
+        "id": "f48080f4-5e1b-4130-9c5a-f1138e36f21a"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 47.8901,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 61.12,
+          "macd": 0.15546758654788678,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:33:02.912Z",
+        "id": "4686f058-7864-402d-937d-621df2498777"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6,
+        "profitTarget": 47.87776443172762,
+        "stopLoss": 47.39167667620429,
+        "atr": 0.13888221586380814,
+        "indicators": {
+          "rsi": 46.08,
+          "macd": -0.0014536056308087977,
+          "bbPercentB": 0.4223579328517329,
+          "adx": 9.814703519519274,
+          "volumeRatio": 0.7967331830177078
+        },
+        "timestamp": "2025-12-09T20:33:03.283Z",
+        "id": "de984008-ed2e-4d86-a455-1e472c7b23bb"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:33:03.429Z",
+        "id": "4ae42933-a5a5-465e-9d60-1f8e245946b4"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 47.8901,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 61.12,
+          "macd": 0.15546758654788678,
+          "adx": 25.806495752761975
+        },
+        "timestamp": "2025-12-09T20:33:32.928Z",
+        "id": "4a06988e-0354-45ec-8270-c82181378c03"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6,
+        "profitTarget": 47.87776443172762,
+        "stopLoss": 47.39167667620429,
+        "atr": 0.13888221586380814,
+        "indicators": {
+          "rsi": 46.08,
+          "macd": -0.0014536056308087977,
+          "bbPercentB": 0.4223579328517329,
+          "adx": 9.814703519519274,
+          "volumeRatio": 0.7967331830177078
+        },
+        "timestamp": "2025-12-09T20:33:33.307Z",
+        "id": "4c229e71-813b-4f24-ab44-ac48e18d11a5"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:33:33.437Z",
+        "id": "756fa69b-aec0-4f2c-a07f-ed5168870afa"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 47.66,
+        "pnlPercent": -1.56674326300397,
+        "pnl": -154.5,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 58.12,
+          "macd": 0.1407831421034399,
+          "adx": 25.511045201407864
+        },
+        "timestamp": "2025-12-09T20:34:04.041Z",
+        "id": "84f38383-7591-41ec-838f-cfd522264987"
+      },
+      {
+        "shouldExit": true,
+        "symbol": "SOXS",
+        "action": "SELL",
+        "exitScore": 40,
+        "reasons": [
+          "Bearish RSI divergence",
+          "MACD bearish momentum"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 2.945,
+        "pnlPercent": 0,
+        "pnl": 0,
+        "quantity": 1000,
+        "indicators": {
+          "rsi": 49.87,
+          "macd": -0.00007956327367934606,
+          "adx": 22.91870186369127
+        },
+        "timestamp": "2025-12-09T20:34:04.256Z",
+        "id": "5adcc4c9-f0f6-4f87-9552-bf6962a5d993"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "SOXL",
+        "confidence": 40,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.6333,
+        "profitTarget": 47.91559300315619,
+        "stopLoss": 47.42158024763286,
+        "atr": 0.1411465015780939,
+        "indicators": {
+          "rsi": 48.36,
+          "macd": 0.0006715225743221774,
+          "bbPercentB": 0.5338455181825604,
+          "adx": 9.814703519519272,
+          "volumeRatio": 0.9904753468243804
+        },
+        "timestamp": "2025-12-09T20:34:04.771Z",
+        "id": "c64db72a-d5e2-4c84-be87-e8c35a8c2a1e"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:34:05.003Z",
+        "id": "98c1caf3-a856-4535-b0cb-f0066cbc3e30"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": -15,
+        "reasons": [
+          "AI holding: trend still bullish"
+        ],
+        "exitReason": "AI holding: trend still bullish",
+        "currentPrice": 47.66,
+        "pnlPercent": -1.5719657405473202,
+        "pnl": -155.015,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 58.12,
+          "macd": 0.1407831421034399,
+          "adx": 25.511045201407864
+        },
+        "timestamp": "2025-12-09T20:34:32.937Z",
+        "id": "c76afc7e-5d38-4b59-b8e8-f962ef16b91e"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:34:33.071Z",
+        "id": "19e1ba78-b9bf-47a6-ad05-ad095e84cee3"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "SOXS",
+        "confidence": 55,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "Bollinger squeeze (volatility expansion expected)",
+          "High volume confirmation"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.971757674059312,
+        "stopLoss": 2.924931744455516,
+        "atr": 0.013378837029656119,
+        "indicators": {
+          "rsi": 49.87,
+          "macd": -0.00007956327367934606,
+          "bbPercentB": 0.3782063866581888,
+          "adx": 22.91870186369127,
+          "volumeRatio": 3.617044436981015
+        },
+        "timestamp": "2025-12-09T20:34:33.248Z",
+        "id": "7bc51752-cc61-4b07-bff0-a861a1a242d0"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:35:03.139Z",
+        "id": "49def961-bb18-4463-b7db-febae170f691"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 10,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone"
+        ],
+        "currentPrice": 11.2105,
+        "profitTarget": 11.631915211096311,
+        "stopLoss": 10.999792394451845,
+        "atr": 0.14047173703210375,
+        "indicators": {
+          "rsi": 38.71,
+          "macd": -0.03931879320747697,
+          "bbPercentB": 0.24961594326673087,
+          "adx": 25.50828443431735,
+          "volumeRatio": 1.0408704253214638
+        },
+        "timestamp": "2025-12-09T20:35:33.080Z",
+        "id": "49a16ad9-7d25-4e4e-9d82-9850455401e3"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.31,
+        "profitTarget": 11.726921267446576,
+        "stopLoss": 11.101539366276713,
+        "atr": 0.13897375581552493,
+        "indicators": {
+          "rsi": 43.94,
+          "macd": -0.023129070018655343,
+          "bbPercentB": 0.3531439088989127,
+          "adx": 23.91089711703405,
+          "volumeRatio": 0.04602308283362774
+        },
+        "timestamp": "2025-12-09T20:36:03.186Z",
+        "id": "18f8b958-a4f1-41d6-b7e9-bf4d95b65282"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.31,
+        "profitTarget": 11.726921267446576,
+        "stopLoss": 11.101539366276713,
+        "atr": 0.13897375581552493,
+        "indicators": {
+          "rsi": 43.94,
+          "macd": -0.023129070018655343,
+          "bbPercentB": 0.3531439088989127,
+          "adx": 23.91089711703405,
+          "volumeRatio": 0.04602308283362774
+        },
+        "timestamp": "2025-12-09T20:36:33.085Z",
+        "id": "e27d79ff-f604-49cc-bfc6-b2f6f9cb2dff"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.36,
+        "profitTarget": 11.783349838875145,
+        "stopLoss": 11.148325080562426,
+        "atr": 0.14111661295838204,
+        "indicators": {
+          "rsi": 46.25,
+          "macd": -0.01993818682777168,
+          "bbPercentB": 0.3942047115443046,
+          "adx": 23.72615650929266,
+          "volumeRatio": 0.07459144769106642
+        },
+        "timestamp": "2025-12-09T20:37:03.074Z",
+        "id": "e0855112-675a-439b-8eaf-f32e92d4a34b"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.36,
+        "profitTarget": 11.783349838875145,
+        "stopLoss": 11.148325080562426,
+        "atr": 0.14111661295838204,
+        "indicators": {
+          "rsi": 46.25,
+          "macd": -0.01993818682777168,
+          "bbPercentB": 0.3942047115443046,
+          "adx": 23.72615650929266,
+          "volumeRatio": 0.07459144769106642
+        },
+        "timestamp": "2025-12-09T20:37:33.104Z",
+        "id": "09cb67f4-c12f-4a0f-8738-03a7459735b9"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.36,
+        "profitTarget": 11.783349838875145,
+        "stopLoss": 11.148325080562426,
+        "atr": 0.14111661295838204,
+        "indicators": {
+          "rsi": 46.25,
+          "macd": -0.01993818682777168,
+          "bbPercentB": 0.3942047115443046,
+          "adx": 23.72615650929266,
+          "volumeRatio": 0.12388004939421078
+        },
+        "timestamp": "2025-12-09T20:38:03.088Z",
+        "id": "fe9b55ce-b925-4010-aab2-b80c5fb7c3d2"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.36,
+        "profitTarget": 11.783349838875145,
+        "stopLoss": 11.148325080562426,
+        "atr": 0.14111661295838204,
+        "indicators": {
+          "rsi": 46.25,
+          "macd": -0.01993818682777168,
+          "bbPercentB": 0.3942047115443046,
+          "adx": 23.72615650929266,
+          "volumeRatio": 0.12388004939421078
+        },
+        "timestamp": "2025-12-09T20:38:33.093Z",
+        "id": "0ef35fe5-3efd-4e60-9aac-175dcce9dcd9"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.36,
+        "profitTarget": 11.783349838875145,
+        "stopLoss": 11.148325080562426,
+        "atr": 0.14111661295838204,
+        "indicators": {
+          "rsi": 46.25,
+          "macd": -0.01993818682777168,
+          "bbPercentB": 0.3942047115443046,
+          "adx": 23.72615650929266,
+          "volumeRatio": 0.12388004939421078
+        },
+        "timestamp": "2025-12-09T20:39:03.111Z",
+        "id": "a697b1ad-ee03-46c2-a8ed-4ea2e1ef5a6b"
+      },
+      {
+        "shouldExit": true,
+        "symbol": "SOXL",
+        "action": "SELL",
+        "exitScore": 40,
+        "reasons": [
+          "Bearish RSI divergence",
+          "MACD bearish momentum"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 47.585,
+        "pnlPercent": -0.08926855825274,
+        "pnl": -8.92,
+        "quantity": 210,
+        "indicators": {
+          "rsi": 45.27,
+          "macd": -0.002216826524062257,
+          "adx": 9.930892456001356
+        },
+        "timestamp": "2025-12-09T20:39:33.121Z",
+        "id": "73ee97ad-ff0d-4581-b838-23d1a2f23389"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.36,
+        "profitTarget": 11.783349838875145,
+        "stopLoss": 11.148325080562426,
+        "atr": 0.14111661295838204,
+        "indicators": {
+          "rsi": 46.25,
+          "macd": -0.01993818682777168,
+          "bbPercentB": 0.3942047115443046,
+          "adx": 23.72615650929266,
+          "volumeRatio": 0.12388004939421078
+        },
+        "timestamp": "2025-12-09T20:39:33.368Z",
+        "id": "5d0d028b-6047-4140-beda-7755c809ad12"
+      },
+      {
+        "shouldExit": true,
+        "symbol": "SOXS",
+        "action": "SELL",
+        "exitScore": 40,
+        "reasons": [
+          "Bearish RSI divergence",
+          "MACD bearish momentum"
+        ],
+        "exitReason": "Bearish RSI divergence",
+        "currentPrice": 2.94,
+        "pnlPercent": -0.16949152542373,
+        "pnl": -5,
+        "quantity": 1000,
+        "indicators": {
+          "rsi": 45.17,
+          "macd": -0.00045137663740095203,
+          "adx": 23.992168635953654
+        },
+        "timestamp": "2025-12-09T20:42:32.885Z",
+        "id": "2f9eaa02-bc4f-4d6e-ac7b-78649a3ed715"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXL",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.5904,
+        "profitTarget": 47.855544477211204,
+        "stopLoss": 47.3915416420916,
+        "atr": 0.13257223860560186,
+        "indicators": {
+          "rsi": 45.68,
+          "macd": -0.0034230957292777156,
+          "bbPercentB": 0.35714041959287274,
+          "adx": 10.546141733907502,
+          "volumeRatio": 0.5959377534152961
+        },
+        "timestamp": "2025-12-09T20:42:33.374Z",
+        "id": "fd92474d-7a21-41cf-a9bc-6c2546ddab31"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 20,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.4014,
+        "profitTarget": 11.809510564669779,
+        "stopLoss": 11.19734471766511,
+        "atr": 0.1360368548899262,
+        "indicators": {
+          "rsi": 48.15,
+          "macd": -0.0031595616576261254,
+          "bbPercentB": 0.44212107944090373,
+          "adx": 22.41729188556255,
+          "volumeRatio": 0.21742877644200898
+        },
+        "timestamp": "2025-12-09T20:42:33.502Z",
+        "id": "551420b4-457c-4c8a-95fe-706416bfc0cd"
+      },
+      {
+        "shouldExit": false,
+        "symbol": "QBTX",
+        "action": "SELL",
+        "exitScore": 15,
+        "reasons": [
+          "MACD bearish momentum"
+        ],
+        "exitReason": "MACD bearish momentum",
+        "currentPrice": 47.645,
+        "pnlPercent": -0.68936703572175,
+        "pnl": -67.98,
+        "quantity": 206,
+        "indicators": {
+          "rsi": 57.09,
+          "macd": -0.04282787147622935,
+          "adx": 19.8767103700801
+        },
+        "timestamp": "2025-12-09T20:55:14.062Z",
+        "id": "922a03ed-e0b9-455b-a169-4e2264a32098"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "SOXL",
+        "confidence": 60,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bullish RSI divergence detected",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Price above VWAP"
+        ],
+        "currentPrice": 47.7,
+        "profitTarget": 47.960452838141975,
+        "stopLoss": 47.50466037139352,
+        "atr": 0.13022641907098767,
+        "indicators": {
+          "rsi": 54.03,
+          "macd": 0.006580979596742163,
+          "bbPercentB": 0.7960473713076179,
+          "adx": 9.77907206086537,
+          "volumeRatio": 0.6337462158657791
+        },
+        "timestamp": "2025-12-09T20:55:14.228Z",
+        "id": "a2f6dc99-a230-4cc3-aac4-1fa38f2ce478"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.3,
+        "profitTarget": 11.693428609124144,
+        "stopLoss": 11.103285695437929,
+        "atr": 0.13114286970804748,
+        "indicators": {
+          "rsi": 44.05,
+          "macd": 0.012508973413242669,
+          "bbPercentB": 0.3959449708761386,
+          "adx": 18.75689215404619,
+          "volumeRatio": 0.02231158386301725
+        },
+        "timestamp": "2025-12-09T20:55:14.690Z",
+        "id": "a4bbb0f0-2a79-4352-a669-98b6e449bcbd"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "SOXS",
+        "confidence": 35,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Strong bullish trend (ADX)"
+        ],
+        "currentPrice": 2.945,
+        "profitTarget": 2.968965238208976,
+        "stopLoss": 2.927026071343268,
+        "atr": 0.01198261910448798,
+        "indicators": {
+          "rsi": 49.13,
+          "macd": -0.00009149791782207622,
+          "bbPercentB": 0.39241738967363726,
+          "adx": 25.331582425342646,
+          "volumeRatio": 0.33407561228907995
+        },
+        "timestamp": "2025-12-09T20:55:14.960Z",
+        "id": "84b79acf-b844-4247-acaa-391037d416f0"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.2899,
+        "profitTarget": 11.704735751981284,
+        "stopLoss": 11.082482124009356,
+        "atr": 0.13827858399376175,
+        "indicators": {
+          "rsi": 43.67,
+          "macd": 0.01186441500868475,
+          "bbPercentB": 0.3861970606483329,
+          "adx": 18.881881204092217,
+          "volumeRatio": 0.7635647295619031
+        },
+        "timestamp": "2025-12-09T20:57:38.019Z",
+        "id": "ee41c548-80e9-4dce-98b9-d473a6cdbbd9"
+      },
+      {
+        "shouldEnter": true,
+        "symbol": "SOXS",
+        "confidence": 50,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "Near lower Bollinger Band",
+          "Bollinger squeeze (volatility expansion expected)",
+          "Strong bullish trend (ADX)"
+        ],
+        "currentPrice": 2.9412,
+        "profitTarget": 2.9658652382089756,
+        "stopLoss": 2.9227010713432677,
+        "atr": 0.012332619104487989,
+        "indicators": {
+          "rsi": 45.38,
+          "macd": -0.0003340050403289837,
+          "bbPercentB": 0.15328381767250235,
+          "adx": 25.331582425342646,
+          "volumeRatio": 0.5893973687891908
+        },
+        "timestamp": "2025-12-09T20:57:38.504Z",
+        "id": "a2dae818-892d-44e6-ba26-c7e13c33a00c"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.265,
+        "profitTarget": 11.679835751981285,
+        "stopLoss": 11.057582124009357,
+        "atr": 0.13827858399376175,
+        "indicators": {
+          "rsi": 42.75,
+          "macd": 0.010275355179625106,
+          "bbPercentB": 0.36228738681564776,
+          "adx": 18.881881204092217,
+          "volumeRatio": 0.7786557882124722
+        },
+        "timestamp": "2025-12-09T20:58:07.770Z",
+        "id": "400937d9-bfbb-4ba4-867c-1845b2b02081"
+      },
+      {
+        "shouldEnter": false,
+        "symbol": "QBTZ",
+        "confidence": 30,
+        "action": "BUY",
+        "reasons": [
+          "RSI in neutral zone",
+          "MACD bullish",
+          "Bollinger squeeze (volatility expansion expected)"
+        ],
+        "currentPrice": 11.265,
+        "profitTarget": 11.679835751981285,
+        "stopLoss": 11.057582124009357,
+        "atr": 0.13827858399376175,
+        "indicators": {
+          "rsi": 42.75,
+          "macd": 0.010275355179625106,
+          "bbPercentB": 0.36228738681564776,
+          "adx": 18.881881204092217,
+          "volumeRatio": 0.7786557882124722
+        },
+        "timestamp": "2025-12-09T20:58:37.912Z",
+        "id": "7748ecc0-c56f-4994-8317-aafd7b86c0a3"
+      }
+    ],
+    "alerts": [],
+    "circuitBreakerTriggered": false,
+    "lastActivity": "2025-12-09T20:58:37.912Z"
   }
 }
