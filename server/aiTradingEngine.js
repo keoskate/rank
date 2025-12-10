@@ -41,8 +41,10 @@ function saveSessions() {
   try {
     const sessionsData = {};
     sessions.forEach((session, sessionId) => {
+      // Exclude intervalId (Timeout reference) to avoid circular JSON
+      const { intervalId, ...sessionWithoutInterval } = session;
       sessionsData[sessionId] = {
-        ...session,
+        ...sessionWithoutInterval,
         portfolio: {
           ...session.portfolio,
           positions: Array.from(session.portfolio.positions.entries()),
@@ -107,9 +109,9 @@ const DEFAULT_CONFIG = {
   consecutiveLossLimit: 3,
   profitTargetMultiplier: 2, // 2x ATR
   stopLossMultiplier: 1.5, // 1.5x ATR
-  minConfidence: 70,
+  minConfidence: 40, // Lower threshold for paper trading
   watchlist: [],
-  autoTrade: false, // Safety: manual confirmation by default
+  autoTrade: true, // Enable auto-trading by default for paper account
   simulationMode: true, // Tracks virtual P&L without real trades
 };
 

@@ -196,7 +196,7 @@ const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
                   fontSize: theme.typography.fontSize.sm,
                   color: theme.colors.textMuted,
                 }}>
-                  Confidence: {(lastDetection.confidence * 100).toFixed(0)}%
+                  Confidence: {lastDetection.confidence?.toFixed(0) || 0}%
                 </span>
               </div>
               <p style={{

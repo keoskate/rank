@@ -13,12 +13,15 @@ import Card from './Card';
 import Button from './Button';
 import theme from '../../theme';
 
-const StrategyMonitorPanel = ({ symbol, versionId, onAlert }) => {
+const StrategyMonitorPanel = ({ symbol, versionId, onAlert, sessionStats }) => {
   const [monitor, setMonitor] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
+
+  // Use session stats if provided (from live trading dashboard)
+  const useSessionStats = sessionStats && Object.keys(sessionStats).length > 0;
 
   // Fetch monitor data
   const fetchMonitor = useCallback(async () => {
@@ -133,7 +136,15 @@ const StrategyMonitorPanel = ({ symbol, versionId, onAlert }) => {
     );
   }
 
-  const metrics = monitor?.metrics?.current || {};
+  // Derive metrics from session stats or monitor data
+  const metrics = useSessionStats ? {
+    winRate: sessionStats.winRate,
+    totalPnL: sessionStats.totalPnL,
+    maxDrawdown: sessionStats.maxDrawdown,
+    totalTrades: sessionStats.totalTrades,
+    consecutiveLosses: sessionStats.consecutiveLosses || 0,
+    profitFactor: sessionStats.profitFactor,
+  } : (monitor?.metrics?.current || {});
   const rolling = monitor?.metrics?.rolling || {};
 
   const getStatusColor = (value, threshold, inverse = false) => {
@@ -152,13 +163,24 @@ const StrategyMonitorPanel = ({ symbol, versionId, onAlert }) => {
               width: 10,
               height: 10,
               borderRadius: '50%',
-              backgroundColor: isMonitoring ? theme.colors.success : theme.colors.textMuted,
+              backgroundColor: (isMonitoring || useSessionStats) ? theme.colors.success : theme.colors.textMuted,
             }}
           />
+          {useSessionStats && (
+            <span style={{
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.primary,
+              backgroundColor: `${theme.colors.primary}20`,
+              padding: '2px 6px',
+              borderRadius: theme.borderRadius.sm,
+            }}>
+              LIVE
+            </span>
+          )}
         </div>
       }
     >
-      {/* Status & Controls */}
+      {/* Status & Controls - hide button when using session stats */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -169,16 +191,18 @@ const StrategyMonitorPanel = ({ symbol, versionId, onAlert }) => {
       }}>
         <div>
           <span style={{ color: theme.colors.textSecondary, fontSize: theme.typography.fontSize.sm }}>
-            {symbol} • {versionId?.slice(0, 8)}
+            {useSessionStats ? 'Live Trading Session' : `${symbol} • ${versionId?.slice(0, 8)}`}
           </span>
         </div>
-        <Button
-          variant={isMonitoring ? 'secondary' : 'primary'}
-          size="small"
-          onClick={isMonitoring ? stopMonitoring : startMonitoring}
-        >
-          {isMonitoring ? 'Stop Monitor' : 'Start Monitor'}
-        </Button>
+        {!useSessionStats && (
+          <Button
+            variant={isMonitoring ? 'secondary' : 'primary'}
+            size="small"
+            onClick={isMonitoring ? stopMonitoring : startMonitoring}
+          >
+            {isMonitoring ? 'Stop Monitor' : 'Start Monitor'}
+          </Button>
+        )}
       </div>
 
       {/* Alerts */}
@@ -211,9 +235,9 @@ const StrategyMonitorPanel = ({ symbol, versionId, onAlert }) => {
       )}
 
       {/* Metrics Grid */}
-      {loading ? (
+      {loading && !useSessionStats ? (
         <p style={{ color: theme.colors.textMuted }}>Loading...</p>
-      ) : !isMonitoring && !monitor ? (
+      ) : !isMonitoring && !monitor && !useSessionStats ? (
         <p style={{ color: theme.colors.textMuted }}>
           Start monitoring to track performance metrics.
         </p>

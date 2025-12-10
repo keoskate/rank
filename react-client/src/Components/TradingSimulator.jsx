@@ -19,9 +19,21 @@ import theme from '../theme';
 import { useTradingConfig } from '../contexts/TradingConfigContext';
 
 // Simulation constants
-const MARKET_OPEN_HOUR = 9.5; // 9:30 AM
-const MARKET_CLOSE_HOUR = 16; // 4:00 PM
+const MARKET_OPEN_HOUR = 9.5; // 9:30 AM EST
+const MARKET_CLOSE_HOUR = 16; // 4:00 PM EST
 const DEFAULT_SIMULATION_DURATION = 6000; // 6 seconds in ms
+
+// Convert timestamp to EST hour (handles timezone correctly)
+const getEstHour = timestamp => {
+  const date = new Date(timestamp);
+  // Get UTC hours and minutes
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  // EST is UTC-5 (ignoring daylight saving for simplicity - market hours are always EST)
+  let estHours = utcHours - 5;
+  if (estHours < 0) estHours += 24;
+  return estHours + utcMinutes / 60;
+};
 
 const TradingSimulator = ({ onComplete }) => {
   // Use config DIRECTLY from context - this ensures ConfigPanel edits are immediately used
@@ -30,9 +42,15 @@ const TradingSimulator = ({ onComplete }) => {
   // State for config recommendations
   const [recommendations, setRecommendations] = useState([]);
 
-  // Simulation state
-  const [simulationDate, setSimulationDate] = useState('');
-  const [symbol, setSymbol] = useState('AAPL');
+  // Simulation state - load from localStorage if available
+  const [simulationDate, setSimulationDate] = useState(() => {
+    const saved = localStorage.getItem('simulator-date');
+    return saved || '';
+  });
+  const [symbol, setSymbol] = useState(() => {
+    const saved = localStorage.getItem('simulator-symbol');
+    return saved || 'AAPL';
+  });
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -46,6 +64,9 @@ const TradingSimulator = ({ onComplete }) => {
   const [dayOpen, setDayOpen] = useState(0);
   const [dayHigh, setDayHigh] = useState(0);
   const [dayLow, setDayLow] = useState(Infinity);
+
+  // Pre-market gap info (to explain overnight moves)
+  const [preMarketInfo, setPreMarketInfo] = useState(null);
 
   // Get initial capital from config, with fallback
   const getInitialCapital = () => config?.allocatedCapital || 100000;
@@ -83,15 +104,47 @@ const TradingSimulator = ({ onComplete }) => {
   const candlesRef = useRef([]);
   const isPausedRef = useRef(false);
 
-  // Get yesterday's date as default
+  // CRITICAL: Store config snapshot when simulation starts
+  // This prevents config changes during simulation from affecting results
+  const configSnapshotRef = useRef(null);
+  const [usedConfig, setUsedConfig] = useState(null); // For displaying in results
+
+  // Stress Test / Config Optimizer state
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizerProgress, setOptimizerProgress] = useState(0);
+  const [optimizerResults, setOptimizerResults] = useState([]);
+  const [showOptimizer, setShowOptimizer] = useState(false);
+
+  // Debug logging state
+  const [debugLog, setDebugLog] = useState([]);
+  const [showDebugLog, setShowDebugLog] = useState(false);
+  const [optimizerPrediction, setOptimizerPrediction] = useState(null);
+  const debugLogRef = useRef([]);
+
+  // Get yesterday's date as default (only if no saved date)
   useEffect(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    while (yesterday.getDay() === 0 || yesterday.getDay() === 6) {
+    if (!simulationDate) {
+      const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
+      while (yesterday.getDay() === 0 || yesterday.getDay() === 6) {
+        yesterday.setDate(yesterday.getDate() - 1);
+      }
+      setSimulationDate(yesterday.toISOString().split('T')[0]);
     }
-    setSimulationDate(yesterday.toISOString().split('T')[0]);
   }, []);
+
+  // Persist date and symbol to localStorage
+  useEffect(() => {
+    if (simulationDate) {
+      localStorage.setItem('simulator-date', simulationDate);
+    }
+  }, [simulationDate]);
+
+  useEffect(() => {
+    if (symbol) {
+      localStorage.setItem('simulator-symbol', symbol);
+    }
+  }, [symbol]);
 
   // Calculate unrealized P&L
   const getUnrealizedPnL = useCallback(() => {
@@ -120,30 +173,50 @@ const TradingSimulator = ({ onComplete }) => {
         throw new Error('No market data available for this date');
       }
 
-      // Filter to market hours and validate data
-      const marketCandles = data.results
+      // Get all valid candles first
+      const allValidCandles = data.results
         .filter(candle => {
-          if (!candle) return false;
-          const timestamp = candle.timestamp || candle.t;
-          if (!timestamp) return false;
-          const time = new Date(timestamp);
-          const hour = time.getHours() + time.getMinutes() / 60;
-          return hour >= MARKET_OPEN_HOUR && hour < MARKET_CLOSE_HOUR;
-        })
-        .filter(candle => {
-          // Ensure all required fields exist
           const close = candle.close ?? candle.c;
           const high = candle.high ?? candle.h;
           const low = candle.low ?? candle.l;
           const open = candle.open ?? candle.o;
-          return (
-            close !== undefined &&
-            high !== undefined &&
-            low !== undefined &&
-            open !== undefined
-          );
+          return close !== undefined && high !== undefined && low !== undefined && open !== undefined;
         })
         .sort((a, b) => (a.timestamp || a.t) - (b.timestamp || b.t));
+
+      // Find pre-market data (before 9:30 AM EST)
+      const preMarketCandles = allValidCandles.filter(candle => {
+        const timestamp = candle.timestamp || candle.t;
+        const estHour = getEstHour(timestamp);
+        return estHour < MARKET_OPEN_HOUR;
+      });
+
+      // Filter to market hours only for trading (9:30 AM - 4:00 PM EST)
+      const marketCandles = allValidCandles.filter(candle => {
+        const timestamp = candle.timestamp || candle.t;
+        const estHour = getEstHour(timestamp);
+        return estHour >= MARKET_OPEN_HOUR && estHour < MARKET_CLOSE_HOUR;
+      });
+
+      // Calculate pre-market gap info if there's pre-market data
+      if (preMarketCandles.length > 0 && marketCandles.length > 0) {
+        const preMarketLow = Math.min(...preMarketCandles.map(c => c.low ?? c.l));
+        const preMarketHigh = Math.max(...preMarketCandles.map(c => c.high ?? c.h));
+        const preMarketFirst = preMarketCandles[0].open ?? preMarketCandles[0].o;
+        const marketOpen = marketCandles[0].open ?? marketCandles[0].o;
+        const gapPercent = ((marketOpen - preMarketFirst) / preMarketFirst * 100).toFixed(1);
+
+        setPreMarketInfo({
+          preMarketLow,
+          preMarketHigh,
+          preMarketFirst,
+          marketOpen,
+          gapPercent,
+          hasGap: Math.abs(parseFloat(gapPercent)) > 2, // Consider >2% a significant gap
+        });
+      } else {
+        setPreMarketInfo(null);
+      }
 
       return marketCandles;
     } catch (err) {
@@ -167,7 +240,7 @@ const TradingSimulator = ({ onComplete }) => {
   };
 
   // Simple AI decision logic with null checks
-  // Uses config for profit target, stop loss, min confidence, etc.
+  // CRITICAL: Uses configSnapshotRef to ensure consistent config throughout simulation
   const makeAiDecision = (candle, index, allCandles, currentPosition) => {
     const c = getCandle(candle);
     if (!c)
@@ -179,22 +252,48 @@ const TradingSimulator = ({ onComplete }) => {
 
     const { close: price, volume, open, high, low, timestamp } = c;
 
-    // Get config values with defaults
-    // Config may use takeProfitPercent, profitTarget, or profitTargetPercent
+    // CRITICAL: Use snapshot config, NOT live config
+    // This ensures config doesn't change mid-simulation
+    const cfg = configSnapshotRef.current || config;
+
+    // Get ALL config values with defaults
     const profitTargetPercent =
-      config?.takeProfitPercent ||
-      config?.profitTarget ||
-      config?.profitTargetPercent ||
+      cfg?.takeProfitPercent ||
+      cfg?.profitTarget ||
+      cfg?.profitTargetPercent ||
       2;
-    const stopLossPercent = config?.stopLossPercent || config?.stopLoss || 1;
-    const minConfidence = config?.minConfidence || 70;
+    const stopLossPercent = cfg?.stopLossPercent || cfg?.stopLoss || 1;
+    const minConfidence = cfg?.minConfidence || 70;
+
+    // Entry condition config values
+    const rsiOversold = cfg?.rsiOversold || 30;
+    const rsiOverbought = cfg?.rsiOverbought || 70;
+    const vwapDeviation = (cfg?.vwapDeviationPercent || 0.5) / 100; // Convert to decimal
+    const volumeMultiplier = cfg?.volumeMultiplier || 1.5;
+    const minSignalsRequired = cfg?.minSignalsRequired || 3;
+    // Handle both boolean and string "Yes"/"No" values
+    const toBool = val => val === true || val === 'Yes' || val === 'yes';
+    const requireVolumeSpike = toBool(cfg?.requireVolumeSpike);
+    const requireTrendAlign = toBool(cfg?.requireTrendAlignment) || toBool(cfg?.requireTrendAlign);
+    const requireRsiSignal = toBool(cfg?.requireRsiSignal);
+    // Entry strategy: 'dip' (buy oversold), 'momentum' (buy breakouts), 'balanced' (both)
+    const entryStrategy = cfg?.entryStrategy || 'balanced';
 
     // Debug log on first candle to verify config is being used
     if (index === 0) {
       console.log('[Simulator] Using config:', {
+        entryStrategy,
         profitTargetPercent,
         stopLossPercent,
         minConfidence,
+        rsiOversold,
+        rsiOverbought,
+        vwapDeviation,
+        volumeMultiplier,
+        minSignalsRequired,
+        requireVolumeSpike,
+        requireTrendAlign,
+        requireRsiSignal,
         rawConfig: config,
       });
     }
@@ -288,42 +387,120 @@ const TradingSimulator = ({ onComplete }) => {
       },
     };
 
-    // BUY signals
+    // BUY signals - using config values and entry strategy
     if (!currentPosition) {
-      let buyScore = 0;
+      let signalCount = 0;
       const buyReasons = [];
+      let isDipEntry = false;
+      let isMomentumEntry = false;
 
-      if (rsi < 35) {
-        buyScore += 25;
-        buyReasons.push(`RSI oversold (${Math.round(rsi)})`);
+      // === DIP BUYING SIGNALS (for pullbacks/oversold) ===
+      // Used by: dip, balanced, conservative
+      if (entryStrategy === 'dip' || entryStrategy === 'balanced' || entryStrategy === 'conservative') {
+        // RSI oversold signal
+        if (rsi < rsiOversold) {
+          signalCount++;
+          isDipEntry = true;
+          buyReasons.push(`RSI oversold (${Math.round(rsi)} < ${rsiOversold})`);
+        }
+
+        // Below VWAP signal
+        if (price < vwap * (1 - vwapDeviation)) {
+          signalCount++;
+          isDipEntry = true;
+          buyReasons.push(`Below VWAP by ${(vwapDeviation * 100).toFixed(1)}%`);
+        }
+
+        // Pullback signal in uptrend
+        if (priceChange < -0.005 && priceChange > -0.02 && price > ma20) {
+          signalCount++;
+          isDipEntry = true;
+          buyReasons.push('Pullback in uptrend');
+        }
       }
-      if (price < vwap * 0.995) {
-        buyScore += 20;
-        buyReasons.push(`Price below VWAP ($${vwap.toFixed(2)})`);
+
+      // === MOMENTUM BUYING SIGNALS (for breakouts/strong trends) ===
+      // Used by: momentum, balanced, aggressive
+      if (entryStrategy === 'momentum' || entryStrategy === 'balanced' || entryStrategy === 'aggressive') {
+        // Strong RSI (momentum, not oversold)
+        if (rsi > 50 && rsi < 65) {
+          signalCount++;
+          isMomentumEntry = true;
+          buyReasons.push(`RSI momentum (${Math.round(rsi)})`);
+        }
+
+        // Price above VWAP with strength (breakout)
+        if (price > vwap * (1 + vwapDeviation) && priceChange > 0) {
+          signalCount++;
+          isMomentumEntry = true;
+          buyReasons.push(`Breakout above VWAP (+${((price/vwap - 1) * 100).toFixed(1)}%)`);
+        }
+
+        // Price above MA20 (uptrend confirmation)
+        if (price > ma20 * 1.005) {
+          signalCount++;
+          isMomentumEntry = true;
+          buyReasons.push('Above MA20 uptrend');
+        }
       }
-      if (priceChange < -0.005 && priceChange > -0.02) {
-        buyScore += 15;
-        buyReasons.push('Minor pullback detected');
+
+      // Volume spike signal (applies to both strategies)
+      const hasVolumeSpike = volumeRatio > volumeMultiplier;
+      if (hasVolumeSpike) {
+        signalCount++;
+        buyReasons.push(`Volume spike (${volumeRatio.toFixed(1)}x)`);
       }
 
-      // Volume spike check with null safety
-      const recentCandles = allCandles.slice(Math.max(0, index - 10), index);
-      const avgVolume =
-        recentCandles.reduce((s, c) => {
-          const cd = getCandle(c);
-          return s + (cd ? cd.volume : 0);
-        }, 0) / Math.max(recentCandles.length, 1);
+      // Check required conditions based on config
+      let meetsRequirements = true;
+      const hasRsiSignal = rsi < rsiOversold || (isMomentumEntry && rsi > 50);
+      const hasTrendSignal = price < vwap * (1 - vwapDeviation) || price > vwap * (1 + vwapDeviation) || price > ma20;
 
-      if (volume > avgVolume * 1.5) {
-        buyScore += 15;
-        buyReasons.push('Volume spike detected');
+      if (requireRsiSignal && !hasRsiSignal) {
+        meetsRequirements = false;
+      }
+      if (requireVolumeSpike && !hasVolumeSpike) {
+        meetsRequirements = false;
+      }
+      if (requireTrendAlign && !hasTrendSignal) {
+        meetsRequirements = false;
       }
 
-      decision.confidence = Math.min(95, 50 + buyScore);
+      // Calculate confidence based on signal count
+      const baseConfidence = 50;
+      const perSignalBoost = 15;
+      decision.confidence = Math.min(95, baseConfidence + signalCount * perSignalBoost);
 
-      if (decision.confidence >= minConfidence) {
+      // Only trigger buy if we have enough signals AND meet requirements
+      if (
+        signalCount >= minSignalsRequired &&
+        meetsRequirements &&
+        decision.confidence >= minConfidence
+      ) {
         decision.action = 'BUY';
         decision.reasons = buyReasons;
+
+        // Debug log for BUY
+        debugLogRef.current.push({
+          type: 'BUY',
+          index,
+          price,
+          timestamp,
+          signalCount,
+          minSignalsRequired,
+          confidence: decision.confidence,
+          minConfidence,
+          meetsRequirements,
+          hasRsiSignal,
+          hasVolumeSpike,
+          hasTrendSignal,
+          requireRsiSignal,
+          requireVolumeSpike,
+          requireTrendAlign,
+          reasons: buyReasons,
+          indicators: { rsi, vwap, ma20, volumeRatio, priceChange },
+          entryStrategy,
+        });
       }
     }
 
@@ -346,9 +523,9 @@ const TradingSimulator = ({ onComplete }) => {
         sellReasons.push(`Stop loss triggered (${pnlPercent.toFixed(2)}%)`);
       }
 
-      if (rsi > 70) {
+      if (rsi > rsiOverbought) {
         sellScore += 20;
-        sellReasons.push(`RSI overbought (${Math.round(rsi)})`);
+        sellReasons.push(`RSI overbought (${Math.round(rsi)} > ${rsiOverbought})`);
       }
 
       if (price > vwap * 1.01 && priceChange < 0) {
@@ -356,19 +533,37 @@ const TradingSimulator = ({ onComplete }) => {
         sellReasons.push('Momentum fading above VWAP');
       }
 
-      // End of day check
-      const time = new Date(timestamp);
-      const hour = time.getHours() + time.getMinutes() / 60;
-      if (hour >= 15.75) {
+      // End of day check (must use EST for market hours)
+      const estHour = getEstHour(timestamp);
+      if (estHour >= 15.75) {
         sellScore += 50;
         sellReasons.push('End of day liquidation');
       }
 
       decision.confidence = Math.min(95, 50 + sellScore);
 
-      if (decision.confidence >= minConfidence || hour >= 15.75) {
+      if (decision.confidence >= minConfidence || estHour >= 15.75) {
         decision.action = 'SELL';
         decision.reasons = sellReasons;
+
+        // Debug log for SELL
+        debugLogRef.current.push({
+          type: 'SELL',
+          index,
+          price,
+          entryPrice,
+          pnlPercent,
+          timestamp,
+          sellScore,
+          confidence: decision.confidence,
+          minConfidence,
+          profitTargetPercent,
+          stopLossPercent,
+          rsiOverbought,
+          estHour,
+          reasons: sellReasons,
+          indicators: { rsi, vwap, priceChange },
+        });
       }
     }
 
@@ -388,11 +583,13 @@ const TradingSimulator = ({ onComplete }) => {
 
       setPortfolio(prev => {
         const newPortfolio = { ...prev };
+        // Use config snapshot if available (locked during simulation)
+        const activeConfig = configSnapshotRef.current || config;
 
         if (decision.action === 'BUY' && prev.positions.length === 0) {
           // Use config position sizing, with fallbacks
-          const maxPositionPercent = (config?.maxPositionSizePercent || 50) / 100;
-          const maxPositionDollars = config?.maxPositionSize || prev.cash;
+          const maxPositionPercent = (activeConfig?.maxPositionSizePercent || 50) / 100;
+          const maxPositionDollars = activeConfig?.maxPositionSize || prev.cash;
           const positionValue = Math.min(prev.cash * maxPositionPercent, maxPositionDollars);
           const positionSize = Math.floor(positionValue / price);
 
@@ -514,9 +711,14 @@ const TradingSimulator = ({ onComplete }) => {
     setDayHigh(prev => Math.max(prev, high));
     setDayLow(prev => Math.min(prev === Infinity ? low : prev, low));
 
+    // Display time in EST (market time)
     const time = new Date(timestamp);
     setCurrentTime(
-      time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      time.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/New_York',
+      })
     );
 
     // Make AI decision
@@ -543,6 +745,27 @@ const TradingSimulator = ({ onComplete }) => {
 
   // Start simulation
   const startSimulation = async () => {
+    // CRITICAL: Snapshot the config at simulation start
+    // This ensures the SAME config is used throughout the entire simulation
+    const configSnapshot = { ...config };
+    configSnapshotRef.current = configSnapshot;
+    setUsedConfig(configSnapshot);
+    console.log('[Simulator] 🔒 Config snapshot locked:', {
+      entryStrategy: configSnapshot.entryStrategy,
+      minSignalsRequired: configSnapshot.minSignalsRequired,
+      takeProfitPercent: configSnapshot.takeProfitPercent,
+      stopLossPercent: configSnapshot.stopLossPercent,
+      minConfidence: configSnapshot.minConfidence,
+      maxPositionSizePercent: configSnapshot.maxPositionSizePercent,
+      requireVolumeSpike: configSnapshot.requireVolumeSpike,
+      requireTrendAlignment: configSnapshot.requireTrendAlignment,
+      requireRsiSignal: configSnapshot.requireRsiSignal,
+      rsiOversold: configSnapshot.rsiOversold,
+      rsiOverbought: configSnapshot.rsiOverbought,
+      volumeMultiplier: configSnapshot.volumeMultiplier,
+      allocatedCapital: configSnapshot.allocatedCapital,
+    });
+
     setIsRunning(true);
     setIsPaused(false);
     isPausedRef.current = false;
@@ -554,7 +777,11 @@ const TradingSimulator = ({ onComplete }) => {
     setAnalysis(null);
     setShowAnalysis(false);
     setRealizedPnL(0);
-    const initialCapital = config?.allocatedCapital || 100000;
+    // Clear debug log for fresh simulation
+    debugLogRef.current = [];
+    setDebugLog([]);
+    setShowDebugLog(false);
+    const initialCapital = configSnapshot.allocatedCapital || 100000;
     setPortfolio({
       cash: initialCapital,
       startingCash: initialCapital,
@@ -695,6 +922,16 @@ const TradingSimulator = ({ onComplete }) => {
 
         setAnalysis(analysisResult);
         setShowAnalysis(true);
+
+        // Save debug log for review
+        setDebugLog([...debugLogRef.current]);
+        console.log('[Simulator] Debug log saved:', debugLogRef.current.length, 'entries');
+        console.log('[Simulator] Actual results:', {
+          returnPercent: returnPercent.toFixed(2),
+          totalPnL: totalPnLCalc.toFixed(2),
+          numTrades: totalTrades,
+          winRate: winRate.toFixed(0),
+        });
 
         // Generate config recommendations based on results
         generateRecommendations(analysisResult, prev.trades);
@@ -891,11 +1128,13 @@ const TradingSimulator = ({ onComplete }) => {
   };
 
   // Generate recommendations based on simulation results
-  const generateRecommendations = useCallback((analysisData, trades) => {
+  const generateRecommendations = useCallback((analysisData, trades, dayData) => {
     const recs = [];
     const currentTP = config?.takeProfitPercent || 2;
     const currentSL = config?.stopLossPercent || 1;
     const currentConf = config?.minConfidence || 70;
+    const currentMinSignals = config?.minSignalsRequired || 3;
+    const currentStrategy = config?.entryStrategy || 'balanced';
 
     if (!analysisData || trades.length === 0) {
       setRecommendations([]);
@@ -909,24 +1148,73 @@ const TradingSimulator = ({ onComplete }) => {
     const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
     const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
 
-    // Recommendation 1: Take Profit adjustment
+    // Analyze day characteristics
+    const dayMove = analysisData.priceChangePercent || 0;
+    const isTrendingDay = Math.abs(dayMove) > 3; // >3% move
+    const isBigDay = Math.abs(dayMove) > 5; // >5% move
+    const captureRate = dayMove !== 0 ? (analysisData.returnPercent / Math.abs(dayMove)) : 0;
+
+    // Recommendation 1: Strategy type for the day
+    if (isTrendingDay && currentStrategy !== 'momentum' && captureRate < 0.3) {
+      recs.push({
+        id: 'use_momentum',
+        title: '🚀 Switch to Momentum Strategy',
+        description: `This was a ${dayMove > 0 ? '+' : ''}${dayMove.toFixed(1)}% day but you only captured ${(captureRate * 100).toFixed(0)}% of it. Momentum strategy is better for strong trend days.`,
+        field: 'entryStrategy',
+        currentValue: currentStrategy,
+        suggestedValue: 'momentum',
+        impact: `Potential ${(dayMove * 0.5).toFixed(1)}%+ return on similar days`,
+        priority: 'high',
+      });
+    }
+
+    // Recommendation 2: Too few signals required on trending day
+    if (isTrendingDay && currentMinSignals >= 3 && trades.length < 5) {
+      recs.push({
+        id: 'reduce_signals',
+        title: '📉 Reduce Min Signals Required',
+        description: `Only ${trades.length} trades on a ${dayMove.toFixed(1)}% day. Requiring ${currentMinSignals} signals is too strict for momentum plays.`,
+        field: 'minSignalsRequired',
+        currentValue: currentMinSignals,
+        suggestedValue: 2,
+        impact: 'More opportunities on strong moves',
+        priority: 'high',
+      });
+    }
+
+    // Recommendation 3: Take Profit too tight on big day
+    if (isBigDay && currentTP < 3 && avgWin > 0) {
+      const potentialExtra = (dayMove * 0.3) - currentTP;
+      if (potentialExtra > 0.5) {
+        recs.push({
+          id: 'increase_tp_big_day',
+          title: '💰 Increase Take Profit for Big Days',
+          description: `On ${dayMove.toFixed(1)}% days, ${currentTP}% take profit exits too early. Let winners run when momentum is strong.`,
+          field: 'takeProfitPercent',
+          currentValue: currentTP,
+          suggestedValue: Math.min(dayMove * 0.4, 8),
+          impact: `Capture ${(potentialExtra).toFixed(1)}% more per trade`,
+          priority: 'high',
+        });
+      }
+    }
+
+    // Recommendation 4: Standard Take Profit adjustment
     if (winRate >= 0.6 && avgWin < avgLoss * 1.5) {
-      // High win rate but profits not large enough
       recs.push({
         id: 'increase_tp',
         title: 'Increase Take Profit Target',
-        description: `Your win rate is ${(winRate * 100).toFixed(0)}% but average win ($${avgWin.toFixed(0)}) is less than 1.5x average loss ($${avgLoss.toFixed(0)}). Consider letting winners run longer.`,
+        description: `Your win rate is ${(winRate * 100).toFixed(0)}% but average win ($${avgWin.toFixed(0)}) is less than 1.5x average loss ($${avgLoss.toFixed(0)}).`,
         field: 'takeProfitPercent',
         currentValue: currentTP,
         suggestedValue: Math.min(currentTP * 1.5, 5),
         impact: '+0.5-1% potential daily return',
       });
     } else if (winRate < 0.4 && avgWin > avgLoss * 2) {
-      // Low win rate but big winners - maybe targets too high
       recs.push({
         id: 'decrease_tp',
         title: 'Decrease Take Profit Target',
-        description: `Your win rate is only ${(winRate * 100).toFixed(0)}% but winners are ${(avgWin / avgLoss).toFixed(1)}x larger than losses. Consider smaller targets to improve consistency.`,
+        description: `Your win rate is only ${(winRate * 100).toFixed(0)}% but winners are ${(avgWin / avgLoss).toFixed(1)}x larger than losses.`,
         field: 'takeProfitPercent',
         currentValue: currentTP,
         suggestedValue: Math.max(currentTP * 0.75, 1),
@@ -934,14 +1222,14 @@ const TradingSimulator = ({ onComplete }) => {
       });
     }
 
-    // Recommendation 2: Stop Loss adjustment
+    // Recommendation 5: Stop Loss adjustment
     if (losses.length > 0) {
       const avgLossPercent = (avgLoss / (config?.allocatedCapital || 100000)) * 100;
       if (avgLossPercent > currentSL * 1.2) {
         recs.push({
           id: 'tighten_sl',
           title: 'Tighten Stop Loss',
-          description: `Average loss (${avgLossPercent.toFixed(2)}%) exceeds your stop loss setting (${currentSL}%). Either slippage is high or stops aren't triggering properly.`,
+          description: `Average loss (${avgLossPercent.toFixed(2)}%) exceeds your stop loss setting (${currentSL}%).`,
           field: 'stopLossPercent',
           currentValue: currentSL,
           suggestedValue: Math.max(currentSL * 0.8, 0.5),
@@ -951,7 +1239,7 @@ const TradingSimulator = ({ onComplete }) => {
         recs.push({
           id: 'widen_sl',
           title: 'Widen Stop Loss',
-          description: `You might be getting stopped out too early. Average loss (${avgLossPercent.toFixed(2)}%) is much less than your stop (${currentSL}%). Giving trades more room might improve win rate.`,
+          description: `You might be getting stopped out too early. Average loss (${avgLossPercent.toFixed(2)}%) is much less than your stop (${currentSL}%).`,
           field: 'stopLossPercent',
           currentValue: currentSL,
           suggestedValue: Math.min(currentSL * 1.25, 3),
@@ -960,42 +1248,62 @@ const TradingSimulator = ({ onComplete }) => {
       }
     }
 
-    // Recommendation 3: Confidence threshold
-    if (trades.length < 3 && analysisData.returnPercent < 0) {
+    // Recommendation 6: Confidence threshold
+    if (trades.length < 3 && analysisData.returnPercent < dayMove * 0.1) {
       recs.push({
         id: 'lower_confidence',
         title: 'Lower Confidence Threshold',
-        description: `Only ${trades.length} trades executed. Consider lowering confidence threshold to capture more opportunities.`,
+        description: `Only ${trades.length} trades executed on a ${dayMove.toFixed(1)}% day. Consider lowering confidence threshold.`,
         field: 'minConfidence',
         currentValue: currentConf,
         suggestedValue: Math.max(currentConf - 10, 50),
         impact: 'More trading opportunities',
       });
-    } else if (trades.length > 8 && winRate < 0.45) {
+    } else if (trades.length > 15 && winRate < 0.45) {
       recs.push({
         id: 'raise_confidence',
         title: 'Raise Confidence Threshold',
-        description: `${trades.length} trades with only ${(winRate * 100).toFixed(0)}% win rate. Be more selective by raising confidence threshold.`,
+        description: `${trades.length} trades with only ${(winRate * 100).toFixed(0)}% win rate. Be more selective.`,
         field: 'minConfidence',
         currentValue: currentConf,
         suggestedValue: Math.min(currentConf + 10, 85),
-        impact: 'Higher quality signals, fewer false positives',
+        impact: 'Higher quality signals',
       });
     }
 
-    // Recommendation 4: R:R Ratio
+    // Recommendation 7: R:R Ratio
     const rrRatio = avgWin / (avgLoss || 1);
     if (rrRatio < 1 && winRate < 0.6) {
       recs.push({
         id: 'improve_rr',
         title: 'Improve Risk/Reward Ratio',
-        description: `Current R:R is ${rrRatio.toFixed(2)}:1 with ${(winRate * 100).toFixed(0)}% win rate. This combination is not profitable. Need either higher R:R or higher win rate.`,
+        description: `Current R:R is ${rrRatio.toFixed(2)}:1 with ${(winRate * 100).toFixed(0)}% win rate. This combination is not profitable.`,
         field: 'takeProfitPercent',
         currentValue: currentTP,
-        suggestedValue: currentSL * 2, // Aim for 2:1 R:R
+        suggestedValue: currentSL * 2,
         impact: 'Profitable expectancy',
       });
     }
+
+    // Recommendation 8: Disable require flags on momentum days
+    if (isTrendingDay && config?.requireVolumeSpike && trades.length < 5) {
+      recs.push({
+        id: 'disable_volume_req',
+        title: 'Disable Volume Spike Requirement',
+        description: `On strong trend days, requiring volume spikes filters out good momentum entries.`,
+        field: 'requireVolumeSpike',
+        currentValue: true,
+        suggestedValue: false,
+        impact: 'More momentum entries',
+      });
+    }
+
+    // Sort by priority (high priority first)
+    recs.sort((a, b) => {
+      if (a.priority === 'high' && b.priority !== 'high') return -1;
+      if (b.priority === 'high' && a.priority !== 'high') return 1;
+      return 0;
+    });
 
     setRecommendations(recs);
   }, [config]);
@@ -1005,6 +1313,329 @@ const TradingSimulator = ({ onComplete }) => {
     updateGlobalConfig({ [rec.field]: rec.suggestedValue });
     // Remove applied recommendation from list
     setRecommendations(prev => prev.filter(r => r.id !== rec.id));
+  };
+
+  // Apply all recommendations at once
+  const applyAllRecommendations = () => {
+    const updates = {};
+    recommendations.forEach(rec => {
+      updates[rec.field] = rec.suggestedValue;
+    });
+    updateGlobalConfig(updates);
+    setRecommendations([]);
+  };
+
+  // ============================================
+  // CONFIG OPTIMIZER / STRESS TEST
+  // Runs multiple simulations to find optimal config
+  // ============================================
+
+  // Config variations to test - include aggressive options for big move days
+  const CONFIG_VARIATIONS = {
+    entryStrategy: ['balanced', 'aggressive', 'momentum'],
+    minSignalsRequired: [1, 2],
+    takeProfitPercent: [2, 3, 5, 8],
+    stopLossPercent: [1, 2, 3],
+    minConfidence: [50, 60, 70],
+    maxPositionSizePercent: [25, 50, 80],
+    // Test with NO requirements for maximum trading
+    requireFlags: [
+      { requireVolumeSpike: false, requireTrendAlignment: false, requireRsiSignal: false },
+    ],
+  };
+
+  // Run a fast simulation with a given config (no UI updates)
+  const runFastSimulation = (candleData, testConfig) => {
+    const initialCash = testConfig.allocatedCapital || 25000;
+    let cash = initialCash;
+    let position = null;
+    let trades = [];
+    let entryPrice = 0;
+
+    // Calculate indicators for each candle
+    const calculateIndicators = (index, allCandles) => {
+      const lookback = Math.min(index + 1, 14);
+      const recentCandles = allCandles.slice(Math.max(0, index - lookback + 1), index + 1);
+
+      // RSI calculation
+      let gains = 0, losses = 0;
+      for (let i = 1; i < recentCandles.length; i++) {
+        const change = (recentCandles[i].close || recentCandles[i].c) - (recentCandles[i-1].close || recentCandles[i-1].c);
+        if (change > 0) gains += change;
+        else losses -= change;
+      }
+      const avgGain = gains / lookback;
+      const avgLoss = losses / lookback;
+      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+      const rsi = 100 - (100 / (1 + rs));
+
+      // VWAP calculation
+      let vwapSum = 0, volSum = 0;
+      for (let i = 0; i <= index; i++) {
+        const c = allCandles[i];
+        const price = (c.high || c.h) + (c.low || c.l) + (c.close || c.c);
+        const vol = c.volume || c.v || 1;
+        vwapSum += (price / 3) * vol;
+        volSum += vol;
+      }
+      const vwap = volSum > 0 ? vwapSum / volSum : 0;
+
+      // MA20
+      const ma20Candles = allCandles.slice(Math.max(0, index - 19), index + 1);
+      const ma20 = ma20Candles.reduce((s, c) => s + (c.close || c.c), 0) / ma20Candles.length;
+
+      // Volume ratio
+      const avgVol = recentCandles.reduce((s, c) => s + (c.volume || c.v || 0), 0) / recentCandles.length;
+      const currentVol = allCandles[index].volume || allCandles[index].v || 0;
+      const volumeRatio = avgVol > 0 ? currentVol / avgVol : 1;
+
+      return { rsi, vwap, ma20, volumeRatio };
+    };
+
+    // Process each candle
+    for (let i = 20; i < candleData.length; i++) {
+      const candle = candleData[i];
+      const price = candle.close || candle.c;
+      const indicators = calculateIndicators(i, candleData);
+
+      // BUY logic - matches makeAiDecision logic exactly
+      if (!position) {
+        let signals = 0;
+        const strategy = testConfig.entryStrategy || 'balanced';
+        const rsiOversold = testConfig.rsiOversold || 30;
+        const volumeMultiplier = testConfig.volumeMultiplier || 1.5;
+
+        // Helper for boolean config values
+        const toBool = val => val === true || val === 'Yes' || val === 'yes';
+        const requireVolumeSpike = toBool(testConfig.requireVolumeSpike);
+        const requireTrendAlign = toBool(testConfig.requireTrendAlignment) || toBool(testConfig.requireTrendAlign);
+        const requireRsiSignal = toBool(testConfig.requireRsiSignal);
+
+        let hasRsiSignal = false;
+        let hasTrendSignal = false;
+        let hasVolumeSpike = false;
+
+        // Dip signals
+        if (strategy === 'dip' || strategy === 'balanced' || strategy === 'conservative') {
+          if (indicators.rsi < rsiOversold) {
+            signals++;
+            hasRsiSignal = true;
+          }
+          if (price < indicators.vwap * 0.995) {
+            signals++;
+            hasTrendSignal = true;
+          }
+        }
+
+        // Momentum signals
+        if (strategy === 'momentum' || strategy === 'balanced' || strategy === 'aggressive') {
+          if (indicators.rsi > 50 && indicators.rsi < 70) {
+            signals++;
+            hasRsiSignal = true;
+          }
+          if (price > indicators.vwap * 1.005) {
+            signals++;
+            hasTrendSignal = true;
+          }
+          if (price > indicators.ma20 * 1.005) {
+            signals++;
+            hasTrendSignal = true;
+          }
+        }
+
+        // Volume spike
+        if (indicators.volumeRatio > volumeMultiplier) {
+          signals++;
+          hasVolumeSpike = true;
+        }
+
+        // Check required conditions (same as makeAiDecision)
+        let meetsRequirements = true;
+        if (requireRsiSignal && !hasRsiSignal) meetsRequirements = false;
+        if (requireVolumeSpike && !hasVolumeSpike) meetsRequirements = false;
+        if (requireTrendAlign && !hasTrendSignal) meetsRequirements = false;
+
+        // Calculate BUY confidence same as full simulation
+        const baseConfidence = 50;
+        const perSignalBoost = 15;
+        const buyConfidence = Math.min(95, baseConfidence + signals * perSignalBoost);
+        const minConfidence = testConfig.minConfidence || 70;
+
+        // Check if we should buy (same conditions as full simulation)
+        if (
+          signals >= (testConfig.minSignalsRequired || 2) &&
+          meetsRequirements &&
+          buyConfidence >= minConfidence
+        ) {
+          // Use SAME position sizing as full simulation
+          const maxPositionPercent = (testConfig.maxPositionSizePercent || 50) / 100;
+          const maxPositionDollars = testConfig.maxPositionSize || cash;
+          const positionValue = Math.min(cash * maxPositionPercent, maxPositionDollars);
+          const positionSize = Math.floor(positionValue / price);
+          if (positionSize > 0) {
+            position = { quantity: positionSize, entryPrice: price };
+            entryPrice = price;
+            cash -= positionSize * price;
+          }
+        }
+      }
+      // SELL logic - matches makeAiDecision's score-based system exactly
+      else if (position) {
+        const pnlPercent = ((price - entryPrice) / entryPrice) * 100;
+        const minConfidence = testConfig.minConfidence || 70;
+        const rsiOverbought = testConfig.rsiOverbought || 70;
+        const profitTargetPercent = testConfig.takeProfitPercent || 2;
+        const stopLossPercent = testConfig.stopLossPercent || 1;
+
+        // Get EST hour for end-of-day check (same as full simulation)
+        const timestamp = candle.timestamp || candle.t;
+        const estHour = timestamp ? (new Date(timestamp).getUTCHours() - 5 + 24) % 24 + (new Date(timestamp).getUTCMinutes() / 60) : 12;
+
+        // Score-based sell system (matches full simulation)
+        let sellScore = 0;
+
+        // Profit target
+        if (pnlPercent >= profitTargetPercent) sellScore += 30;
+        // Stop loss
+        if (pnlPercent <= -stopLossPercent) sellScore += 40;
+        // RSI overbought
+        if (indicators.rsi > rsiOverbought) sellScore += 20;
+        // Momentum fading (price above VWAP but dropping)
+        const priceChange = i > 0 ? (price - (candleData[i-1].close || candleData[i-1].c)) / (candleData[i-1].close || candleData[i-1].c) : 0;
+        if (price > indicators.vwap * 1.01 && priceChange < 0) sellScore += 15;
+        // End of day liquidation (after 3:45 PM EST)
+        if (estHour >= 15.75) sellScore += 50;
+
+        // Calculate confidence same as full simulation
+        const sellConfidence = Math.min(95, 50 + sellScore);
+
+        // Sell if confidence meets threshold OR end of day (matches full simulation)
+        if (sellConfidence >= minConfidence || estHour >= 15.75) {
+          const pnl = position.quantity * (price - entryPrice);
+          trades.push({ pnl, entryPrice, exitPrice: price });
+          cash += position.quantity * price;
+          position = null;
+        }
+      }
+    }
+
+    // Close any remaining position at end
+    if (position && candleData.length > 0) {
+      const lastPrice = candleData[candleData.length - 1].close || candleData[candleData.length - 1].c;
+      const pnl = position.quantity * (lastPrice - entryPrice);
+      trades.push({ pnl, entryPrice, exitPrice: lastPrice });
+      cash += position.quantity * lastPrice;
+    }
+
+    const totalPnL = trades.reduce((s, t) => s + t.pnl, 0);
+    const returnPercent = ((cash - initialCash) / initialCash) * 100;
+    const winRate = trades.length > 0 ? (trades.filter(t => t.pnl > 0).length / trades.length) * 100 : 0;
+
+    return {
+      totalPnL,
+      returnPercent,
+      winRate,
+      numTrades: trades.length,
+      config: testConfig,
+    };
+  };
+
+  // Run the optimizer
+  const runOptimizer = async () => {
+    setIsOptimizing(true);
+    setOptimizerProgress(0);
+    setOptimizerResults([]);
+    setShowOptimizer(true);
+
+    // Fetch candle data
+    const data = await fetchSimulationData();
+    if (!data || data.length === 0) {
+      setIsOptimizing(false);
+      addEvent('error', 'Optimizer Failed', 'No data available for this date');
+      return;
+    }
+    console.log(`[Optimizer] Processing ${data.length} candles (starting from index 20, so ${data.length - 20} tradeable candles)`);
+
+    // Generate all config combinations
+    const combinations = [];
+    const baseConfig = {
+      ...config,
+      allocatedCapital: config.allocatedCapital || 25000,
+      rsiOversold: config.rsiOversold || 30,
+      rsiOverbought: config.rsiOverbought || 70,
+      volumeMultiplier: config.volumeMultiplier || 1.5,
+    };
+
+    for (const strategy of CONFIG_VARIATIONS.entryStrategy) {
+      for (const signals of CONFIG_VARIATIONS.minSignalsRequired) {
+        for (const tp of CONFIG_VARIATIONS.takeProfitPercent) {
+          for (const sl of CONFIG_VARIATIONS.stopLossPercent) {
+            for (const conf of CONFIG_VARIATIONS.minConfidence) {
+              for (const posSize of CONFIG_VARIATIONS.maxPositionSizePercent) {
+                for (const flags of CONFIG_VARIATIONS.requireFlags) {
+                  combinations.push({
+                    ...baseConfig,
+                    entryStrategy: strategy,
+                    minSignalsRequired: signals,
+                    takeProfitPercent: tp,
+                    stopLossPercent: sl,
+                    minConfidence: conf,
+                    maxPositionSizePercent: posSize,
+                    ...flags,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[Optimizer] Testing ${combinations.length} config combinations...`);
+    addEvent('info', 'Optimizer Started', `Testing ${combinations.length} configurations...`);
+
+    const results = [];
+    for (let i = 0; i < combinations.length; i++) {
+      const testConfig = combinations[i];
+      const result = runFastSimulation(data, testConfig);
+      results.push(result);
+
+      // Update progress every 10 iterations
+      if (i % 10 === 0) {
+        setOptimizerProgress(Math.round((i / combinations.length) * 100));
+        // Yield to prevent UI freeze
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+
+    // Sort by return percent (best first)
+    results.sort((a, b) => b.returnPercent - a.returnPercent);
+
+    // Keep top 10
+    const topResults = results.slice(0, 10);
+    setOptimizerResults(topResults);
+    setOptimizerProgress(100);
+    setIsOptimizing(false);
+
+    addEvent('success', 'Optimizer Complete', `Best config: ${topResults[0].returnPercent.toFixed(2)}% return`);
+    console.log('[Optimizer] Top 10 results:', topResults);
+  };
+
+  // Apply an optimizer result
+  const applyOptimizerResult = (result) => {
+    updateGlobalConfig(result.config);
+    // Store the prediction for comparison after simulation
+    setOptimizerPrediction({
+      returnPercent: result.returnPercent,
+      totalPnL: result.totalPnL,
+      numTrades: result.numTrades,
+      winRate: result.winRate,
+      config: { ...result.config },
+    });
+    // Clear debug log for fresh start
+    debugLogRef.current = [];
+    setDebugLog([]);
+    addEvent('info', 'Config Applied', `Applied ${result.config.entryStrategy} strategy config. Predicted: ${result.returnPercent.toFixed(2)}% return, ${result.numTrades} trades`);
   };
 
   // Save results
@@ -1194,12 +1825,26 @@ const TradingSimulator = ({ onComplete }) => {
             gap: theme.spacing.sm,
           }}
         >
-          {!isRunning ? (
-            <Button
-              onClick={startSimulation}
-              disabled={!simulationDate || !symbol}
-            >
-              Run Simulation
+          {!isRunning && !isOptimizing ? (
+            <>
+              <Button
+                onClick={startSimulation}
+                disabled={!simulationDate || !symbol}
+              >
+                Run Simulation
+              </Button>
+              <Button
+                variant="outline"
+                onClick={runOptimizer}
+                disabled={!simulationDate || !symbol}
+                style={{ backgroundColor: '#8b5cf6', color: '#fff', border: 'none' }}
+              >
+                🔬 Find Optimal Config
+              </Button>
+            </>
+          ) : isOptimizing ? (
+            <Button variant="outline" disabled>
+              Optimizing... {optimizerProgress}%
             </Button>
           ) : (
             <>
@@ -1216,6 +1861,26 @@ const TradingSimulator = ({ onComplete }) => {
           )}
         </div>
       </div>
+
+      {/* Config Locked Indicator - Shows during simulation */}
+      {isRunning && configSnapshotRef.current && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: theme.spacing.md,
+            padding: theme.spacing.xs,
+            marginBottom: theme.spacing.sm,
+            backgroundColor: '#dbeafe',
+            borderRadius: theme.borderRadius.sm,
+            fontSize: theme.typography.fontSize.xs,
+            color: '#1e40af',
+          }}
+        >
+          <span>🔒 <strong>Config Locked:</strong> {configSnapshotRef.current.entryStrategy} strategy | TP {configSnapshotRef.current.takeProfitPercent}% | SL {configSnapshotRef.current.stopLossPercent}% | {configSnapshotRef.current.minSignalsRequired} signals</span>
+        </div>
+      )}
 
       {/* PROMINENT P&L DISPLAY */}
       {(isRunning || progress > 0) && (
@@ -1395,6 +2060,17 @@ const TradingSimulator = ({ onComplete }) => {
                 ? `${(((currentPrice - dayOpen) / dayOpen) * 100).toFixed(2)}%`
                 : '--'}
             </div>
+            {preMarketInfo?.hasGap && (
+              <div
+                style={{
+                  fontSize: '10px',
+                  color: parseFloat(preMarketInfo.gapPercent) > 0 ? theme.colors.success : theme.colors.error,
+                  marginTop: '2px',
+                }}
+              >
+                Gap: {preMarketInfo.gapPercent > 0 ? '+' : ''}{preMarketInfo.gapPercent}%
+              </div>
+            )}
           </div>
           <div
             style={{
@@ -2061,6 +2737,118 @@ const TradingSimulator = ({ onComplete }) => {
         </div>
       )}
 
+      {/* OPTIMIZER RESULTS */}
+      {showOptimizer && optimizerResults.length > 0 && (
+        <div
+          style={{
+            marginBottom: theme.spacing.lg,
+            padding: theme.spacing.md,
+            backgroundColor: '#f5f3ff',
+            borderRadius: theme.borderRadius.lg,
+            border: '2px solid #8b5cf6',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+            <h4 style={{ margin: 0, color: '#5b21b6' }}>
+              🔬 Optimizer Results - Top 10 Configs for {symbol} on {simulationDate}
+            </h4>
+            <button
+              onClick={() => setShowOptimizer(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '18px',
+                cursor: 'pointer',
+                color: '#5b21b6',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.typography.fontSize.sm }}>
+              <thead>
+                <tr style={{ backgroundColor: '#ede9fe' }}>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>#</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Return</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>P&L</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Win Rate</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Trades</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Strategy</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Signals</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>TP%</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>SL%</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Conf%</th>
+                  <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid #8b5cf6' }}>Pos%</th>
+                  <th style={{ padding: '8px', textAlign: 'center', borderBottom: '2px solid #8b5cf6' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {optimizerResults.map((result, index) => (
+                  <tr
+                    key={index}
+                    style={{
+                      backgroundColor: index === 0 ? '#ddd6fe' : index % 2 === 0 ? '#faf5ff' : 'white',
+                    }}
+                  >
+                    <td style={{ padding: '8px', fontWeight: index === 0 ? 'bold' : 'normal' }}>
+                      {index === 0 ? '🏆' : index + 1}
+                    </td>
+                    <td style={{
+                      padding: '8px',
+                      fontWeight: 'bold',
+                      color: result.returnPercent >= 0 ? '#16a34a' : '#dc2626',
+                    }}>
+                      {result.returnPercent >= 0 ? '+' : ''}{result.returnPercent.toFixed(2)}%
+                    </td>
+                    <td style={{
+                      padding: '8px',
+                      color: result.totalPnL >= 0 ? '#16a34a' : '#dc2626',
+                    }}>
+                      ${result.totalPnL.toFixed(0)}
+                    </td>
+                    <td style={{ padding: '8px' }}>{result.winRate.toFixed(0)}%</td>
+                    <td style={{ padding: '8px' }}>{result.numTrades}</td>
+                    <td style={{ padding: '8px' }}>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        backgroundColor:
+                          result.config.entryStrategy === 'momentum' ? '#8b5cf6' :
+                          result.config.entryStrategy === 'aggressive' ? '#ef4444' :
+                          result.config.entryStrategy === 'conservative' ? '#22c55e' : '#3b82f6',
+                        color: '#fff',
+                        fontSize: '11px',
+                      }}>
+                        {result.config.entryStrategy}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px' }}>{result.config.minSignalsRequired}</td>
+                    <td style={{ padding: '8px' }}>{result.config.takeProfitPercent}%</td>
+                    <td style={{ padding: '8px' }}>{result.config.stopLossPercent}%</td>
+                    <td style={{ padding: '8px' }}>{result.config.minConfidence}%</td>
+                    <td style={{ padding: '8px' }}>{result.config.maxPositionSizePercent}%</td>
+                    <td style={{ padding: '8px', textAlign: 'center' }}>
+                      <Button
+                        size="small"
+                        variant={index === 0 ? 'primary' : 'outline'}
+                        onClick={() => applyOptimizerResult(result)}
+                        style={index === 0 ? { backgroundColor: '#8b5cf6', border: 'none' } : {}}
+                      >
+                        Apply
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ margin: 0, marginTop: theme.spacing.md, fontSize: theme.typography.fontSize.xs, color: '#5b21b6' }}>
+            💡 Click "Apply" on the best config, then run a full simulation to verify the results.
+          </p>
+        </div>
+      )}
+
       {/* Analysis Results */}
       {showAnalysis && analysis && (
         <div
@@ -2082,6 +2870,164 @@ const TradingSimulator = ({ onComplete }) => {
               Save Results
             </Button>
           </div>
+
+          {/* Config Used - CRITICAL for knowing what settings produced these results */}
+          {usedConfig && (
+            <div
+              style={{
+                marginBottom: theme.spacing.md,
+                padding: theme.spacing.sm,
+                backgroundColor: '#e0f2fe',
+                borderRadius: theme.borderRadius.md,
+                border: '1px solid #0ea5e9',
+                fontSize: theme.typography.fontSize.sm,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 'bold', color: '#0369a1' }}>
+                  🔒 Config Used in This Simulation:
+                </span>
+                <Button
+                  size="small"
+                  variant="primary"
+                  onClick={() => updateGlobalConfig(usedConfig)}
+                  style={{ backgroundColor: '#0ea5e9', border: 'none', fontSize: '12px', padding: '4px 12px' }}
+                >
+                  ↩ Restore This Config
+                </Button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing.md }}>
+                <span><strong>Strategy:</strong> {usedConfig.entryStrategy}</span>
+                <span><strong>TP:</strong> {usedConfig.takeProfitPercent}%</span>
+                <span><strong>SL:</strong> {usedConfig.stopLossPercent}%</span>
+                <span><strong>Signals:</strong> {usedConfig.minSignalsRequired}</span>
+                <span><strong>Confidence:</strong> {usedConfig.minConfidence}%</span>
+                <span><strong>Volume Spike:</strong> {usedConfig.requireVolumeSpike ? 'Yes' : 'No'}</span>
+                <span><strong>Trend Align:</strong> {usedConfig.requireTrendAlignment ? 'Yes' : 'No'}</span>
+                <span><strong>RSI Signal:</strong> {usedConfig.requireRsiSignal ? 'Yes' : 'No'}</span>
+              </div>
+            </div>
+          )}
+
+          {/* OPTIMIZER vs ACTUAL COMPARISON */}
+          {optimizerPrediction && analysis && (
+            <div
+              style={{
+                marginBottom: theme.spacing.md,
+                padding: theme.spacing.sm,
+                backgroundColor: '#fef3c7',
+                borderRadius: theme.borderRadius.md,
+                border: '1px solid #f59e0b',
+                fontSize: theme.typography.fontSize.sm,
+              }}
+            >
+              <div style={{ fontWeight: 'bold', color: '#92400e', marginBottom: '8px' }}>
+                ⚠️ Optimizer vs Actual Comparison:
+              </div>
+              <table style={{ width: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #f59e0b' }}>
+                    <th style={{ textAlign: 'left', padding: '4px' }}>Metric</th>
+                    <th style={{ textAlign: 'right', padding: '4px' }}>Predicted</th>
+                    <th style={{ textAlign: 'right', padding: '4px' }}>Actual</th>
+                    <th style={{ textAlign: 'right', padding: '4px' }}>Diff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '4px' }}>Return %</td>
+                    <td style={{ textAlign: 'right', padding: '4px', color: '#16a34a' }}>+{optimizerPrediction.returnPercent.toFixed(2)}%</td>
+                    <td style={{ textAlign: 'right', padding: '4px', color: analysis.returnPercent >= 0 ? '#16a34a' : '#dc2626' }}>{analysis.returnPercent >= 0 ? '+' : ''}{analysis.returnPercent.toFixed(2)}%</td>
+                    <td style={{ textAlign: 'right', padding: '4px', color: '#dc2626', fontWeight: 'bold' }}>{(analysis.returnPercent - optimizerPrediction.returnPercent).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px' }}>P&L</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>${optimizerPrediction.totalPnL.toFixed(0)}</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>${analysis.totalPnL?.toFixed(0) || realizedPnL.toFixed(0)}</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>${((analysis.totalPnL || realizedPnL) - optimizerPrediction.totalPnL).toFixed(0)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px' }}>Trades</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>{optimizerPrediction.numTrades}</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>{analysis.totalTrades}</td>
+                    <td style={{ textAlign: 'right', padding: '4px', color: analysis.totalTrades !== optimizerPrediction.numTrades ? '#dc2626' : '#16a34a', fontWeight: 'bold' }}>{analysis.totalTrades - optimizerPrediction.numTrades}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px' }}>Win Rate</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>{optimizerPrediction.winRate.toFixed(0)}%</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>{analysis.winRate?.toFixed(0) || 0}%</td>
+                    <td style={{ textAlign: 'right', padding: '4px' }}>{((analysis.winRate || 0) - optimizerPrediction.winRate).toFixed(0)}%</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style={{ marginTop: '8px' }}>
+                <button
+                  onClick={() => setShowDebugLog(!showDebugLog)}
+                  style={{
+                    padding: '4px 12px',
+                    backgroundColor: '#f59e0b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }}
+                >
+                  {showDebugLog ? 'Hide' : 'Show'} Debug Log ({debugLog.length} entries)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* DEBUG LOG PANEL */}
+          {showDebugLog && debugLog.length > 0 && (
+            <div
+              style={{
+                marginBottom: theme.spacing.md,
+                padding: theme.spacing.sm,
+                backgroundColor: '#1e1e1e',
+                borderRadius: theme.borderRadius.md,
+                maxHeight: '400px',
+                overflow: 'auto',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#d4d4d4',
+              }}
+            >
+              <div style={{ marginBottom: '8px', color: '#4ec9b0', fontWeight: 'bold' }}>
+                Full Simulation Decision Log ({debugLog.length} trades):
+              </div>
+              {debugLog.map((entry, idx) => (
+                <div key={idx} style={{ marginBottom: '8px', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
+                  <div style={{ color: entry.type === 'BUY' ? '#4ec9b0' : '#ce9178' }}>
+                    #{idx + 1} {entry.type} @ ${entry.price?.toFixed(2)} (idx: {entry.index})
+                  </div>
+                  {entry.type === 'BUY' ? (
+                    <div style={{ color: '#9cdcfe', marginLeft: '12px' }}>
+                      signals: {entry.signalCount}/{entry.minSignalsRequired} | conf: {entry.confidence}%/{entry.minConfidence}% |
+                      RSI:{entry.indicators?.rsi?.toFixed(0)} | VWAP:{entry.indicators?.vwap?.toFixed(2)} | Vol:{entry.indicators?.volumeRatio?.toFixed(1)}x
+                      <br/>
+                      strategy: {entry.entryStrategy} | meetsReq: {entry.meetsRequirements ? 'Y' : 'N'} |
+                      reqVol: {entry.requireVolumeSpike ? 'Y' : 'N'}({entry.hasVolumeSpike ? '✓' : '✗'}) |
+                      reqTrend: {entry.requireTrendAlign ? 'Y' : 'N'}({entry.hasTrendSignal ? '✓' : '✗'}) |
+                      reqRSI: {entry.requireRsiSignal ? 'Y' : 'N'}({entry.hasRsiSignal ? '✓' : '✗'})
+                      <br/>
+                      <span style={{ color: '#6a9955' }}>reasons: {entry.reasons?.join(', ')}</span>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#9cdcfe', marginLeft: '12px' }}>
+                      entry: ${entry.entryPrice?.toFixed(2)} | pnl: {entry.pnlPercent?.toFixed(2)}% |
+                      sellScore: {entry.sellScore} | conf: {entry.confidence}%/{entry.minConfidence}%
+                      <br/>
+                      TP: {entry.profitTargetPercent}% | SL: {entry.stopLossPercent}% | RSI: {entry.indicators?.rsi?.toFixed(0)} | hour: {entry.estHour?.toFixed(2)}
+                      <br/>
+                      <span style={{ color: '#6a9955' }}>reasons: {entry.reasons?.join(', ')}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div
             style={{
@@ -2324,43 +3270,73 @@ const TradingSimulator = ({ onComplete }) => {
               style={{
                 marginTop: theme.spacing.lg,
                 padding: theme.spacing.md,
-                backgroundColor: theme.colors.primary + '08',
+                backgroundColor: '#fef3c7',
                 borderRadius: theme.borderRadius.md,
-                border: `2px solid ${theme.colors.primary}40`,
+                border: `2px solid #f59e0b`,
               }}
             >
-              <h4 style={{ margin: 0, marginBottom: theme.spacing.md, color: theme.colors.primary }}>
-                Recommended Config Adjustments
-              </h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                <h4 style={{ margin: 0, color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ⚡ Recommended Optimizations
+                  <span style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    backgroundColor: '#ef4444',
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                  }}>
+                    {recommendations.length} suggestions
+                  </span>
+                </h4>
+                <Button
+                  size="small"
+                  variant="primary"
+                  onClick={applyAllRecommendations}
+                  style={{ backgroundColor: '#22c55e', border: 'none' }}
+                >
+                  ✨ Apply All Optimizations
+                </Button>
+              </div>
               <div style={{ display: 'grid', gap: theme.spacing.md }}>
                 {recommendations.map((rec) => (
                   <div
                     key={rec.id}
                     style={{
                       padding: theme.spacing.md,
-                      backgroundColor: theme.colors.surface,
+                      backgroundColor: rec.priority === 'high' ? '#fef9c3' : theme.colors.surface,
                       borderRadius: theme.borderRadius.md,
-                      border: `1px solid ${theme.colors.gray200}`,
+                      border: rec.priority === 'high' ? `2px solid #eab308` : `1px solid ${theme.colors.gray200}`,
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
-                        <h5 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.text }}>
+                        <h5 style={{ margin: 0, marginBottom: theme.spacing.xs, color: theme.colors.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {rec.title}
+                          {rec.priority === 'high' && (
+                            <span style={{
+                              fontSize: '10px',
+                              backgroundColor: '#ef4444',
+                              color: '#fff',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                            }}>
+                              HIGH IMPACT
+                            </span>
+                          )}
                         </h5>
                         <p style={{ margin: 0, marginBottom: theme.spacing.sm, color: theme.colors.gray600, fontSize: theme.typography.fontSize.sm }}>
                           {rec.description}
                         </p>
-                        <div style={{ display: 'flex', gap: theme.spacing.lg, fontSize: theme.typography.fontSize.sm }}>
-                          <span>
-                            <strong>Current:</strong> {rec.currentValue}
-                            {rec.field.includes('Percent') || rec.field.includes('Confidence') ? '%' : ''}
+                        <div style={{ display: 'flex', gap: theme.spacing.lg, fontSize: theme.typography.fontSize.sm, flexWrap: 'wrap' }}>
+                          <span style={{ color: theme.colors.error }}>
+                            <strong>Current:</strong> {typeof rec.currentValue === 'boolean' ? (rec.currentValue ? 'Yes' : 'No') : rec.currentValue}
+                            {typeof rec.currentValue === 'number' && (rec.field.includes('Percent') || rec.field.includes('Confidence')) ? '%' : ''}
                           </span>
                           <span style={{ color: theme.colors.success }}>
-                            <strong>Suggested:</strong> {typeof rec.suggestedValue === 'number' ? rec.suggestedValue.toFixed(2) : rec.suggestedValue}
-                            {rec.field.includes('Percent') || rec.field.includes('Confidence') ? '%' : ''}
+                            <strong>→ Suggested:</strong> {typeof rec.suggestedValue === 'boolean' ? (rec.suggestedValue ? 'Yes' : 'No') : (typeof rec.suggestedValue === 'number' ? rec.suggestedValue.toFixed(2) : rec.suggestedValue)}
+                            {typeof rec.suggestedValue === 'number' && (rec.field.includes('Percent') || rec.field.includes('Confidence')) ? '%' : ''}
                           </span>
-                          <span style={{ color: theme.colors.info }}>
+                          <span style={{ color: '#8b5cf6' }}>
                             <strong>Impact:</strong> {rec.impact}
                           </span>
                         </div>
@@ -2377,8 +3353,8 @@ const TradingSimulator = ({ onComplete }) => {
                   </div>
                 ))}
               </div>
-              <p style={{ margin: 0, marginTop: theme.spacing.md, color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
-                Click "Apply" to update your trading config. Run another simulation to test the changes.
+              <p style={{ margin: 0, marginTop: theme.spacing.md, color: '#92400e', fontSize: theme.typography.fontSize.xs }}>
+                💡 Click "Apply All Optimizations" to apply all suggestions, then re-run the simulation to see improvements.
               </p>
             </div>
           )}

@@ -245,7 +245,7 @@ const PortfolioPage = () => {
                   const pnlPercent =
                     parseFloat(
                       pos.unrealizedPLPercent || pos.unrealized_plpc || 0
-                    ) * 100;
+                    );
                   const qty = pos.quantity || pos.qty;
                   const avgPrice = pos.avgEntryPrice || pos.avg_entry_price;
                   const currentPrice = pos.currentPrice || pos.current_price;

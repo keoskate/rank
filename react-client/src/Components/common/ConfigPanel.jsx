@@ -4,60 +4,448 @@
  * Shows ALL trading config parameters in a clean grid layout.
  * Aligned exactly with TradingConfigContext - the single source of truth.
  *
+ * Features:
+ * - Risk indicators (green=conservative, red=aggressive)
+ * - Strategy presets for quick configuration
+ * - Save/load named configurations
+ * - Tooltips explaining each setting
+ *
  * Used across: Strategy Lab, Trading Simulator, A/B Testing, Live Trading
  */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 
-// Complete config schema matching TradingConfigContext exactly
+// Strategy presets for quick configuration
+const STRATEGY_PRESETS = {
+  conservative: {
+    name: 'Conservative',
+    description: 'Low risk, steady gains. Best for volatile markets.',
+    color: '#22c55e', // green
+    config: {
+      minConfidence: 80,
+      rsiOversold: 25,
+      rsiOverbought: 75,
+      minSignalsRequired: 4,
+      takeProfitPercent: 1.5,
+      stopLossPercent: 0.5,
+      riskPerTradePercent: 1,
+      maxPositionSizePercent: 5,
+      requireVolumeSpike: true,
+      requireTrendAlignment: true,
+      requireRsiSignal: true,
+      entryStrategy: 'conservative',
+    },
+  },
+  balanced: {
+    name: 'Balanced',
+    description: 'Moderate risk/reward. Good all-around strategy.',
+    color: '#3b82f6', // blue
+    config: {
+      minConfidence: 70,
+      rsiOversold: 30,
+      rsiOverbought: 70,
+      minSignalsRequired: 3,
+      takeProfitPercent: 2.0,
+      stopLossPercent: 1.0,
+      riskPerTradePercent: 2,
+      maxPositionSizePercent: 10,
+      requireVolumeSpike: true,
+      requireTrendAlignment: true,
+      requireRsiSignal: true,
+      entryStrategy: 'balanced',
+    },
+  },
+  aggressive: {
+    name: 'Aggressive',
+    description: 'High risk, high reward. Best for strong trends.',
+    color: '#ef4444', // red
+    config: {
+      minConfidence: 60,
+      rsiOversold: 35,
+      rsiOverbought: 65,
+      minSignalsRequired: 2,
+      takeProfitPercent: 3.0,
+      stopLossPercent: 1.5,
+      riskPerTradePercent: 3,
+      maxPositionSizePercent: 15,
+      requireVolumeSpike: false,
+      requireTrendAlignment: true,
+      requireRsiSignal: false,
+      entryStrategy: 'aggressive',
+    },
+  },
+  scalping: {
+    name: 'Scalping',
+    description: 'Quick in-and-out trades. Many small profits.',
+    color: '#f59e0b', // amber
+    config: {
+      minConfidence: 65,
+      rsiOversold: 40,
+      rsiOverbought: 60,
+      minSignalsRequired: 2,
+      takeProfitPercent: 0.5,
+      stopLossPercent: 0.25,
+      riskPerTradePercent: 1,
+      maxPositionSizePercent: 20,
+      requireVolumeSpike: true,
+      requireTrendAlignment: false,
+      requireRsiSignal: false,
+      entryStrategy: 'aggressive',
+    },
+  },
+  momentum: {
+    name: 'Momentum',
+    description: 'Ride strong trends. Best for breakout days.',
+    color: '#8b5cf6', // purple
+    config: {
+      minConfidence: 70,
+      rsiOversold: 45,
+      rsiOverbought: 80,
+      minSignalsRequired: 2,
+      takeProfitPercent: 5.0,
+      stopLossPercent: 2.0,
+      riskPerTradePercent: 3,
+      maxPositionSizePercent: 15,
+      requireVolumeSpike: true,
+      requireTrendAlignment: true,
+      requireRsiSignal: false,
+      entryStrategy: 'momentum',
+      trailingStopPercent: 1.5,
+    },
+  },
+};
+
+// Config field metadata with risk levels and tooltips
 const CONFIG_SCHEMA = {
   'Capital Allocation': {
-    allocatedCapital: { label: 'Capital ($)', type: 'number', min: 1000, max: 10000000, step: 1000 },
-    maxLeverage: { label: 'Max Leverage', type: 'number', min: 1, max: 4, step: 0.5 },
-    reserveCashPercent: { label: 'Cash Reserve %', type: 'number', min: 0, max: 50, step: 5 },
+    allocatedCapital: {
+      label: 'Capital ($)',
+      type: 'number',
+      min: 1000,
+      max: 10000000,
+      step: 1000,
+      tooltip: 'Total capital available for trading',
+      risk: 'neutral',
+    },
+    maxLeverage: {
+      label: 'Max Leverage',
+      type: 'number',
+      min: 1,
+      max: 4,
+      step: 0.5,
+      tooltip: 'Maximum leverage multiplier. Higher = more risk',
+      risk: 'higher-risky',
+    },
+    reserveCashPercent: {
+      label: 'Cash Reserve %',
+      type: 'number',
+      min: 0,
+      max: 50,
+      step: 5,
+      tooltip: 'Cash kept uninvested. Higher = more conservative',
+      risk: 'higher-safe',
+    },
   },
   'Position Management': {
-    maxPositions: { label: 'Max Positions', type: 'number', min: 1, max: 20, step: 1 },
-    maxPositionSizePercent: { label: 'Max Position %', type: 'number', min: 1, max: 100, step: 5 },
-    minPositionSize: { label: 'Min Position $', type: 'number', min: 50, max: 10000, step: 50 },
-    maxPositionSize: { label: 'Max Position $', type: 'number', min: 1000, max: 100000, step: 1000 },
+    maxPositions: {
+      label: 'Max Positions',
+      type: 'number',
+      min: 1,
+      max: 20,
+      step: 1,
+      tooltip: 'Maximum concurrent positions. More = diversified but complex',
+      risk: 'neutral',
+    },
+    maxPositionSizePercent: {
+      label: 'Max Position %',
+      type: 'slider',
+      min: 1,
+      max: 50,
+      step: 1,
+      tooltip: 'Max % of capital per position. Higher = more concentrated risk',
+      risk: 'higher-risky',
+    },
+    minPositionSize: {
+      label: 'Min Position $',
+      type: 'number',
+      min: 50,
+      max: 10000,
+      step: 50,
+      tooltip: 'Minimum position size in dollars',
+      risk: 'neutral',
+    },
+    maxPositionSize: {
+      label: 'Max Position $',
+      type: 'number',
+      min: 1000,
+      max: 100000,
+      step: 1000,
+      tooltip: 'Maximum position size in dollars',
+      risk: 'neutral',
+    },
   },
   'Risk Management': {
-    riskPerTradePercent: { label: 'Risk/Trade %', type: 'number', min: 0.5, max: 10, step: 0.5 },
-    dailyLossLimitPercent: { label: 'Daily Loss Limit %', type: 'number', min: 1, max: 20, step: 1 },
-    weeklyLossLimitPercent: { label: 'Weekly Loss Limit %', type: 'number', min: 2, max: 30, step: 1 },
-    maxConsecutiveLosses: { label: 'Max Consec. Losses', type: 'number', min: 1, max: 10, step: 1 },
-    trailingStopPercent: { label: 'Trailing Stop %', type: 'number', min: 0, max: 10, step: 0.5 },
+    riskPerTradePercent: {
+      label: 'Risk/Trade %',
+      type: 'slider',
+      min: 0.5,
+      max: 5,
+      step: 0.5,
+      tooltip: 'Max capital risked per trade. Higher = aggressive',
+      risk: 'higher-risky',
+    },
+    dailyLossLimitPercent: {
+      label: 'Daily Loss Limit %',
+      type: 'slider',
+      min: 1,
+      max: 10,
+      step: 0.5,
+      tooltip: 'Stop trading if daily loss exceeds this. Lower = safer',
+      risk: 'higher-risky',
+    },
+    weeklyLossLimitPercent: {
+      label: 'Weekly Loss Limit %',
+      type: 'number',
+      min: 2,
+      max: 30,
+      step: 1,
+      tooltip: 'Stop trading if weekly loss exceeds this',
+      risk: 'higher-risky',
+    },
+    maxConsecutiveLosses: {
+      label: 'Max Consec. Losses',
+      type: 'number',
+      min: 1,
+      max: 10,
+      step: 1,
+      tooltip: 'Pause trading after this many consecutive losses',
+      risk: 'higher-risky',
+    },
+    trailingStopPercent: {
+      label: 'Trailing Stop %',
+      type: 'slider',
+      min: 0,
+      max: 5,
+      step: 0.25,
+      tooltip: 'Dynamic stop that follows price up. 0 = disabled',
+      risk: 'neutral',
+    },
   },
   'AI Model Parameters': {
-    minConfidence: { label: 'Min Confidence %', type: 'number', min: 50, max: 95, step: 5 },
-    rsiOversold: { label: 'RSI Oversold', type: 'number', min: 10, max: 40, step: 5 },
-    rsiOverbought: { label: 'RSI Overbought', type: 'number', min: 60, max: 90, step: 5 },
-    vwapDeviationPercent: { label: 'VWAP Deviation %', type: 'number', min: 0.1, max: 3, step: 0.1 },
-    volumeMultiplier: { label: 'Volume Multiplier', type: 'number', min: 1, max: 5, step: 0.25 },
-    adxMinStrength: { label: 'ADX Min Strength', type: 'number', min: 10, max: 40, step: 5 },
-    macdSensitivity: { label: 'MACD Sensitivity', type: 'select', options: ['low', 'normal', 'high'] },
-    patternRecognition: { label: 'Pattern Recognition', type: 'boolean' },
+    minConfidence: {
+      label: 'Min Confidence %',
+      type: 'slider',
+      min: 40,
+      max: 95,
+      step: 5,
+      tooltip: 'Minimum AI confidence to enter trade. Higher = fewer but surer trades',
+      risk: 'lower-safe',
+    },
+    rsiOversold: {
+      label: 'RSI Oversold',
+      type: 'slider',
+      min: 15,
+      max: 40,
+      step: 5,
+      tooltip: 'RSI level considered oversold (buy signal). Higher = more signals',
+      risk: 'higher-risky',
+    },
+    rsiOverbought: {
+      label: 'RSI Overbought',
+      type: 'slider',
+      min: 60,
+      max: 85,
+      step: 5,
+      tooltip: 'RSI level considered overbought (sell signal). Lower = earlier exits',
+      risk: 'lower-safe',
+    },
+    vwapDeviationPercent: {
+      label: 'VWAP Deviation %',
+      type: 'number',
+      min: 0.1,
+      max: 3,
+      step: 0.1,
+      tooltip: 'Distance from VWAP to trigger signals',
+      risk: 'neutral',
+    },
+    volumeMultiplier: {
+      label: 'Volume Multiplier',
+      type: 'slider',
+      min: 1,
+      max: 3,
+      step: 0.25,
+      tooltip: 'Volume spike threshold (vs average). Lower = more signals',
+      risk: 'lower-risky',
+    },
+    adxMinStrength: {
+      label: 'ADX Min Strength',
+      type: 'number',
+      min: 10,
+      max: 40,
+      step: 5,
+      tooltip: 'Minimum trend strength (ADX) to trade',
+      risk: 'neutral',
+    },
+    macdSensitivity: {
+      label: 'MACD Sensitivity',
+      type: 'select',
+      options: ['low', 'normal', 'high'],
+      tooltip: 'MACD signal sensitivity. High = more signals',
+      risk: 'neutral',
+    },
+    patternRecognition: {
+      label: 'Pattern Recognition',
+      type: 'boolean',
+      tooltip: 'Enable chart pattern detection',
+      risk: 'neutral',
+    },
   },
   'Entry Conditions': {
-    entryStrategy: { label: 'Entry Strategy', type: 'select', options: ['conservative', 'balanced', 'aggressive'] },
-    requireVolumeSpike: { label: 'Require Volume Spike', type: 'boolean' },
-    requireTrendAlignment: { label: 'Require Trend Align', type: 'boolean' },
-    requireRsiSignal: { label: 'Require RSI Signal', type: 'boolean' },
-    minSignalsRequired: { label: 'Min Signals Required', type: 'number', min: 1, max: 5, step: 1 },
+    entryStrategy: {
+      label: 'Entry Strategy',
+      type: 'select',
+      options: ['conservative', 'balanced', 'aggressive', 'momentum'],
+      tooltip: 'Overall entry approach',
+      risk: 'neutral',
+    },
+    requireVolumeSpike: {
+      label: 'Require Volume Spike',
+      type: 'boolean',
+      tooltip: 'Only enter on high volume. Enabled = safer',
+      risk: 'off-risky',
+    },
+    requireTrendAlignment: {
+      label: 'Require Trend Align',
+      type: 'boolean',
+      tooltip: 'Only enter when trend confirms. Enabled = safer',
+      risk: 'off-risky',
+    },
+    requireRsiSignal: {
+      label: 'Require RSI Signal',
+      type: 'boolean',
+      tooltip: 'Require RSI confirmation. Enabled = safer',
+      risk: 'off-risky',
+    },
+    minSignalsRequired: {
+      label: 'Min Signals Required',
+      type: 'slider',
+      min: 1,
+      max: 5,
+      step: 1,
+      tooltip: 'Number of confirming signals needed. Higher = fewer but stronger entries',
+      risk: 'lower-safe',
+    },
   },
   'Exit Conditions': {
-    takeProfitPercent: { label: 'Take Profit %', type: 'number', min: 0.5, max: 20, step: 0.25 },
-    stopLossPercent: { label: 'Stop Loss %', type: 'number', min: 0.25, max: 10, step: 0.25 },
-    useAdaptiveTargets: { label: 'Adaptive Targets', type: 'boolean' },
-    exitOnRsiExtreme: { label: 'Exit on RSI Extreme', type: 'boolean' },
-    exitBeforeClose: { label: 'Exit Before Close', type: 'boolean' },
-    exitBeforeCloseMinutes: { label: 'Exit Mins Before Close', type: 'number', min: 5, max: 60, step: 5 },
+    takeProfitPercent: {
+      label: 'Take Profit %',
+      type: 'slider',
+      min: 0.5,
+      max: 10,
+      step: 0.25,
+      tooltip: 'Target profit to exit. Higher = bigger wins but fewer',
+      risk: 'higher-risky',
+    },
+    stopLossPercent: {
+      label: 'Stop Loss %',
+      type: 'slider',
+      min: 0.25,
+      max: 5,
+      step: 0.25,
+      tooltip: 'Max loss before exit. Lower = tighter risk control',
+      risk: 'higher-risky',
+    },
+    useAdaptiveTargets: {
+      label: 'Adaptive Targets',
+      type: 'boolean',
+      tooltip: 'Adjust targets based on volatility',
+      risk: 'neutral',
+    },
+    exitOnRsiExtreme: {
+      label: 'Exit on RSI Extreme',
+      type: 'boolean',
+      tooltip: 'Exit when RSI hits extreme levels',
+      risk: 'neutral',
+    },
+    exitBeforeClose: {
+      label: 'Exit Before Close',
+      type: 'boolean',
+      tooltip: 'Close positions before market close',
+      risk: 'off-risky',
+    },
+    exitBeforeCloseMinutes: {
+      label: 'Exit Mins Before Close',
+      type: 'number',
+      min: 5,
+      max: 60,
+      step: 5,
+      tooltip: 'Minutes before close to exit positions',
+      risk: 'neutral',
+    },
   },
-  'Timeframes': {
-    preferredTimeframe: { label: 'Preferred Timeframe', type: 'select', options: ['1min', '5min', '15min', '30min', '1hour'] },
+  Timeframes: {
+    preferredTimeframe: {
+      label: 'Preferred Timeframe',
+      type: 'select',
+      options: ['1min', '5min', '15min', '30min', '1hour'],
+      tooltip: 'Primary chart timeframe for analysis',
+      risk: 'neutral',
+    },
   },
+};
+
+// Risk color helper
+const getRiskColor = (schema, value) => {
+  if (!schema.risk || schema.risk === 'neutral') return null;
+
+  const isAtMax = value >= (schema.max || 100);
+  const isAtMin = value <= (schema.min || 0);
+  const isOn = value === true || value === 'Yes';
+  const isOff = value === false || value === 'No';
+
+  // For boolean "off means risky"
+  if (schema.risk === 'off-risky') {
+    return isOff ? '#ef4444' : '#22c55e';
+  }
+
+  // For numeric "higher is risky"
+  if (schema.risk === 'higher-risky') {
+    const range = (schema.max || 100) - (schema.min || 0);
+    const normalized = (value - (schema.min || 0)) / range;
+    if (normalized > 0.7) return '#ef4444';
+    if (normalized > 0.4) return '#f59e0b';
+    return '#22c55e';
+  }
+
+  // For numeric "lower is risky"
+  if (schema.risk === 'lower-risky') {
+    const range = (schema.max || 100) - (schema.min || 0);
+    const normalized = (value - (schema.min || 0)) / range;
+    if (normalized < 0.3) return '#ef4444';
+    if (normalized < 0.6) return '#f59e0b';
+    return '#22c55e';
+  }
+
+  // For "higher is safe"
+  if (schema.risk === 'higher-safe') {
+    const range = (schema.max || 100) - (schema.min || 0);
+    const normalized = (value - (schema.min || 0)) / range;
+    if (normalized > 0.7) return '#22c55e';
+    if (normalized > 0.4) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  // For "lower is safe"
+  if (schema.risk === 'lower-safe') {
+    const range = (schema.max || 100) - (schema.min || 0);
+    const normalized = (value - (schema.min || 0)) / range;
+    if (normalized < 0.3) return '#22c55e';
+    if (normalized < 0.6) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  return null;
 };
 
 const ConfigPanel = ({
@@ -67,9 +455,23 @@ const ConfigPanel = ({
   localConfig = null, // use local state instead of context
   title = 'Trading Configuration',
   compact = false, // compact mode for inline display
+  showPresets = true, // show strategy presets
+  showSaveLoad = true, // show save/load buttons
 }) => {
-  const { config: contextConfig, updateConfig } = useTradingConfig();
+  const { config: contextConfig, updateConfig, exportConfig, importConfig, resetConfig } =
+    useTradingConfig();
   const [localState, setLocalState] = useState(localConfig || {});
+  const [hoveredField, setHoveredField] = useState(null);
+  const [savedConfigs, setSavedConfigs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('saved-trading-configs') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [configName, setConfigName] = useState('');
+  const fileInputRef = useRef(null);
 
   // Use localConfig if provided, otherwise use context
   const config = localConfig !== null ? { ...DEFAULT_TRADING_CONFIG, ...localState } : contextConfig;
@@ -82,6 +484,57 @@ const ConfigPanel = ({
     } else {
       updateConfig({ [field]: value });
       if (onConfigChange) onConfigChange({ [field]: value });
+    }
+  };
+
+  const applyPreset = preset => {
+    const presetConfig = STRATEGY_PRESETS[preset]?.config;
+    if (presetConfig) {
+      if (localConfig !== null) {
+        setLocalState(prev => ({ ...prev, ...presetConfig }));
+        if (onConfigChange) onConfigChange(presetConfig);
+      } else {
+        updateConfig(presetConfig);
+      }
+    }
+  };
+
+  const saveConfig = () => {
+    if (!configName.trim()) return;
+    const newSaved = { ...savedConfigs, [configName]: config };
+    setSavedConfigs(newSaved);
+    localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
+    setShowSaveDialog(false);
+    setConfigName('');
+  };
+
+  const loadConfig = name => {
+    const loaded = savedConfigs[name];
+    if (loaded) {
+      if (localConfig !== null) {
+        setLocalState(loaded);
+        if (onConfigChange) onConfigChange(loaded);
+      } else {
+        updateConfig(loaded);
+      }
+    }
+  };
+
+  const deleteConfig = name => {
+    const newSaved = { ...savedConfigs };
+    delete newSaved[name];
+    setSavedConfigs(newSaved);
+    localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
+  };
+
+  const handleImport = e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = event => {
+        importConfig(event.target.result);
+      };
+      reader.readAsText(file);
     }
   };
 
@@ -100,36 +553,122 @@ const ConfigPanel = ({
   // Compact mode - single row summary
   if (compact) {
     return (
-      <div style={{
-        display: 'flex',
-        gap: theme.spacing.lg,
-        padding: theme.spacing.sm,
-        backgroundColor: theme.colors.surface,
-        borderRadius: theme.borderRadius.md,
-        border: `1px solid ${theme.colors.border}`,
-        flexWrap: 'wrap',
-        fontSize: theme.typography.fontSize.sm,
-      }}>
-        <span><strong style={{ color: theme.colors.success }}>TP:</strong> {config.takeProfitPercent}%</span>
-        <span><strong style={{ color: theme.colors.error }}>SL:</strong> {config.stopLossPercent}%</span>
-        <span><strong>Conf:</strong> {config.minConfidence}%</span>
-        <span><strong>Capital:</strong> ${(config.allocatedCapital || 25000).toLocaleString()}</span>
-        <span><strong>Max Pos:</strong> {config.maxPositions}</span>
-        <span><strong>Risk:</strong> {config.riskPerTradePercent}%</span>
+      <div
+        style={{
+          display: 'flex',
+          gap: theme.spacing.lg,
+          padding: theme.spacing.sm,
+          backgroundColor: theme.colors.surface,
+          borderRadius: theme.borderRadius.md,
+          border: `1px solid ${theme.colors.border}`,
+          flexWrap: 'wrap',
+          fontSize: theme.typography.fontSize.sm,
+        }}
+      >
+        <span>
+          <strong style={{ color: theme.colors.success }}>TP:</strong> {config.takeProfitPercent}%
+        </span>
+        <span>
+          <strong style={{ color: theme.colors.error }}>SL:</strong> {config.stopLossPercent}%
+        </span>
+        <span>
+          <strong>Conf:</strong> {config.minConfidence}%
+        </span>
+        <span>
+          <strong>Capital:</strong> ${(config.allocatedCapital || 25000).toLocaleString()}
+        </span>
+        <span>
+          <strong>Max Pos:</strong> {config.maxPositions}
+        </span>
+        <span>
+          <strong>Risk:</strong> {config.riskPerTradePercent}%
+        </span>
       </div>
     );
   }
+
+  // Slider component
+  const renderSlider = (field, schema, value) => {
+    const riskColor = getRiskColor(schema, value);
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <input
+          type="range"
+          value={value}
+          onChange={e => handleChange(field, parseFloat(e.target.value))}
+          min={schema.min}
+          max={schema.max}
+          step={schema.step}
+          style={{
+            flex: 1,
+            height: '6px',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            accentColor: riskColor || theme.colors.primary,
+          }}
+        />
+        <span
+          style={{
+            minWidth: '45px',
+            textAlign: 'right',
+            fontSize: theme.typography.fontSize.sm,
+            fontWeight: theme.typography.fontWeight.bold,
+            color: riskColor || theme.colors.text,
+          }}
+        >
+          {value}
+          {field.includes('Percent') || field === 'minConfidence' ? '%' : ''}
+        </span>
+      </div>
+    );
+  };
+
+  // Toggle switch component
+  const renderToggle = (field, schema, value) => {
+    const riskColor = getRiskColor(schema, value);
+    const isOn = value === true;
+    return (
+      <button
+        onClick={() => handleChange(field, !value)}
+        style={{
+          width: '48px',
+          height: '26px',
+          borderRadius: '13px',
+          border: 'none',
+          backgroundColor: isOn ? (riskColor || '#22c55e') : '#cbd5e1',
+          position: 'relative',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: '3px',
+            left: isOn ? '25px' : '3px',
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            backgroundColor: '#fff',
+            transition: 'left 0.2s',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          }}
+        />
+      </button>
+    );
+  };
 
   // Input renderer
   const renderInput = (field, schema) => {
     const value = getSafeValue(field, schema);
     const isEditing = mode === 'edit';
+    const riskColor = getRiskColor(schema, value);
 
     const inputStyle = {
       width: '100%',
       padding: '6px 8px',
       borderRadius: theme.borderRadius.sm,
-      border: `1px solid ${theme.colors.border}`,
+      border: `1px solid ${riskColor || theme.colors.border}`,
       backgroundColor: isEditing ? theme.colors.background : theme.colors.surface,
       color: theme.colors.text,
       fontSize: theme.typography.fontSize.sm,
@@ -139,15 +678,19 @@ const ConfigPanel = ({
       // View mode - display only
       let displayValue = value;
       if (typeof value === 'boolean') displayValue = value ? 'Yes' : 'No';
-      else if (field.includes('Capital') || field.includes('PositionSize')) displayValue = `$${Number(value).toLocaleString()}`;
+      else if (field.includes('Capital') || field.includes('PositionSize'))
+        displayValue = `$${Number(value).toLocaleString()}`;
       else if (field.includes('Percent') || field === 'minConfidence') displayValue = `${value}%`;
 
       return (
-        <div style={{
-          ...inputStyle,
-          backgroundColor: theme.colors.surface,
-          fontWeight: theme.typography.fontWeight.medium,
-        }}>
+        <div
+          style={{
+            ...inputStyle,
+            backgroundColor: theme.colors.surface,
+            fontWeight: theme.typography.fontWeight.medium,
+            borderLeft: riskColor ? `3px solid ${riskColor}` : undefined,
+          }}
+        >
           {displayValue}
         </div>
       );
@@ -155,27 +698,24 @@ const ConfigPanel = ({
 
     // Edit mode
     if (schema.type === 'boolean') {
-      return (
-        <select
-          value={value ? 'true' : 'false'}
-          onChange={(e) => handleChange(field, e.target.value === 'true')}
-          style={inputStyle}
-        >
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      );
+      return renderToggle(field, schema, value);
+    }
+
+    if (schema.type === 'slider') {
+      return renderSlider(field, schema, value);
     }
 
     if (schema.type === 'select') {
       return (
         <select
           value={value || schema.options[0]}
-          onChange={(e) => handleChange(field, e.target.value)}
+          onChange={e => handleChange(field, e.target.value)}
           style={inputStyle}
         >
           {schema.options.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
           ))}
         </select>
       );
@@ -185,51 +725,298 @@ const ConfigPanel = ({
       <input
         type="number"
         value={value}
-        onChange={(e) => {
+        onChange={e => {
           const parsed = parseFloat(e.target.value);
           handleChange(field, Number.isNaN(parsed) ? schema.min || 0 : parsed);
         }}
         min={schema.min}
         max={schema.max}
         step={schema.step}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderLeft: riskColor ? `3px solid ${riskColor}` : undefined,
+        }}
       />
     );
   };
 
   return (
-    <div style={{
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.borderRadius.lg,
-      border: `1px solid ${theme.colors.border}`,
-      overflow: 'hidden',
-    }}>
+    <div
+      style={{
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.lg,
+        border: `1px solid ${theme.colors.border}`,
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: theme.spacing.md,
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.background,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: theme.spacing.md,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.background,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-          <h3 style={{ margin: 0, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: theme.typography.fontSize.lg,
+              fontWeight: theme.typography.fontWeight.bold,
+            }}
+          >
             {title}
           </h3>
           {mode === 'edit' && (
-            <span style={{
-              fontSize: theme.typography.fontSize.xs,
-              padding: '2px 8px',
-              backgroundColor: theme.colors.primary,
-              color: '#fff',
-              borderRadius: theme.borderRadius.sm,
-            }}>
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                padding: '2px 8px',
+                backgroundColor: theme.colors.primary,
+                color: '#fff',
+                borderRadius: theme.borderRadius.sm,
+              }}
+            >
               EDITING
             </span>
           )}
         </div>
+
+        {/* Risk Legend */}
+        {mode === 'edit' && (
+          <div
+            style={{
+              display: 'flex',
+              gap: theme.spacing.md,
+              fontSize: theme.typography.fontSize.xs,
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '2px',
+                  backgroundColor: '#22c55e',
+                }}
+              />
+              Conservative
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '2px',
+                  backgroundColor: '#f59e0b',
+                }}
+              />
+              Moderate
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '2px',
+                  backgroundColor: '#ef4444',
+                }}
+              />
+              Aggressive
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* Strategy Presets */}
+      {mode === 'edit' && showPresets && (
+        <div
+          style={{
+            padding: theme.spacing.md,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.gray50,
+          }}
+        >
+          <div
+            style={{
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textMuted,
+              marginBottom: theme.spacing.sm,
+              textTransform: 'uppercase',
+              fontWeight: theme.typography.fontWeight.bold,
+            }}
+          >
+            Quick Presets
+          </div>
+          <div style={{ display: 'flex', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+            {Object.entries(STRATEGY_PRESETS).map(([key, preset]) => (
+              <button
+                key={key}
+                onClick={() => applyPreset(key)}
+                title={preset.description}
+                style={{
+                  padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                  borderRadius: theme.borderRadius.md,
+                  border: `2px solid ${preset.color}`,
+                  backgroundColor:
+                    config.entryStrategy === key ? preset.color : 'transparent',
+                  color: config.entryStrategy === key ? '#fff' : preset.color,
+                  cursor: 'pointer',
+                  fontWeight: theme.typography.fontWeight.bold,
+                  fontSize: theme.typography.fontSize.sm,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Save/Load Section */}
+      {mode === 'edit' && showSaveLoad && (
+        <div
+          style={{
+            padding: theme.spacing.md,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            gap: theme.spacing.sm,
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
+          <button
+            onClick={() => setShowSaveDialog(true)}
+            style={{
+              padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+              borderRadius: theme.borderRadius.sm,
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.primary,
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            💾 Save Config
+          </button>
+          <button
+            onClick={exportConfig}
+            style={{
+              padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+              borderRadius: theme.borderRadius.sm,
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            📤 Export JSON
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+              borderRadius: theme.borderRadius.sm,
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            📥 Import JSON
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            style={{ display: 'none' }}
+          />
+
+          {/* Saved configs dropdown */}
+          {Object.keys(savedConfigs).length > 0 && (
+            <select
+              onChange={e => e.target.value && loadConfig(e.target.value)}
+              value=""
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                borderRadius: theme.borderRadius.sm,
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                fontSize: theme.typography.fontSize.sm,
+              }}
+            >
+              <option value="">📂 Load Saved...</option>
+              {Object.keys(savedConfigs).map(name => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Save Dialog */}
+      {showSaveDialog && (
+        <div
+          style={{
+            padding: theme.spacing.md,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.gray50,
+            display: 'flex',
+            gap: theme.spacing.sm,
+            alignItems: 'center',
+          }}
+        >
+          <input
+            type="text"
+            value={configName}
+            onChange={e => setConfigName(e.target.value)}
+            placeholder="Config name..."
+            style={{
+              flex: 1,
+              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+              borderRadius: theme.borderRadius.sm,
+              border: `1px solid ${theme.colors.border}`,
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          />
+          <button
+            onClick={saveConfig}
+            disabled={!configName.trim()}
+            style={{
+              padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+              borderRadius: theme.borderRadius.sm,
+              border: 'none',
+              backgroundColor: theme.colors.primary,
+              color: '#fff',
+              cursor: configName.trim() ? 'pointer' : 'not-allowed',
+              opacity: configName.trim() ? 1 : 0.5,
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            Save
+          </button>
+          <button
+            onClick={() => setShowSaveDialog(false)}
+            style={{
+              padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+              borderRadius: theme.borderRadius.sm,
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.sm,
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Config Grid - All categories visible */}
       <div style={{ padding: theme.spacing.md }}>
@@ -240,36 +1027,80 @@ const ConfigPanel = ({
           return (
             <div key={category} style={{ marginBottom: theme.spacing.lg }}>
               {/* Category Header */}
-              <h4 style={{
-                margin: `0 0 ${theme.spacing.sm}`,
-                fontSize: theme.typography.fontSize.sm,
-                color: theme.colors.textMuted,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                borderBottom: `1px solid ${theme.colors.border}`,
-                paddingBottom: theme.spacing.xs,
-              }}>
+              <h4
+                style={{
+                  margin: `0 0 ${theme.spacing.sm}`,
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  paddingBottom: theme.spacing.xs,
+                }}
+              >
                 {category}
               </h4>
 
               {/* Fields Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                gap: theme.spacing.md,
-              }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                  gap: theme.spacing.md,
+                }}
+              >
                 {Object.entries(fields).map(([field, schema]) => (
-                  <div key={field}>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '4px',
-                      fontSize: theme.typography.fontSize.xs,
-                      color: theme.colors.textSecondary,
-                      fontWeight: theme.typography.fontWeight.medium,
-                    }}>
+                  <div
+                    key={field}
+                    onMouseEnter={() => setHoveredField(field)}
+                    onMouseLeave={() => setHoveredField(null)}
+                    style={{ position: 'relative' }}
+                  >
+                    <label
+                      style={{
+                        display: 'block',
+                        marginBottom: '4px',
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.textSecondary,
+                        fontWeight: theme.typography.fontWeight.medium,
+                      }}
+                    >
                       {schema.label}
+                      {schema.tooltip && (
+                        <span
+                          style={{
+                            marginLeft: '4px',
+                            cursor: 'help',
+                            opacity: 0.5,
+                          }}
+                        >
+                          ⓘ
+                        </span>
+                      )}
                     </label>
                     {renderInput(field, schema)}
+
+                    {/* Tooltip */}
+                    {hoveredField === field && schema.tooltip && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '100%',
+                          left: 0,
+                          right: 0,
+                          padding: theme.spacing.sm,
+                          backgroundColor: '#1f2937',
+                          color: '#fff',
+                          borderRadius: theme.borderRadius.sm,
+                          fontSize: theme.typography.fontSize.xs,
+                          zIndex: 100,
+                          marginBottom: '4px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        }}
+                      >
+                        {schema.tooltip}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -279,18 +1110,22 @@ const ConfigPanel = ({
 
         {/* Actions */}
         {mode === 'edit' && (
-          <div style={{
-            display: 'flex',
-            gap: theme.spacing.sm,
-            marginTop: theme.spacing.md,
-            paddingTop: theme.spacing.md,
-            borderTop: `1px solid ${theme.colors.border}`,
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: theme.spacing.sm,
+              marginTop: theme.spacing.md,
+              paddingTop: theme.spacing.md,
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
             <button
               onClick={() => {
                 if (localConfig !== null) {
                   setLocalState({});
                   if (onConfigChange) onConfigChange({});
+                } else {
+                  resetConfig();
                 }
               }}
               style={{

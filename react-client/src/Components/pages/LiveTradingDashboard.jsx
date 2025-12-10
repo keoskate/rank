@@ -50,6 +50,7 @@ const LiveTradingDashboard = () => {
   // Use both state (for React re-renders) and ref (for interval callbacks)
   const [isEditingConfig, setIsEditingConfig] = useState(false);
   const isEditingConfigRef = useRef(false);
+  const showSimulatorRef = useRef(false); // Track if simulator is open (prevents config overwrite)
   const configEditTimeoutRef = useRef(null);
 
   // Portfolio state
@@ -99,6 +100,11 @@ const LiveTradingDashboard = () => {
   // Simulation mode
   const [showSimulator, setShowSimulator] = useState(false);
 
+  // Sync showSimulator state to ref (for use in polling interval without re-creating interval)
+  useEffect(() => {
+    showSimulatorRef.current = showSimulator;
+  }, [showSimulator]);
+
   // Audio notification settings
   const [audioSettings, setAudioSettings] = useState(() => loadAudioSettings());
 
@@ -128,7 +134,8 @@ const LiveTradingDashboard = () => {
     });
 
     socket.on('simulation_started', data => {
-      setSessionId(data.sessionId);
+      // Navigate to the new session URL
+      navigate(`/live-trading/${data.sessionId}`);
       setSessionStatus('running');
       addAlert(
         'success',
@@ -232,7 +239,8 @@ const LiveTradingDashboard = () => {
       fetchAccount();
       fetchPositions();
       fetchOrderStats();
-      if (urlSessionId && !isEditingConfigRef.current) {
+      // Don't fetch session details (which can overwrite config) if user is editing or simulator is open
+      if (urlSessionId && !isEditingConfigRef.current && !showSimulatorRef.current) {
         fetchSessionDetails(urlSessionId);
       }
     }, 10000);
@@ -332,9 +340,11 @@ const LiveTradingDashboard = () => {
         // Only load config from server on initial load OR when explicitly requested
         // Never overwrite when user is editing to prevent losing their changes
         // Use ref to get current editing state (avoids closure issues)
+        // CRITICAL: Also don't overwrite when simulator is open - it uses its own config edits
         if (
           data.config &&
           !isEditingConfigRef.current &&
+          !showSimulator &&
           (!configLoaded || forceLoadConfig)
         ) {
           contextUpdateConfig(data.config);
@@ -569,6 +579,20 @@ const LiveTradingDashboard = () => {
 
     // Use context to update config (auto-saves to localStorage)
     contextUpdateConfig({ [key]: value });
+
+    // Immediately sync critical settings to backend if we have an active session
+    const criticalSettings = ['autoTrade', 'minConfidence', 'watchlist', 'maxPositions'];
+    if (urlSessionId && criticalSettings.includes(key)) {
+      fetch(`/api/ai/session/${urlSessionId}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value }),
+      }).then(res => {
+        if (res.ok) {
+          console.log(`[Config] Synced ${key}=${value} to server`);
+        }
+      }).catch(err => console.error('[Config] Sync failed:', err));
+    }
   };
 
   const saveConfig = async () => {
@@ -2632,6 +2656,14 @@ const LiveTradingDashboard = () => {
         <StrategyMonitorPanel
           symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
           versionId={'default'}
+          sessionStats={urlSessionId ? {
+            winRate: stats.winRate,
+            totalPnL: stats.totalPnL,
+            totalTrades: stats.totalTrades,
+            consecutiveLosses: 0, // TODO: Track this in session
+            maxDrawdown: 0, // TODO: Track this in session
+            profitFactor: stats.wins > 0 ? (stats.wins / Math.max(1, stats.losses)) : 0,
+          } : null}
           onAlert={(alertsList) => {
             // Handle strategy alerts
             alertsList.forEach(alert => {
