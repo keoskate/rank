@@ -311,6 +311,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
     priceVsMa: 0,
   });
 
+  // Intraday regime detection state
+  const [intradayRegime, setIntradayRegime] = useState({
+    regime: 'unknown',
+    confidence: 0,
+    priceVsOpen: 0,
+    trend: 'flat',
+    lastUpdate: null,
+    history: [], // Track regime changes throughout the day
+  });
+
   // Refs for simulation control
   const simulationRef = useRef(null);
   const indexRef = useRef(0);
@@ -381,6 +391,109 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
 
   // Total P&L (realized + unrealized)
   const totalPnL = realizedPnL + getUnrealizedPnL();
+
+  /**
+   * Detect intraday regime based on price action
+   * Called every N candles during simulation to update regime
+   */
+  const detectIntradayRegime = useCallback((candleData, currentIdx, openPrice) => {
+    if (!candleData || currentIdx < 10 || !openPrice) return null;
+
+    const recentCandles = candleData.slice(Math.max(0, currentIdx - 30), currentIdx + 1);
+    const currentCandle = candleData[currentIdx];
+    const price = currentCandle.close ?? currentCandle.c;
+
+    // Calculate metrics
+    const priceVsOpen = ((price - openPrice) / openPrice) * 100;
+
+    // Calculate trend from recent highs/lows
+    let higherHighs = 0;
+    let lowerLows = 0;
+    for (let i = 5; i < recentCandles.length; i++) {
+      const prevHigh = recentCandles[i - 5].high ?? recentCandles[i - 5].h;
+      const currHigh = recentCandles[i].high ?? recentCandles[i].h;
+      const prevLow = recentCandles[i - 5].low ?? recentCandles[i - 5].l;
+      const currLow = recentCandles[i].low ?? recentCandles[i].l;
+
+      if (currHigh > prevHigh) higherHighs++;
+      if (currLow < prevLow) lowerLows++;
+    }
+
+    // Calculate VWAP for comparison
+    let vwapSum = 0;
+    let volumeSum = 0;
+    for (let i = 0; i <= currentIdx; i++) {
+      const c = candleData[i];
+      const typical = ((c.high ?? c.h) + (c.low ?? c.l) + (c.close ?? c.c)) / 3;
+      const vol = c.volume ?? c.v ?? 1;
+      vwapSum += typical * vol;
+      volumeSum += vol;
+    }
+    const vwap = vwapSum / volumeSum;
+    const priceVsVwap = ((price - vwap) / vwap) * 100;
+
+    // Calculate 20-candle momentum
+    const momentum20 = currentIdx >= 20
+      ? ((price - (candleData[currentIdx - 20].close ?? candleData[currentIdx - 20].c)) /
+         (candleData[currentIdx - 20].close ?? candleData[currentIdx - 20].c)) * 100
+      : 0;
+
+    // Determine trend direction
+    let trend = 'flat';
+    if (higherHighs > lowerLows + 3) trend = 'uptrend';
+    else if (lowerLows > higherHighs + 3) trend = 'downtrend';
+
+    // Determine regime based on multiple signals
+    let bullSignals = 0;
+    let bearSignals = 0;
+
+    // Signal 1: Price vs Open
+    if (priceVsOpen > 2) bullSignals += 2;
+    else if (priceVsOpen > 0.5) bullSignals += 1;
+    else if (priceVsOpen < -2) bearSignals += 2;
+    else if (priceVsOpen < -0.5) bearSignals += 1;
+
+    // Signal 2: Price vs VWAP
+    if (priceVsVwap > 1) bullSignals += 2;
+    else if (priceVsVwap > 0.3) bullSignals += 1;
+    else if (priceVsVwap < -1) bearSignals += 2;
+    else if (priceVsVwap < -0.3) bearSignals += 1;
+
+    // Signal 3: Trend
+    if (trend === 'uptrend') bullSignals += 2;
+    else if (trend === 'downtrend') bearSignals += 2;
+
+    // Signal 4: Recent momentum
+    if (momentum20 > 1) bullSignals += 1;
+    else if (momentum20 < -1) bearSignals += 1;
+
+    // Determine regime
+    let regime = 'sideways';
+    let confidence = 50;
+
+    if (bullSignals >= bearSignals + 3) {
+      regime = 'bull';
+      confidence = Math.min(95, 60 + (bullSignals - bearSignals) * 5);
+    } else if (bearSignals >= bullSignals + 3) {
+      regime = 'bear';
+      confidence = Math.min(95, 60 + (bearSignals - bullSignals) * 5);
+    } else {
+      regime = 'sideways';
+      confidence = 50 + Math.abs(bullSignals - bearSignals) * 5;
+    }
+
+    return {
+      regime,
+      confidence,
+      priceVsOpen: priceVsOpen.toFixed(2),
+      priceVsVwap: priceVsVwap.toFixed(2),
+      momentum20: momentum20.toFixed(2),
+      trend,
+      bullSignals,
+      bearSignals,
+      timestamp: currentCandle.timestamp || currentCandle.t,
+    };
+  }, []);
 
   // Fetch historical intraday data
   const fetchSimulationData = async () => {
@@ -844,6 +957,29 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
       })
     );
 
+    // Update intraday regime every 30 candles (30 minutes)
+    if (index > 0 && index % 30 === 0) {
+      const regimeResult = detectIntradayRegime(data, index, dayOpen);
+      if (regimeResult) {
+        setIntradayRegime(prev => {
+          const newHistory = prev.history || [];
+          // Only add to history if regime changed
+          if (newHistory.length === 0 || newHistory[newHistory.length - 1].regime !== regimeResult.regime) {
+            newHistory.push({
+              ...regimeResult,
+              time: currentTime,
+              candleIndex: index,
+            });
+          }
+          return {
+            ...regimeResult,
+            lastUpdate: currentTime,
+            history: newHistory,
+          };
+        });
+      }
+    }
+
     // Make AI decision
     setPortfolio(prev => {
       const currentPosition = prev.positions[0] || null;
@@ -904,6 +1040,15 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
     debugLogRef.current = [];
     setDebugLog([]);
     setShowDebugLog(false);
+    // Reset intraday regime
+    setIntradayRegime({
+      regime: 'unknown',
+      confidence: 0,
+      priceVsOpen: 0,
+      trend: 'flat',
+      lastUpdate: null,
+      history: [],
+    });
     const initialCapital = configSnapshot.allocatedCapital || 100000;
     setPortfolio({
       cash: initialCapital,
@@ -2224,6 +2369,138 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                 : 'None'}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Intraday Regime Panel */}
+      {(isRunning || progress > 0) && intradayRegime.regime !== 'unknown' && (
+        <div
+          style={{
+            marginBottom: theme.spacing.md,
+            padding: theme.spacing.md,
+            backgroundColor: intradayRegime.regime === 'bull' ? '#dcfce7'
+              : intradayRegime.regime === 'bear' ? '#fee2e2' : '#fef9c3',
+            borderRadius: theme.borderRadius.md,
+            border: `2px solid ${intradayRegime.regime === 'bull' ? '#22c55e'
+              : intradayRegime.regime === 'bear' ? '#ef4444' : '#eab308'}`,
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: theme.spacing.sm,
+          }}>
+            <h4 style={{
+              margin: 0,
+              fontSize: theme.typography.fontSize.sm,
+              color: intradayRegime.regime === 'bull' ? '#166534'
+                : intradayRegime.regime === 'bear' ? '#991b1b' : '#854d0e',
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}>
+              {intradayRegime.regime === 'bull' && '📈'}
+              {intradayRegime.regime === 'bear' && '📉'}
+              {intradayRegime.regime === 'sideways' && '↔️'}
+              Intraday Regime: <strong>{intradayRegime.regime.toUpperCase()}</strong>
+              <span style={{
+                padding: '2px 8px',
+                borderRadius: theme.borderRadius.sm,
+                backgroundColor: 'white',
+                fontSize: theme.typography.fontSize.xs,
+              }}>
+                {intradayRegime.confidence}% conf
+              </span>
+            </h4>
+            <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textMuted }}>
+              Updated: {intradayRegime.lastUpdate || 'Pending'}
+            </span>
+          </div>
+
+          {/* Regime Metrics */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: theme.spacing.sm,
+            fontSize: theme.typography.fontSize.xs,
+          }}>
+            <div style={{ textAlign: 'center', padding: theme.spacing.xs, backgroundColor: 'white', borderRadius: theme.borderRadius.sm }}>
+              <div style={{ color: theme.colors.textMuted }}>vs Open</div>
+              <div style={{
+                fontWeight: 'bold',
+                color: parseFloat(intradayRegime.priceVsOpen) > 0 ? '#22c55e' : parseFloat(intradayRegime.priceVsOpen) < 0 ? '#ef4444' : 'inherit',
+              }}>
+                {intradayRegime.priceVsOpen > 0 ? '+' : ''}{intradayRegime.priceVsOpen}%
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', padding: theme.spacing.xs, backgroundColor: 'white', borderRadius: theme.borderRadius.sm }}>
+              <div style={{ color: theme.colors.textMuted }}>vs VWAP</div>
+              <div style={{
+                fontWeight: 'bold',
+                color: parseFloat(intradayRegime.priceVsVwap) > 0 ? '#22c55e' : parseFloat(intradayRegime.priceVsVwap) < 0 ? '#ef4444' : 'inherit',
+              }}>
+                {intradayRegime.priceVsVwap > 0 ? '+' : ''}{intradayRegime.priceVsVwap}%
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', padding: theme.spacing.xs, backgroundColor: 'white', borderRadius: theme.borderRadius.sm }}>
+              <div style={{ color: theme.colors.textMuted }}>20m Mom</div>
+              <div style={{
+                fontWeight: 'bold',
+                color: parseFloat(intradayRegime.momentum20) > 0 ? '#22c55e' : parseFloat(intradayRegime.momentum20) < 0 ? '#ef4444' : 'inherit',
+              }}>
+                {intradayRegime.momentum20 > 0 ? '+' : ''}{intradayRegime.momentum20}%
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', padding: theme.spacing.xs, backgroundColor: 'white', borderRadius: theme.borderRadius.sm }}>
+              <div style={{ color: theme.colors.textMuted }}>Trend</div>
+              <div style={{ fontWeight: 'bold' }}>
+                {intradayRegime.trend === 'uptrend' && '⬆️ Up'}
+                {intradayRegime.trend === 'downtrend' && '⬇️ Down'}
+                {intradayRegime.trend === 'flat' && '➡️ Flat'}
+              </div>
+            </div>
+          </div>
+
+          {/* Regime History */}
+          {intradayRegime.history?.length > 1 && (
+            <div style={{
+              marginTop: theme.spacing.sm,
+              padding: theme.spacing.xs,
+              backgroundColor: 'white',
+              borderRadius: theme.borderRadius.sm,
+              fontSize: '10px',
+            }}>
+              <strong>Regime Changes:</strong>{' '}
+              {intradayRegime.history.map((h, i) => (
+                <span key={i} style={{
+                  padding: '2px 6px',
+                  marginLeft: '4px',
+                  borderRadius: '4px',
+                  backgroundColor: h.regime === 'bull' ? '#dcfce7' : h.regime === 'bear' ? '#fee2e2' : '#fef9c3',
+                }}>
+                  {h.time}: {h.regime.toUpperCase()}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* ETF Mode Symbol Suggestion */}
+          {lockedSymbols && lockedSymbols.length > 0 && (
+            <div style={{
+              marginTop: theme.spacing.sm,
+              padding: theme.spacing.xs,
+              backgroundColor: '#dbeafe',
+              borderRadius: theme.borderRadius.sm,
+              fontSize: theme.typography.fontSize.xs,
+              color: '#1e40af',
+            }}>
+              <strong>ETF Mode Suggestion:</strong>{' '}
+              {intradayRegime.regime === 'bull' && `Consider ${lockedSymbols[1] || lockedSymbols[0]} (bull ETF)`}
+              {intradayRegime.regime === 'bear' && `Consider ${lockedSymbols[2] || lockedSymbols[0]} (bear ETF)`}
+              {intradayRegime.regime === 'sideways' && 'Consider staying in cash - sideways regime detected'}
+            </div>
+          )}
         </div>
       )}
 

@@ -452,19 +452,121 @@ const LeveragedEtfPanel = ({ onSymbolSelect, date, enabled, onEnabledChange, onF
         {flowData?.flowData && (
           <div style={{
             marginBottom: theme.spacing.sm,
-            padding: theme.spacing.xs,
+            padding: theme.spacing.sm,
             backgroundColor: 'white',
             borderRadius: theme.borderRadius.sm,
-            fontSize: theme.typography.fontSize.xs,
+            border: '1px solid #22c55e',
           }}>
-            <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
-              <span><strong>Sentiment:</strong> {flowData.flowData.sentimentText}</span>
-              <span><strong>P/C:</strong> {flowData.flowData.putCallRatio?.toFixed(3)}</span>
-              <span><strong>Calls:</strong> {flowData.flowData.callFlowPercent?.toFixed(1)}%</span>
-              {flowData.flowData.totalCallFlow && (
-                <span><strong>Call $:</strong> ${(flowData.flowData.totalCallFlow / 1000000).toFixed(2)}M</span>
-              )}
+            <div style={{
+              fontSize: theme.typography.fontSize.xs,
+              fontWeight: 'bold',
+              color: '#166534',
+              marginBottom: theme.spacing.xs,
+              display: 'flex',
+              justifyContent: 'space-between',
+            }}>
+              <span>✓ CheddarFlow Data Retrieved</span>
+              <span style={{ fontWeight: 'normal', color: theme.colors.textMuted }}>
+                {flowData.date || 'Today'}
+              </span>
             </div>
+
+            {/* Main sentiment badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              marginBottom: theme.spacing.sm,
+            }}>
+              <span style={{
+                padding: '4px 12px',
+                borderRadius: theme.borderRadius.sm,
+                backgroundColor: flowData.flowData.sentimentText?.toLowerCase().includes('bullish') ? '#dcfce7'
+                  : flowData.flowData.sentimentText?.toLowerCase().includes('bearish') ? '#fee2e2' : '#fef9c3',
+                color: flowData.flowData.sentimentText?.toLowerCase().includes('bullish') ? '#166534'
+                  : flowData.flowData.sentimentText?.toLowerCase().includes('bearish') ? '#991b1b' : '#854d0e',
+                fontWeight: 'bold',
+                fontSize: theme.typography.fontSize.sm,
+              }}>
+                {flowData.flowData.sentimentText || 'Unknown'}
+              </span>
+              <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textMuted }}>
+                P/C Ratio: <strong>{flowData.flowData.putCallRatio?.toFixed(3) || 'N/A'}</strong>
+              </span>
+            </div>
+
+            {/* Detailed flow breakdown */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: theme.spacing.xs,
+              fontSize: theme.typography.fontSize.xs,
+            }}>
+              {/* Calls */}
+              <div style={{
+                padding: theme.spacing.xs,
+                backgroundColor: '#dcfce7',
+                borderRadius: theme.borderRadius.sm,
+              }}>
+                <div style={{ color: '#166534', fontWeight: 'bold' }}>📈 CALLS</div>
+                <div>Flow: <strong>{flowData.flowData.callFlowPercent?.toFixed(1) || 0}%</strong></div>
+                {flowData.flowData.totalCallFlow && (
+                  <div>Volume: <strong>${(flowData.flowData.totalCallFlow / 1000000).toFixed(2)}M</strong></div>
+                )}
+                {flowData.flowData.callContracts && (
+                  <div>Contracts: <strong>{flowData.flowData.callContracts.toLocaleString()}</strong></div>
+                )}
+              </div>
+
+              {/* Puts */}
+              <div style={{
+                padding: theme.spacing.xs,
+                backgroundColor: '#fee2e2',
+                borderRadius: theme.borderRadius.sm,
+              }}>
+                <div style={{ color: '#991b1b', fontWeight: 'bold' }}>📉 PUTS</div>
+                <div>Flow: <strong>{flowData.flowData.putFlowPercent?.toFixed(1) || 0}%</strong></div>
+                {flowData.flowData.totalPutFlow && (
+                  <div>Volume: <strong>${(flowData.flowData.totalPutFlow / 1000000).toFixed(2)}M</strong></div>
+                )}
+                {flowData.flowData.putContracts && (
+                  <div>Contracts: <strong>{flowData.flowData.putContracts.toLocaleString()}</strong></div>
+                )}
+              </div>
+            </div>
+
+            {/* Sentiment analysis */}
+            {flowData.sentiment && (
+              <div style={{
+                marginTop: theme.spacing.xs,
+                padding: theme.spacing.xs,
+                backgroundColor: theme.colors.gray100,
+                borderRadius: theme.borderRadius.sm,
+                fontSize: '10px',
+              }}>
+                <strong>Analysis:</strong> {flowData.sentiment.sentiment} ({flowData.sentiment.confidence}% confidence)
+                {flowData.sentiment.reasons?.length > 0 && (
+                  <div style={{ color: theme.colors.textMuted, marginTop: '2px' }}>
+                    {flowData.sentiment.reasons.join(' • ')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* No flow data message */}
+        {!flowData && !flowLoading && !flowError && (
+          <div style={{
+            padding: theme.spacing.sm,
+            backgroundColor: '#fef3c7',
+            borderRadius: theme.borderRadius.sm,
+            marginBottom: theme.spacing.sm,
+            fontSize: theme.typography.fontSize.xs,
+            color: '#92400e',
+            textAlign: 'center',
+          }}>
+            No CheddarFlow data available. Click "Fetch from CheddarFlow" or enter data manually below.
           </div>
         )}
 
