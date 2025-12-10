@@ -54,7 +54,7 @@ const REGIME_INFO = {
   },
 };
 
-const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
+const RegimeConfigPanel = ({ symbol, onRegimeChange, date }) => {
   const { config, updateConfig } = useTradingConfig();
   const [regime, setRegime] = useState(null);
   const [regimeConfig, setRegimeConfig] = useState(null);
@@ -68,7 +68,9 @@ const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/regime/${symbol}`);
+      // Add date parameter if provided (for historical simulation)
+      const dateParam = date ? `&date=${date}` : '';
+      const response = await fetch(`/api/regime/${symbol}?days=90${dateParam}`);
       if (response.ok) {
         const data = await response.json();
         setRegime(data.regime);
@@ -80,7 +82,7 @@ const RegimeConfigPanel = ({ symbol, onRegimeChange }) => {
     } finally {
       setLoading(false);
     }
-  }, [symbol, onRegimeChange]);
+  }, [symbol, onRegimeChange, date]);
 
   // Fetch regime-specific config
   const fetchRegimeConfig = useCallback(async () => {

@@ -100,6 +100,17 @@ const LiveTradingDashboard = () => {
 
   // Simulation mode
   const [showSimulator, setShowSimulator] = useState(false);
+  const [simulationDate, setSimulationDate] = useState(null);
+  const [simulationSymbol, setSimulationSymbol] = useState(null);
+
+  // Leveraged ETF Strategy mode
+  const [leveragedEtfEnabled, setLeveragedEtfEnabled] = useState(false);
+  const [selectedEtfFamily, setSelectedEtfFamily] = useState(null);
+
+  // Get locked symbols when ETF mode is enabled
+  const lockedSymbols = leveragedEtfEnabled && selectedEtfFamily
+    ? [selectedEtfFamily.base, selectedEtfFamily.bull, selectedEtfFamily.bear]
+    : null;
 
   // Sync showSimulator state to ref (for use in polling interval without re-creating interval)
   useEffect(() => {
@@ -2642,6 +2653,10 @@ const LiveTradingDashboard = () => {
             // Optionally handle simulation results
             console.log('Simulation completed:', results);
           }}
+          onDateChange={setSimulationDate}
+          onSymbolChange={setSimulationSymbol}
+          initialSymbol={leveragedEtfEnabled && lockedSymbols ? lockedSymbols[0] : undefined}
+          lockedSymbols={lockedSymbols}
         />
       )}
 
@@ -2677,20 +2692,33 @@ const LiveTradingDashboard = () => {
           }}
         />
         <RegimeConfigPanel
-          symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
+          symbol={simulationSymbol || chartSymbol || config.watchlist?.[0] || 'AAPL'}
+          date={simulationDate}
           onRegimeChange={(data) => {
             console.log('Regime changed:', data.regime);
           }}
         />
         <LeveragedEtfPanel
+          date={simulationDate}
+          enabled={leveragedEtfEnabled}
+          onEnabledChange={(enabled) => {
+            setLeveragedEtfEnabled(enabled);
+            if (!enabled) {
+              setSelectedEtfFamily(null);
+            }
+          }}
           onSymbolSelect={(symbol) => {
             console.log('Leveraged ETF selected:', symbol);
             setChartSymbol(symbol);
+            setSimulationSymbol(symbol);
             // Add to watchlist if not present
             if (!config.watchlist?.includes(symbol)) {
               const newWatchlist = [...(config.watchlist || []), symbol];
               updateConfig({ watchlist: newWatchlist });
             }
+          }}
+          onFamilyChange={(family) => {
+            setSelectedEtfFamily(family);
           }}
         />
       </div>

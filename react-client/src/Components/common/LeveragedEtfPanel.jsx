@@ -21,7 +21,7 @@ const ETF_FAMILIES = [
   { base: 'PLTR', name: 'Palantir Technologies', bull: 'PLTU', bear: 'PLTZ', leverage: '2x' },
 ];
 
-const LeveragedEtfPanel = ({ onSymbolSelect }) => {
+const LeveragedEtfPanel = ({ onSymbolSelect, date, enabled, onEnabledChange, onFamilyChange }) => {
   const [selectedFamily, setSelectedFamily] = useState(ETF_FAMILIES[0]);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -107,7 +107,7 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
       let response;
 
       if (withFlow && (flowSentiment !== 'neutral' || putCallRatio || callFlowPercent)) {
-        // POST with flow data
+        // POST with flow data (and date if provided)
         const flowDataPayload = {
           sentimentText: flowSentiment.charAt(0).toUpperCase() + flowSentiment.slice(1),
           putCallRatio: putCallRatio ? parseFloat(putCallRatio) : undefined,
@@ -118,11 +118,12 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
         response = await fetch(`/api/leveraged-etf/analyze/${selectedFamily.base}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flowData: flowDataPayload }),
+          body: JSON.stringify({ flowData: flowDataPayload, date }),
         });
       } else {
-        // GET without flow data
-        response = await fetch(`/api/leveraged-etf/analyze/${selectedFamily.base}`);
+        // GET without flow data (add date if provided)
+        const dateParam = date ? `?date=${date}` : '';
+        response = await fetch(`/api/leveraged-etf/analyze/${selectedFamily.base}${dateParam}`);
       }
 
       if (response.ok) {
@@ -137,7 +138,7 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedFamily, flowSentiment, putCallRatio, callFlowPercent]);
+  }, [selectedFamily, flowSentiment, putCallRatio, callFlowPercent, date]);
 
   // Auto-fetch flow and analysis when family changes
   useEffect(() => {
@@ -158,14 +159,19 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
     };
 
     fetchAll();
-  }, [selectedFamily, autoFetchFlow]);
+  }, [selectedFamily, autoFetchFlow, date]);
+
+  // Notify parent when family changes
+  useEffect(() => {
+    onFamilyChange?.(selectedFamily);
+  }, [selectedFamily, onFamilyChange]);
 
   // Re-analyze when flow inputs change
   useEffect(() => {
     if (flowSentiment !== 'neutral' || putCallRatio || callFlowPercent) {
       fetchAnalysis(true);
     }
-  }, [flowSentiment, putCallRatio, callFlowPercent]);
+  }, [flowSentiment, putCallRatio, callFlowPercent, date]);
 
   // Handle applying the recommendation
   const applyRecommendation = () => {
@@ -202,13 +208,32 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
           <span style={{ fontWeight: 'bold', fontSize: theme.typography.fontSize.md }}>
             Leveraged ETF Strategy
           </span>
+          {/* Enable/Disable Toggle */}
+          {onEnabledChange && (
+            <button
+              onClick={() => onEnabledChange(!enabled)}
+              style={{
+                padding: '4px 12px',
+                borderRadius: theme.borderRadius.md,
+                border: 'none',
+                backgroundColor: enabled ? '#22c55e' : theme.colors.gray300,
+                color: enabled ? 'white' : theme.colors.textMuted,
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {enabled ? 'ENABLED' : 'DISABLED'}
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', gap: theme.spacing.xs }}>
           <Button
             size="small"
             variant="outline"
             onClick={() => fetchCheddarFlow(selectedFamily.base)}
-            disabled={flowLoading}
+            disabled={flowLoading || !enabled}
             title="Fetch latest CheddarFlow data"
           >
             {flowLoading ? '...' : '📊'}
@@ -217,12 +242,45 @@ const LeveragedEtfPanel = ({ onSymbolSelect }) => {
             size="small"
             variant="outline"
             onClick={() => fetchAnalysis(true)}
-            disabled={loading}
+            disabled={loading || !enabled}
           >
             {loading ? 'Analyzing...' : 'Refresh'}
           </Button>
         </div>
       </div>
+
+      {/* Date being used for analysis */}
+      {date && (
+        <div style={{
+          padding: theme.spacing.xs,
+          backgroundColor: '#dbeafe',
+          borderRadius: theme.borderRadius.sm,
+          marginBottom: theme.spacing.sm,
+          fontSize: theme.typography.fontSize.xs,
+          color: '#1e40af',
+          textAlign: 'center',
+        }}>
+          Analyzing regime for: <strong>{date}</strong>
+        </div>
+      )}
+
+      {/* Disabled overlay message */}
+      {!enabled && onEnabledChange && (
+        <div style={{
+          padding: theme.spacing.md,
+          backgroundColor: theme.colors.gray100,
+          borderRadius: theme.borderRadius.md,
+          textAlign: 'center',
+          color: theme.colors.textMuted,
+          marginBottom: theme.spacing.md,
+        }}>
+          <p style={{ margin: 0 }}>
+            Enable this strategy to lock into leveraged ETF trading for the selected family.
+            <br />
+            <small>When enabled, symbol selection will be limited to {selectedFamily.base}/{selectedFamily.bull}/{selectedFamily.bear}</small>
+          </p>
+        </div>
+      )}
 
       {/* ETF Family Selector */}
       <div style={{ marginBottom: theme.spacing.md }}>

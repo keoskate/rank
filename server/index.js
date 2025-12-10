@@ -4645,16 +4645,17 @@ app.get('/api/leveraged/:symbol/decay', (req, res) => {
  * Detect bull/bear/sideways market conditions
  */
 
-// Detect current regime for a symbol (uses recent data)
+// Detect current regime for a symbol (uses recent data or specific date)
 app.get('/api/regime/:symbol', async (req, res) => {
   const { symbol } = req.params;
-  const { days } = req.query;
+  const { days, date } = req.query;
   const lookbackDays = parseInt(days) || 90;
 
   try {
     // Get historical data for regime detection
-    const endDate = new Date();
-    const startDate = new Date();
+    // Use provided date or current date as end date
+    const endDate = date ? new Date(date) : new Date();
+    const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - lookbackDays);
 
     // Format dates for polygon API
@@ -4882,7 +4883,7 @@ app.get('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
 // Analyze with manual flow sentiment input
 app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
   const { symbol } = req.params;
-  const { flowData, accountValue = 25000, riskPercent = 2 } = req.body;
+  const { flowData, accountValue = 25000, riskPercent = 2, date } = req.body;
 
   try {
     // Check if symbol is supported
@@ -4893,9 +4894,9 @@ app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
       });
     }
 
-    // Get technical regime
-    const endDate = new Date();
-    const startDate = new Date();
+    // Get technical regime - use provided date or current date
+    const endDate = date ? new Date(date) : new Date();
+    const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 90);
 
     const formatDate = (d) => d.toISOString().split('T')[0];

@@ -246,7 +246,7 @@ const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex,
 // END SHARED TRADING LOGIC
 // ============================================
 
-const TradingSimulator = ({ onComplete }) => {
+const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSymbol, lockedSymbols }) => {
   // Use config DIRECTLY from context - this ensures ConfigPanel edits are immediately used
   const { config, updateConfig: updateGlobalConfig } = useTradingConfig();
 
@@ -259,6 +259,8 @@ const TradingSimulator = ({ onComplete }) => {
     return saved || '';
   });
   const [symbol, setSymbol] = useState(() => {
+    // Use initialSymbol if provided, otherwise load from localStorage
+    if (initialSymbol) return initialSymbol;
     const saved = localStorage.getItem('simulator-symbol');
     return saved || 'AAPL';
   });
@@ -348,18 +350,27 @@ const TradingSimulator = ({ onComplete }) => {
     }
   }, []);
 
-  // Persist date and symbol to localStorage
+  // Persist date and symbol to localStorage + notify parent
   useEffect(() => {
     if (simulationDate) {
       localStorage.setItem('simulator-date', simulationDate);
+      onDateChange?.(simulationDate);
     }
-  }, [simulationDate]);
+  }, [simulationDate, onDateChange]);
 
   useEffect(() => {
     if (symbol) {
       localStorage.setItem('simulator-symbol', symbol);
+      onSymbolChange?.(symbol);
     }
-  }, [symbol]);
+  }, [symbol, onSymbolChange]);
+
+  // Update symbol if initialSymbol changes (e.g., from leveraged ETF panel)
+  useEffect(() => {
+    if (initialSymbol && initialSymbol !== symbol && !isRunning) {
+      setSymbol(initialSymbol);
+    }
+  }, [initialSymbol]);
 
   // Calculate unrealized P&L
   const getUnrealizedPnL = useCallback(() => {
@@ -1806,22 +1817,43 @@ const TradingSimulator = ({ onComplete }) => {
               color: theme.colors.gray600,
             }}
           >
-            Symbol
+            Symbol {lockedSymbols?.length > 0 && <span style={{ color: '#22c55e', fontSize: '10px' }}>(ETF Mode)</span>}
           </label>
-          <input
-            type="text"
-            value={symbol}
-            onChange={e => setSymbol(e.target.value.toUpperCase())}
-            disabled={isRunning}
-            placeholder="AAPL"
-            style={{
-              width: '100%',
-              padding: theme.spacing.sm,
-              border: `1px solid ${theme.colors.gray300}`,
-              borderRadius: theme.borderRadius.md,
-              fontSize: theme.typography.fontSize.md,
-            }}
-          />
+          {lockedSymbols?.length > 0 ? (
+            /* When ETF mode is enabled, show dropdown of allowed symbols */
+            <select
+              value={symbol}
+              onChange={e => setSymbol(e.target.value)}
+              disabled={isRunning}
+              style={{
+                width: '100%',
+                padding: theme.spacing.sm,
+                border: `1px solid #22c55e`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.md,
+                backgroundColor: '#dcfce7',
+              }}
+            >
+              {lockedSymbols.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={symbol}
+              onChange={e => setSymbol(e.target.value.toUpperCase())}
+              disabled={isRunning}
+              placeholder="AAPL"
+              style={{
+                width: '100%',
+                padding: theme.spacing.sm,
+                border: `1px solid ${theme.colors.gray300}`,
+                borderRadius: theme.borderRadius.md,
+                fontSize: theme.typography.fontSize.md,
+              }}
+            />
+          )}
         </div>
 
         <div>

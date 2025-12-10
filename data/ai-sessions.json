@@ -636,10 +636,10 @@
             "symbol": "QBTX",
             "quantity": 206,
             "averageCost": 47.87,
-            "currentPrice": 47.27,
-            "marketValue": 9737.62,
-            "unrealizedPnL": -123.6,
-            "unrealizedPnLPercent": -1.25339461040318,
+            "currentPrice": 46.3796,
+            "marketValue": 9554.1976,
+            "unrealizedPnL": -307.0224,
+            "unrealizedPnLPercent": -3.11343221224149,
             "side": "long",
             "entryTime": "2025-12-09T20:19:16.251Z"
           }
@@ -650,10 +650,10 @@
             "symbol": "SOXL",
             "quantity": 210,
             "averageCost": 47.677952,
-            "currentPrice": 47.63,
-            "marketValue": 10002.3,
-            "unrealizedPnL": -10.06992,
-            "unrealizedPnLPercent": -0.10057478978963,
+            "currentPrice": 47.77,
+            "marketValue": 10031.7,
+            "unrealizedPnL": 19.33008,
+            "unrealizedPnLPercent": 0.19306198387044998,
             "side": "long",
             "entryTime": "2025-12-09T20:55:16.740Z"
           }
@@ -664,16 +664,16 @@
             "symbol": "SOXS",
             "quantity": 1000,
             "averageCost": 2.946667,
-            "currentPrice": 2.95,
-            "marketValue": 2950,
-            "unrealizedPnL": 3.333,
-            "unrealizedPnLPercent": 0.11311084693316001,
+            "currentPrice": 2.935,
+            "marketValue": 2935,
+            "unrealizedPnL": -11.667,
+            "unrealizedPnLPercent": -0.39593886923768,
             "side": "long",
             "entryTime": "2025-12-09T20:57:40.986Z"
           }
         ]
       ],
-      "initialValue": 100238.05
+      "initialValue": 100069.03
     },
     "stats": {
       "totalTrades": 7,
