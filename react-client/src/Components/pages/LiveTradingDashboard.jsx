@@ -16,6 +16,7 @@ import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
 import StrategyMonitorPanel from '../common/StrategyMonitorPanel';
 import RegimeConfigPanel from '../common/RegimeConfigPanel';
+import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 import {
@@ -2679,6 +2680,17 @@ const LiveTradingDashboard = () => {
           symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
           onRegimeChange={(data) => {
             console.log('Regime changed:', data.regime);
+          }}
+        />
+        <LeveragedEtfPanel
+          onSymbolSelect={(symbol) => {
+            console.log('Leveraged ETF selected:', symbol);
+            setChartSymbol(symbol);
+            // Add to watchlist if not present
+            if (!config.watchlist?.includes(symbol)) {
+              const newWatchlist = [...(config.watchlist || []), symbol];
+              updateConfig({ watchlist: newWatchlist });
+            }
           }}
         />
       </div>
