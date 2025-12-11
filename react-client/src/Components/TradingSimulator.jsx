@@ -1286,8 +1286,8 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
     if (visibleCandles.length === 0) return null;
 
     // Use viewBox for responsive scaling
-    const width = 350;
-    const height = 140;
+    const width = 450;
+    const height = 160;
     const padding = 35;
 
     const prices = visibleCandles
@@ -1325,7 +1325,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
         style={{
           width: '100%',
           height: 'auto',
-          maxHeight: '140px',
+          maxHeight: '160px',
           backgroundColor: theme.colors.gray50,
           borderRadius: theme.borderRadius.sm,
         }}
@@ -2545,12 +2545,27 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
         </div>
       )}
 
+      {/* Full TradingView Chart (V2) - positioned above "What the Strategy Sees" */}
+      {candles.length > 0 && (
+        <div style={{ marginBottom: theme.spacing.md }}>
+          <TradingViewChart
+            candles={candles}
+            currentCandleIndex={currentCandleIndex}
+            trades={portfolio.trades}
+            currentPosition={portfolio.positions[0] || null}
+            dayOpen={dayOpen}
+            symbol={symbol}
+            height={400}
+          />
+        </div>
+      )}
+
       {/* ML Indicators Panel - What the Strategy Sees */}
       {(isRunning || progress > 0) && (
         <div
           style={{
             marginBottom: theme.spacing.md,
-            padding: theme.spacing.md,
+            padding: theme.spacing.sm,
             backgroundColor: theme.colors.gray50,
             borderRadius: theme.borderRadius.md,
             border: `1px solid ${theme.colors.gray200}`,
@@ -2571,27 +2586,39 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             What the Strategy Sees
           </h4>
 
-          {/* Main content row: Metrics + Mini Chart */}
+          {/* Main content row: Mini Chart + Metrics */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: candles.length > 0 ? '1fr 350px' : '1fr',
-              gap: theme.spacing.md,
+              gridTemplateColumns: candles.length > 0 ? '450px 1fr' : '1fr',
+              gap: theme.spacing.sm,
               alignItems: 'start',
             }}
           >
-          {/* Left side: Indicator metrics grid */}
+          {/* Left side: Mini Chart */}
+          {candles.length > 0 && (
+            <div style={{
+              backgroundColor: theme.colors.surface,
+              borderRadius: theme.borderRadius.sm,
+              padding: theme.spacing.sm,
+              border: `1px solid ${theme.colors.gray200}`,
+            }}>
+              {renderMiniChart()}
+            </div>
+          )}
+
+          {/* Right side: Indicator metrics grid */}
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(6, 1fr)',
-              gap: theme.spacing.sm,
+              gap: theme.spacing.xs,
             }}
           >
             {/* RSI Indicator */}
             <div
               style={{
-                padding: theme.spacing.sm,
+                padding: '6px',
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.sm,
                 textAlign: 'center',
@@ -2599,16 +2626,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                 }}
               >
                 RSI (14)
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xl,
+                  fontSize: theme.typography.fontSize.lg,
                   fontWeight: theme.typography.fontWeight.bold,
                   color:
                     currentIndicators.rsi <= 30
@@ -2622,7 +2649,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color:
                     currentIndicators.rsi <= 30
                       ? theme.colors.success
@@ -2640,8 +2667,8 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               {/* RSI Bar */}
               <div
                 style={{
-                  marginTop: '6px',
-                  height: '4px',
+                  marginTop: '4px',
+                  height: '3px',
                   backgroundColor: theme.colors.gray200,
                   borderRadius: '2px',
                   position: 'relative',
@@ -2652,8 +2679,8 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                     position: 'absolute',
                     left: `${currentIndicators.rsi}%`,
                     top: '-2px',
-                    width: '8px',
-                    height: '8px',
+                    width: '7px',
+                    height: '7px',
                     borderRadius: '50%',
                     backgroundColor:
                       currentIndicators.rsi <= 30
@@ -2670,7 +2697,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             {/* Price vs VWAP */}
             <div
               style={{
-                padding: theme.spacing.sm,
+                padding: '6px',
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.sm,
                 textAlign: 'center',
@@ -2678,16 +2705,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                 }}
               >
                 Price vs VWAP
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xl,
+                  fontSize: theme.typography.fontSize.lg,
                   fontWeight: theme.typography.fontWeight.bold,
                   color:
                     currentIndicators.priceVsVwap >= 0
@@ -2700,7 +2727,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
                 }}
               >
@@ -2711,7 +2738,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             {/* Price vs MA20 */}
             <div
               style={{
-                padding: theme.spacing.sm,
+                padding: '6px',
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.sm,
                 textAlign: 'center',
@@ -2719,16 +2746,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                 }}
               >
                 Price vs MA(20)
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xl,
+                  fontSize: theme.typography.fontSize.lg,
                   fontWeight: theme.typography.fontWeight.bold,
                   color:
                     currentIndicators.priceVsMa >= 0
@@ -2741,7 +2768,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
                 }}
               >
@@ -2752,7 +2779,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             {/* Volume Ratio */}
             <div
               style={{
-                padding: theme.spacing.sm,
+                padding: '6px',
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.sm,
                 textAlign: 'center',
@@ -2760,16 +2787,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                 }}
               >
                 Volume Ratio
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xl,
+                  fontSize: theme.typography.fontSize.lg,
                   fontWeight: theme.typography.fontWeight.bold,
                   color:
                     currentIndicators.volumeRatio >= 1.5
@@ -2783,7 +2810,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color:
                     currentIndicators.volumeRatio >= 1.5
                       ? theme.colors.success
@@ -2799,8 +2826,8 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               {/* Volume bar visualization */}
               <div
                 style={{
-                  marginTop: '6px',
-                  height: '16px',
+                  marginTop: '4px',
+                  height: '12px',
                   backgroundColor: theme.colors.gray200,
                   borderRadius: '2px',
                   overflow: 'hidden',
@@ -2825,7 +2852,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             {/* Momentum */}
             <div
               style={{
-                padding: theme.spacing.sm,
+                padding: '6px',
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.sm,
                 textAlign: 'center',
@@ -2833,16 +2860,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                 }}
               >
                 Momentum (1m)
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xl,
+                  fontSize: theme.typography.fontSize.lg,
                   fontWeight: theme.typography.fontWeight.bold,
                   color:
                     currentIndicators.momentum >= 0
@@ -2855,7 +2882,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
                 }}
               >
@@ -2870,7 +2897,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             {/* Current Volume */}
             <div
               style={{
-                padding: theme.spacing.sm,
+                padding: '6px',
                 backgroundColor: theme.colors.surface,
                 borderRadius: theme.borderRadius.sm,
                 textAlign: 'center',
@@ -2878,16 +2905,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                 }}
               >
                 Volume
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.lg,
+                  fontSize: theme.typography.fontSize.md,
                   fontWeight: theme.typography.fontWeight.bold,
                 }}
               >
@@ -2897,7 +2924,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xs,
+                  fontSize: '10px',
                   color: theme.colors.gray500,
                 }}
               >
@@ -2907,12 +2934,11 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
               </div>
             </div>
 
-            {/* Signal Summary - spans full width of left column */}
+            {/* Signal Summary - spans full width */}
             <div
               style={{
                 gridColumn: '1 / -1',
-                marginTop: theme.spacing.xs,
-                padding: theme.spacing.xs,
+                padding: '4px 6px',
                 backgroundColor:
                   currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
                     ? `${theme.colors.success}15`
@@ -2931,11 +2957,12 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             >
             <div
               style={{
-                fontSize: theme.typography.fontSize.sm,
+                fontSize: '11px',
                 color: theme.colors.gray600,
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: theme.spacing.sm,
+                gap: theme.spacing.xs,
+                alignItems: 'center',
               }}
             >
               <strong>Signals:</strong>
@@ -2944,9 +2971,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                   style={{
                     backgroundColor: theme.colors.success + '20',
                     color: theme.colors.success,
-                    padding: '2px 8px',
+                    padding: '1px 6px',
                     borderRadius: theme.borderRadius.sm,
-                    fontSize: theme.typography.fontSize.xs,
+                    fontSize: '10px',
                   }}
                 >
                   RSI Oversold
@@ -2957,9 +2984,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                   style={{
                     backgroundColor: theme.colors.error + '20',
                     color: theme.colors.error,
-                    padding: '2px 8px',
+                    padding: '1px 6px',
                     borderRadius: theme.borderRadius.sm,
-                    fontSize: theme.typography.fontSize.xs,
+                    fontSize: '10px',
                   }}
                 >
                   RSI Overbought
@@ -2970,9 +2997,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                   style={{
                     backgroundColor: theme.colors.success + '20',
                     color: theme.colors.success,
-                    padding: '2px 8px',
+                    padding: '1px 6px',
                     borderRadius: theme.borderRadius.sm,
-                    fontSize: theme.typography.fontSize.xs,
+                    fontSize: '10px',
                   }}
                 >
                   Below VWAP
@@ -2983,9 +3010,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                   style={{
                     backgroundColor: theme.colors.warning + '20',
                     color: theme.colors.warning,
-                    padding: '2px 8px',
+                    padding: '1px 6px',
                     borderRadius: theme.borderRadius.sm,
-                    fontSize: theme.typography.fontSize.xs,
+                    fontSize: '10px',
                   }}
                 >
                   Above VWAP
@@ -2996,9 +3023,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                   style={{
                     backgroundColor: theme.colors.info + '20',
                     color: theme.colors.info,
-                    padding: '2px 8px',
+                    padding: '1px 6px',
                     borderRadius: theme.borderRadius.sm,
-                    fontSize: theme.typography.fontSize.xs,
+                    fontSize: '10px',
                   }}
                 >
                   Volume Spike
@@ -3013,9 +3040,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                     style={{
                       backgroundColor: theme.colors.gray200,
                       color: theme.colors.gray600,
-                      padding: '2px 8px',
+                      padding: '1px 6px',
                       borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.xs,
+                      fontSize: '10px',
                     }}
                   >
                     No Strong Signals
@@ -3024,36 +3051,9 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             </div>
           </div>
           </div>
-          {/* End of left column (indicators grid) */}
-
-          {/* Right side: Mini Chart */}
-          {candles.length > 0 && (
-            <div style={{
-              backgroundColor: theme.colors.surface,
-              borderRadius: theme.borderRadius.sm,
-              padding: theme.spacing.sm,
-              border: `1px solid ${theme.colors.gray200}`,
-            }}>
-              {renderMiniChart()}
-            </div>
-          )}
+          {/* End of right column (indicators grid) */}
           </div>
           {/* End of main content row */}
-        </div>
-      )}
-
-      {/* Full TradingView Chart (V2) */}
-      {candles.length > 0 && (
-        <div style={{ marginBottom: theme.spacing.md }}>
-          <TradingViewChart
-            candles={candles}
-            currentCandleIndex={currentCandleIndex}
-            trades={portfolio.trades}
-            currentPosition={portfolio.positions[0] || null}
-            dayOpen={dayOpen}
-            symbol={symbol}
-            height={400}
-          />
         </div>
       )}
 
