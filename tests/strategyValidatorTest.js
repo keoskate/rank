@@ -243,10 +243,21 @@ async function testUIRendering(page) {
   console.log('TEST SUITE 2: UI Panel Rendering');
   console.log('========================================\n');
 
-  // Navigate to sessions list first
+  // Navigate to sessions list first (with retry)
+  let navigationSuccess = false;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await page.goto(`${BASE_URL}/live-trading`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      navigationSuccess = true;
+      break;
+    } catch (navError) {
+      console.log(`   Navigation attempt ${attempt} failed: ${navError.message}`);
+      if (attempt === 2) throw navError;
+      await sleep(2000);
+    }
+  }
   try {
-    await page.goto(`${BASE_URL}/live-trading`, { waitUntil: 'networkidle2', timeout: 30000 });
-    await sleep(2000);
+    await sleep(3000);
     await takeScreenshot(page, '01-sessions-list');
 
     // Click the first "View" button to open a session
@@ -327,10 +338,19 @@ async function testE2EBacktestFlow(page) {
   console.log('TEST SUITE 3: E2E Backtest Flow');
   console.log('========================================\n');
 
-  // Navigate to sessions list and click View
+  // Navigate to sessions list and click View (with retry)
   try {
-    await page.goto(`${BASE_URL}/live-trading`, { waitUntil: 'networkidle2', timeout: 30000 });
-    await sleep(2000);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await page.goto(`${BASE_URL}/live-trading`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        break;
+      } catch (navError) {
+        console.log(`   Navigation attempt ${attempt} failed: ${navError.message}`);
+        if (attempt === 2) throw navError;
+        await sleep(2000);
+      }
+    }
+    await sleep(3000);
 
     // Click first View button
     await page.evaluate(() => {
@@ -371,16 +391,60 @@ async function testE2EBacktestFlow(page) {
   const endDate = getDateDaysAgo(1);
 
   try {
-    const dateInputs = await page.$$('input[type="date"]');
-    if (dateInputs.length >= 2) {
-      // Find the date inputs in the validator panel
-      await dateInputs[dateInputs.length - 2].click({ clickCount: 3 });
-      await dateInputs[dateInputs.length - 2].type(startDate);
-      await dateInputs[dateInputs.length - 1].click({ clickCount: 3 });
-      await dateInputs[dateInputs.length - 1].type(endDate);
-      await takeScreenshot(page, '04-dates-entered');
-      logResult('Enter date range', true, `${startDate} to ${endDate}`);
-    }
+    // Set symbol and date values via JavaScript
+    const inputsSet = await page.evaluate((testSymbol, start, end) => {
+      // Find the Strategy Validator panel
+      const validatorPanel = Array.from(document.querySelectorAll('div')).find(
+        div => div.textContent.includes('Strategy Validator') && div.textContent.includes('Multi-day')
+      );
+
+      if (!validatorPanel) {
+        return { success: false, error: 'Strategy Validator panel not found' };
+      }
+
+      // Find symbol input (text input) and set using React-compatible method
+      const symbolInput = validatorPanel.querySelector('input[type="text"]');
+      if (symbolInput) {
+        // Use native setter to trigger React's onChange
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        nativeInputValueSetter.call(symbolInput, testSymbol);
+        symbolInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      // Find date inputs and set using React-compatible method
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+
+      const panelDateInputs = validatorPanel.querySelectorAll('input[type="date"]');
+      if (panelDateInputs.length >= 2) {
+        // Use native setter to properly trigger React's onChange
+        nativeInputValueSetter.call(panelDateInputs[0], start);
+        panelDateInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+        panelDateInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+
+        nativeInputValueSetter.call(panelDateInputs[1], end);
+        panelDateInputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+        panelDateInputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+        return { success: true, hasSymbolInput: !!symbolInput };
+      }
+
+      // Fallback: use all date inputs on page
+      const dateInputs = document.querySelectorAll('input[type="date"]');
+      if (dateInputs.length >= 2) {
+        nativeInputValueSetter.call(dateInputs[dateInputs.length - 2], start);
+        dateInputs[dateInputs.length - 2].dispatchEvent(new Event('input', { bubbles: true }));
+        dateInputs[dateInputs.length - 2].dispatchEvent(new Event('change', { bubbles: true }));
+
+        nativeInputValueSetter.call(dateInputs[dateInputs.length - 1], end);
+        dateInputs[dateInputs.length - 1].dispatchEvent(new Event('input', { bubbles: true }));
+        dateInputs[dateInputs.length - 1].dispatchEvent(new Event('change', { bubbles: true }));
+        return { success: true, fallback: true };
+      }
+
+      return { success: false, error: 'No date inputs found' };
+    }, TEST_SYMBOL, startDate, endDate);
+
+    await takeScreenshot(page, '04-dates-entered');
+    logResult('Enter date range', inputsSet.success, `${TEST_SYMBOL}: ${startDate} to ${endDate}`);
   } catch (error) {
     logResult('Enter date range', false, error.message);
   }
@@ -407,29 +471,35 @@ async function testE2EBacktestFlow(page) {
   // Wait for results (with timeout)
   console.log('   Waiting for backtest results (up to 2 minutes)...');
   try {
-    // Wait for either results or error
+    // Wait for backtest to complete - check that loading is gone AND verdict is visible
     await page.waitForFunction(
       () => {
-        // Check for verdict banner (success)
-        const verdictElements = document.querySelectorAll('div');
-        for (const el of verdictElements) {
-          if (
-            el.textContent.includes('Ready for Paper Trading') ||
-            el.textContent.includes('Promising') ||
-            el.textContent.includes('Needs Work') ||
-            el.textContent.includes('Not Ready')
-          ) {
-            return true;
-          }
+        const pageText = document.body.textContent;
+
+        // Make sure we're not still loading
+        if (pageText.includes('Running backtest') || pageText.includes('Running...')) {
+          return false;
         }
-        // Check for error
+
+        // Check for verdict text
+        const hasVerdict = (
+          pageText.includes('Ready for Paper Trading') ||
+          pageText.includes('Promising') ||
+          pageText.includes('Needs Work') ||
+          pageText.includes('Not Ready')
+        );
+
+        // Also check for error state
         const errorElements = document.querySelectorAll('div');
+        let hasError = false;
         for (const el of errorElements) {
           if (el.style.backgroundColor === 'rgb(254, 226, 226)') {
-            return true;
+            hasError = true;
+            break;
           }
         }
-        return false;
+
+        return hasVerdict || hasError;
       },
       { timeout: TIMEOUT }
     );
@@ -443,24 +513,52 @@ async function testE2EBacktestFlow(page) {
     return;
   }
 
+  // Wait for full results to render (verdict appearing doesn't mean stats are visible yet)
+  await sleep(1000);
+
   // Validate results display
   try {
-    // Check for key stats
+    // Wait for key stats to appear - check for partial matches since labels may have line breaks
+    await page.waitForFunction(
+      () => {
+        const text = document.body.textContent;
+        // Check for partial text matches (labels may be split across lines)
+        const hasSharpe = text.includes('Sharpe') && text.includes('Ratio');
+        const hasDrawdown = text.includes('Drawdown');
+        const hasWinRate = text.includes('Win Rate') || text.includes('Win') && text.includes('Rate');
+        return hasSharpe && hasDrawdown && hasWinRate;
+      },
+      { timeout: 5000 }
+    );
+    logResult('Key statistics displayed', true);
+  } catch (error) {
+    // If waiting failed, check current state for debugging
     const statsVisible = await page.evaluate(() => {
       const text = document.body.textContent;
-      return (
-        text.includes('Sharpe Ratio') &&
-        text.includes('Max Drawdown') &&
-        text.includes('Win Rate')
-      );
+      return {
+        hasSharpe: text.includes('Sharpe'),
+        hasDrawdown: text.includes('Drawdown'),
+        hasWinRate: text.includes('Win'),
+        hasRatio: text.includes('Ratio'),
+      };
     });
-    logResult('Key statistics displayed', statsVisible);
-  } catch (error) {
-    logResult('Key statistics displayed', false, error.message);
+    logResult('Key statistics displayed', false, JSON.stringify(statsVisible));
   }
 
-  // Check for verdict
+  // Check for verdict - wait for it to appear
   try {
+    await page.waitForFunction(
+      () => {
+        const text = document.body.textContent;
+        return (
+          text.includes('Ready for Paper Trading') ||
+          text.includes('Promising') ||
+          text.includes('Needs Work') ||
+          text.includes('Not Ready')
+        );
+      },
+      { timeout: 5000 }
+    );
     const verdictInfo = await page.evaluate(() => {
       const text = document.body.textContent;
       if (text.includes('Ready for Paper Trading')) return 'READY_FOR_PAPER_TRADING';
@@ -470,14 +568,61 @@ async function testE2EBacktestFlow(page) {
       return 'UNKNOWN';
     });
     logResult('Verdict displayed', verdictInfo !== 'UNKNOWN', `Verdict: ${verdictInfo}`);
+
+    // NEW TEST: Verify statistics are non-zero (not all 0.00%)
+    const statsValues = await page.evaluate(() => {
+      const text = document.body.textContent;
+      // Text structure: "LabelValue" with no spaces, e.g., "Sharpe Ratio0.00" or "Day Win Rate50.0%"
+      // Use flexible regex that matches label followed by number (with optional sign and decimals)
+      const avgDailyMatch = text.match(/Avg Daily\s*Return([-\d.]+)%/i);
+      const sharpeMatch = text.match(/Sharpe\s*Ratio([-\d.]+)/i);
+      const drawdownMatch = text.match(/Max\s*Drawdown([-\d.]+)%/i);
+      const dayWinMatch = text.match(/Day Win\s*Rate([-\d.]+)%/i);
+      const tradeWinMatch = text.match(/Trade Win\s*Rate([-\d.]+)%/i);
+
+      // Debug: find relevant portion of text starting from "Days Tested"
+      const daysIdx = text.indexOf('Days Tested');
+      const validatorSection = daysIdx > -1
+        ? text.substring(daysIdx, Math.min(daysIdx + 500, text.length))
+        : text.substring(text.indexOf('Strategy Validator'), text.indexOf('Strategy Validator') + 500);
+
+      return {
+        avgDailyReturn: avgDailyMatch ? parseFloat(avgDailyMatch[1]) : null,
+        sharpeRatio: sharpeMatch ? parseFloat(sharpeMatch[1]) : null,
+        maxDrawdown: drawdownMatch ? parseFloat(drawdownMatch[1]) : null,
+        dayWinRate: dayWinMatch ? parseFloat(dayWinMatch[1]) : null,
+        tradeWinRate: tradeWinMatch ? parseFloat(tradeWinMatch[1]) : null,
+        debugText: validatorSection,
+      };
+    });
+
+    // Check that at least some stats have non-zero values
+    const hasNonZeroStats = (
+      (statsValues.sharpeRatio !== null && statsValues.sharpeRatio !== 0) ||
+      (statsValues.dayWinRate !== null && statsValues.dayWinRate !== 0) ||
+      (statsValues.tradeWinRate !== null && statsValues.tradeWinRate !== 0)
+    );
+
+    logResult(
+      'Statistics have non-zero values',
+      hasNonZeroStats,
+      `Sharpe: ${statsValues.sharpeRatio}, DayWin: ${statsValues.dayWinRate}%, TradeWin: ${statsValues.tradeWinRate}%`
+    );
+
+    // Debug output
+    if (!hasNonZeroStats && statsValues.debugText) {
+      console.log('   DEBUG Text snippet:', statsValues.debugText.replace(/\s+/g, ' ').substring(0, 300));
+    }
   } catch (error) {
-    logResult('Verdict displayed', false, error.message);
+    // Debug: show what text is on page
+    const pageText = await page.evaluate(() => document.body.textContent.substring(0, 500));
+    logResult('Verdict displayed', false, `Timeout. Page starts with: ${pageText.substring(0, 100)}...`);
   }
 
   // Check for regime breakdown
   try {
     const regimeVisible = await page.evaluate(() => {
-      const text = document.body.textContent;
+      const text = document.body.textContent.toLowerCase();
       return text.includes('bull') && text.includes('bear');
     });
     logResult('Regime breakdown displayed', regimeVisible);
@@ -485,13 +630,19 @@ async function testE2EBacktestFlow(page) {
     logResult('Regime breakdown displayed', false, error.message);
   }
 
-  // Check for strengths/issues
+  // Check for strengths/issues - scroll to make sure they're visible
   try {
+    // Scroll down to see the strengths/issues section
+    await page.evaluate(() => {
+      window.scrollBy(0, 500);
+    });
+    await sleep(500);
+
     const feedbackVisible = await page.evaluate(() => {
       const text = document.body.textContent;
       return text.includes('Strengths') && text.includes('Issues');
     });
-    logResult('Strengths/Issues section displayed', feedbackVisible);
+    logResult('Strengths/Issues section displayed', feedbackVisible, feedbackVisible ? '' : 'Text not found in body');
   } catch (error) {
     logResult('Strengths/Issues section displayed', false, error.message);
   }

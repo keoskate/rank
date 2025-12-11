@@ -8,14 +8,18 @@ import theme from '../../theme';
  * Runs multi-day backtests to validate strategy consistency.
  * Shows risk metrics, regime breakdown, and verdict.
  */
-const StrategyValidatorPanel = ({ symbol, config, onConfigApply }) => {
+const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
+  const [localSymbol, setLocalSymbol] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: getDefaultStartDate(),
     endDate: getDefaultEndDate(),
   });
+
+  // Use prop symbol if provided, otherwise use local input
+  const symbol = propSymbol || localSymbol;
 
   function getDefaultStartDate() {
     const d = new Date();
@@ -40,18 +44,26 @@ const StrategyValidatorPanel = ({ symbol, config, onConfigApply }) => {
     setResults(null);
 
     try {
+      const requestBody = {
+        symbol,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        config: config || {},
+      };
+
+      // Debug: log what's being sent
+      console.log('[StrategyValidator] Request:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch('/api/strategy-validator/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
-          config: config || {},
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+
+      // Debug: log what's received
+      console.log('[StrategyValidator] Response statistics:', data.statistics);
 
       if (!response.ok) {
         throw new Error(data.error || 'Backtest failed');
@@ -122,13 +134,35 @@ const StrategyValidatorPanel = ({ symbol, config, onConfigApply }) => {
           A good strategy should work across different market conditions, not just one lucky day.
         </p>
 
-        {/* Date Range Selection */}
+        {/* Symbol and Date Range Selection */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr auto',
+          gridTemplateColumns: propSymbol ? '1fr 1fr auto' : '100px 1fr 1fr auto',
           gap: theme.spacing.sm,
           marginBottom: theme.spacing.md,
         }}>
+          {/* Symbol input - only show if no prop symbol */}
+          {!propSymbol && (
+            <div>
+              <label style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textMuted }}>
+                Symbol
+              </label>
+              <input
+                type="text"
+                value={localSymbol}
+                onChange={(e) => setLocalSymbol(e.target.value.toUpperCase())}
+                placeholder="QBTS"
+                style={{
+                  width: '100%',
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.sm,
+                  border: `1px solid ${theme.colors.gray300}`,
+                  fontSize: theme.typography.fontSize.sm,
+                  textTransform: 'uppercase',
+                }}
+              />
+            </div>
+          )}
           <div>
             <label style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textMuted }}>
               Start Date

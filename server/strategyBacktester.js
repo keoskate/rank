@@ -8,6 +8,8 @@
  * 4. Identify regime-specific performance
  */
 
+const technicalIndicators = require('./technicalIndicatorsService');
+
 class StrategyBacktester {
   constructor(polygonClient, regimeDetector) {
     this.polygonClient = polygonClient;
@@ -166,6 +168,7 @@ class StrategyBacktester {
 
   /**
    * Run trading simulation for a single day
+   * Includes circuit breaker logic to match live trading behavior
    */
   runDaySimulation(candles, config) {
     const initialCapital = config.allocatedCapital || 25000;
@@ -176,6 +179,13 @@ class StrategyBacktester {
     let losses = 0;
     let realizedPnL = 0;
     const tradeLog = [];
+
+    // Circuit breaker state (matches aiTradingEngine)
+    let consecutiveLosses = 0;
+    const consecutiveLossLimit = config.consecutiveLossLimit || 3;
+    const dailyLossLimitPercent = config.dailyLossLimitPercent || 5;
+    let circuitBreakerTriggered = false;
+    let circuitBreakerReason = null;
 
     // Calculate day's price range for reference
     const dayOpen = candles[0].open ?? candles[0].o;
@@ -188,11 +198,17 @@ class StrategyBacktester {
       const price = candle.close ?? candle.c;
       const estHour = this.getEstHour(candle.timestamp || candle.t);
 
+      // Check circuit breaker before trading
+      if (circuitBreakerTriggered) {
+        // If in position, still allow exits but no new entries
+        if (!position) continue;
+      }
+
       // Calculate indicators
       const indicators = this.calculateIndicators(candles, i);
 
-      if (!position) {
-        // Check for BUY signal
+      if (!position && !circuitBreakerTriggered) {
+        // Check for BUY signal (only if circuit breaker not triggered)
         const buySignal = this.checkBuySignal(indicators, config);
         if (buySignal.shouldBuy && buySignal.confidence >= (config.minConfidence || 60)) {
           const positionSize = cash * (config.maxPositionSizePercent || 15) / 100;
@@ -206,7 +222,7 @@ class StrategyBacktester {
             cash -= shares * price;
           }
         }
-      } else {
+      } else if (position) {
         // Check for SELL signal
         const pnlPercent = ((price - position.entryPrice) / position.entryPrice) * 100;
         const holdTime = i - position.entryIndex;
@@ -220,8 +236,19 @@ class StrategyBacktester {
           cash += proceeds;
           trades++;
 
-          if (tradePnL > 0) wins++;
-          else losses++;
+          if (tradePnL > 0) {
+            wins++;
+            consecutiveLosses = 0; // Reset on win
+          } else {
+            losses++;
+            consecutiveLosses++;
+
+            // Check consecutive loss circuit breaker
+            if (consecutiveLosses >= consecutiveLossLimit) {
+              circuitBreakerTriggered = true;
+              circuitBreakerReason = `Consecutive loss limit (${consecutiveLosses})`;
+            }
+          }
 
           tradeLog.push({
             entry: position.entryPrice,
@@ -233,6 +260,13 @@ class StrategyBacktester {
           });
 
           position = null;
+
+          // Check daily loss limit circuit breaker
+          const dailyPnLPercent = (realizedPnL / initialCapital) * 100;
+          if (dailyPnLPercent <= -dailyLossLimitPercent) {
+            circuitBreakerTriggered = true;
+            circuitBreakerReason = `Daily loss limit (${dailyPnLPercent.toFixed(2)}%)`;
+          }
         }
       }
 
@@ -245,8 +279,13 @@ class StrategyBacktester {
         cash += proceeds;
         trades++;
 
-        if (tradePnL > 0) wins++;
-        else losses++;
+        if (tradePnL > 0) {
+          wins++;
+          consecutiveLosses = 0;
+        } else {
+          losses++;
+          consecutiveLosses++;
+        }
 
         tradeLog.push({
           entry: position.entryPrice,
@@ -276,51 +315,59 @@ class StrategyBacktester {
       dayReturn, // Buy and hold return for this day
       alpha: returnPercent - dayReturn, // Strategy return minus buy-and-hold
       tradeLog,
+      circuitBreakerTriggered,
+      circuitBreakerReason,
     };
   }
 
   /**
    * Calculate technical indicators
+   * Uses the same technicalIndicatorsService as live trading for RSI parity
    */
   calculateIndicators(candles, index) {
-    const lookback = Math.min(14, index);
-    const recentCandles = candles.slice(index - lookback, index + 1);
+    // Normalize candle format for technical indicators library
+    const normalizedCandles = candles.slice(0, index + 1).map(c => ({
+      open: c.open ?? c.o,
+      high: c.high ?? c.h,
+      low: c.low ?? c.l,
+      close: c.close ?? c.c,
+      volume: c.volume ?? c.v ?? 1,
+    }));
 
-    // RSI
-    let gains = 0, losses = 0;
-    for (let i = 1; i < recentCandles.length; i++) {
-      const change = (recentCandles[i].close ?? recentCandles[i].c) -
-                     (recentCandles[i-1].close ?? recentCandles[i-1].c);
-      if (change > 0) gains += change;
-      else losses += Math.abs(change);
+    const closes = normalizedCandles.map(c => c.close);
+    const price = closes[closes.length - 1];
+
+    // RSI - Use the same Wilder's smoothing method as live trading
+    let rsi = 50; // Default if not enough data
+    if (closes.length >= 15) {
+      const rsiValues = technicalIndicators.calculateRSI(closes, 14);
+      if (rsiValues.length > 0) {
+        rsi = rsiValues[rsiValues.length - 1];
+      }
     }
-    const avgGain = gains / lookback;
-    const avgLoss = losses / lookback;
-    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    const rsi = 100 - (100 / (1 + rs));
 
-    // VWAP
-    let vwapSum = 0, volumeSum = 0;
-    for (let i = 0; i <= index; i++) {
-      const c = candles[i];
-      const typical = ((c.high ?? c.h) + (c.low ?? c.l) + (c.close ?? c.c)) / 3;
-      const vol = c.volume ?? c.v ?? 1;
-      vwapSum += typical * vol;
-      volumeSum += vol;
+    // VWAP - Use the same calculation as live trading
+    let vwap = price; // Default to current price
+    if (normalizedCandles.length > 0) {
+      const vwapValues = technicalIndicators.calculateVWAP(normalizedCandles);
+      if (vwapValues.length > 0) {
+        vwap = vwapValues[vwapValues.length - 1];
+      }
     }
-    const vwap = vwapSum / volumeSum;
 
-    const price = candles[index].close ?? candles[index].c;
     const priceVsVwap = ((price - vwap) / vwap) * 100;
 
     // Volume ratio
-    const avgVolume = candles.slice(Math.max(0, index - 10), index)
-      .reduce((sum, c) => sum + (c.volume ?? c.v ?? 0), 0) / 10;
-    const currentVolume = candles[index].volume ?? candles[index].v ?? 0;
+    const volumes = normalizedCandles.map(c => c.volume);
+    const lookbackVols = volumes.slice(Math.max(0, volumes.length - 11), volumes.length - 1);
+    const avgVolume = lookbackVols.length > 0
+      ? lookbackVols.reduce((sum, v) => sum + v, 0) / lookbackVols.length
+      : 1;
+    const currentVolume = volumes[volumes.length - 1] || 0;
     const volumeRatio = avgVolume > 0 ? currentVolume / avgVolume : 1;
 
     // Price change
-    const prevPrice = index > 0 ? (candles[index - 1].close ?? candles[index - 1].c) : price;
+    const prevPrice = closes.length > 1 ? closes[closes.length - 2] : price;
     const priceChange = ((price - prevPrice) / prevPrice) * 100;
 
     return { rsi, vwap, priceVsVwap, volumeRatio, priceChange, price };
@@ -328,42 +375,94 @@ class StrategyBacktester {
 
   /**
    * Check for buy signal
+   * Aligned with aiTradingEngine's shouldBuy logic for parity
    */
   checkBuySignal(indicators, config) {
     const { rsi, priceVsVwap, volumeRatio } = indicators;
     const strategy = config.entryStrategy || 'balanced';
-    let signals = 0;
+    const rsiOversold = config.rsiOversold || 30;
+    const volumeMultiplier = config.volumeMultiplier || 1.5;
+    const requireVolumeSpike = config.requireVolumeSpike !== false;
+    const requireRsiSignal = config.requireRsiSignal !== false;
+
+    let signalCount = 0;
     const reasons = [];
+    let strategyMatch = false;
 
-    // RSI oversold
-    if (rsi <= (config.rsiOversold || 30)) {
-      signals++;
-      reasons.push(`RSI oversold (${Math.round(rsi)})`);
+    const belowVwap = priceVsVwap < 0;
+
+    // Strategy-specific signal checks (matching aiTradingEngine)
+    if (strategy === 'dip' || strategy === 'conservative') {
+      // Buy the dip: RSI oversold + below VWAP
+      if (rsi < rsiOversold && belowVwap) {
+        strategyMatch = true;
+        signalCount++;
+        reasons.push(`RSI oversold (${Math.round(rsi)}) + below VWAP`);
+      }
     }
 
-    // Below VWAP (for dip strategy)
-    if (priceVsVwap < -0.5 && (strategy === 'dip' || strategy === 'balanced')) {
-      signals++;
-      reasons.push(`Below VWAP (${priceVsVwap.toFixed(2)}%)`);
+    if (strategy === 'momentum' || strategy === 'aggressive') {
+      // Momentum: RSI between 50-65
+      if (rsi > 50 && rsi < 65) {
+        strategyMatch = true;
+        signalCount++;
+        reasons.push(`RSI momentum zone (${Math.round(rsi)})`);
+      }
+      // Aggressive: more lenient entry - RSI not overbought AND has some volume
+      if (strategy === 'aggressive') {
+        if (rsi < 70) {
+          strategyMatch = true;
+          signalCount++;
+          reasons.push(`Aggressive entry (RSI ${Math.round(rsi)} < 70)`);
+        }
+        // Aggressive gets extra signal for any volume activity
+        if (volumeRatio >= 1.0) {
+          signalCount++;
+          reasons.push(`Volume present (${volumeRatio.toFixed(1)}x)`);
+        }
+      }
     }
 
-    // RSI momentum (for momentum strategy)
-    if (rsi >= 50 && rsi <= 65 && (strategy === 'momentum' || strategy === 'balanced')) {
-      signals++;
-      reasons.push(`RSI momentum zone (${Math.round(rsi)})`);
+    if (strategy === 'balanced') {
+      // Balanced: RSI below threshold + below VWAP
+      // Use rsiOversold + 15 as the balanced threshold (default 45 if rsiOversold=30)
+      const balancedRsiThreshold = (rsiOversold || 30) + 15;
+      if (rsi < balancedRsiThreshold && belowVwap) {
+        strategyMatch = true;
+        signalCount++; // Signal 1: RSI dip
+        signalCount++; // Signal 2: Below VWAP (these are two separate conditions)
+        reasons.push(`RSI dip (${Math.round(rsi)}) + below VWAP`);
+      }
+      // Balanced also gets signal for moderate RSI (not overbought)
+      if (rsi < 60) {
+        signalCount++;
+        reasons.push(`RSI neutral (${Math.round(rsi)})`);
+      }
     }
 
-    // Volume spike
-    if (volumeRatio >= (config.volumeMultiplier || 1.5)) {
-      signals++;
+    // Additional confirming signals
+    if (requireVolumeSpike && volumeRatio >= volumeMultiplier) {
+      signalCount++;
       reasons.push(`Volume spike (${volumeRatio.toFixed(1)}x)`);
     }
 
-    const minSignals = config.minSignalsRequired || 2;
-    const shouldBuy = signals >= minSignals;
-    const confidence = Math.min(95, 50 + signals * 15);
+    if (requireRsiSignal && rsi < 40) {
+      signalCount++;
+      reasons.push('RSI oversold zone');
+    }
 
-    return { shouldBuy, signals, confidence, reasons };
+    // Calculate confidence (matching aiTradingEngine)
+    // Formula: base 20 + 20 per signal, so 3 signals = 80% confidence
+    const confidence = Math.min(20 + signalCount * 20, 100);
+    const minSignals = config.minSignalsRequired || 2;
+    const minConfidence = config.minConfidence || 70;
+
+    // Entry: strategy match + minimum signals + confidence threshold
+    const meetsSignalRequirement = signalCount >= minSignals;
+    const meetsConfidenceRequirement = confidence >= minConfidence;
+    const shouldBuy = strategyMatch && meetsSignalRequirement && meetsConfidenceRequirement;
+
+    return { shouldBuy, signals: signalCount, confidence, reasons };
   }
 
   /**
