@@ -3353,6 +3353,24 @@ app.delete('/api/ai/session/:sessionId', async (req, res) => {
   }
 });
 
+// Clone AI trading session
+app.post('/api/ai/session/clone', async (req, res) => {
+  try {
+    const { sessionId, name, paperTrading } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    const result = aiTradingEngine.cloneSession(sessionId, { name, paperTrading });
+    if (result.error) {
+      return res.status(404).json(result);
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Error cloning AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all sessions for a user
 app.get('/api/ai/sessions/:userId', async (req, res) => {
   try {
@@ -3521,8 +3539,39 @@ app.get('/api/indicators/:symbol', async (req, res) => {
     const timeframe = req.query.timeframe || '5';
     const unit = req.query.unit || 'minute';
 
+    // Calculate appropriate date range based on timeframe
+    // Shorter timeframes should fetch less history to stay zoomed in
     const toDate = new Date();
-    const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    let daysBack;
+    let maxCandles;
+
+    if (unit === 'minute') {
+      const tf = parseInt(timeframe);
+      if (tf <= 1) {
+        daysBack = 1; // 1 minute: just today
+        maxCandles = 30; // ~30 minutes of 1-min candles (most zoomed in)
+      } else if (tf <= 5) {
+        daysBack = 1; // 5 minute: just today
+        maxCandles = 40; // ~3 hours of 5-min candles
+      } else if (tf <= 15) {
+        daysBack = 2; // 15 minute: 2 days
+        maxCandles = 60; // ~15 hours of 15-min candles
+      } else if (tf <= 30) {
+        daysBack = 3; // 30 minute: 3 days
+        maxCandles = 60; // ~30 hours of 30-min candles
+      } else {
+        daysBack = 7; // 1 hour+: 7 days
+        maxCandles = 100;
+      }
+    } else if (unit === 'hour') {
+      daysBack = 14; // Hourly: 2 weeks
+      maxCandles = 150;
+    } else {
+      daysBack = 60; // Daily: ~2 months
+      maxCandles = 60;
+    }
+
+    const fromDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
     const candles = await polygonClient.getAggregates(
       symbol,
       parseInt(timeframe),
@@ -3533,7 +3582,7 @@ app.get('/api/indicators/:symbol', async (req, res) => {
       }
     );
 
-    if (!candles || candles.length < 50) {
+    if (!candles || candles.length < 20) {
       return res.status(400).json({ error: 'Insufficient data' });
     }
 
@@ -3541,7 +3590,7 @@ app.get('/api/indicators/:symbol', async (req, res) => {
 
     res.json({
       symbol,
-      candles: candles.slice(-200),
+      candles: candles.slice(-maxCandles),
       indicators,
       timestamp: new Date().toISOString(),
     });

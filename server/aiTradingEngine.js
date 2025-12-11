@@ -323,6 +323,87 @@ function deleteSession(sessionId) {
 }
 
 /**
+ * Clone a trading session with a new name
+ * Copies all configuration but starts fresh (no trades/stats)
+ * @param {string} sessionId - Source session to clone
+ * @param {object} options - Clone options (name, paperTrading)
+ * @returns {object} New session info
+ */
+function cloneSession(sessionId, options = {}) {
+  const sourceSession = sessions.get(sessionId);
+  if (!sourceSession) {
+    return { error: 'Source session not found', sessionId };
+  }
+
+  // Deep clone the config
+  const clonedConfig = JSON.parse(JSON.stringify(sourceSession.config));
+
+  // Apply overrides from options
+  if (options.name) {
+    clonedConfig.name = options.name;
+  } else {
+    clonedConfig.name = `${sourceSession.name} (Copy)`;
+  }
+
+  // Set paper trading mode if specified
+  if (typeof options.paperTrading === 'boolean') {
+    clonedConfig.paperTrading = options.paperTrading;
+  }
+
+  // Create new session with cloned config (starts paused so user can review)
+  const newSessionId = uuidv4();
+  const newSession = {
+    sessionId: newSessionId,
+    userId: sourceSession.userId,
+    name: clonedConfig.name,
+    status: 'paused', // Start paused so user can review before running
+    startTime: new Date(),
+    config: clonedConfig,
+    portfolio: {
+      cash: 100000,
+      positions: new Map(),
+      initialValue: 100000,
+    },
+    stats: {
+      totalTrades: 0,
+      wins: 0,
+      losses: 0,
+      totalPnL: 0,
+      consecutiveLosses: 0,
+      peakValue: 100000,
+      maxDrawdown: 0,
+      winRate: 0,
+    },
+    decisions: [],
+    alerts: [],
+    circuitBreakerTriggered: false,
+    clonedFrom: sessionId, // Track lineage
+  };
+
+  sessions.set(newSessionId, newSession);
+  decisionHistory.set(newSessionId, []);
+
+  console.log(
+    `[AI Engine] Session "${clonedConfig.name}" cloned from "${sourceSession.name}": ${newSessionId}`
+  );
+
+  saveSessions();
+
+  return {
+    success: true,
+    sessionId: newSessionId,
+    name: clonedConfig.name,
+    status: 'paused',
+    config: clonedConfig,
+    clonedFrom: {
+      sessionId: sessionId,
+      name: sourceSession.name,
+    },
+    message: `Session cloned successfully. Review settings and resume when ready.`,
+  };
+}
+
+/**
  * Pause a trading session
  * @param {string} sessionId - Session identifier
  */
@@ -1445,6 +1526,7 @@ module.exports = {
   startSession,
   stopSession,
   deleteSession,
+  cloneSession,
   pauseSession,
   resumeSession,
   getSessionStatus,

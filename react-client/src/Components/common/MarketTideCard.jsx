@@ -13,7 +13,7 @@ import Button from './Button';
 import theme from '../../theme';
 
 const MarketTideCard = ({ onSentimentChange }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as loading
   const [error, setError] = useState(null);
   const [tideData, setTideData] = useState(null);
   const [configured, setConfigured] = useState(null); // null = unknown, true/false = known
@@ -49,17 +49,19 @@ const MarketTideCard = ({ onSentimentChange }) => {
       }
     } catch (err) {
       setError('Could not connect to server');
+      setConfigured(false);
       if (onSentimentChange) {
         onSentimentChange({ configured: false });
       }
     } finally {
       setLoading(false);
     }
-  }, [onSentimentChange]);
+  }, []); // Remove onSentimentChange from deps to prevent re-fetch loops
 
+  // Fetch once on mount
   useEffect(() => {
     fetchMarketTide();
-  }, [fetchMarketTide]);
+  }, []);
 
   const getSentimentColor = (sentiment) => {
     if (sentiment === 'bullish') return { bg: '#dcfce7', text: '#166534' };
@@ -163,15 +165,15 @@ const MarketTideCard = ({ onSentimentChange }) => {
         </div>
       )}
 
-      {/* Loading State */}
-      {loading && !tideData && (
+      {/* Loading State - shown during initial load or when configured is unknown */}
+      {(loading || configured === null) && !tideData && configured !== false && (
         <div style={{
           padding: theme.spacing.md,
           textAlign: 'center',
           color: theme.colors.textMuted,
           fontSize: theme.typography.fontSize.sm,
         }}>
-          Fetching market tide...
+          Checking API configuration...
         </div>
       )}
 

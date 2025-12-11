@@ -20,6 +20,10 @@ const TradingSessionsList = () => {
   const [newSessionName, setNewSessionName] = useState('');
   const [showNewForm, setShowNewForm] = useState(false);
   const [account, setAccount] = useState(null);
+  // Clone modal state
+  const [cloneModalSession, setCloneModalSession] = useState(null);
+  const [cloneName, setCloneName] = useState('');
+  const [clonePaperTrading, setClonePaperTrading] = useState(true);
 
   // Fetch sessions on mount
   useEffect(() => {
@@ -151,6 +155,51 @@ const TradingSessionsList = () => {
     } catch (err) {
       console.error('Failed to delete session:', err);
       setError('Failed to delete session');
+    }
+  };
+
+  // Open clone modal
+  const openCloneModal = (session, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCloneModalSession(session);
+    setCloneName(`${session.name} (Copy)`);
+    setClonePaperTrading(true); // Default to paper trading for safety
+  };
+
+  // Close clone modal
+  const closeCloneModal = () => {
+    setCloneModalSession(null);
+    setCloneName('');
+  };
+
+  // Clone session
+  const cloneSession = async () => {
+    if (!cloneModalSession) return;
+
+    try {
+      const res = await fetch('/api/ai/session/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: cloneModalSession.sessionId,
+          name: cloneName.trim() || `${cloneModalSession.name} (Copy)`,
+          paperTrading: clonePaperTrading,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.sessionId) {
+        closeCloneModal();
+        fetchSessions();
+        // Navigate to the cloned session
+        navigate(`/live-trading/${data.sessionId}`);
+      } else {
+        setError(data.error || 'Failed to clone session');
+      }
+    } catch (err) {
+      console.error('Failed to clone session:', err);
+      setError('Failed to clone session');
     }
   };
 
@@ -369,6 +418,7 @@ const TradingSessionsList = () => {
                 onPause={pauseSession}
                 onResume={resumeSession}
                 onDelete={deleteSession}
+                onClone={openCloneModal}
                 formatCurrency={formatCurrency}
                 getStatusColor={getStatusColor}
                 getStatusBg={getStatusBg}
@@ -399,6 +449,7 @@ const TradingSessionsList = () => {
                 onPause={pauseSession}
                 onResume={resumeSession}
                 onDelete={deleteSession}
+                onClone={openCloneModal}
                 formatCurrency={formatCurrency}
                 getStatusColor={getStatusColor}
                 getStatusBg={getStatusBg}
@@ -429,12 +480,180 @@ const TradingSessionsList = () => {
                 onPause={pauseSession}
                 onResume={resumeSession}
                 onDelete={deleteSession}
+                onClone={openCloneModal}
                 formatCurrency={formatCurrency}
                 getStatusColor={getStatusColor}
                 getStatusBg={getStatusBg}
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Clone Session Modal */}
+      {cloneModalSession && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={closeCloneModal}
+        >
+          <Card
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              padding: theme.spacing.xl,
+              margin: theme.spacing.lg,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, color: theme.colors.gray900 }}>
+              Clone Session
+            </h2>
+            <p style={{ color: theme.colors.gray600, marginBottom: theme.spacing.lg }}>
+              Create a copy of "<strong>{cloneModalSession.name}</strong>" with all its
+              configuration. The clone will start paused so you can review settings.
+            </p>
+
+            {/* Clone Name */}
+            <div style={{ marginBottom: theme.spacing.lg }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: theme.spacing.xs,
+                  color: theme.colors.gray700,
+                  fontWeight: theme.typography.fontWeight.medium,
+                }}
+              >
+                New Session Name
+              </label>
+              <input
+                type="text"
+                value={cloneName}
+                onChange={e => setCloneName(e.target.value)}
+                placeholder={`${cloneModalSession.name} (Copy)`}
+                style={{
+                  width: '100%',
+                  padding: theme.spacing.sm,
+                  border: `1px solid ${theme.colors.gray300}`,
+                  borderRadius: theme.borderRadius.md,
+                  fontSize: theme.typography.fontSize.md,
+                }}
+              />
+            </div>
+
+            {/* Trading Mode Selection */}
+            <div style={{ marginBottom: theme.spacing.lg }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: theme.spacing.sm,
+                  color: theme.colors.gray700,
+                  fontWeight: theme.typography.fontWeight.medium,
+                }}
+              >
+                Trading Mode
+              </label>
+              <div style={{ display: 'flex', gap: theme.spacing.md }}>
+                <label
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    padding: theme.spacing.md,
+                    border: `2px solid ${clonePaperTrading ? theme.colors.primary : theme.colors.gray300}`,
+                    borderRadius: theme.borderRadius.md,
+                    cursor: 'pointer',
+                    backgroundColor: clonePaperTrading ? `${theme.colors.primary}10` : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="tradingMode"
+                    checked={clonePaperTrading}
+                    onChange={() => setClonePaperTrading(true)}
+                  />
+                  <div>
+                    <div style={{ fontWeight: theme.typography.fontWeight.medium }}>
+                      Paper Trading
+                    </div>
+                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                      Simulated trades, no real money
+                    </div>
+                  </div>
+                </label>
+                <label
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    padding: theme.spacing.md,
+                    border: `2px solid ${!clonePaperTrading ? theme.colors.warning : theme.colors.gray300}`,
+                    borderRadius: theme.borderRadius.md,
+                    cursor: 'pointer',
+                    backgroundColor: !clonePaperTrading ? `${theme.colors.warning}10` : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="tradingMode"
+                    checked={!clonePaperTrading}
+                    onChange={() => setClonePaperTrading(false)}
+                  />
+                  <div>
+                    <div style={{ fontWeight: theme.typography.fontWeight.medium }}>
+                      Live Trading
+                    </div>
+                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.warning }}>
+                      Real money, real trades
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Warning for live trading */}
+            {!clonePaperTrading && (
+              <div
+                style={{
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.warning}15`,
+                  border: `1px solid ${theme.colors.warning}`,
+                  borderRadius: theme.borderRadius.md,
+                  marginBottom: theme.spacing.lg,
+                }}
+              >
+                <p style={{ margin: 0, color: theme.colors.warning, fontWeight: theme.typography.fontWeight.medium }}>
+                  ⚠️ Live Trading Warning
+                </p>
+                <p style={{ margin: '8px 0 0', color: theme.colors.gray700, fontSize: theme.typography.fontSize.sm }}>
+                  This session will use real money when auto-trading is enabled.
+                  Make sure you review all settings before resuming.
+                </p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: theme.spacing.md, justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={closeCloneModal}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={cloneSession}>
+                Clone Session
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>
@@ -465,6 +684,7 @@ const SessionCard = ({
   onPause,
   onResume,
   onDelete,
+  onClone,
   formatCurrency,
   getStatusColor,
   getStatusBg,
@@ -667,6 +887,14 @@ const SessionCard = ({
               Stop
             </Button>
           )}
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={e => onClone(session, e)}
+            title="Clone this session"
+          >
+            Clone
+          </Button>
           <Button
             size="small"
             variant="secondary"

@@ -160,6 +160,7 @@ export function useTradingViewChart(options = {}) {
    */
   const setCandlestickData = useCallback(data => {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
+    if (!Array.isArray(data) || data.length === 0) return;
 
     // Format data for lightweight-charts
     const candleData = data.map(candle => ({
@@ -220,6 +221,7 @@ export function useTradingViewChart(options = {}) {
    */
   const addEMALine = useCallback((id, data, lineOptions = {}) => {
     if (!chartRef.current) return;
+    if (!Array.isArray(data) || data.length === 0) return;
 
     // Remove existing if present
     if (indicatorSeriesRef.current[id]) {
@@ -251,6 +253,7 @@ export function useTradingViewChart(options = {}) {
    */
   const addBollingerBands = useCallback(data => {
     if (!chartRef.current) return;
+    if (!Array.isArray(data) || data.length === 0) return;
 
     // Remove existing
     ['bb_upper', 'bb_middle', 'bb_lower'].forEach(id => {

@@ -745,21 +745,25 @@ const TradingViewChart = ({
       const isVisible = candleData.some(c => Math.abs(c.time - tradeTime) < 300); // Within 5 min
       if (!isVisible) return;
 
-      if (trade.type === 'BUY') {
+      // Support both formats: type='BUY'/'SELL' (simulator) and side='buy'/'sell' (live)
+      const tradeType = (trade.type || trade.side || '').toUpperCase();
+      const price = trade.price || 0;
+
+      if (tradeType === 'BUY') {
         markers.push({
           time: tradeTime,
           position: 'belowBar',
           color: '#22c55e',
           shape: 'arrowUp',
-          text: `Buy $${trade.price.toFixed(2)}`,
+          text: `Buy $${price.toFixed(2)}`,
         });
-      } else if (trade.type === 'SELL') {
+      } else if (tradeType === 'SELL') {
         markers.push({
           time: tradeTime,
           position: 'aboveBar',
           color: '#ef4444',
           shape: 'arrowDown',
-          text: `Sell $${trade.price.toFixed(2)}`,
+          text: `Sell $${price.toFixed(2)}`,
         });
       }
     });

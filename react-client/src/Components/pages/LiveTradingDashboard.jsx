@@ -9,7 +9,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import TradingViewChart from '../TradingViewChart';
+import TradingViewChart from '../common/TradingViewChart';
+import WatchlistCharts from '../common/WatchlistCharts';
 import TradingSimulator from '../TradingSimulator';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -22,7 +23,7 @@ import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import TradingLogPanel from '../common/TradingLogPanel';
-import LiveTradingChart from '../common/LiveTradingChart';
+// LiveTradingChart removed - now using TradingViewChart
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 import {
@@ -87,6 +88,9 @@ const LiveTradingDashboard = () => {
     pendingOrders: 0,
   });
 
+  // Recent trades for LiveTradingChart
+  const [recentTrades, setRecentTrades] = useState([]);
+
   // Chart state
   const [chartData, setChartData] = useState([]);
   const [chartSymbol, setChartSymbol] = useState('');
@@ -137,19 +141,27 @@ const LiveTradingDashboard = () => {
     } catch {}
   };
 
-  // Research symbol for experimental analysis - independent of chart symbol
-  const [researchSymbol, setResearchSymbol] = useState(() => {
-    try {
-      return localStorage.getItem('research-symbol') || 'QBTS';
-    } catch {
-      return 'QBTS';
-    }
-  });
+  // Sync preference first (needed to determine initial research symbol)
   const [syncResearchWithChart, setSyncResearchWithChart] = useState(() => {
     try {
       return localStorage.getItem('sync-research-with-chart') === 'true';
     } catch {
       return false;
+    }
+  });
+
+  // Research symbol for experimental analysis
+  // If sync is enabled, default to first watchlist symbol; otherwise use localStorage
+  const [researchSymbol, setResearchSymbol] = useState(() => {
+    try {
+      const syncEnabled = localStorage.getItem('sync-research-with-chart') === 'true';
+      if (syncEnabled) {
+        // Will be overwritten by useEffect when chart/simulation symbol loads
+        return 'QBTS';
+      }
+      return localStorage.getItem('research-symbol') || 'QBTS';
+    } catch {
+      return 'QBTS';
     }
   });
 
@@ -184,12 +196,17 @@ const LiveTradingDashboard = () => {
     } catch {}
   }, [syncResearchWithChart]);
 
-  // Sync research symbol with chart symbol when enabled
+  // Sync research symbol with chart/simulation symbol when enabled
+  // Priority: simulationSymbol (if simulator is shown) > chartSymbol > first watchlist item
   useEffect(() => {
-    if (syncResearchWithChart && chartSymbol) {
-      setResearchSymbol(chartSymbol);
+    if (!syncResearchWithChart) return;
+
+    // Determine the active symbol to sync with
+    const activeSymbol = simulationSymbol || chartSymbol || config.watchlist?.[0];
+    if (activeSymbol && activeSymbol !== researchSymbol) {
+      setResearchSymbol(activeSymbol);
     }
-  }, [syncResearchWithChart, chartSymbol]);
+  }, [syncResearchWithChart, simulationSymbol, chartSymbol, config.watchlist]);
 
   // Audio notification settings
   const [audioSettings, setAudioSettings] = useState(() => loadAudioSettings());
@@ -309,6 +326,11 @@ const LiveTradingDashboard = () => {
       // Reset configLoaded when switching sessions
       setConfigLoaded(false);
       fetchSessionDetails(urlSessionId, true);
+      // Fetch chart data for the first watchlist symbol
+      const firstSymbol = config.watchlist?.[0];
+      if (firstSymbol && !chartSymbol) {
+        fetchChartData(firstSymbol);
+      }
     }
   }, [urlSessionId]);
 
@@ -404,6 +426,18 @@ const LiveTradingDashboard = () => {
           todaySells,
           pendingOrders: pendingOrders.length,
         });
+
+        // Update recentTrades for LiveTradingChart
+        // Format trades with needed fields for chart markers
+        const formattedTrades = todayOrders.map(order => ({
+          symbol: order.symbol,
+          side: order.side,
+          price: parseFloat(order.filled_avg_price || order.limit_price || 0),
+          quantity: parseInt(order.filled_qty || order.qty || 0),
+          timestamp: order.filled_at || order.submitted_at,
+          orderId: order.id,
+        }));
+        setRecentTrades(formattedTrades);
       }
     } catch (err) {
       console.error('Failed to fetch order stats:', err);
@@ -2875,23 +2909,8 @@ const LiveTradingDashboard = () => {
         </Card>
       )}
 
-      {/* Live Trading Chart - Shows when session is running */}
-      {urlSessionId && sessionStatus === 'running' && (
-        <LiveTradingChart
-          symbol={chartSymbol || config.watchlist?.[0] || 'NVDA'}
-          sessionId={urlSessionId}
-          trades={recentTrades || []}
-          positions={positions || []}
-          height={220}
-          refreshInterval={5000}
-          onPriceUpdate={(price) => {
-            // Could update current price state if needed
-          }}
-        />
-      )}
-
-      {/* Trading Day Simulator - Shows when enabled and no active session */}
-      {showSimulator && !urlSessionId && (
+      {/* Trading Day Simulator - Shows when enabled */}
+      {showSimulator && (
         <TradingSimulator
           onComplete={results => {
             // Optionally handle simulation results
@@ -3137,14 +3156,14 @@ const LiveTradingDashboard = () => {
             }}>
               <TechnicalRegimeCard
                 symbol={researchSymbol}
-                date={simulationDate}
+                date={syncResearchWithChart ? simulationDate : null}
                 onRegimeChange={(data) => {
                   setSignalData(prev => ({ ...prev, regime: data }));
                 }}
               />
               <CheddarFlowCard
                 symbol={researchSymbol}
-                date={simulationDate}
+                date={syncResearchWithChart ? simulationDate : null}
                 onSentimentChange={(data) => {
                   setSignalData(prev => ({ ...prev, flow: data }));
                 }}
@@ -3289,26 +3308,28 @@ const LiveTradingDashboard = () => {
       >
         {/* Left Column - Chart and Positions */}
         <div>
-          {/* Chart or Watchlist */}
-          {chartSymbol ? (
-            <TradingViewChart
-              symbol={chartSymbol}
-              candles={chartData}
-              indicators={chartIndicators}
-              height={400}
-              title={chartSymbol}
-              showControls={true}
-              showLegend={true}
-            />
-          ) : (
-            <WatchlistPanel
-              watchlist={config.watchlist}
-              onSelectSymbol={symbol => fetchChartData(symbol)}
-              sessionStatus={sessionStatus}
-              onReorderWatchlist={newWatchlist =>
-                updateConfig('watchlist', newWatchlist)
-              }
-            />
+          {/* Watchlist Panel - Quick overview of all stocks */}
+          <WatchlistPanel
+            watchlist={config.watchlist}
+            onSelectSymbol={symbol => fetchChartData(symbol)}
+            sessionStatus={sessionStatus}
+            onReorderWatchlist={newWatchlist =>
+              updateConfig('watchlist', newWatchlist)
+            }
+          />
+
+          {/* Charts for all watchlist symbols - shows trades in real-time */}
+          {urlSessionId && config.watchlist?.length > 0 && (
+            <div style={{ marginTop: theme.spacing.md }}>
+              <WatchlistCharts
+                watchlist={config.watchlist}
+                trades={recentTrades || []}
+                positions={positions || []}
+                height={300}
+                refreshInterval={sessionStatus === 'running' ? 15000 : 60000}
+                maxCharts={5}
+              />
+            </div>
           )}
 
           {/* Active Positions */}
