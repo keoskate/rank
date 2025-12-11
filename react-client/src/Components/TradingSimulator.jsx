@@ -15,6 +15,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Card from './common/Card';
 import Button from './common/Button';
 import ConfigPanel from './common/ConfigPanel';
+import TradingViewChart from './common/TradingViewChart';
 import theme from '../theme';
 import { useTradingConfig } from '../contexts/TradingConfigContext';
 
@@ -3011,10 +3012,25 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
         </div>
       )}
 
-      {/* Mini Chart */}
+      {/* Mini Chart (V1) */}
       {candles.length > 0 && (
         <div style={{ marginBottom: theme.spacing.md }}>
           {renderMiniChart()}
+        </div>
+      )}
+
+      {/* Full TradingView Chart (V2) */}
+      {candles.length > 0 && (
+        <div style={{ marginBottom: theme.spacing.md }}>
+          <TradingViewChart
+            candles={candles}
+            currentCandleIndex={currentCandleIndex}
+            trades={portfolio.trades}
+            currentPosition={portfolio.positions[0] || null}
+            dayOpen={dayOpen}
+            symbol={symbol}
+            height={400}
+          />
         </div>
       )}
 
