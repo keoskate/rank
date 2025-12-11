@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart } from 'lightweight-charts';
+import * as LightweightCharts from 'lightweight-charts';
 import theme from '../../theme';
 
 /**
@@ -20,16 +20,36 @@ const TradingViewChart = ({
   dayOpen = 0,
   symbol = '',
   height = 400,
+  showRSI = true, // Show RSI panel by default
+  rsiHeight = 120,
 }) => {
   const chartContainerRef = useRef(null);
+  const rsiContainerRef = useRef(null);
   const chartRef = useRef(null);
+  const rsiChartRef = useRef(null);
   const candlestickSeriesRef = useRef(null);
   const volumeSeriesRef = useRef(null);
+  const vwapSeriesRef = useRef(null);
+  const ma20SeriesRef = useRef(null);
+  const ema9SeriesRef = useRef(null);
+  const rsiSeriesRef = useRef(null);
+  const rsiSignalSeriesRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
+  const [chartError, setChartError] = useState(null);
 
   // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    // Get createChart from library - handle various export formats
+    const createChart = LightweightCharts.createChart ||
+                        (LightweightCharts.default && LightweightCharts.default.createChart);
+
+    if (typeof createChart !== 'function') {
+      console.error('lightweight-charts createChart not found. Available exports:', Object.keys(LightweightCharts));
+      setChartError('Chart library failed to load');
+      return;
+    }
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -101,9 +121,88 @@ const TradingViewChart = ({
       },
     });
 
+    // Create VWAP line series (blue dotted)
+    const vwapSeries = chart.addLineSeries({
+      color: '#3b82f6',
+      lineWidth: 2,
+      lineStyle: 2, // Dashed
+      title: 'VWAP',
+    });
+
+    // Create 20-period MA line series (orange)
+    const ma20Series = chart.addLineSeries({
+      color: '#f97316',
+      lineWidth: 1,
+      title: 'MA20',
+    });
+
+    // Create 9-period EMA line series (purple, for momentum)
+    const ema9Series = chart.addLineSeries({
+      color: '#8b5cf6',
+      lineWidth: 1,
+      title: 'EMA9',
+    });
+
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
     volumeSeriesRef.current = volumeSeries;
+    vwapSeriesRef.current = vwapSeries;
+    ma20SeriesRef.current = ma20Series;
+    ema9SeriesRef.current = ema9Series;
+
+    // Create RSI chart if enabled and container exists
+    let rsiChart = null;
+    let rsiSeries = null;
+    let rsiSignalSeries = null;
+
+    if (showRSI && rsiContainerRef.current) {
+      rsiChart = createChart(rsiContainerRef.current, {
+        layout: {
+          backgroundColor: '#ffffff',
+          textColor: '#333',
+        },
+        grid: {
+          vertLines: { color: '#f0f0f0' },
+          horzLines: { color: '#f5f5f5' },
+        },
+        crosshair: {
+          mode: 1,
+          vertLine: { width: 1, color: '#9B9B9B', style: 2 },
+          horzLine: { width: 1, color: '#9B9B9B', style: 2 },
+        },
+        rightPriceScale: {
+          borderColor: '#e0e0e0',
+          scaleMargins: { top: 0.1, bottom: 0.1 },
+        },
+        timeScale: {
+          borderColor: '#e0e0e0',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: { mouseWheel: true, pressedMouseMove: true },
+        handleScale: { mouseWheel: true, pinch: true },
+      });
+
+      // RSI line series with dynamic coloring
+      rsiSeries = rsiChart.addLineSeries({
+        color: '#9ca3af', // Default gray, will be overridden per-point
+        lineWidth: 2,
+        title: 'RSI',
+        priceFormat: { type: 'custom', formatter: (price) => price.toFixed(1) },
+      });
+
+      // Signal line (EMA of RSI)
+      rsiSignalSeries = rsiChart.addLineSeries({
+        color: '#ff5d00',
+        lineWidth: 1,
+        title: 'Signal',
+      });
+
+      rsiChartRef.current = rsiChart;
+      rsiSeriesRef.current = rsiSeries;
+      rsiSignalSeriesRef.current = rsiSignalSeries;
+    }
+
     setIsReady(true);
 
     // Handle resize
@@ -113,20 +212,243 @@ const TradingViewChart = ({
           width: chartContainerRef.current.clientWidth,
         });
       }
+      if (rsiChart && rsiContainerRef.current) {
+        rsiChart.applyOptions({
+          width: rsiContainerRef.current.clientWidth,
+        });
+      }
     };
 
     window.addEventListener('resize', handleResize);
     handleResize();
 
+    // Sync time scales between main chart and RSI
+    if (rsiChart) {
+      chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if (range && rsiChart) {
+          rsiChart.timeScale().setVisibleLogicalRange(range);
+        }
+      });
+      rsiChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if (range && chart) {
+          chart.timeScale().setVisibleLogicalRange(range);
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
+      if (rsiChart) rsiChart.remove();
       chartRef.current = null;
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      vwapSeriesRef.current = null;
+      ma20SeriesRef.current = null;
+      ema9SeriesRef.current = null;
+      rsiChartRef.current = null;
+      rsiSeriesRef.current = null;
+      rsiSignalSeriesRef.current = null;
       setIsReady(false);
     };
-  }, []);
+  }, [showRSI]);
+
+  // Helper functions for calculating indicators
+  const calculateSMA = (data, period) => {
+    const result = [];
+    for (let i = period - 1; i < data.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < period; j++) {
+        sum += data[i - j].close;
+      }
+      result.push({ time: data[i].time, value: sum / period });
+    }
+    return result;
+  };
+
+  const calculateEMA = (data, period) => {
+    const result = [];
+    const multiplier = 2 / (period + 1);
+
+    // Start with SMA for first value
+    let sum = 0;
+    for (let i = 0; i < period && i < data.length; i++) {
+      sum += data[i].close;
+    }
+    let ema = sum / Math.min(period, data.length);
+
+    for (let i = 0; i < data.length; i++) {
+      if (i < period - 1) {
+        // Not enough data yet, skip
+        continue;
+      } else if (i === period - 1) {
+        result.push({ time: data[i].time, value: ema });
+      } else {
+        ema = (data[i].close - ema) * multiplier + ema;
+        result.push({ time: data[i].time, value: ema });
+      }
+    }
+    return result;
+  };
+
+  const calculateVWAP = (data, volumeData) => {
+    const result = [];
+    let cumulativeTPV = 0; // Cumulative (Typical Price * Volume)
+    let cumulativeVolume = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const typicalPrice = (data[i].high + data[i].low + data[i].close) / 3;
+      const volume = volumeData[i]?.value || 0;
+
+      cumulativeTPV += typicalPrice * volume;
+      cumulativeVolume += volume;
+
+      if (cumulativeVolume > 0) {
+        result.push({ time: data[i].time, value: cumulativeTPV / cumulativeVolume });
+      }
+    }
+    return result;
+  };
+
+  // Calculate RMA (Relative Moving Average / Wilder's Smoothing)
+  const calculateRMA = (values, period) => {
+    const result = [];
+    let rma = 0;
+    const alpha = 1 / period;
+
+    for (let i = 0; i < values.length; i++) {
+      if (i < period - 1) {
+        // Build up initial average
+        rma += values[i] / period;
+        if (i === period - 2) {
+          rma += values[i + 1] / period;
+        }
+      } else if (i === period - 1) {
+        result.push(rma);
+      } else {
+        rma = alpha * values[i] + (1 - alpha) * rma;
+        result.push(rma);
+      }
+    }
+    return result;
+  };
+
+  /**
+   * Calculate Ultimate RSI (LuxAlgo-style)
+   * Based on Pine Script from TradingView
+   *
+   * Uses range-based calculation:
+   * - If upper range expands: diff = range (bullish)
+   * - If lower range expands: diff = -range (bearish)
+   * - Otherwise: diff = price change
+   *
+   * Returns both RSI and signal line values
+   */
+  const calculateUltimateRSI = (data, length = 14, signalLength = 14) => {
+    if (data.length < length + 1) return { rsi: [], signal: [] };
+
+    // Extract close prices and calculate ranges
+    const closes = data.map(d => d.close);
+    const highs = data.map(d => d.high);
+    const lows = data.map(d => d.low);
+
+    // Calculate rolling highest high and lowest low
+    const upper = [];
+    const lower = [];
+    for (let i = 0; i < data.length; i++) {
+      if (i < length - 1) {
+        upper.push(null);
+        lower.push(null);
+      } else {
+        let maxHigh = highs[i];
+        let minLow = lows[i];
+        for (let j = 1; j < length; j++) {
+          maxHigh = Math.max(maxHigh, highs[i - j]);
+          minLow = Math.min(minLow, lows[i - j]);
+        }
+        upper.push(maxHigh);
+        lower.push(minLow);
+      }
+    }
+
+    // Calculate diff based on range expansion
+    const diff = [];
+    for (let i = 0; i < data.length; i++) {
+      if (i < length || upper[i] === null) {
+        diff.push(0);
+      } else {
+        const range = upper[i] - lower[i];
+        const priceChange = closes[i] - closes[i - 1];
+        const prevUpper = upper[i - 1];
+        const prevLower = lower[i - 1];
+
+        if (upper[i] > prevUpper) {
+          diff.push(range); // Bullish expansion
+        } else if (lower[i] < prevLower) {
+          diff.push(-range); // Bearish expansion
+        } else {
+          diff.push(priceChange); // Normal price change
+        }
+      }
+    }
+
+    // Calculate RMA of diff (numerator) and RMA of abs(diff) (denominator)
+    const diffSlice = diff.slice(length);
+    const absDiffSlice = diffSlice.map(d => Math.abs(d));
+
+    const numRMA = calculateRMA(diffSlice, length);
+    const denRMA = calculateRMA(absDiffSlice, length);
+
+    // Calculate Ultimate RSI: (num/den) * 50 + 50
+    const rsiValues = [];
+    for (let i = 0; i < numRMA.length; i++) {
+      const den = denRMA[i] || 0.0001; // Avoid division by zero
+      const rsiValue = (numRMA[i] / den) * 50 + 50;
+      rsiValues.push(Math.max(0, Math.min(100, rsiValue))); // Clamp to 0-100
+    }
+
+    // Calculate signal line (EMA of RSI)
+    const signalValues = [];
+    if (rsiValues.length >= signalLength) {
+      const multiplier = 2 / (signalLength + 1);
+      let ema = rsiValues.slice(0, signalLength).reduce((a, b) => a + b, 0) / signalLength;
+
+      for (let i = 0; i < rsiValues.length; i++) {
+        if (i < signalLength - 1) {
+          signalValues.push(null);
+        } else if (i === signalLength - 1) {
+          signalValues.push(ema);
+        } else {
+          ema = (rsiValues[i] - ema) * multiplier + ema;
+          signalValues.push(ema);
+        }
+      }
+    }
+
+    // Build result arrays with timestamps
+    const startIndex = length + length - 1; // Account for both lookback periods
+    const rsiResult = [];
+    const signalResult = [];
+
+    for (let i = 0; i < rsiValues.length; i++) {
+      const dataIndex = startIndex + i;
+      if (dataIndex < data.length) {
+        rsiResult.push({
+          time: data[dataIndex].time,
+          value: rsiValues[i],
+        });
+
+        if (signalValues[i] !== null && signalValues[i] !== undefined) {
+          signalResult.push({
+            time: data[dataIndex].time,
+            value: signalValues[i],
+          });
+        }
+      }
+    }
+
+    return { rsi: rsiResult, signal: signalResult };
+  };
 
   // Update chart data when candles or currentCandleIndex change
   useEffect(() => {
@@ -178,9 +500,52 @@ const TradingViewChart = ({
       };
     }).filter(v => v.value > 0);
 
-    // Set data
+    // Set candlestick and volume data
     candlestickSeriesRef.current.setData(candleData);
     volumeSeriesRef.current.setData(volumeData);
+
+    // Calculate and set technical indicators
+    if (candleData.length >= 3) {
+      // VWAP - resets daily, so calculate from start of visible data
+      const vwapData = calculateVWAP(candleData, volumeData);
+      if (vwapSeriesRef.current && vwapData.length > 0) {
+        vwapSeriesRef.current.setData(vwapData);
+      }
+
+      // 20-period MA (or less if not enough data)
+      const ma20Period = Math.min(20, Math.floor(candleData.length / 2));
+      if (ma20Period >= 3) {
+        const ma20Data = calculateSMA(candleData, ma20Period);
+        if (ma20SeriesRef.current && ma20Data.length > 0) {
+          ma20SeriesRef.current.setData(ma20Data);
+        }
+      }
+
+      // 9-period EMA (or less if not enough data)
+      const ema9Period = Math.min(9, Math.floor(candleData.length / 2));
+      if (ema9Period >= 3) {
+        const ema9Data = calculateEMA(candleData, ema9Period);
+        if (ema9SeriesRef.current && ema9Data.length > 0) {
+          ema9SeriesRef.current.setData(ema9Data);
+        }
+      }
+
+      // Calculate and update Ultimate RSI
+      if (showRSI && rsiSeriesRef.current && candleData.length >= 30) {
+        const { rsi, signal } = calculateUltimateRSI(candleData, 14, 14);
+        if (rsi.length > 0) {
+          rsiSeriesRef.current.setData(rsi);
+        }
+        if (signal.length > 0 && rsiSignalSeriesRef.current) {
+          rsiSignalSeriesRef.current.setData(signal);
+        }
+
+        // Fit RSI chart content
+        if (rsiChartRef.current) {
+          rsiChartRef.current.timeScale().fitContent();
+        }
+      }
+    }
 
     // Add markers for trades
     const markers = [];
@@ -215,9 +580,9 @@ const TradingViewChart = ({
     markers.sort((a, b) => a.time - b.time);
     candlestickSeriesRef.current.setMarkers(markers);
 
-    // Scroll to show latest candle
+    // Fit content and scroll to show latest candle on right side
     if (candleData.length > 0) {
-      chartRef.current.timeScale().scrollToPosition(2, false);
+      chartRef.current.timeScale().fitContent();
     }
 
   }, [candles, currentCandleIndex, trades, isReady]);
@@ -247,6 +612,25 @@ const TradingViewChart = ({
 
   const stats = getStats();
   const isPositive = stats.change >= 0;
+
+  // Show error state if chart failed to load
+  if (chartError) {
+    return (
+      <div style={{
+        width: '100%',
+        height: height,
+        backgroundColor: '#fff',
+        borderRadius: theme.borderRadius.lg,
+        border: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: theme.colors.textMuted,
+      }}>
+        <span>📊 {chartError}</span>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -320,26 +704,88 @@ const TradingViewChart = ({
         }}
       />
 
+      {/* RSI Panel */}
+      {showRSI && (
+        <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+          {/* RSI Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+            backgroundColor: theme.colors.gray50,
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textMuted,
+            }}>
+              <span style={{ fontWeight: 'bold' }}>Ultimate RSI</span>
+              <span style={{ color: '#9ca3af' }}>14</span>
+              <span>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: 12, height: 2, backgroundColor: '#ff5d00' }}></span>
+                Signal 14
+              </span>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.md,
+              fontSize: theme.typography.fontSize.xs,
+            }}>
+              <span style={{ color: '#089981' }}>OB 80</span>
+              <span style={{ color: theme.colors.textMuted }}>50</span>
+              <span style={{ color: '#f23645' }}>OS 20</span>
+            </div>
+          </div>
+          {/* RSI Chart */}
+          <div
+            ref={rsiContainerRef}
+            style={{
+              width: '100%',
+              height: rsiHeight,
+            }}
+          />
+        </div>
+      )}
+
       {/* Chart Footer - Legend */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
-        gap: theme.spacing.lg,
+        flexWrap: 'wrap',
+        gap: theme.spacing.md,
         padding: theme.spacing.sm,
         borderTop: `1px solid ${theme.colors.border}`,
         backgroundColor: theme.colors.gray50,
         fontSize: theme.typography.fontSize.xs,
         color: theme.colors.textMuted,
       }}>
+        {/* Indicators */}
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: 16, height: 2, backgroundColor: '#3b82f6', borderStyle: 'dashed' }}></span>
+          VWAP
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: 16, height: 2, backgroundColor: '#f97316' }}></span>
+          MA20
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: 16, height: 2, backgroundColor: '#8b5cf6' }}></span>
+          EMA9
+        </span>
+        <span style={{ borderLeft: '1px solid #ddd', paddingLeft: theme.spacing.md, display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '8px solid #22c55e' }}></span>
-          Buy Order
+          Buy
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '8px solid #ef4444' }}></span>
-          Sell Order
+          Sell
         </span>
-        <span>Scroll to zoom • Drag to pan</span>
       </div>
     </div>
   );
