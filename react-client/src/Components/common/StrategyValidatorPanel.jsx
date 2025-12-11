@@ -508,7 +508,7 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
             )}
 
             {/* Daily Results Table (collapsed by default) */}
-            <details style={{ marginTop: theme.spacing.md }}>
+            <details style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.md }}>
               <summary style={{
                 cursor: 'pointer',
                 padding: theme.spacing.sm,
@@ -519,8 +519,6 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
                 View Daily Results ({results.dailyResults?.length || 0} days)
               </summary>
               <div style={{
-                maxHeight: '300px',
-                overflowY: 'auto',
                 marginTop: theme.spacing.sm,
               }}>
                 <table style={{
