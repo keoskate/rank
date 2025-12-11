@@ -352,6 +352,8 @@ const TradingViewChart = ({
 
   // Helper functions for calculating indicators
   const calculateSMA = (data, period) => {
+    if (!Array.isArray(data) || data.length === 0) return [];
+
     const result = [];
     for (let i = period - 1; i < data.length; i++) {
       let sum = 0;
@@ -364,6 +366,8 @@ const TradingViewChart = ({
   };
 
   const calculateEMA = (data, period) => {
+    if (!Array.isArray(data) || data.length === 0) return [];
+
     const result = [];
     const multiplier = 2 / (period + 1);
 
@@ -389,6 +393,8 @@ const TradingViewChart = ({
   };
 
   const calculateVWAP = (data, volumeData) => {
+    if (!Array.isArray(data) || data.length === 0) return [];
+
     const result = [];
     let cumulativeTPV = 0; // Cumulative (Typical Price * Volume)
     let cumulativeVolume = 0;
@@ -420,6 +426,10 @@ const TradingViewChart = ({
    * - Band 3: ±2.51σ (99% confidence)
    */
   const calculateVWAPWithBands = (data, volumeData) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      return { vwap: [], bandU1: [], bandD1: [], bandU2: [], bandD2: [], bandU3: [], bandD3: [] };
+    }
+
     const vwap = [];
     const bandU1 = [], bandD1 = [];
     const bandU2 = [], bandD2 = [];
@@ -504,7 +514,7 @@ const TradingViewChart = ({
    * Returns both RSI and signal line values
    */
   const calculateUltimateRSI = (data, length = 14, signalLength = 14) => {
-    if (data.length < length + 1) return { rsi: [], signal: [] };
+    if (!Array.isArray(data) || data.length < length + 1) return { rsi: [], signal: [] };
 
     // Extract close prices and calculate ranges
     const closes = data.map(d => d.close);
