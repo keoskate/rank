@@ -1285,9 +1285,10 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
     const visibleCandles = candles.slice(0, currentCandleIndex + 1);
     if (visibleCandles.length === 0) return null;
 
-    const width = 600;
-    const height = 180;
-    const padding = 40;
+    // Use viewBox for responsive scaling
+    const width = 350;
+    const height = 140;
+    const padding = 35;
 
     const prices = visibleCandles
       .map(c => getCandle(c)?.close || 0)
@@ -1319,11 +1320,14 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
 
     return (
       <svg
-        width={width}
-        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
         style={{
+          width: '100%',
+          height: 'auto',
+          maxHeight: '140px',
           backgroundColor: theme.colors.gray50,
-          borderRadius: theme.borderRadius.md,
+          borderRadius: theme.borderRadius.sm,
         }}
       >
         {[0, 0.25, 0.5, 0.75, 1].map(pct => (

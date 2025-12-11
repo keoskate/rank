@@ -7,7 +7,7 @@
  * - Call/Put flow percentages and volumes
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Card from './Card';
 import Button from './Button';
 import theme from '../../theme';
@@ -18,7 +18,11 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
   const [flowError, setFlowError] = useState(null);
   const [flowData, setFlowData] = useState(null);
   const [autoFetchFlow, setAutoFetchFlow] = useState(true);
-  const [lastFetchedSymbol, setLastFetchedSymbol] = useState(null);
+  const [lastFetchedKey, setLastFetchedKey] = useState(null);
+
+  // Store callback in ref to avoid re-triggering effect
+  const onSentimentChangeRef = useRef(onSentimentChange);
+  onSentimentChangeRef.current = onSentimentChange;
 
   // Fetch CheddarFlow data
   const fetchCheddarFlow = useCallback(async (sym) => {
@@ -35,16 +39,16 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
       if (response.ok) {
         const data = await response.json();
         setFlowData(data);
-        setLastFetchedSymbol(sym);
+        setLastFetchedKey(`${sym}-${today}`);
 
-        // Notify parent of sentiment change
-        if (data.flowData && onSentimentChange) {
+        // Notify parent of sentiment change (use ref to avoid dependency)
+        if (data.flowData && onSentimentChangeRef.current) {
           const sentimentText = data.flowData.sentimentText?.toLowerCase() || '';
           let sentiment = 'neutral';
           if (sentimentText.includes('bullish')) sentiment = 'bullish';
           else if (sentimentText.includes('bearish')) sentiment = 'bearish';
 
-          onSentimentChange({
+          onSentimentChangeRef.current({
             sentiment,
             putCallRatio: data.flowData.putCallRatio,
             callFlowPercent: data.flowData.callFlowPercent,
@@ -68,14 +72,16 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
     } finally {
       setFlowLoading(false);
     }
-  }, [date, onSentimentChange]);
+  }, [date]);
 
   // Auto-fetch when symbol changes
   useEffect(() => {
-    if (autoFetchFlow && symbol && symbol !== lastFetchedSymbol) {
+    const today = date || new Date().toISOString().split('T')[0];
+    const fetchKey = `${symbol}-${today}`;
+    if (autoFetchFlow && symbol && fetchKey !== lastFetchedKey) {
       fetchCheddarFlow(symbol);
     }
-  }, [symbol, autoFetchFlow, fetchCheddarFlow, lastFetchedSymbol]);
+  }, [symbol, date, autoFetchFlow, fetchCheddarFlow, lastFetchedKey]);
 
   const getSentimentColor = (sentimentText) => {
     const s = sentimentText?.toLowerCase() || '';

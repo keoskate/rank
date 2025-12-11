@@ -5,7 +5,7 @@
  * Lighter weight than RegimeConfigPanel for dashboard use.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Card from './Card';
 import Button from './Button';
 import theme from '../../theme';
@@ -39,6 +39,11 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [detection, setDetection] = useState(null);
+  const [lastFetchedKey, setLastFetchedKey] = useState(null);
+
+  // Store callback in ref to avoid re-triggering effect
+  const onRegimeChangeRef = useRef(onRegimeChange);
+  onRegimeChangeRef.current = onRegimeChange;
 
   const detectRegime = useCallback(async () => {
     if (!symbol) return;
@@ -54,7 +59,9 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
         const data = await response.json();
         setRegime(data.regime);
         setDetection(data);
-        if (onRegimeChange) onRegimeChange(data);
+        setLastFetchedKey(`${symbol}-${date || 'now'}`);
+        // Use ref to avoid dependency on callback
+        if (onRegimeChangeRef.current) onRegimeChangeRef.current(data);
       } else {
         setError('Failed to detect regime');
       }
@@ -63,11 +70,15 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
     } finally {
       setLoading(false);
     }
-  }, [symbol, date, onRegimeChange]);
+  }, [symbol, date]);
 
+  // Only fetch when symbol or date actually changes
   useEffect(() => {
-    detectRegime();
-  }, [detectRegime]);
+    const fetchKey = `${symbol}-${date || 'now'}`;
+    if (fetchKey !== lastFetchedKey) {
+      detectRegime();
+    }
+  }, [symbol, date, lastFetchedKey, detectRegime]);
 
   const currentRegime = regime ? REGIME_INFO[regime] : null;
 
