@@ -143,7 +143,13 @@ const LiveTradingDashboard = () => {
       return 'QBTS';
     }
   });
-  const [syncResearchWithChart, setSyncResearchWithChart] = useState(false);
+  const [syncResearchWithChart, setSyncResearchWithChart] = useState(() => {
+    try {
+      return localStorage.getItem('sync-research-with-chart') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Signal data from experimental cards (for checklist aggregation)
   const [signalData, setSignalData] = useState({
@@ -168,6 +174,13 @@ const LiveTradingDashboard = () => {
       localStorage.setItem('research-symbol', researchSymbol);
     } catch {}
   }, [researchSymbol]);
+
+  // Persist sync with chart preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('sync-research-with-chart', syncResearchWithChart.toString());
+    } catch {}
+  }, [syncResearchWithChart]);
 
   // Sync research symbol with chart symbol when enabled
   useEffect(() => {
