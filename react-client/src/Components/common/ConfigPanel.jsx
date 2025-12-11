@@ -474,7 +474,21 @@ const ConfigPanel = ({
   const [saveAsTarget, setSaveAsTarget] = useState(null); // Strategy being overwritten
   const [saveAsNewName, setSaveAsNewName] = useState(''); // New name for Save As (empty = keep original)
   const [configName, setConfigName] = useState('');
+  const [loadedConfigName, setLoadedConfigName] = useState(() => {
+    try {
+      return localStorage.getItem('loaded-config-name') || null;
+    } catch {
+      return null;
+    }
+  });
   const fileInputRef = useRef(null);
+
+  // Auto-load saved config on mount
+  useEffect(() => {
+    if (loadedConfigName && savedConfigs[loadedConfigName] && localConfig === null) {
+      updateConfig(savedConfigs[loadedConfigName]);
+    }
+  }, []); // Only run on mount
 
   // Use localConfig if provided, otherwise use context
   const config = localConfig !== null ? { ...DEFAULT_TRADING_CONFIG, ...localState } : contextConfig;
@@ -507,6 +521,9 @@ const ConfigPanel = ({
     const newSaved = { ...savedConfigs, [configName]: config };
     setSavedConfigs(newSaved);
     localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
+    // Set as currently loaded config
+    setLoadedConfigName(configName);
+    localStorage.setItem('loaded-config-name', configName);
     setShowSaveDialog(false);
     setConfigName('');
   };
@@ -525,6 +542,9 @@ const ConfigPanel = ({
     newSaved[finalName] = config;
     setSavedConfigs(newSaved);
     localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
+    // Set as currently loaded config
+    setLoadedConfigName(finalName);
+    localStorage.setItem('loaded-config-name', finalName);
     setShowSaveAsDialog(false);
     setSaveAsTarget(null);
     setSaveAsNewName('');
@@ -570,7 +590,17 @@ const ConfigPanel = ({
       } else {
         updateConfig(loaded);
       }
+      // Persist loaded config name
+      setLoadedConfigName(name);
+      localStorage.setItem('loaded-config-name', name);
     }
+  };
+
+  // Clear loaded config (revert to defaults)
+  const clearLoadedConfig = () => {
+    setLoadedConfigName(null);
+    localStorage.removeItem('loaded-config-name');
+    resetConfig();
   };
 
   const deleteConfig = name => {
@@ -927,6 +957,48 @@ const ConfigPanel = ({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Currently Loaded Config Label */}
+      {mode === 'edit' && showSaveLoad && loadedConfigName && (
+        <div
+          style={{
+            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+            backgroundColor: '#dbeafe',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+            <span style={{ fontSize: theme.typography.fontSize.sm, color: '#1e40af' }}>
+              📁 Loaded:
+            </span>
+            <span style={{
+              fontWeight: 'bold',
+              fontSize: theme.typography.fontSize.sm,
+              color: '#1e40af',
+            }}>
+              {loadedConfigName}
+            </span>
+          </div>
+          <button
+            onClick={clearLoadedConfig}
+            style={{
+              padding: `2px ${theme.spacing.sm}`,
+              borderRadius: theme.borderRadius.sm,
+              border: '1px solid #93c5fd',
+              backgroundColor: 'transparent',
+              color: '#1e40af',
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.xs,
+            }}
+            title="Clear loaded config and reset to defaults"
+          >
+            ✕ Clear
+          </button>
         </div>
       )}
 
