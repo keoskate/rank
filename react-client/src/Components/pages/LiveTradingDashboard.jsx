@@ -22,6 +22,7 @@ import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import TradingLogPanel from '../common/TradingLogPanel';
+import LiveTradingChart from '../common/LiveTradingChart';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 import {
@@ -2874,8 +2875,23 @@ const LiveTradingDashboard = () => {
         </Card>
       )}
 
-      {/* Trading Day Simulator */}
-      {showSimulator && (
+      {/* Live Trading Chart - Shows when session is running */}
+      {urlSessionId && sessionStatus === 'running' && (
+        <LiveTradingChart
+          symbol={chartSymbol || config.watchlist?.[0] || 'NVDA'}
+          sessionId={urlSessionId}
+          trades={recentTrades || []}
+          positions={positions || []}
+          height={220}
+          refreshInterval={5000}
+          onPriceUpdate={(price) => {
+            // Could update current price state if needed
+          }}
+        />
+      )}
+
+      {/* Trading Day Simulator - Shows when enabled and no active session */}
+      {showSimulator && !urlSessionId && (
         <TradingSimulator
           onComplete={results => {
             // Optionally handle simulation results
