@@ -19,73 +19,127 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
   const [flowData, setFlowData] = useState(null);
   const [autoFetchFlow, setAutoFetchFlow] = useState(true);
   const [lastFetchedKey, setLastFetchedKey] = useState(null);
+  const [dataDate, setDataDate] = useState(null); // The actual date of the data
+  const [isLiveData, setIsLiveData] = useState(false); // Is this today's data?
 
   // Store callback in ref to avoid re-triggering effect
   const onSentimentChangeRef = useRef(onSentimentChange);
   onSentimentChangeRef.current = onSentimentChange;
 
-  // Fetch CheddarFlow data
-  const fetchCheddarFlow = useCallback(async (sym) => {
-    setFlowLoading(true);
-    setFlowError(null);
+  // Helper to check if data has meaningful content
+  const hasFlowActivity = (data) => {
+    if (!data?.flowData) return false;
+    const fd = data.flowData;
+    // Check if there's any actual flow data (not just zeros)
+    return fd.sentimentText ||
+           (fd.callFlow && fd.callFlow > 0) ||
+           (fd.putFlow && fd.putFlow > 0) ||
+           (fd.callContracts && fd.callContracts > 0) ||
+           (fd.putContracts && fd.putContracts > 0);
+  };
+
+  // Get previous business day
+  const getPreviousBusinessDay = (dateStr) => {
+    const d = new Date(dateStr + 'T12:00:00'); // Noon to avoid timezone issues
+    d.setDate(d.getDate() - 1);
+    // Skip weekends
+    while (d.getDay() === 0 || d.getDay() === 6) {
+      d.setDate(d.getDate() - 1);
+    }
+    return d.toISOString().split('T')[0];
+  };
+
+  // Fetch CheddarFlow data with fallback to previous day
+  const fetchCheddarFlow = useCallback(async (sym, targetDate = null, isRetry = false) => {
+    if (!isRetry) {
+      setFlowLoading(true);
+      setFlowError(null);
+    }
 
     try {
-      const today = date || new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
+      const requestDate = targetDate || date || today;
+      const isToday = requestDate === today;
 
       const response = await fetch(
-        `/api/cheddarflow/${sym}?date=${today}&useProfile=true`
+        `/api/cheddarflow/${sym}?date=${requestDate}&useProfile=true`
       );
 
       if (response.ok) {
         const data = await response.json();
-        setFlowData(data);
-        setLastFetchedKey(`${sym}-${today}`);
-
-        // Notify parent of sentiment change (use ref to avoid dependency)
-        if (data.flowData && onSentimentChangeRef.current) {
-          const sentimentText = data.flowData.sentimentText?.toLowerCase() || '';
-          let sentiment = 'neutral';
-          if (sentimentText.includes('bullish')) sentiment = 'bullish';
-          else if (sentimentText.includes('bearish')) sentiment = 'bearish';
-
-          onSentimentChangeRef.current({
-            sentiment,
-            putCallRatio: data.flowData.putCallRatio,
-            callFlowPercent: data.flowData.callFlowPercent,
-            data: data.flowData,
-          });
-        }
 
         // Check if data indicates auth is needed
         if (data.flowData?.needsAuth || data.flowData?.error?.includes('expired')) {
-          setFlowError('Session expired. Close Chrome browser, then click refresh.');
+          setFlowError('Session expired. Please check your CheddarFlow credentials in .env');
+          setFlowLoading(false);
           return null;
         }
 
-        return data;
+        // Check if we got actual data
+        if (hasFlowActivity(data)) {
+          setFlowData(data);
+          setDataDate(requestDate);
+          setIsLiveData(isToday);
+          setLastFetchedKey(`${sym}-${requestDate}`);
+
+          // Notify parent of sentiment change
+          if (data.flowData && onSentimentChangeRef.current) {
+            const sentimentText = data.flowData.sentimentText?.toLowerCase() || '';
+            let sentiment = 'neutral';
+            if (sentimentText.includes('bullish')) sentiment = 'bullish';
+            else if (sentimentText.includes('bearish')) sentiment = 'bearish';
+
+            onSentimentChangeRef.current({
+              sentiment,
+              putCallRatio: data.flowData.putCallRatio,
+              callFlowPercent: data.flowData.callFlowPercent,
+              data: data.flowData,
+              date: requestDate,
+              isLive: isToday,
+            });
+          }
+
+          setFlowLoading(false);
+          return data;
+        } else if (isToday && !isRetry) {
+          // No data for today, try previous business day
+          console.log('[CheddarFlow] No data for today, trying previous day...');
+          const prevDay = getPreviousBusinessDay(requestDate);
+          return fetchCheddarFlow(sym, prevDay, true);
+        } else {
+          // Either it's a specific date request or retry failed - show what we have
+          setFlowData(data);
+          setDataDate(requestDate);
+          setIsLiveData(false);
+          setLastFetchedKey(`${sym}-${requestDate}`);
+          setFlowLoading(false);
+          return data;
+        }
       } else {
         const err = await response.json();
         if (err.error?.includes('Chrome') || err.error?.includes('auth') || err.error?.includes('expired')) {
-          setFlowError('Session expired. Close Chrome browser, then click refresh to re-authenticate.');
+          setFlowError('Session expired. Please check your CheddarFlow credentials in .env');
         } else {
           setFlowError(err.error || 'Failed to fetch flow data');
         }
+        setFlowLoading(false);
         return null;
       }
     } catch (err) {
       setFlowError('Could not connect to CheddarFlow');
-      return null;
-    } finally {
       setFlowLoading(false);
+      return null;
     }
   }, [date]);
 
-  // Auto-fetch when symbol changes
+  // Auto-fetch when symbol or date changes
   useEffect(() => {
-    const today = date || new Date().toISOString().split('T')[0];
-    const fetchKey = `${symbol}-${today}`;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const fetchKey = `${symbol}-${targetDate}`;
     if (autoFetchFlow && symbol && fetchKey !== lastFetchedKey) {
-      fetchCheddarFlow(symbol);
+      // If a specific date is provided (sync with chart), use that date directly
+      // Otherwise, let fetchCheddarFlow handle today with fallback
+      fetchCheddarFlow(symbol, date || null);
     }
   }, [symbol, date, autoFetchFlow, fetchCheddarFlow, lastFetchedKey]);
 
@@ -151,14 +205,34 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
         </div>
       </div>
 
-      {/* Symbol being tracked */}
+      {/* Symbol and date being tracked */}
       <div style={{
         fontSize: theme.typography.fontSize.xs,
         color: theme.colors.textMuted,
         marginBottom: theme.spacing.sm,
+        display: 'flex',
+        alignItems: 'center',
+        gap: theme.spacing.xs,
+        flexWrap: 'wrap',
       }}>
-        Tracking: <strong>{symbol}</strong>
-        {date && <span> ({date})</span>}
+        <span>Tracking: <strong>{symbol}</strong></span>
+        {dataDate && (
+          <span style={{
+            padding: '2px 6px',
+            borderRadius: theme.borderRadius.sm,
+            backgroundColor: isLiveData ? '#dcfce7' : theme.colors.gray100,
+            color: isLiveData ? '#166534' : theme.colors.textMuted,
+            fontSize: '10px',
+            fontWeight: isLiveData ? 'bold' : 'normal',
+          }}>
+            {isLiveData ? '🔴 LIVE' : `📅 ${dataDate}`}
+          </span>
+        )}
+        {date && date !== dataDate && (
+          <span style={{ fontSize: '10px', color: theme.colors.textMuted }}>
+            (synced to {date})
+          </span>
+        )}
       </div>
 
       {/* Error */}
