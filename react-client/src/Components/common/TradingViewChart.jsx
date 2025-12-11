@@ -34,6 +34,13 @@ const TradingViewChart = ({
   const ema9SeriesRef = useRef(null);
   const rsiSeriesRef = useRef(null);
   const rsiSignalSeriesRef = useRef(null);
+  // VWAP StdDev Bands refs
+  const vwapBandU1Ref = useRef(null);
+  const vwapBandD1Ref = useRef(null);
+  const vwapBandU2Ref = useRef(null);
+  const vwapBandD2Ref = useRef(null);
+  const vwapBandU3Ref = useRef(null);
+  const vwapBandD3Ref = useRef(null);
   const [isReady, setIsReady] = useState(false);
   const [chartError, setChartError] = useState(null);
 
@@ -143,12 +150,57 @@ const TradingViewChart = ({
       title: 'EMA9',
     });
 
+    // Create VWAP StdDev Bands (semi-transparent for visual clarity)
+    // Band 1: ±1.28 StdDev (gray, closest to VWAP)
+    const vwapBandU1 = chart.addLineSeries({
+      color: 'rgba(156, 163, 175, 0.6)', // gray
+      lineWidth: 1,
+      lineStyle: 2, // Dashed
+      title: 'VWAP +1σ',
+    });
+    const vwapBandD1 = chart.addLineSeries({
+      color: 'rgba(156, 163, 175, 0.6)',
+      lineWidth: 1,
+      lineStyle: 2,
+      title: 'VWAP -1σ',
+    });
+
+    // Band 2: ±2.01 StdDev (red/green for overbought/oversold zones)
+    const vwapBandU2 = chart.addLineSeries({
+      color: 'rgba(239, 68, 68, 0.5)', // red
+      lineWidth: 1,
+      title: 'VWAP +2σ',
+    });
+    const vwapBandD2 = chart.addLineSeries({
+      color: 'rgba(34, 197, 94, 0.5)', // green
+      lineWidth: 1,
+      title: 'VWAP -2σ',
+    });
+
+    // Band 3: ±2.51 StdDev (stronger red/green for extreme zones)
+    const vwapBandU3 = chart.addLineSeries({
+      color: 'rgba(220, 38, 38, 0.6)', // darker red
+      lineWidth: 1,
+      title: 'VWAP +3σ',
+    });
+    const vwapBandD3 = chart.addLineSeries({
+      color: 'rgba(22, 163, 74, 0.6)', // darker green
+      lineWidth: 1,
+      title: 'VWAP -3σ',
+    });
+
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
     volumeSeriesRef.current = volumeSeries;
     vwapSeriesRef.current = vwapSeries;
     ma20SeriesRef.current = ma20Series;
     ema9SeriesRef.current = ema9Series;
+    vwapBandU1Ref.current = vwapBandU1;
+    vwapBandD1Ref.current = vwapBandD1;
+    vwapBandU2Ref.current = vwapBandU2;
+    vwapBandD2Ref.current = vwapBandD2;
+    vwapBandU3Ref.current = vwapBandU3;
+    vwapBandD3Ref.current = vwapBandD3;
 
     // Create RSI chart if enabled and container exists
     let rsiChart = null;
@@ -246,6 +298,12 @@ const TradingViewChart = ({
       vwapSeriesRef.current = null;
       ma20SeriesRef.current = null;
       ema9SeriesRef.current = null;
+      vwapBandU1Ref.current = null;
+      vwapBandD1Ref.current = null;
+      vwapBandU2Ref.current = null;
+      vwapBandD2Ref.current = null;
+      vwapBandU3Ref.current = null;
+      vwapBandD3Ref.current = null;
       rsiChartRef.current = null;
       rsiSeriesRef.current = null;
       rsiSignalSeriesRef.current = null;
@@ -308,6 +366,68 @@ const TradingViewChart = ({
       }
     }
     return result;
+  };
+
+  /**
+   * Calculate VWAP with Standard Deviation Bands
+   * Based on Pine Script: VWAP Stdev Bands v2
+   *
+   * VWAP = Cumulative(TypicalPrice * Volume) / Cumulative(Volume)
+   * StdDev = sqrt(Cumulative(Volume * TP^2) / Cumulative(Volume) - VWAP^2)
+   *
+   * Bands at various sigma levels:
+   * - Band 1: ±1.28σ (80% confidence)
+   * - Band 2: ±2.01σ (95% confidence)
+   * - Band 3: ±2.51σ (99% confidence)
+   */
+  const calculateVWAPWithBands = (data, volumeData) => {
+    const vwap = [];
+    const bandU1 = [], bandD1 = [];
+    const bandU2 = [], bandD2 = [];
+    const bandU3 = [], bandD3 = [];
+
+    // Standard deviation multipliers (from Pine Script)
+    const dev1 = 1.28;
+    const dev2 = 2.01;
+    const dev3 = 2.51;
+
+    let cumulativeTPV = 0;    // Sum of (TP * Volume)
+    let cumulativeVolume = 0; // Sum of Volume
+    let cumulativeV2 = 0;     // Sum of (Volume * TP^2)
+
+    for (let i = 0; i < data.length; i++) {
+      const high = data[i].high;
+      const low = data[i].low;
+      const close = data[i].close;
+      const tp = (high + low) / 2; // hl2 in Pine Script
+      const volume = volumeData[i]?.value || 0;
+
+      if (volume <= 0) continue;
+
+      cumulativeTPV += tp * volume;
+      cumulativeVolume += volume;
+      cumulativeV2 += volume * tp * tp;
+
+      if (cumulativeVolume > 0) {
+        const vwapValue = cumulativeTPV / cumulativeVolume;
+        // Variance = E[X^2] - E[X]^2
+        const variance = Math.max(0, cumulativeV2 / cumulativeVolume - vwapValue * vwapValue);
+        const stdDev = Math.sqrt(variance);
+
+        const time = data[i].time;
+        vwap.push({ time, value: vwapValue });
+
+        // Calculate bands at each sigma level
+        bandU1.push({ time, value: vwapValue + dev1 * stdDev });
+        bandD1.push({ time, value: vwapValue - dev1 * stdDev });
+        bandU2.push({ time, value: vwapValue + dev2 * stdDev });
+        bandD2.push({ time, value: vwapValue - dev2 * stdDev });
+        bandU3.push({ time, value: vwapValue + dev3 * stdDev });
+        bandD3.push({ time, value: vwapValue - dev3 * stdDev });
+      }
+    }
+
+    return { vwap, bandU1, bandD1, bandU2, bandD2, bandU3, bandD3 };
   };
 
   // Calculate RMA (Relative Moving Average / Wilder's Smoothing)
@@ -506,10 +626,23 @@ const TradingViewChart = ({
 
     // Calculate and set technical indicators
     if (candleData.length >= 3) {
-      // VWAP - resets daily, so calculate from start of visible data
-      const vwapData = calculateVWAP(candleData, volumeData);
-      if (vwapSeriesRef.current && vwapData.length > 0) {
-        vwapSeriesRef.current.setData(vwapData);
+      // VWAP with StdDev Bands - resets daily
+      const vwapBands = calculateVWAPWithBands(candleData, volumeData);
+      if (vwapSeriesRef.current && vwapBands.vwap.length > 0) {
+        vwapSeriesRef.current.setData(vwapBands.vwap);
+      }
+      // Set VWAP bands
+      if (vwapBandU1Ref.current && vwapBands.bandU1.length > 0) {
+        vwapBandU1Ref.current.setData(vwapBands.bandU1);
+        vwapBandD1Ref.current.setData(vwapBands.bandD1);
+      }
+      if (vwapBandU2Ref.current && vwapBands.bandU2.length > 0) {
+        vwapBandU2Ref.current.setData(vwapBands.bandU2);
+        vwapBandD2Ref.current.setData(vwapBands.bandD2);
+      }
+      if (vwapBandU3Ref.current && vwapBands.bandU3.length > 0) {
+        vwapBandU3Ref.current.setData(vwapBands.bandU3);
+        vwapBandD3Ref.current.setData(vwapBands.bandD3);
       }
 
       // 20-period MA (or less if not enough data)
