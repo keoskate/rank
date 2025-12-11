@@ -124,9 +124,13 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           const prevDay = getPreviousBusinessDay(requestDate);
           return fetchCheddarFlow(sym, prevDay, { isRetry: true, useStale });
         } else {
-          setFlowData(data);
-          setDataDate(requestDate);
-          setIsLiveData(false);
+          // No meaningful data - only update state if we don't already have good data
+          // This prevents clearing good cached data with empty responses
+          if (!flowData || !hasFlowActivity(flowData)) {
+            setFlowData(data);
+            setDataDate(requestDate);
+            setIsLiveData(false);
+          }
           setLastFetchedKey(`${sym}-${requestDate}`);
           setFlowLoading(false);
           return data;
@@ -327,7 +331,8 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
               overflow: 'hidden',
             }}>
               <div style={{
-                width: `${flowData.flowData.callFlowPercent || 50}%`,
+                // Clamp between 0 and 100, default to 50 if invalid
+                width: `${Math.min(100, Math.max(0, flowData.flowData.callFlowPercent ?? 50))}%`,
                 height: '100%',
                 backgroundColor: flowData.flowData.sentimentText?.toLowerCase().includes('bullish') ? '#22c55e' :
                                  flowData.flowData.sentimentText?.toLowerCase().includes('bearish') ? '#ef4444' : '#eab308',
