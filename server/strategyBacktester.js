@@ -182,7 +182,7 @@ class StrategyBacktester {
 
     // Circuit breaker state (matches aiTradingEngine)
     let consecutiveLosses = 0;
-    const consecutiveLossLimit = config.consecutiveLossLimit || 3;
+    const consecutiveLossLimit = config.maxConsecutiveLosses || config.consecutiveLossLimit || 3;
     const dailyLossLimitPercent = config.dailyLossLimitPercent || 5;
     let circuitBreakerTriggered = false;
     let circuitBreakerReason = null;

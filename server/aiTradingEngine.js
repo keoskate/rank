@@ -100,24 +100,33 @@ const MARKET_CLOSE_HOUR = 16;
 const MARKET_CLOSE_MINUTE = 0;
 
 // Default configuration
+// Note: Field names align with frontend TradingConfigContext.jsx for seamless import
 const DEFAULT_CONFIG = {
   name: 'Default Strategy',
-  timeframes: ['scalping', 'dayTrading', 'swing'],
+  timeframes: ['dayTrading'],
   maxPositions: 5,
   maxPositionSizePercent: 10,
   riskPerTradePercent: 2,
   dailyLossLimitPercent: 5,
-  consecutiveLossLimit: 3,
-  profitTargetMultiplier: 2, // 2x ATR
-  stopLossMultiplier: 1.5, // 1.5x ATR
-  minConfidence: 40, // Lower threshold for paper trading
+  maxConsecutiveLosses: 3, // Renamed from consecutiveLossLimit to match frontend
+  minConfidence: 70, // Match frontend default
   watchlist: [],
-  autoTrade: true, // Enable auto-trading by default for paper account
-  simulationMode: true, // Tracks virtual P&L without real trades
-  // Exit settings (percentage-based):
-  // takeProfitPercent: 2,     // Take profit at +2% (default)
-  // stopLossPercent: 1,       // Stop loss at -1% (default)
-  // trailingStopPercent: 0,   // Trailing stop disabled by default (set to e.g. 0.5 to enable)
+  autoTrade: false, // Match frontend default - require explicit opt-in
+  // Entry settings
+  entryStrategy: 'balanced',
+  requireVolumeSpike: true,
+  requireTrendAlignment: true,
+  requireRsiSignal: true,
+  minSignalsRequired: 3,
+  rsiOversold: 30,
+  rsiOverbought: 70,
+  volumeMultiplier: 1.5,
+  // Exit settings (percentage-based)
+  takeProfitPercent: 2.0,
+  stopLossPercent: 1.0,
+  trailingStopPercent: 0,
+  useAdaptiveTargets: true,
+  exitOnRsiExtreme: true,
 };
 
 /**
@@ -1217,10 +1226,9 @@ async function executeExit(sessionId, symbol, decision) {
       session.stats.losses++;
       session.stats.consecutiveLosses++;
 
-      // Check circuit breaker
-      if (
-        session.stats.consecutiveLosses >= session.config.consecutiveLossLimit
-      ) {
+      // Check circuit breaker (support both field names for backwards compatibility)
+      const consecutiveLimit = session.config.maxConsecutiveLosses || session.config.consecutiveLossLimit || 3;
+      if (session.stats.consecutiveLosses >= consecutiveLimit) {
         triggerCircuitBreaker(sessionId, 'Consecutive loss limit reached');
       }
     }
@@ -1286,7 +1294,7 @@ function triggerCircuitBreaker(sessionId, reason) {
     reason,
     action: 'Trading paused',
     value: session.stats.consecutiveLosses,
-    threshold: session.config.consecutiveLossLimit,
+    threshold: session.config.maxConsecutiveLosses || session.config.consecutiveLossLimit || 3,
   });
 
   websocketServer.sendAlert(session.userId, {
