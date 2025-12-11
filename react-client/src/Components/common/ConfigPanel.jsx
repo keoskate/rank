@@ -472,6 +472,7 @@ const ConfigPanel = ({
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
   const [saveAsTarget, setSaveAsTarget] = useState(null); // Strategy being overwritten
+  const [saveAsNewName, setSaveAsNewName] = useState(''); // New name for Save As (empty = keep original)
   const [configName, setConfigName] = useState('');
   const fileInputRef = useRef(null);
 
@@ -510,14 +511,23 @@ const ConfigPanel = ({
     setConfigName('');
   };
 
-  // Save As - overwrite existing strategy
+  // Save As - overwrite existing strategy (with optional rename)
   const saveAsConfig = () => {
     if (!saveAsTarget) return;
-    const newSaved = { ...savedConfigs, [saveAsTarget]: config };
+    const finalName = saveAsNewName.trim() || saveAsTarget;
+    const newSaved = { ...savedConfigs };
+
+    // If renaming, delete the old entry
+    if (finalName !== saveAsTarget) {
+      delete newSaved[saveAsTarget];
+    }
+
+    newSaved[finalName] = config;
     setSavedConfigs(newSaved);
     localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
     setShowSaveAsDialog(false);
     setSaveAsTarget(null);
+    setSaveAsNewName('');
   };
 
   // Get differences between current config and saved config
@@ -951,6 +961,7 @@ const ConfigPanel = ({
               onChange={e => {
                 if (e.target.value) {
                   setSaveAsTarget(e.target.value);
+                  setSaveAsNewName(''); // Reset name field
                   setShowSaveAsDialog(true);
                 }
                 e.target.value = '';
@@ -1122,8 +1133,43 @@ const ConfigPanel = ({
             onClick={e => e.stopPropagation()}
           >
             <h3 style={{ marginTop: 0, marginBottom: theme.spacing.md }}>
-              Save to "{saveAsTarget}"
+              Save Strategy
             </h3>
+
+            {/* Strategy Name Input */}
+            <div style={{ marginBottom: theme.spacing.md }}>
+              <label style={{
+                display: 'block',
+                marginBottom: theme.spacing.xs,
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: 500,
+              }}>
+                Strategy Name
+              </label>
+              <input
+                type="text"
+                value={saveAsNewName}
+                onChange={e => setSaveAsNewName(e.target.value)}
+                placeholder={saveAsTarget}
+                style={{
+                  width: '100%',
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.sm,
+                  border: `1px solid ${theme.colors.border}`,
+                  fontSize: theme.typography.fontSize.md,
+                  boxSizing: 'border-box',
+                }}
+              />
+              <p style={{
+                margin: `${theme.spacing.xs} 0 0 0`,
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.textMuted,
+              }}>
+                {saveAsNewName.trim() && saveAsNewName.trim() !== saveAsTarget
+                  ? `Will rename "${saveAsTarget}" to "${saveAsNewName.trim()}"`
+                  : 'Leave empty to keep the current name'}
+              </p>
+            </div>
 
             {(() => {
               const diffs = getConfigDiff(savedConfigs[saveAsTarget]);
