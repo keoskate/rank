@@ -267,21 +267,27 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
               color: 'white',
               borderRadius: theme.borderRadius.md,
               marginBottom: theme.spacing.md,
+              overflow: 'hidden',
             }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: theme.spacing.md,
               }}>
-                <div>
-                  <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: 'bold' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: theme.typography.fontSize.lg,
+                    fontWeight: 'bold',
+                    lineHeight: 1.3,
+                  }}>
                     {getVerdictLabel(results.verdict?.verdict)}
                   </div>
                   <div style={{ fontSize: theme.typography.fontSize.sm, opacity: 0.9 }}>
                     Confidence: {results.verdict?.confidence}
                   </div>
                 </div>
-                <div style={{ fontSize: '32px' }}>
+                <div style={{ fontSize: '32px', flexShrink: 0 }}>
                   {results.verdict?.verdict === 'READY_FOR_PAPER_TRADING' && '🎉'}
                   {results.verdict?.verdict === 'PROMISING_NEEDS_REFINEMENT' && '🔧'}
                   {results.verdict?.verdict === 'NEEDS_WORK' && '⚠️'}
@@ -409,32 +415,51 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
                 <h4 style={{ margin: 0, marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.sm }}>
                   Performance by Market Regime
                 </h4>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: theme.spacing.sm,
-                }}>
-                  {['bull', 'bear', 'sideways'].map(regime => (
-                    <div
-                      key={regime}
-                      style={{
-                        padding: theme.spacing.sm,
-                        backgroundColor: regime === 'bull' ? '#dcfce7'
-                          : regime === 'bear' ? '#fee2e2' : '#fef9c3',
-                        borderRadius: theme.borderRadius.sm,
-                        fontSize: theme.typography.fontSize.xs,
-                      }}
-                    >
-                      <div style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
-                        {regime === 'bull' && '📈'} {regime === 'bear' && '📉'} {regime === 'sideways' && '↔️'}
-                        {regime}
+                {/* Check if we have any regime data (not all unknown) */}
+                {(results.regimeBreakdown.bull?.days > 0 ||
+                  results.regimeBreakdown.bear?.days > 0 ||
+                  results.regimeBreakdown.sideways?.days > 0) ? (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: theme.spacing.sm,
+                  }}>
+                    {['bull', 'bear', 'sideways'].map(regime => (
+                      <div
+                        key={regime}
+                        style={{
+                          padding: theme.spacing.sm,
+                          backgroundColor: regime === 'bull' ? '#dcfce7'
+                            : regime === 'bear' ? '#fee2e2' : '#fef9c3',
+                          borderRadius: theme.borderRadius.sm,
+                          fontSize: theme.typography.fontSize.xs,
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
+                          {regime === 'bull' && '📈 '}{regime === 'bear' && '📉 '}{regime === 'sideways' && '↔️ '}
+                          {regime}
+                        </div>
+                        <div>Days: {results.regimeBreakdown[regime]?.days || 0}</div>
+                        <div>Avg Return: {results.regimeBreakdown[regime]?.avgReturn || 0}%</div>
+                        <div>Win Rate: {results.regimeBreakdown[regime]?.winRate || 0}%</div>
                       </div>
-                      <div>Days: {results.regimeBreakdown[regime]?.days || 0}</div>
-                      <div>Avg Return: {results.regimeBreakdown[regime]?.avgReturn || 0}%</div>
-                      <div>Win Rate: {results.regimeBreakdown[regime]?.winRate || 0}%</div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: theme.spacing.md,
+                    backgroundColor: theme.colors.gray100,
+                    borderRadius: theme.borderRadius.sm,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.textMuted,
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ marginBottom: theme.spacing.xs }}>📊 Regime data unavailable</div>
+                    <div style={{ fontSize: theme.typography.fontSize.xs }}>
+                      Regime detection requires 50+ days of historical data for accurate classification.
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
