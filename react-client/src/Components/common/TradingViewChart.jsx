@@ -12,6 +12,29 @@ import theme from '../../theme';
  * - Current position indicator
  * - Responsive sizing
  */
+// Default indicator visibility settings
+const DEFAULT_INDICATORS = {
+  vwap: true,
+  vwapBands: false, // StdDev bands off by default (can be noisy)
+  ma20: true,
+  ema9: true,
+  volume: true,
+  rsi: true,
+};
+
+// Load indicator preferences from localStorage
+const loadIndicatorPrefs = () => {
+  try {
+    const saved = localStorage.getItem('chart-indicators');
+    if (saved) {
+      return { ...DEFAULT_INDICATORS, ...JSON.parse(saved) };
+    }
+  } catch (e) {
+    console.warn('Failed to load indicator preferences:', e);
+  }
+  return DEFAULT_INDICATORS;
+};
+
 const TradingViewChart = ({
   candles = [],
   currentCandleIndex = 0,
@@ -43,6 +66,22 @@ const TradingViewChart = ({
   const vwapBandD3Ref = useRef(null);
   const [isReady, setIsReady] = useState(false);
   const [chartError, setChartError] = useState(null);
+
+  // Indicator visibility state with localStorage persistence
+  const [indicators, setIndicators] = useState(loadIndicatorPrefs);
+
+  // Save indicator preferences to localStorage
+  const toggleIndicator = (key) => {
+    setIndicators(prev => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('chart-indicators', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to save indicator preferences:', e);
+      }
+      return updated;
+    });
+  };
 
   // Initialize chart
   useEffect(() => {
@@ -620,51 +659,51 @@ const TradingViewChart = ({
       };
     }).filter(v => v.value > 0);
 
-    // Set candlestick and volume data
+    // Set candlestick data (always shown)
     candlestickSeriesRef.current.setData(candleData);
-    volumeSeriesRef.current.setData(volumeData);
 
-    // Calculate and set technical indicators
+    // Set volume data (respects indicator toggle)
+    if (volumeSeriesRef.current) {
+      volumeSeriesRef.current.setData(indicators.volume ? volumeData : []);
+    }
+
+    // Calculate and set technical indicators (respecting visibility toggles)
     if (candleData.length >= 3) {
       // VWAP with StdDev Bands - resets daily
       const vwapBands = calculateVWAPWithBands(candleData, volumeData);
-      if (vwapSeriesRef.current && vwapBands.vwap.length > 0) {
-        vwapSeriesRef.current.setData(vwapBands.vwap);
+
+      // VWAP line
+      if (vwapSeriesRef.current) {
+        vwapSeriesRef.current.setData(indicators.vwap ? vwapBands.vwap : []);
       }
-      // Set VWAP bands
-      if (vwapBandU1Ref.current && vwapBands.bandU1.length > 0) {
-        vwapBandU1Ref.current.setData(vwapBands.bandU1);
-        vwapBandD1Ref.current.setData(vwapBands.bandD1);
-      }
-      if (vwapBandU2Ref.current && vwapBands.bandU2.length > 0) {
-        vwapBandU2Ref.current.setData(vwapBands.bandU2);
-        vwapBandD2Ref.current.setData(vwapBands.bandD2);
-      }
-      if (vwapBandU3Ref.current && vwapBands.bandU3.length > 0) {
-        vwapBandU3Ref.current.setData(vwapBands.bandU3);
-        vwapBandD3Ref.current.setData(vwapBands.bandD3);
+
+      // VWAP bands (separate toggle)
+      if (vwapBandU1Ref.current) {
+        const bandData = indicators.vwapBands ? vwapBands : { bandU1: [], bandD1: [], bandU2: [], bandD2: [], bandU3: [], bandD3: [] };
+        vwapBandU1Ref.current.setData(bandData.bandU1);
+        vwapBandD1Ref.current.setData(bandData.bandD1);
+        vwapBandU2Ref.current.setData(bandData.bandU2);
+        vwapBandD2Ref.current.setData(bandData.bandD2);
+        vwapBandU3Ref.current.setData(bandData.bandU3);
+        vwapBandD3Ref.current.setData(bandData.bandD3);
       }
 
       // 20-period MA (or less if not enough data)
       const ma20Period = Math.min(20, Math.floor(candleData.length / 2));
-      if (ma20Period >= 3) {
+      if (ma20Period >= 3 && ma20SeriesRef.current) {
         const ma20Data = calculateSMA(candleData, ma20Period);
-        if (ma20SeriesRef.current && ma20Data.length > 0) {
-          ma20SeriesRef.current.setData(ma20Data);
-        }
+        ma20SeriesRef.current.setData(indicators.ma20 ? ma20Data : []);
       }
 
       // 9-period EMA (or less if not enough data)
       const ema9Period = Math.min(9, Math.floor(candleData.length / 2));
-      if (ema9Period >= 3) {
+      if (ema9Period >= 3 && ema9SeriesRef.current) {
         const ema9Data = calculateEMA(candleData, ema9Period);
-        if (ema9SeriesRef.current && ema9Data.length > 0) {
-          ema9SeriesRef.current.setData(ema9Data);
-        }
+        ema9SeriesRef.current.setData(indicators.ema9 ? ema9Data : []);
       }
 
-      // Calculate and update Ultimate RSI
-      if (showRSI && rsiSeriesRef.current && candleData.length >= 30) {
+      // Calculate and update Ultimate RSI (respects both showRSI prop and indicator toggle)
+      if (showRSI && indicators.rsi && rsiSeriesRef.current && candleData.length >= 30) {
         const { rsi, signal } = calculateUltimateRSI(candleData, 14, 14);
         if (rsi.length > 0) {
           rsiSeriesRef.current.setData(rsi);
@@ -676,6 +715,12 @@ const TradingViewChart = ({
         // Fit RSI chart content
         if (rsiChartRef.current) {
           rsiChartRef.current.timeScale().fitContent();
+        }
+      } else if (rsiSeriesRef.current) {
+        // Clear RSI data if disabled
+        rsiSeriesRef.current.setData([]);
+        if (rsiSignalSeriesRef.current) {
+          rsiSignalSeriesRef.current.setData([]);
         }
       }
     }
@@ -718,7 +763,7 @@ const TradingViewChart = ({
       chartRef.current.timeScale().fitContent();
     }
 
-  }, [candles, currentCandleIndex, trades, isReady]);
+  }, [candles, currentCandleIndex, trades, isReady, indicators]);
 
   // Update chart height
   useEffect(() => {
@@ -826,6 +871,56 @@ const TradingViewChart = ({
             )}
           </div>
         )}
+      </div>
+
+      {/* Indicator Toggle Bar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: theme.spacing.xs,
+        padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.gray50,
+        fontSize: '11px',
+        flexWrap: 'wrap',
+      }}>
+        <span style={{ color: theme.colors.textMuted, marginRight: theme.spacing.xs }}>Indicators:</span>
+        {[
+          { key: 'vwap', label: 'VWAP', color: '#3b82f6' },
+          { key: 'vwapBands', label: 'VWAP Bands', color: '#9ca3af' },
+          { key: 'ma20', label: 'MA20', color: '#f97316' },
+          { key: 'ema9', label: 'EMA9', color: '#8b5cf6' },
+          { key: 'volume', label: 'Volume', color: '#26a69a' },
+          { key: 'rsi', label: 'RSI', color: '#6366f1' },
+        ].map(({ key, label, color }) => (
+          <button
+            key={key}
+            onClick={() => toggleIndicator(key)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 8px',
+              border: `1px solid ${indicators[key] ? color : theme.colors.gray300}`,
+              borderRadius: theme.borderRadius.sm,
+              backgroundColor: indicators[key] ? `${color}15` : 'transparent',
+              color: indicators[key] ? color : theme.colors.textMuted,
+              cursor: 'pointer',
+              fontSize: '10px',
+              fontWeight: indicators[key] ? 'bold' : 'normal',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '2px',
+              backgroundColor: indicators[key] ? color : 'transparent',
+              border: `1px solid ${color}`,
+            }} />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* TradingView Chart */}

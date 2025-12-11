@@ -272,6 +272,29 @@ class CheddarFlowScraper {
       // Give extra time for dynamic content to load
       await new Promise(resolve => setTimeout(resolve, 3000));
 
+      // Check if redirected to login page
+      const currentUrl = this.page.url();
+      if (currentUrl.includes('login') || currentUrl.includes('auth.cheddarflow')) {
+        console.log('[CheddarFlow] Session expired - redirected to login');
+        // Clear invalid cookies
+        try {
+          const fs = require('fs');
+          if (fs.existsSync(COOKIE_FILE)) {
+            fs.unlinkSync(COOKIE_FILE);
+            console.log('[CheddarFlow] Deleted expired cookies file');
+          }
+        } catch (e) {
+          // Ignore
+        }
+        return {
+          symbol: symbol.toUpperCase(),
+          date: targetDate,
+          error: 'Session expired. Please re-authenticate.',
+          needsAuth: true,
+          scraped: false,
+        };
+      }
+
       // Extract data from the page
       const flowData = await this.page.evaluate(() => {
         const result = {

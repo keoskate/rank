@@ -56,11 +56,17 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           });
         }
 
+        // Check if data indicates auth is needed
+        if (data.flowData?.needsAuth || data.flowData?.error?.includes('expired')) {
+          setFlowError('Session expired. Close Chrome browser, then click refresh.');
+          return null;
+        }
+
         return data;
       } else {
         const err = await response.json();
-        if (err.error?.includes('Chrome') || err.error?.includes('auth')) {
-          setFlowError('Close Chrome and retry to authenticate.');
+        if (err.error?.includes('Chrome') || err.error?.includes('auth') || err.error?.includes('expired')) {
+          setFlowError('Session expired. Close Chrome browser, then click refresh to re-authenticate.');
         } else {
           setFlowError(err.error || 'Failed to fetch flow data');
         }
