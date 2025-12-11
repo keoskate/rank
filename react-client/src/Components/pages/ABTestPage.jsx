@@ -29,7 +29,7 @@ const CONFIG_SCHEMA = {
     dailyLossLimitPercent: { label: 'Daily Loss Limit %', type: 'number', min: 1, max: 20, step: 1 },
     weeklyLossLimitPercent: { label: 'Weekly Loss Limit %', type: 'number', min: 2, max: 30, step: 1 },
     maxConsecutiveLosses: { label: 'Max Consecutive Losses', type: 'number', min: 1, max: 10, step: 1 },
-    trailingStopPercent: { label: 'Trailing Stop %', type: 'number', min: 0, max: 10, step: 0.5 },
+    trailingStopPercent: { label: 'Trailing Stop (% of TP)', type: 'number', min: 0, max: 100, step: 10 },
   },
   'AI Model Parameters': {
     minConfidence: { label: 'Min Confidence %', type: 'number', min: 50, max: 95, step: 5 },

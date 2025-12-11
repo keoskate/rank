@@ -233,7 +233,7 @@ class StrategyBacktester {
         const pnlPercent = ((price - position.entryPrice) / position.entryPrice) * 100;
         const holdTime = i - position.entryIndex;
 
-        const sellSignal = this.checkSellSignal(indicators, config, pnlPercent, estHour, holdTime, position.highWaterMark, price);
+        const sellSignal = this.checkSellSignal(indicators, config, pnlPercent, estHour, holdTime, position.highWaterMark, price, position.entryPrice);
         if (sellSignal.shouldSell) {
           const proceeds = position.shares * price;
           const tradePnL = proceeds - (position.shares * position.entryPrice);
@@ -481,7 +481,7 @@ class StrategyBacktester {
    * @param {number} highWaterMark - Highest price since entry (for trailing stop)
    * @param {number} currentPrice - Current price
    */
-  checkSellSignal(indicators, config, pnlPercent, estHour, holdTime, highWaterMark, currentPrice) {
+  checkSellSignal(indicators, config, pnlPercent, estHour, holdTime, highWaterMark, currentPrice, entryPrice) {
     const { rsi } = indicators;
     const minHoldCandles = 5;
 
@@ -495,15 +495,19 @@ class StrategyBacktester {
       return { shouldSell: true, reason: `Stop loss (${pnlPercent.toFixed(2)}%)` };
     }
 
-    // Trailing stop - only activates when in profit
-    // Default: 1.5% trailing stop (sells if price drops 1.5% from highest point)
-    const trailingStopPercent = config.trailingStopPercent || 1.5;
-    if (trailingStopPercent > 0 && highWaterMark && currentPrice && pnlPercent > 0) {
-      const dropFromHigh = ((highWaterMark - currentPrice) / highWaterMark) * 100;
-      if (dropFromHigh >= trailingStopPercent) {
+    // Trailing stop - now a % of gains to lock in (e.g., 50 means lock in 50% of gains)
+    // 0 = disabled, values 0-100 represent % of gains to protect
+    const trailingStopOfTP = config.trailingStopPercent || 0;
+    if (trailingStopOfTP > 0 && highWaterMark && highWaterMark > entryPrice && pnlPercent > 0) {
+      const gainFromEntry = highWaterMark - entryPrice;
+      const allowedDropFromHigh = gainFromEntry * (100 - trailingStopOfTP) / 100;
+      const triggerPrice = highWaterMark - allowedDropFromHigh;
+      const lockedInGainPercent = ((triggerPrice - entryPrice) / entryPrice) * 100;
+
+      if (currentPrice <= triggerPrice) {
         return {
           shouldSell: true,
-          reason: `Trailing stop (${dropFromHigh.toFixed(2)}% from high of $${highWaterMark.toFixed(2)})`
+          reason: `Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${((highWaterMark - entryPrice) / entryPrice * 100).toFixed(2)}% gain)`
         };
       }
     }

@@ -222,13 +222,14 @@ const CONFIG_SCHEMA = {
       risk: 'higher-risky',
     },
     trailingStopPercent: {
-      label: 'Trailing Stop %',
+      label: 'Trailing Stop (% of TP)',
       type: 'slider',
       min: 0,
-      max: 5,
-      step: 0.25,
-      tooltip: 'Dynamic stop that follows price up. 0 = disabled',
+      max: 100,
+      step: 10,
+      tooltip: 'Lock in gains when price drops from high. E.g., 50% means sell if price drops halfway back to entry. 0 = disabled',
       risk: 'neutral',
+      suffix: '%',
     },
   },
   'AI Model Parameters': {
@@ -469,6 +470,8 @@ const ConfigPanel = ({
     }
   });
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
+  const [saveAsTarget, setSaveAsTarget] = useState(null); // Strategy being overwritten
   const [configName, setConfigName] = useState('');
   const fileInputRef = useRef(null);
 
@@ -505,6 +508,47 @@ const ConfigPanel = ({
     localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
     setShowSaveDialog(false);
     setConfigName('');
+  };
+
+  // Save As - overwrite existing strategy
+  const saveAsConfig = () => {
+    if (!saveAsTarget) return;
+    const newSaved = { ...savedConfigs, [saveAsTarget]: config };
+    setSavedConfigs(newSaved);
+    localStorage.setItem('saved-trading-configs', JSON.stringify(newSaved));
+    setShowSaveAsDialog(false);
+    setSaveAsTarget(null);
+  };
+
+  // Get differences between current config and saved config
+  const getConfigDiff = (savedConfig) => {
+    const diffs = [];
+    const allKeys = new Set([...Object.keys(config), ...Object.keys(savedConfig || {})]);
+
+    // Find field labels from schema
+    const getFieldLabel = (key) => {
+      for (const category of Object.keys(CONFIG_SCHEMA)) {
+        if (CONFIG_SCHEMA[category][key]) {
+          return CONFIG_SCHEMA[category][key].label || key;
+        }
+      }
+      return key;
+    };
+
+    allKeys.forEach(key => {
+      const oldVal = savedConfig?.[key];
+      const newVal = config[key];
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+        diffs.push({
+          field: key,
+          label: getFieldLabel(key),
+          oldValue: oldVal,
+          newValue: newVal,
+        });
+      }
+    });
+
+    return diffs;
   };
 
   const loadConfig = name => {
@@ -900,8 +944,36 @@ const ConfigPanel = ({
               fontSize: theme.typography.fontSize.sm,
             }}
           >
-            💾 Save Config
+            💾 Save New
           </button>
+          {Object.keys(savedConfigs).length > 0 && (
+            <select
+              onChange={e => {
+                if (e.target.value) {
+                  setSaveAsTarget(e.target.value);
+                  setShowSaveAsDialog(true);
+                }
+                e.target.value = '';
+              }}
+              value=""
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                borderRadius: theme.borderRadius.sm,
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.success,
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: theme.typography.fontSize.sm,
+              }}
+            >
+              <option value="">💾 Save As...</option>
+              {Object.keys(savedConfigs).map(name => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={exportConfig}
             style={{
@@ -1014,6 +1086,126 @@ const ConfigPanel = ({
           >
             Cancel
           </button>
+        </div>
+      )}
+
+      {/* Save As Dialog with Diff */}
+      {showSaveAsDialog && saveAsTarget && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            setShowSaveAsDialog(false);
+            setSaveAsTarget(null);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: theme.borderRadius.lg,
+              padding: theme.spacing.lg,
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: theme.spacing.md }}>
+              Save to "{saveAsTarget}"
+            </h3>
+
+            {(() => {
+              const diffs = getConfigDiff(savedConfigs[saveAsTarget]);
+              if (diffs.length === 0) {
+                return (
+                  <p style={{ color: theme.colors.textMuted }}>
+                    No changes detected.
+                  </p>
+                );
+              }
+
+              return (
+                <>
+                  <p style={{ marginBottom: theme.spacing.sm, color: theme.colors.textMuted }}>
+                    {diffs.length} change{diffs.length !== 1 ? 's' : ''} will be saved:
+                  </p>
+                  <div style={{
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.borderRadius.sm,
+                    overflow: 'hidden',
+                    marginBottom: theme.spacing.md,
+                  }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.typography.fontSize.sm }}>
+                      <thead>
+                        <tr style={{ backgroundColor: theme.colors.gray100 }}>
+                          <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.border}` }}>Setting</th>
+                          <th style={{ padding: theme.spacing.sm, textAlign: 'right', borderBottom: `1px solid ${theme.colors.border}` }}>Old</th>
+                          <th style={{ padding: theme.spacing.sm, textAlign: 'center', borderBottom: `1px solid ${theme.colors.border}` }}>→</th>
+                          <th style={{ padding: theme.spacing.sm, textAlign: 'left', borderBottom: `1px solid ${theme.colors.border}` }}>New</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {diffs.map(diff => (
+                          <tr key={diff.field}>
+                            <td style={{ padding: theme.spacing.sm, fontWeight: 500 }}>{diff.label}</td>
+                            <td style={{ padding: theme.spacing.sm, textAlign: 'right', color: '#ef4444' }}>
+                              {diff.oldValue === undefined ? '—' : String(diff.oldValue)}
+                            </td>
+                            <td style={{ padding: theme.spacing.sm, textAlign: 'center', color: theme.colors.textMuted }}>→</td>
+                            <td style={{ padding: theme.spacing.sm, textAlign: 'left', color: '#22c55e' }}>
+                              {diff.newValue === undefined ? '—' : String(diff.newValue)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
+
+            <div style={{ display: 'flex', gap: theme.spacing.sm, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowSaveAsDialog(false);
+                  setSaveAsTarget(null);
+                }}
+                style={{
+                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                  borderRadius: theme.borderRadius.sm,
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveAsConfig}
+                style={{
+                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                  borderRadius: theme.borderRadius.sm,
+                  border: 'none',
+                  backgroundColor: theme.colors.success,
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Confirm Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

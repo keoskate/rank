@@ -811,14 +811,20 @@ async function evaluateExit(sessionId, symbol) {
       factors.push(`Stop loss -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`);
     }
 
-    // Trailing stop - only activates when position is in profit
-    const trailingStopPercent = cfg.trailingStopPercent || 0; // Default 0 = disabled
-    if (trailingStopPercent > 0 && position.highWaterMark && pnlPercent > 0) {
-      const dropFromHigh = ((position.highWaterMark - currentPrice) / position.highWaterMark) * 100;
-      if (dropFromHigh >= trailingStopPercent) {
+    // Trailing stop - now a % of gains to lock in (e.g., 50 means lock in 50% of gains)
+    // 0 = disabled, values 0-100 represent % of gains to protect
+    const trailingStopOfTP = cfg.trailingStopPercent || 0;
+    const entryPrice = position.averageCost;
+    if (trailingStopOfTP > 0 && position.highWaterMark && position.highWaterMark > entryPrice && pnlPercent > 0) {
+      const gainFromEntry = position.highWaterMark - entryPrice;
+      const allowedDropFromHigh = gainFromEntry * (100 - trailingStopOfTP) / 100;
+      const triggerPrice = position.highWaterMark - allowedDropFromHigh;
+      const lockedInGainPercent = ((triggerPrice - entryPrice) / entryPrice) * 100;
+
+      if (currentPrice <= triggerPrice) {
         exitScore += 45;
         exitReason = 'Trailing stop triggered';
-        factors.push(`Trailing stop (${dropFromHigh.toFixed(2)}% drop from high $${position.highWaterMark.toFixed(2)})`);
+        factors.push(`Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${((position.highWaterMark - entryPrice) / entryPrice * 100).toFixed(2)}% gain)`);
       }
     }
 

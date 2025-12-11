@@ -201,7 +201,8 @@ const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex,
   const rsiOverbought = cfg.rsiOverbought || 70;
   const profitTargetPercent = cfg.takeProfitPercent || 2;
   const stopLossPercent = cfg.stopLossPercent || 1;
-  const trailingStopPercent = cfg.trailingStopPercent || 0; // Default 0 = disabled
+  // Trailing stop is now a % of gains to lock in (e.g., 50 means lock in 50% of gains from high)
+  const trailingStopOfTP = cfg.trailingStopPercent || 0; // 0-100, represents % of gains to protect
 
   const estHour = getEstHour(timestamp);
   const { rsi, vwap, priceChange } = indicators;
@@ -224,13 +225,18 @@ const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex,
   }
 
   // Trailing stop - only activates when in profit and price drops from high
+  // trailingStopOfTP is 0-100: e.g., 50 means "lock in 50% of gains" (sell if price drops 50% back toward entry)
   let trailingStopTriggered = false;
-  if (trailingStopPercent > 0 && highWaterMark && pnlPercent > 0) {
-    const dropFromHigh = ((highWaterMark - price) / highWaterMark) * 100;
-    if (dropFromHigh >= trailingStopPercent) {
+  if (trailingStopOfTP > 0 && highWaterMark && highWaterMark > entryPrice && pnlPercent > 0) {
+    const gainFromEntry = highWaterMark - entryPrice;
+    const allowedDropFromHigh = gainFromEntry * (100 - trailingStopOfTP) / 100;
+    const triggerPrice = highWaterMark - allowedDropFromHigh;
+    const lockedInGainPercent = ((triggerPrice - entryPrice) / entryPrice) * 100;
+
+    if (price <= triggerPrice) {
       sellScore += 35;
       trailingStopTriggered = true;
-      reasons.push(`Trailing stop (${dropFromHigh.toFixed(2)}% from high $${highWaterMark.toFixed(2)})`);
+      reasons.push(`Trailing stop (locked in ${lockedInGainPercent.toFixed(2)}% of ${((highWaterMark - entryPrice) / entryPrice * 100).toFixed(2)}% gain)`);
     }
   }
 

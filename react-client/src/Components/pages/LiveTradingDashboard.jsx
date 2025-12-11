@@ -92,6 +92,14 @@ const LiveTradingDashboard = () => {
   const [showConfig, setShowConfig] = useState(false);
   const [configSection, setConfigSection] = useState('capital'); // 'capital', 'risk', 'ai', 'entry', 'exit'
   const [configLoaded, setConfigLoaded] = useState(false); // Track if we've loaded config from server
+  const [savedConfigs, setSavedConfigs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('saved-trading-configs') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const [showLoadConfigDropdown, setShowLoadConfigDropdown] = useState(false);
 
   // Loading states - separate for each section to avoid full page re-renders
   const [loading, setLoading] = useState(false);
@@ -608,6 +616,29 @@ const LiveTradingDashboard = () => {
     }
   };
 
+  // Load a saved config from localStorage (from simulator ConfigPanel)
+  const loadSavedConfig = (name) => {
+    const loaded = savedConfigs[name];
+    if (loaded) {
+      // Apply all fields from the saved config
+      Object.entries(loaded).forEach(([key, value]) => {
+        contextUpdateConfig({ [key]: value });
+      });
+      addAlert('success', 'Config Loaded', `Loaded "${name}" configuration`);
+      setShowLoadConfigDropdown(false);
+    }
+  };
+
+  // Refresh saved configs from localStorage
+  const refreshSavedConfigs = () => {
+    try {
+      const configs = JSON.parse(localStorage.getItem('saved-trading-configs') || '{}');
+      setSavedConfigs(configs);
+    } catch (e) {
+      console.error('Failed to load saved configs:', e);
+    }
+  };
+
   const saveConfig = async () => {
     // Clear editing flag when saving
     setIsEditingConfig(false);
@@ -858,6 +889,33 @@ const LiveTradingDashboard = () => {
         </div>
       )}
 
+      {/* Empty Watchlist Warning Banner - Always visible when watchlist is empty and session is running */}
+      {config.watchlist.length === 0 && sessionStatus === 'running' && !showConfig && (
+        <Card
+          style={{
+            marginBottom: theme.spacing.lg,
+            padding: theme.spacing.md,
+            backgroundColor: `${theme.colors.warning}15`,
+            border: `2px solid ${theme.colors.warning}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+            <span style={{ fontSize: '28px' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ margin: 0, color: theme.colors.warning, marginBottom: theme.spacing.xs }}>
+                No Symbols in Watchlist - Trading Disabled
+              </h4>
+              <p style={{ margin: 0, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+                Your trading session is running but has no symbols to analyze. Add symbols to the watchlist to enable trading.
+              </p>
+            </div>
+            <Button variant="warning" size="small" onClick={() => setShowConfig(true)}>
+              Configure Watchlist
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Configuration Panel - Enhanced */}
       {showConfig && (
         <Card
@@ -894,7 +952,65 @@ const LiveTradingDashboard = () => {
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+            <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+              {/* Load Config Dropdown */}
+              <div style={{ position: 'relative' }}>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    refreshSavedConfigs();
+                    setShowLoadConfigDropdown(!showLoadConfigDropdown);
+                  }}
+                >
+                  Load Config
+                </Button>
+                {showLoadConfigDropdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: theme.spacing.xs,
+                      backgroundColor: '#fff',
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.md,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      zIndex: 100,
+                      minWidth: '200px',
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {Object.keys(savedConfigs).length === 0 ? (
+                      <div style={{ padding: theme.spacing.md, color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                        No saved configs found. Save a config from the Simulator to import it here.
+                      </div>
+                    ) : (
+                      Object.keys(savedConfigs).map(name => (
+                        <button
+                          key={name}
+                          onClick={() => loadSavedConfig(name)}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: theme.spacing.sm,
+                            border: 'none',
+                            background: 'transparent',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            fontSize: theme.typography.fontSize.sm,
+                          }}
+                          onMouseEnter={e => e.target.style.backgroundColor = theme.colors.gray100}
+                          onMouseLeave={e => e.target.style.backgroundColor = 'transparent'}
+                        >
+                          {name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
               <Button onClick={saveConfig} size="small">
                 Save Configuration
               </Button>
@@ -907,6 +1023,30 @@ const LiveTradingDashboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Empty Watchlist Warning */}
+          {config.watchlist.length === 0 && (
+            <div
+              style={{
+                marginBottom: theme.spacing.md,
+                padding: theme.spacing.md,
+                backgroundColor: `${theme.colors.error}10`,
+                borderRadius: theme.borderRadius.md,
+                border: `1px solid ${theme.colors.error}30`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.sm,
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+              <div>
+                <strong style={{ color: theme.colors.error }}>No symbols in watchlist!</strong>
+                <p style={{ margin: 0, marginTop: '4px', fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+                  Add symbols below to enable trading. Without a watchlist, the AI has no stocks to analyze.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Config Section Tabs */}
           <div
@@ -1604,13 +1744,13 @@ const LiveTradingDashboard = () => {
                       fontSize: theme.typography.fontSize.sm,
                     }}
                   >
-                    Trailing Stop %
+                    Trailing Stop (% of TP)
                   </label>
                   <input
                     type="number"
                     min="0"
-                    max="10"
-                    step="0.5"
+                    max="100"
+                    step="10"
                     value={config.trailingStopPercent}
                     onChange={e =>
                       updateConfig(
@@ -2099,11 +2239,17 @@ const LiveTradingDashboard = () => {
                       fontSize: theme.typography.fontSize.md,
                     }}
                   >
-                    <option value="conservative">
-                      Conservative (wait for strong signals)
+                    <option value="dip">
+                      Buy the Dip (RSI oversold + below VWAP)
+                    </option>
+                    <option value="momentum">
+                      Momentum (RSI breakout + volume)
                     </option>
                     <option value="balanced">
                       Balanced (standard approach)
+                    </option>
+                    <option value="conservative">
+                      Conservative (wait for strong signals)
                     </option>
                     <option value="aggressive">
                       Aggressive (act on early signals)
