@@ -422,7 +422,9 @@ class CheddarFlowScraper {
           symbol: null,
           date: null,
           sentimentText: null,
+          sentimentPercent: null, // The bullish/bearish percentage (green bar fill)
           putCallRatio: null,
+          putCallRatioDisplay: null, // The circular indicator value (0.79 etc)
           callFlow: null,
           putFlow: null,
           callFlowPercent: null,
@@ -433,11 +435,9 @@ class CheddarFlowScraper {
           scraped: true,
         };
 
-        // Try to find sentiment text
-        // Looking for elements that contain "Bullish", "Bearish", or "Neutral"
         const allText = document.body.innerText;
 
-        // Flow sentiment
+        // Flow sentiment (Bullish/Bearish/Neutral)
         if (allText.includes('Flow sentiment')) {
           const sentimentMatch = allText.match(/Flow sentiment[\s\S]*?(Bullish|Bearish|Neutral)/i);
           if (sentimentMatch) {
@@ -445,17 +445,47 @@ class CheddarFlowScraper {
           }
         }
 
-        // Put to call ratio
+        // Try to extract the sentiment percentage from the progress bar
+        // Look for a progress bar or percentage near the sentiment
+        const progressBars = document.querySelectorAll('[role="progressbar"], [class*="progress"], [class*="bar"]');
+        progressBars.forEach(bar => {
+          const width = bar.style?.width;
+          if (width && width.includes('%')) {
+            const percent = parseFloat(width);
+            if (percent > 0 && percent <= 100) {
+              result.sentimentPercent = percent;
+            }
+          }
+          // Also check aria-valuenow
+          const ariaValue = bar.getAttribute('aria-valuenow');
+          if (ariaValue) {
+            result.sentimentPercent = parseFloat(ariaValue);
+          }
+        });
+
+        // If no progress bar found, estimate from call flow percentage
+        // Bullish sentiment correlates with higher call flow %
+        if (!result.sentimentPercent && result.sentimentText) {
+          // We'll calculate this after we have callFlowPercent
+        }
+
+        // Put to call ratio - get both the main value and the circular display value
         const putCallMatch = allText.match(/Put to call[\s\S]*?([\d.]+)/i);
         if (putCallMatch) {
           result.putCallRatio = parseFloat(putCallMatch[1]);
         }
 
-        // Call flow value (e.g., "$2.3M")
-        const callFlowMatch = allText.match(/Call flow[\s\S]*?\$([\d.]+)([KMB])?/i);
-        if (callFlowMatch) {
-          let value = parseFloat(callFlowMatch[1]);
-          const multiplier = callFlowMatch[2];
+        // Look for the circular indicator value (usually shows as 0.xx)
+        const circleValues = allText.match(/Put to call[\s\S]*?([\d.]+)[\s\S]*?([\d.]+)/i);
+        if (circleValues && circleValues[2]) {
+          result.putCallRatioDisplay = parseFloat(circleValues[2]);
+        }
+
+        // Call flow value and dollar amount (e.g., "$549.8M")
+        const callFlowSection = allText.match(/Call flow[\s\S]*?\$([\d.,]+)([KMB])?/i);
+        if (callFlowSection) {
+          let value = parseFloat(callFlowSection[1].replace(/,/g, ''));
+          const multiplier = callFlowSection[2];
           if (multiplier === 'K') value *= 1000;
           else if (multiplier === 'M') value *= 1000000;
           else if (multiplier === 'B') value *= 1000000000;
@@ -463,31 +493,31 @@ class CheddarFlowScraper {
         }
 
         // Put flow value
-        const putFlowMatch = allText.match(/Put flow[\s\S]*?\$([\d.]+)([KMB])?/i);
-        if (putFlowMatch) {
-          let value = parseFloat(putFlowMatch[1]);
-          const multiplier = putFlowMatch[2];
+        const putFlowSection = allText.match(/Put flow[\s\S]*?\$([\d.,]+)([KMB])?/i);
+        if (putFlowSection) {
+          let value = parseFloat(putFlowSection[1].replace(/,/g, ''));
+          const multiplier = putFlowSection[2];
           if (multiplier === 'K') value *= 1000;
           else if (multiplier === 'M') value *= 1000000;
           else if (multiplier === 'B') value *= 1000000000;
           result.putFlow = value;
         }
 
-        // Call contracts and percentage (look for patterns like "8,728" with "95.6%")
-        const callContractsMatch = allText.match(/Call flow[\s\S]*?([\d,]+)[\s\S]*?([\d.]+)%/i);
-        if (callContractsMatch) {
-          result.callContracts = parseInt(callContractsMatch[1].replace(/,/g, ''));
-          result.callFlowPercent = parseFloat(callContractsMatch[2]);
+        // Extract contracts and percentages
+        // Format: "1,682,543" followed by "56.0%"
+        const callDataMatch = allText.match(/Call flow[\s\S]*?([\d,]+)[\s\S]*?([\d.]+)%/i);
+        if (callDataMatch) {
+          result.callContracts = parseInt(callDataMatch[1].replace(/,/g, ''));
+          result.callFlowPercent = parseFloat(callDataMatch[2]);
         }
 
-        // Put contracts and percentage
-        const putContractsMatch = allText.match(/Put flow[\s\S]*?([\d,]+)[\s\S]*?([\d.]+)%/i);
-        if (putContractsMatch) {
-          result.putContracts = parseInt(putContractsMatch[1].replace(/,/g, ''));
-          result.putFlowPercent = parseFloat(putContractsMatch[2]);
+        const putDataMatch = allText.match(/Put flow[\s\S]*?([\d,]+)[\s\S]*?([\d.]+)%/i);
+        if (putDataMatch) {
+          result.putContracts = parseInt(putDataMatch[1].replace(/,/g, ''));
+          result.putFlowPercent = parseFloat(putDataMatch[2]);
         }
 
-        // Calculate percentages if we have both values
+        // Calculate percentages if we have both flow values but not percentages
         if (result.callFlow && result.putFlow) {
           const total = result.callFlow + result.putFlow;
           if (!result.callFlowPercent) {
@@ -497,6 +527,14 @@ class CheddarFlowScraper {
             result.putFlowPercent = (result.putFlow / total) * 100;
           }
           result.totalPremium = total;
+        }
+
+        // Estimate sentiment percentage if not found from progress bar
+        // Use call flow percentage as a proxy (higher calls = more bullish)
+        if (!result.sentimentPercent && result.callFlowPercent) {
+          // Map call flow % to sentiment %
+          // 50% calls = neutral, >50% = bullish, <50% = bearish
+          result.sentimentPercent = result.callFlowPercent;
         }
 
         return result;

@@ -261,104 +261,200 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
         </div>
       )}
 
-      {/* Flow Data Display */}
+      {/* Flow Data Display - CheddarFlow Style */}
       {flowData?.flowData && !flowLoading && (
         <div>
-          {/* Main Sentiment Badge */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: theme.spacing.sm,
-            marginBottom: theme.spacing.sm,
-          }}>
-            <span style={{
-              padding: '6px 14px',
-              borderRadius: theme.borderRadius.md,
-              backgroundColor: getSentimentColor(flowData.flowData.sentimentText).bg,
-              color: getSentimentColor(flowData.flowData.sentimentText).text,
-              fontWeight: 'bold',
-              fontSize: theme.typography.fontSize.md,
-            }}>
-              {flowData.flowData.sentimentText?.toLowerCase().includes('bullish') && '📈 '}
-              {flowData.flowData.sentimentText?.toLowerCase().includes('bearish') && '📉 '}
-              {flowData.flowData.sentimentText || 'Unknown'}
-            </span>
-          </div>
-
-          {/* P/C Ratio */}
-          <div style={{
-            fontSize: theme.typography.fontSize.sm,
-            marginBottom: theme.spacing.sm,
-            color: theme.colors.textSecondary,
-          }}>
-            P/C Ratio: <strong style={{ fontSize: theme.typography.fontSize.md }}>
-              {flowData.flowData.putCallRatio?.toFixed(3) || 'N/A'}
-            </strong>
-            <span style={{ marginLeft: theme.spacing.sm, fontSize: '10px', color: theme.colors.textMuted }}>
-              (&lt;0.5 bullish, &gt;1.2 bearish)
-            </span>
-          </div>
-
-          {/* Call/Put Breakdown */}
+          {/* Row 1: Flow Sentiment with Progress Bar + Put/Call Ratio */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: theme.spacing.xs,
-            fontSize: '11px',
+            gap: theme.spacing.sm,
+            marginBottom: theme.spacing.sm,
           }}>
-            {/* Calls */}
+            {/* Flow Sentiment */}
             <div style={{
-              padding: theme.spacing.xs,
-              backgroundColor: '#dcfce7',
-              borderRadius: theme.borderRadius.sm,
+              padding: theme.spacing.sm,
+              backgroundColor: '#1a1a2e',
+              borderRadius: theme.borderRadius.md,
             }}>
-              <div style={{ color: '#166534', fontWeight: 'bold', marginBottom: '2px' }}>
-                📈 CALLS
+              <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>
+                Flow sentiment
               </div>
-              <div>Flow: <strong>{flowData.flowData.callFlowPercent?.toFixed(1) || 0}%</strong></div>
-              {flowData.flowData.totalCallFlow && (
-                <div>Vol: <strong>${(flowData.flowData.totalCallFlow / 1000000).toFixed(2)}M</strong></div>
-              )}
-              {flowData.flowData.callContracts && (
-                <div>Contracts: <strong>{flowData.flowData.callContracts.toLocaleString()}</strong></div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                <span style={{
+                  color: flowData.flowData.sentimentText?.toLowerCase().includes('bullish') ? '#22c55e' :
+                         flowData.flowData.sentimentText?.toLowerCase().includes('bearish') ? '#ef4444' : '#eab308',
+                  fontWeight: 'bold',
+                  fontSize: theme.typography.fontSize.md,
+                }}>
+                  {flowData.flowData.sentimentText || 'N/A'}
+                </span>
+                {/* Progress Bar */}
+                <div style={{
+                  flex: 1,
+                  height: '8px',
+                  backgroundColor: '#333',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    width: `${flowData.flowData.callFlowPercent || 50}%`,
+                    height: '100%',
+                    backgroundColor: flowData.flowData.sentimentText?.toLowerCase().includes('bullish') ? '#22c55e' :
+                                     flowData.flowData.sentimentText?.toLowerCase().includes('bearish') ? '#ef4444' : '#eab308',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+              </div>
             </div>
 
-            {/* Puts */}
+            {/* Put to Call Ratio with Circular Indicator */}
             <div style={{
-              padding: theme.spacing.xs,
-              backgroundColor: '#fee2e2',
-              borderRadius: theme.borderRadius.sm,
+              padding: theme.spacing.sm,
+              backgroundColor: '#1a1a2e',
+              borderRadius: theme.borderRadius.md,
             }}>
-              <div style={{ color: '#991b1b', fontWeight: 'bold', marginBottom: '2px' }}>
-                📉 PUTS
+              <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>
+                Put to call
               </div>
-              <div>Flow: <strong>{flowData.flowData.putFlowPercent?.toFixed(1) || 0}%</strong></div>
-              {flowData.flowData.totalPutFlow && (
-                <div>Vol: <strong>${(flowData.flowData.totalPutFlow / 1000000).toFixed(2)}M</strong></div>
-              )}
-              {flowData.flowData.putContracts && (
-                <div>Contracts: <strong>{flowData.flowData.putContracts.toLocaleString()}</strong></div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  fontSize: theme.typography.fontSize.lg,
+                }}>
+                  {flowData.flowData.putCallRatio?.toFixed(3) || 'N/A'}
+                </span>
+                {/* Circular Indicator */}
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  border: `3px solid ${flowData.flowData.putCallRatio < 0.7 ? '#22c55e' :
+                                       flowData.flowData.putCallRatio > 1.0 ? '#ef4444' : '#3b82f6'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: flowData.flowData.putCallRatio < 0.7 ? '#22c55e' :
+                         flowData.flowData.putCallRatio > 1.0 ? '#ef4444' : '#3b82f6',
+                }}>
+                  {flowData.flowData.putCallRatio?.toFixed(2) || '—'}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Analysis summary */}
+          {/* Row 2: Call Flow + Put Flow */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: theme.spacing.sm,
+            marginBottom: theme.spacing.sm,
+          }}>
+            {/* Call Flow */}
+            <div style={{
+              padding: theme.spacing.sm,
+              backgroundColor: '#1a1a2e',
+              borderRadius: theme.borderRadius.md,
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '4px',
+              }}>
+                <span style={{ fontSize: '10px', color: '#888' }}>Call flow</span>
+                <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: 'bold' }}>
+                  ${flowData.flowData.callFlow ? (flowData.flowData.callFlow >= 1000000 ?
+                    (flowData.flowData.callFlow / 1000000).toFixed(1) + 'M' :
+                    (flowData.flowData.callFlow / 1000).toFixed(0) + 'K') : '0'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>
+                  {flowData.flowData.callContracts?.toLocaleString() || '0'}
+                </span>
+                {/* Circular percentage */}
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '3px solid #22c55e',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: '#22c55e',
+                }}>
+                  {flowData.flowData.callFlowPercent?.toFixed(1) || '0'}%
+                </div>
+              </div>
+            </div>
+
+            {/* Put Flow */}
+            <div style={{
+              padding: theme.spacing.sm,
+              backgroundColor: '#1a1a2e',
+              borderRadius: theme.borderRadius.md,
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '4px',
+              }}>
+                <span style={{ fontSize: '10px', color: '#888' }}>Put flow</span>
+                <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: 'bold' }}>
+                  ${flowData.flowData.putFlow ? (flowData.flowData.putFlow >= 1000000 ?
+                    (flowData.flowData.putFlow / 1000000).toFixed(1) + 'M' :
+                    (flowData.flowData.putFlow / 1000).toFixed(0) + 'K') : '0'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>
+                  {flowData.flowData.putContracts?.toLocaleString() || '0'}
+                </span>
+                {/* Circular percentage */}
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '3px solid #ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: '#ef4444',
+                }}>
+                  {flowData.flowData.putFlowPercent?.toFixed(1) || '0'}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Analysis summary - compact */}
           {flowData.sentiment && (
             <div style={{
-              marginTop: theme.spacing.sm,
-              padding: theme.spacing.xs,
+              padding: '6px 8px',
               backgroundColor: theme.colors.gray100,
               borderRadius: theme.borderRadius.sm,
               fontSize: '10px',
               color: theme.colors.textSecondary,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}>
-              <strong>Analysis:</strong> {flowData.sentiment.sentiment} ({flowData.sentiment.confidence}% conf)
-              {flowData.sentiment.reasons?.length > 0 && (
-                <div style={{ marginTop: '2px', color: theme.colors.textMuted }}>
-                  {flowData.sentiment.reasons.slice(0, 2).join(' • ')}
-                </div>
-              )}
+              <span>
+                <strong>Analysis:</strong> {flowData.sentiment.sentiment}
+              </span>
+              <span style={{ color: theme.colors.textMuted }}>
+                {flowData.sentiment.confidence}% conf
+              </span>
             </div>
           )}
         </div>
