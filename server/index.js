@@ -2364,6 +2364,77 @@ app.get('/api/alpaca/trades/:symbol', async (req, res) => {
   }
 });
 
+// 26b. Get historical bars from Alpaca (alternative to Polygon)
+// Alpaca includes pre-calculated VWAP in bar data
+app.get('/api/alpaca/bars/:symbol/:timeframe', async (req, res) => {
+  try {
+    const { symbol, timeframe } = req.params;
+    const { from, to, limit } = req.query;
+
+    // Map timeframe to Alpaca format
+    const timeframeMap = {
+      '1': '1Min',
+      '5': '5Min',
+      '15': '15Min',
+      '30': '30Min',
+      '60': '1Hour',
+      'hour': '1Hour',
+      'day': '1Day',
+      '1Day': '1Day',
+    };
+
+    const alpacaTimeframe = timeframeMap[timeframe] || timeframe;
+
+    console.log(
+      `📊 Fetching Alpaca bars for ${symbol} (${alpacaTimeframe}) from ${from} to ${to}`
+    );
+
+    const bars = await alpacaClient.getBars(
+      symbol,
+      alpacaTimeframe,
+      from,
+      to,
+      limit ? parseInt(limit) : 10000
+    );
+
+    // Transform to match Polygon format for easy switching
+    const results = bars.map(bar => ({
+      t: new Date(bar.timestamp).getTime(),
+      o: bar.open,
+      h: bar.high,
+      l: bar.low,
+      c: bar.close,
+      v: bar.volume,
+      vw: bar.vwap, // Alpaca provides pre-calculated VWAP!
+      n: bar.tradeCount,
+      // Also provide full property names
+      time: new Date(bar.timestamp).getTime(),
+      timestamp: new Date(bar.timestamp).getTime(),
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume,
+      vwap: bar.vwap,
+    }));
+
+    res.json({
+      success: true,
+      ticker: symbol,
+      queryCount: results.length,
+      resultsCount: results.length,
+      results,
+      source: 'alpaca',
+    });
+  } catch (error) {
+    console.error(
+      `❌ Error fetching Alpaca bars for ${req.params.symbol}:`,
+      error.message
+    );
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 27. Get comprehensive stock analysis for trading decisions
 app.get('/api/stock/analysis/:symbol', async (req, res) => {
   try {
@@ -5058,6 +5129,46 @@ app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
     console.error(`Error taking screenshot for ${symbol}:`, error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ================================
+// UNUSUAL WHALES API ENDPOINTS
+// ================================
+
+const unusualWhalesClient = require('./unusualWhalesClient');
+
+// Get market-wide sentiment (Market Tide)
+app.get('/api/unusual-whales/market-tide', async (req, res) => {
+  try {
+    const tideData = await unusualWhalesClient.getMarketTide();
+    res.json(tideData);
+  } catch (error) {
+    console.error('Error fetching market tide:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get flow sentiment for a specific symbol
+app.get('/api/unusual-whales/flow/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+
+  try {
+    const flowData = await unusualWhalesClient.getFlowSentiment(symbol);
+    res.json(flowData);
+  } catch (error) {
+    console.error(`Error fetching UW flow for ${symbol}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check if Unusual Whales is configured
+app.get('/api/unusual-whales/status', (req, res) => {
+  res.json({
+    configured: unusualWhalesClient.isConfigured(),
+    message: unusualWhalesClient.isConfigured()
+      ? 'Unusual Whales API is configured'
+      : 'Add UNUSUAL_WHALES_API_KEY to .env to enable',
+  });
 });
 
 // ================================

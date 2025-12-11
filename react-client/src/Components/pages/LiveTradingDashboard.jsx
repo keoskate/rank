@@ -19,6 +19,7 @@ import RegimeConfigPanel from '../common/RegimeConfigPanel';
 import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
 import CheddarFlowCard from '../common/CheddarFlowCard';
 import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
+import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
@@ -134,6 +135,23 @@ const LiveTradingDashboard = () => {
     } catch {}
   };
 
+  // Research symbol for experimental analysis - independent of chart symbol
+  const [researchSymbol, setResearchSymbol] = useState(() => {
+    try {
+      return localStorage.getItem('research-symbol') || 'QBTS';
+    } catch {
+      return 'QBTS';
+    }
+  });
+  const [syncResearchWithChart, setSyncResearchWithChart] = useState(false);
+
+  // Signal data from experimental cards (for checklist aggregation)
+  const [signalData, setSignalData] = useState({
+    regime: null,
+    flow: null,
+    marketTide: null,
+  });
+
   // Get locked symbols when ETF mode is enabled
   const lockedSymbols = leveragedEtfEnabled && selectedEtfFamily
     ? [selectedEtfFamily.base, selectedEtfFamily.bull, selectedEtfFamily.bear]
@@ -143,6 +161,20 @@ const LiveTradingDashboard = () => {
   useEffect(() => {
     showSimulatorRef.current = showSimulator;
   }, [showSimulator]);
+
+  // Persist research symbol to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('research-symbol', researchSymbol);
+    } catch {}
+  }, [researchSymbol]);
+
+  // Sync research symbol with chart symbol when enabled
+  useEffect(() => {
+    if (syncResearchWithChart && chartSymbol) {
+      setResearchSymbol(chartSymbol);
+    }
+  }, [syncResearchWithChart, chartSymbol]);
 
   // Audio notification settings
   const [audioSettings, setAudioSettings] = useState(() => loadAudioSettings());
@@ -2883,56 +2915,248 @@ const LiveTradingDashboard = () => {
           borderRadius: theme.borderRadius.lg,
           border: '1px solid #fde047',
         }}>
+          {/* Header with Research Symbol Input */}
           <div style={{
-            fontSize: theme.typography.fontSize.xs,
-            color: '#92400e',
-            marginBottom: theme.spacing.sm,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: theme.spacing.md,
+            paddingBottom: theme.spacing.sm,
+            borderBottom: '1px solid #fde047',
           }}>
-            🧪 Experimental - informational only, does not affect trading signals
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.md,
+            }}>
+              <span style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: '#92400e',
+                fontWeight: 'bold',
+              }}>
+                🧪 Research Symbol
+              </span>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.xs,
+              }}>
+                <input
+                  type="text"
+                  value={researchSymbol}
+                  onChange={(e) => setResearchSymbol(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.target.blur();
+                    }
+                  }}
+                  disabled={syncResearchWithChart}
+                  style={{
+                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: 'bold',
+                    width: '80px',
+                    border: `2px solid ${syncResearchWithChart ? theme.colors.gray300 : '#f59e0b'}`,
+                    borderRadius: theme.borderRadius.md,
+                    backgroundColor: syncResearchWithChart ? theme.colors.gray100 : 'white',
+                    color: syncResearchWithChart ? theme.colors.textMuted : theme.colors.text,
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                  }}
+                  placeholder="QBTS"
+                />
+              </div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.textMuted,
+                cursor: 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={syncResearchWithChart}
+                  onChange={(e) => setSyncResearchWithChart(e.target.checked)}
+                  style={{ width: '14px', height: '14px' }}
+                />
+                Sync with chart
+              </label>
+            </div>
+            <span style={{
+              fontSize: theme.typography.fontSize.xs,
+              color: '#92400e',
+            }}>
+              Informational only - does not affect trading signals
+            </span>
           </div>
-          {/* 3-column grid for compact cards */}
+
+          {/* Signal Checklist + Detail Cards Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: '280px 1fr',
             gap: theme.spacing.md,
-            marginBottom: theme.spacing.md,
           }}>
-            <TechnicalRegimeCard
-              symbol={simulationSymbol || chartSymbol || config.watchlist?.[0] || 'AAPL'}
-              date={simulationDate}
-              onRegimeChange={(data) => {
-                console.log('Regime changed:', data.regime);
-              }}
-            />
-            <CheddarFlowCard
-              symbol={simulationSymbol || chartSymbol || config.watchlist?.[0] || 'QBTS'}
-              date={simulationDate}
-              onSentimentChange={(data) => {
-                console.log('Flow sentiment:', data.sentiment);
-              }}
-            />
-            <LeveragedEtfPanel
-              date={simulationDate}
-              enabled={leveragedEtfEnabled}
-              onEnabledChange={(enabled) => {
-                setLeveragedEtfEnabled(enabled);
-                if (!enabled) {
-                  setSelectedEtfFamily(null);
-                }
-              }}
-              onSymbolSelect={(symbol) => {
-                console.log('Leveraged ETF selected:', symbol);
-                setChartSymbol(symbol);
-                setSimulationSymbol(symbol);
-                if (!config.watchlist?.includes(symbol)) {
-                  const newWatchlist = [...(config.watchlist || []), symbol];
-                  updateConfig({ watchlist: newWatchlist });
-                }
-              }}
-              onFamilyChange={(family) => {
-                setSelectedEtfFamily(family);
-              }}
-            />
+            {/* Signal Checklist - Left Column */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: theme.borderRadius.md,
+              padding: theme.spacing.md,
+              border: '1px solid #e5e7eb',
+            }}>
+              <div style={{
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: 'bold',
+                marginBottom: theme.spacing.sm,
+                color: theme.colors.text,
+              }}>
+                📊 Signal Checklist
+              </div>
+              {/* Regime Signal */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: theme.spacing.xs,
+                borderBottom: '1px solid #f3f4f6',
+              }}>
+                <span style={{ fontSize: theme.typography.fontSize.sm }}>Technical Regime</span>
+                <span style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  padding: '2px 8px',
+                  borderRadius: theme.borderRadius.sm,
+                  backgroundColor: signalData.regime?.regime === 'bull' ? '#dcfce7'
+                    : signalData.regime?.regime === 'bear' ? '#fee2e2'
+                    : signalData.regime ? '#fef9c3' : '#f3f4f6',
+                  color: signalData.regime?.regime === 'bull' ? '#166534'
+                    : signalData.regime?.regime === 'bear' ? '#991b1b'
+                    : signalData.regime ? '#854d0e' : '#6b7280',
+                }}>
+                  {signalData.regime?.regime === 'bull' ? '✅ BULL'
+                    : signalData.regime?.regime === 'bear' ? '❌ BEAR'
+                    : signalData.regime?.regime === 'sideways' ? '⚠️ SIDEWAYS'
+                    : '⏳ Loading'}
+                </span>
+              </div>
+              {/* CheddarFlow Signal */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: theme.spacing.xs,
+                borderBottom: '1px solid #f3f4f6',
+              }}>
+                <span style={{ fontSize: theme.typography.fontSize.sm }}>CheddarFlow</span>
+                <span style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  padding: '2px 8px',
+                  borderRadius: theme.borderRadius.sm,
+                  backgroundColor: signalData.flow?.sentiment === 'bullish' ? '#dcfce7'
+                    : signalData.flow?.sentiment === 'bearish' ? '#fee2e2'
+                    : signalData.flow ? '#fef9c3' : '#f3f4f6',
+                  color: signalData.flow?.sentiment === 'bullish' ? '#166534'
+                    : signalData.flow?.sentiment === 'bearish' ? '#991b1b'
+                    : signalData.flow ? '#854d0e' : '#6b7280',
+                }}>
+                  {signalData.flow?.sentiment === 'bullish' ? '✅ Bullish'
+                    : signalData.flow?.sentiment === 'bearish' ? '❌ Bearish'
+                    : signalData.flow?.sentiment === 'neutral' ? '⚠️ Neutral'
+                    : '⏳ Loading'}
+                </span>
+              </div>
+              {/* Market Tide Signal */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: theme.spacing.xs,
+                borderBottom: '1px solid #f3f4f6',
+              }}>
+                <span style={{ fontSize: theme.typography.fontSize.sm }}>Market Tide (UW)</span>
+                <span style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  padding: '2px 8px',
+                  borderRadius: theme.borderRadius.sm,
+                  backgroundColor: signalData.marketTide?.sentiment === 'bullish' ? '#dcfce7'
+                    : signalData.marketTide?.sentiment === 'bearish' ? '#fee2e2'
+                    : signalData.marketTide ? '#fef9c3' : '#f3f4f6',
+                  color: signalData.marketTide?.sentiment === 'bullish' ? '#166534'
+                    : signalData.marketTide?.sentiment === 'bearish' ? '#991b1b'
+                    : signalData.marketTide ? '#854d0e' : '#6b7280',
+                }}>
+                  {signalData.marketTide?.sentiment === 'bullish' ? '✅ Bullish'
+                    : signalData.marketTide?.sentiment === 'bearish' ? '❌ Bearish'
+                    : signalData.marketTide?.configured === false ? '🔑 No API Key'
+                    : '⏳ Loading'}
+                </span>
+              </div>
+              {/* Overall Summary */}
+              <div style={{
+                marginTop: theme.spacing.sm,
+                padding: theme.spacing.sm,
+                backgroundColor: '#f9fafb',
+                borderRadius: theme.borderRadius.sm,
+                textAlign: 'center',
+              }}>
+                <div style={{
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textMuted,
+                  marginBottom: '4px',
+                }}>
+                  Overall Sentiment
+                </div>
+                <div style={{
+                  fontSize: theme.typography.fontSize.lg,
+                  fontWeight: 'bold',
+                  color: (() => {
+                    const signals = [signalData.regime?.regime, signalData.flow?.sentiment, signalData.marketTide?.sentiment];
+                    const bullish = signals.filter(s => s === 'bull' || s === 'bullish').length;
+                    const bearish = signals.filter(s => s === 'bear' || s === 'bearish').length;
+                    const total = signals.filter(s => s).length;
+                    if (total === 0) return theme.colors.textMuted;
+                    if (bullish > bearish) return '#166534';
+                    if (bearish > bullish) return '#991b1b';
+                    return '#854d0e';
+                  })(),
+                }}>
+                  {(() => {
+                    const signals = [signalData.regime?.regime, signalData.flow?.sentiment, signalData.marketTide?.sentiment];
+                    const bullish = signals.filter(s => s === 'bull' || s === 'bullish').length;
+                    const bearish = signals.filter(s => s === 'bear' || s === 'bearish').length;
+                    const total = signals.filter(s => s).length;
+                    if (total === 0) return 'Analyzing...';
+                    return `${bullish}/${total} Bullish`;
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Detail Cards - Right Column */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: theme.spacing.md,
+            }}>
+              <TechnicalRegimeCard
+                symbol={researchSymbol}
+                date={simulationDate}
+                onRegimeChange={(data) => {
+                  setSignalData(prev => ({ ...prev, regime: data }));
+                }}
+              />
+              <CheddarFlowCard
+                symbol={researchSymbol}
+                date={simulationDate}
+                onSentimentChange={(data) => {
+                  setSignalData(prev => ({ ...prev, flow: data }));
+                }}
+              />
+              <MarketTideCard
+                onSentimentChange={(data) => {
+                  setSignalData(prev => ({ ...prev, marketTide: data }));
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
