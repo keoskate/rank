@@ -5016,6 +5016,10 @@ app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
 // CHEDDARFLOW SCRAPING API ENDPOINTS
 // ================================
 
+// Get CheddarFlow credentials from environment
+const CHEDDARFLOW_EMAIL = process.env.CHEDDARFLOW_EMAIL;
+const CHEDDARFLOW_PASSWORD = process.env.CHEDDARFLOW_PASSWORD;
+
 // Get flow sentiment from CheddarFlow (scraping)
 // Query params: date, useProfile (use existing Chrome profile)
 app.get('/api/cheddarflow/:symbol', async (req, res) => {
@@ -5023,32 +5027,47 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
   const { date, useProfile } = req.query;
 
   try {
-    // Lazy initialize the scraper with profile option
-    if (!cheddarFlowScraper || (useProfile === 'true' && !cheddarFlowScraper.useExistingProfile)) {
-      // Close existing scraper if config changed
-      if (cheddarFlowScraper) {
-        await cheddarFlowScraper.close();
-      }
+    // Lazy initialize the scraper
+    if (!cheddarFlowScraper) {
+      const hasCredentials = CHEDDARFLOW_EMAIL && CHEDDARFLOW_PASSWORD;
+      console.log(`[CheddarFlow] Initializing scraper (credentials: ${hasCredentials ? 'yes' : 'no'})`);
+
       cheddarFlowScraper = new CheddarFlowScraper({
-        headless: useProfile !== 'true', // Can't be headless with profile
-        useExistingProfile: useProfile === 'true',
+        headless: true, // Always headless with credentials
+        useExistingProfile: false,
+        credentials: hasCredentials ? {
+          email: CHEDDARFLOW_EMAIL,
+          password: CHEDDARFLOW_PASSWORD,
+        } : null,
       });
     }
 
-    const flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
-    const sentiment = cheddarFlowScraper.analyzeSentiment(flowData);
+    let flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
 
-    // Save cookies after successful fetch (for future headless use)
-    if (useProfile === 'true' && flowData) {
-      try {
-        const cookies = await cheddarFlowScraper.exportCookies();
-        CheddarFlowScraper.saveCookies(cookies);
-        console.log('[CheddarFlow] Saved session cookies for future headless use');
-      } catch (e) {
-        // Non-fatal, just log
-        console.log('[CheddarFlow] Could not save cookies:', e.message);
+    // If auth needed and we have credentials, try to login and retry
+    if (flowData.needsAuth && CHEDDARFLOW_EMAIL && CHEDDARFLOW_PASSWORD) {
+      console.log('[CheddarFlow] Session expired, attempting auto-login...');
+
+      const loginSuccess = await cheddarFlowScraper.login(CHEDDARFLOW_EMAIL, CHEDDARFLOW_PASSWORD);
+
+      if (loginSuccess) {
+        // Save cookies for next time
+        try {
+          const cookies = await cheddarFlowScraper.exportCookies();
+          CheddarFlowScraper.saveCookies(cookies);
+          console.log('[CheddarFlow] Saved new session cookies');
+        } catch (e) {
+          console.log('[CheddarFlow] Could not save cookies:', e.message);
+        }
+
+        // Retry the fetch
+        flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
+      } else {
+        flowData.error = 'Auto-login failed. Check CHEDDARFLOW_EMAIL and CHEDDARFLOW_PASSWORD in .env';
       }
     }
+
+    const sentiment = cheddarFlowScraper.analyzeSentiment(flowData);
 
     res.json({
       symbol: symbol.toUpperCase(),

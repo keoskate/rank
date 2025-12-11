@@ -165,33 +165,154 @@ class CheddarFlowScraper {
   }
 
   /**
-   * Login to CheddarFlow with credentials
+   * Login to CheddarFlow with credentials (handles Auth0 flow)
    */
   async login(email, password) {
     console.log('[CheddarFlow] Attempting to login...');
 
     try {
-      // Navigate to login page
-      await this.page.goto('https://cheddarflow.com/login', {
+      // Navigate to the dashboard which will redirect to Auth0 login
+      await this.page.goto('https://dash.cheddarflow.com', {
         waitUntil: 'networkidle2',
         timeout: this.timeout,
       });
 
-      // Wait for and fill email field
-      await this.page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
-      await this.page.type('input[type="email"], input[name="email"]', email);
+      // Check if we're on Auth0 login page
+      const currentUrl = this.page.url();
+      console.log('[CheddarFlow] Current URL:', currentUrl);
 
-      // Fill password field
-      await this.page.waitForSelector('input[type="password"], input[name="password"]', { timeout: 10000 });
-      await this.page.type('input[type="password"], input[name="password"]', password);
+      if (!currentUrl.includes('auth.cheddarflow') && !currentUrl.includes('login')) {
+        console.log('[CheddarFlow] Already logged in!');
+        return true;
+      }
 
-      // Click login button
-      await this.page.click('button[type="submit"]');
+      // Wait for Auth0 login form
+      console.log('[CheddarFlow] Waiting for login form...');
 
-      // Wait for navigation
-      await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
+      // Auth0 uses different selectors - try multiple
+      const emailSelectors = [
+        'input[name="username"]',
+        'input[name="email"]',
+        'input[type="email"]',
+        'input#username',
+        'input[inputmode="email"]',
+      ];
 
-      console.log('[CheddarFlow] Login successful');
+      let emailInput = null;
+      for (const selector of emailSelectors) {
+        try {
+          emailInput = await this.page.waitForSelector(selector, { timeout: 5000 });
+          if (emailInput) {
+            console.log(`[CheddarFlow] Found email input: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Try next selector
+        }
+      }
+
+      if (!emailInput) {
+        throw new Error('Could not find email input field');
+      }
+
+      // Clear and type email
+      await emailInput.click({ clickCount: 3 }); // Select all
+      await emailInput.type(email);
+      console.log('[CheddarFlow] Entered email');
+
+      // Small delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Find and fill password field
+      const passwordSelectors = [
+        'input[name="password"]',
+        'input[type="password"]',
+        'input#password',
+      ];
+
+      let passwordInput = null;
+      for (const selector of passwordSelectors) {
+        try {
+          passwordInput = await this.page.waitForSelector(selector, { timeout: 5000 });
+          if (passwordInput) {
+            console.log(`[CheddarFlow] Found password input: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Try next selector
+        }
+      }
+
+      if (!passwordInput) {
+        throw new Error('Could not find password input field');
+      }
+
+      await passwordInput.type(password);
+      console.log('[CheddarFlow] Entered password');
+
+      // Small delay before clicking submit
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Find and click submit button
+      const submitSelectors = [
+        'button[type="submit"]',
+        'button[name="action"]',
+        'button[data-action-button-primary="true"]',
+        'button.c3a8c6928', // Auth0 specific class
+      ];
+
+      let clicked = false;
+      for (const selector of submitSelectors) {
+        try {
+          const button = await this.page.$(selector);
+          if (button) {
+            console.log(`[CheddarFlow] Clicking submit: ${selector}`);
+            await button.click();
+            clicked = true;
+            break;
+          }
+        } catch (e) {
+          // Try next selector
+        }
+      }
+
+      if (!clicked) {
+        // Try pressing Enter as fallback
+        console.log('[CheddarFlow] Pressing Enter to submit');
+        await this.page.keyboard.press('Enter');
+      }
+
+      // Wait for navigation after login
+      console.log('[CheddarFlow] Waiting for redirect after login...');
+      await this.page.waitForNavigation({
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      }).catch(() => {
+        // Navigation might not trigger if already on target page
+        console.log('[CheddarFlow] Navigation wait timed out, checking URL...');
+      });
+
+      // Give it a moment to settle
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if login was successful
+      const finalUrl = this.page.url();
+      console.log('[CheddarFlow] Final URL:', finalUrl);
+
+      if (finalUrl.includes('auth.cheddarflow') || finalUrl.includes('login')) {
+        // Still on login page - check for error messages
+        const errorText = await this.page.evaluate(() => {
+          const errorEl = document.querySelector('[class*="error"], [class*="alert"], [role="alert"]');
+          return errorEl ? errorEl.innerText : null;
+        });
+
+        if (errorText) {
+          console.error('[CheddarFlow] Login error:', errorText);
+        }
+        throw new Error('Login failed - still on login page');
+      }
+
+      console.log('[CheddarFlow] Login successful!');
       return true;
 
     } catch (error) {
