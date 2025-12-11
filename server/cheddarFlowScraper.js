@@ -504,17 +504,58 @@ class CheddarFlowScraper {
         }
 
         // Extract contracts and percentages
-        // Format: "1,682,543" followed by "56.0%"
-        const callDataMatch = allText.match(/Call flow[\s\S]*?([\d,]+)[\s\S]*?([\d.]+)%/i);
-        if (callDataMatch) {
-          result.callContracts = parseInt(callDataMatch[1].replace(/,/g, ''));
-          result.callFlowPercent = parseFloat(callDataMatch[2]);
+        // CheddarFlow layout: "Call flow $202.6K" then "1,289" then "40.3%"
+        // We need to skip the dollar amount and get the contract count
+        // Look for pattern: large number (contracts) followed by percentage
+
+        // First, get all numbers with commas that could be contract counts (>100, no decimal)
+        // Then get percentages
+        const callSection = allText.split(/Put flow/i)[0]; // Get text before "Put flow"
+        const callFlowIdx = callSection.toLowerCase().lastIndexOf('call flow');
+        if (callFlowIdx >= 0) {
+          const afterCallFlow = callSection.substring(callFlowIdx);
+          // Find percentage first
+          const pctMatch = afterCallFlow.match(/([\d.]+)%/);
+          if (pctMatch) {
+            result.callFlowPercent = parseFloat(pctMatch[1]);
+          }
+          // Find contract count - look for numbers with commas that aren't part of dollar amounts
+          // Contract counts are typically large numbers (1,000+) shown separately from the $XXX.XK amount
+          const contractMatches = afterCallFlow.match(/\n\s*([\d,]+)\s*\n/g) ||
+                                  afterCallFlow.match(/>([\d,]+)</g) ||
+                                  afterCallFlow.match(/\s([\d,]{4,})\s/g);
+          if (contractMatches) {
+            for (const match of contractMatches) {
+              const num = parseInt(match.replace(/[^\d]/g, ''));
+              // Contract counts are usually > 100 and different from the dollar amount
+              if (num > 100 && num !== result.callFlow) {
+                result.callContracts = num;
+                break;
+              }
+            }
+          }
         }
 
-        const putDataMatch = allText.match(/Put flow[\s\S]*?([\d,]+)[\s\S]*?([\d.]+)%/i);
-        if (putDataMatch) {
-          result.putContracts = parseInt(putDataMatch[1].replace(/,/g, ''));
-          result.putFlowPercent = parseFloat(putDataMatch[2]);
+        const putSection = allText.substring(allText.toLowerCase().indexOf('put flow'));
+        if (putSection) {
+          // Find percentage
+          const pctMatch = putSection.match(/([\d.]+)%/);
+          if (pctMatch) {
+            result.putFlowPercent = parseFloat(pctMatch[1]);
+          }
+          // Find contract count
+          const contractMatches = putSection.match(/\n\s*([\d,]+)\s*\n/g) ||
+                                  putSection.match(/>([\d,]+)</g) ||
+                                  putSection.match(/\s([\d,]{4,})\s/g);
+          if (contractMatches) {
+            for (const match of contractMatches) {
+              const num = parseInt(match.replace(/[^\d]/g, ''));
+              if (num > 100 && num !== result.putFlow) {
+                result.putContracts = num;
+                break;
+              }
+            }
+          }
         }
 
         // Calculate percentages if we have both flow values but not percentages
