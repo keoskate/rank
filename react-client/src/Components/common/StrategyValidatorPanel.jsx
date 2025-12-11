@@ -306,12 +306,10 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
               <StatBox
                 label="Days Tested"
                 value={results.statistics?.totalDays || 0}
-                suffix="days"
               />
               <StatBox
                 label="Total Trades"
                 value={results.statistics?.totalTrades || 0}
-                suffix="trades"
               />
               <StatBox
                 label="Avg Daily Return"
