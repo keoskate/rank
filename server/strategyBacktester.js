@@ -218,16 +218,22 @@ class StrategyBacktester {
               shares,
               entryPrice: price,
               entryIndex: i,
+              highWaterMark: price, // Track highest price for trailing stop
             };
             cash -= shares * price;
           }
         }
       } else if (position) {
-        // Check for SELL signal
+        // Update high water mark for trailing stop
+        if (price > position.highWaterMark) {
+          position.highWaterMark = price;
+        }
+
+        // Check for SELL signal (including trailing stop)
         const pnlPercent = ((price - position.entryPrice) / position.entryPrice) * 100;
         const holdTime = i - position.entryIndex;
 
-        const sellSignal = this.checkSellSignal(indicators, config, pnlPercent, estHour, holdTime);
+        const sellSignal = this.checkSellSignal(indicators, config, pnlPercent, estHour, holdTime, position.highWaterMark, price);
         if (sellSignal.shouldSell) {
           const proceeds = position.shares * price;
           const tradePnL = proceeds - (position.shares * position.entryPrice);
@@ -467,8 +473,15 @@ class StrategyBacktester {
 
   /**
    * Check for sell signal
+   * @param {Object} indicators - Current technical indicators
+   * @param {Object} config - Strategy configuration
+   * @param {number} pnlPercent - Current P&L percentage from entry
+   * @param {number} estHour - Current hour in EST
+   * @param {number} holdTime - Number of candles held
+   * @param {number} highWaterMark - Highest price since entry (for trailing stop)
+   * @param {number} currentPrice - Current price
    */
-  checkSellSignal(indicators, config, pnlPercent, estHour, holdTime) {
+  checkSellSignal(indicators, config, pnlPercent, estHour, holdTime, highWaterMark, currentPrice) {
     const { rsi } = indicators;
     const minHoldCandles = 5;
 
@@ -480,6 +493,19 @@ class StrategyBacktester {
     // Stop loss
     if (pnlPercent <= -(config.stopLossPercent || 1)) {
       return { shouldSell: true, reason: `Stop loss (${pnlPercent.toFixed(2)}%)` };
+    }
+
+    // Trailing stop - only activates when in profit
+    // Default: 1.5% trailing stop (sells if price drops 1.5% from highest point)
+    const trailingStopPercent = config.trailingStopPercent || 1.5;
+    if (trailingStopPercent > 0 && highWaterMark && currentPrice && pnlPercent > 0) {
+      const dropFromHigh = ((highWaterMark - currentPrice) / highWaterMark) * 100;
+      if (dropFromHigh >= trailingStopPercent) {
+        return {
+          shouldSell: true,
+          reason: `Trailing stop (${dropFromHigh.toFixed(2)}% from high of $${highWaterMark.toFixed(2)})`
+        };
+      }
     }
 
     // RSI overbought (with min hold time)
