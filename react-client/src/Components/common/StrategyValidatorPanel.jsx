@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from './Card';
 import theme from '../../theme';
 
@@ -13,10 +13,24 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [localSymbol, setLocalSymbol] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('strategy-validator-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [dateRange, setDateRange] = useState({
     startDate: getDefaultStartDate(),
     endDate: getDefaultEndDate(),
   });
+
+  // Persist collapse state
+  useEffect(() => {
+    try {
+      localStorage.setItem('strategy-validator-collapsed', isCollapsed.toString());
+    } catch {}
+  }, [isCollapsed]);
 
   // Use prop symbol if provided, otherwise use local input
   const symbol = propSymbol || localSymbol;
@@ -103,7 +117,7 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: theme.spacing.md,
+          marginBottom: isCollapsed && results ? theme.spacing.sm : theme.spacing.md,
         }}>
           <h3 style={{
             margin: 0,
@@ -115,26 +129,98 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
             <span style={{ fontSize: '20px' }}>🔬</span>
             Strategy Validator
           </h3>
-          <span style={{
-            fontSize: theme.typography.fontSize.xs,
-            color: theme.colors.textMuted,
-          }}>
-            Multi-day backtesting
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+            <span style={{
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textMuted,
+            }}>
+              Multi-day backtesting
+            </span>
+            {results && (
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                style={{
+                  background: 'none',
+                  border: `1px solid ${theme.colors.gray300}`,
+                  borderRadius: theme.borderRadius.sm,
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textMuted,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title={isCollapsed ? 'Expand results' : 'Collapse results'}
+              >
+                {isCollapsed ? '▼ Expand' : '▲ Collapse'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Description */}
-        <p style={{
-          margin: 0,
-          marginBottom: theme.spacing.md,
-          fontSize: theme.typography.fontSize.sm,
-          color: theme.colors.textMuted,
-        }}>
-          Test your strategy across multiple days to validate consistency.
-          A good strategy should work across different market conditions, not just one lucky day.
-        </p>
+        {/* Collapsed Summary View */}
+        {isCollapsed && results && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.md,
+            padding: theme.spacing.sm,
+            backgroundColor: theme.colors.gray50,
+            borderRadius: theme.borderRadius.sm,
+          }}>
+            {/* Verdict Badge */}
+            <div style={{
+              padding: '4px 12px',
+              backgroundColor: getVerdictColor(results.verdict?.verdict),
+              color: 'white',
+              borderRadius: theme.borderRadius.sm,
+              fontWeight: 'bold',
+              fontSize: theme.typography.fontSize.sm,
+              whiteSpace: 'nowrap',
+            }}>
+              {results.verdict?.verdict === 'READY_FOR_PAPER_TRADING' && '🎉 '}
+              {results.verdict?.verdict === 'PROMISING_NEEDS_REFINEMENT' && '🔧 '}
+              {results.verdict?.verdict === 'NEEDS_WORK' && '⚠️ '}
+              {results.verdict?.verdict === 'NOT_READY' && '❌ '}
+              {getVerdictLabel(results.verdict?.verdict)}
+            </div>
+            {/* Key Stats */}
+            <div style={{
+              display: 'flex',
+              gap: theme.spacing.md,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.textMuted,
+            }}>
+              <span><strong>{results.statistics?.totalDays || 0}</strong> days</span>
+              <span><strong>{results.statistics?.totalTrades || 0}</strong> trades</span>
+              <span style={{ color: parseFloat(results.statistics?.avgDailyReturn) > 0 ? '#22c55e' : '#ef4444' }}>
+                <strong>{results.statistics?.avgDailyReturn || '0'}%</strong> avg
+              </span>
+              <span>
+                Sharpe: <strong style={{ color: parseFloat(results.statistics?.sharpeRatio) >= 1 ? '#22c55e' : parseFloat(results.statistics?.sharpeRatio) >= 0 ? '#eab308' : '#ef4444' }}>
+                  {results.statistics?.sharpeRatio || '0'}
+                </strong>
+              </span>
+            </div>
+          </div>
+        )}
 
-        {/* Symbol and Date Range Selection */}
+        {/* Full Content - Hidden when collapsed with results */}
+        {(!isCollapsed || !results) && (
+          <>
+            {/* Description */}
+            <p style={{
+              margin: 0,
+              marginBottom: theme.spacing.md,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.textMuted,
+            }}>
+              Test your strategy across multiple days to validate consistency.
+              A good strategy should work across different market conditions, not just one lucky day.
+            </p>
+
+            {/* Symbol and Date Range Selection */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: propSymbol ? '1fr 1fr auto' : '100px 1fr 1fr auto',
@@ -597,6 +683,8 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
               </div>
             </details>
           </div>
+        )}
+          </>
         )}
       </div>
     </Card>

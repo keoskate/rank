@@ -2887,38 +2887,6 @@ const LiveTradingDashboard = () => {
         />
       )}
 
-      {/* Strategy Tools Row - Monitor & Validator */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: theme.spacing.sm,
-          marginBottom: theme.spacing.md,
-        }}
-      >
-        <StrategyMonitorPanel
-          symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
-          versionId={'default'}
-          sessionStats={urlSessionId ? {
-            winRate: stats.winRate,
-            totalPnL: stats.totalPnL,
-            totalTrades: stats.totalTrades,
-            consecutiveLosses: 0,
-            maxDrawdown: 0,
-            profitFactor: stats.wins > 0 ? (stats.wins / Math.max(1, stats.losses)) : 0,
-          } : null}
-          onAlert={(alertsList) => {
-            alertsList.forEach(alert => {
-              addAlert({ type: 'warning', title: 'Strategy Alert', message: alert.message });
-            });
-          }}
-        />
-        <StrategyValidatorPanel
-          symbol={simulationSymbol || chartSymbol}
-          config={config}
-        />
-      </div>
-
       {/* Experimental Analysis Panels - Only when enabled via header button */}
       {showExperimentalPanels && (
         <div style={{
@@ -3173,6 +3141,38 @@ const LiveTradingDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Strategy Tools Row - Monitor & Validator */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: theme.spacing.sm,
+          marginBottom: theme.spacing.md,
+        }}
+      >
+        <StrategyMonitorPanel
+          symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
+          versionId={'default'}
+          sessionStats={urlSessionId ? {
+            winRate: stats.winRate,
+            totalPnL: stats.totalPnL,
+            totalTrades: stats.totalTrades,
+            consecutiveLosses: 0,
+            maxDrawdown: 0,
+            profitFactor: stats.wins > 0 ? (stats.wins / Math.max(1, stats.losses)) : 0,
+          } : null}
+          onAlert={(alertsList) => {
+            alertsList.forEach(alert => {
+              addAlert({ type: 'warning', title: 'Strategy Alert', message: alert.message });
+            });
+          }}
+        />
+        <StrategyValidatorPanel
+          symbol={simulationSymbol || chartSymbol}
+          config={config}
+        />
+      </div>
 
       {/* Performance Metrics - Connected to real account data */}
       <div
