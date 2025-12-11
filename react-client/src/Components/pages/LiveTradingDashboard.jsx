@@ -21,6 +21,7 @@ import CheddarFlowCard from '../common/CheddarFlowCard';
 import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
+import TradingLogPanel from '../common/TradingLogPanel';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 import {
@@ -3173,6 +3174,14 @@ const LiveTradingDashboard = () => {
           config={config}
         />
       </div>
+
+      {/* Trading Log Panel - Diagnostics and debugging */}
+      <TradingLogPanel
+        sessionId={urlSessionId}
+        autoRefresh={sessionStatus === 'running'}
+        refreshInterval={3000}
+        defaultCollapsed={false}
+      />
 
       {/* Performance Metrics - Connected to real account data */}
       <div

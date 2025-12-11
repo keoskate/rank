@@ -18,6 +18,7 @@ const technicalIndicators = require('./technicalIndicatorsService');
 const alpacaClient = require('./alpacaClient');
 const polygonClient = require('./polygonClient');
 const websocketServer = require('./websocketServer');
+const tradingLogger = require('./tradingLogger');
 
 // Session persistence file
 const SESSION_FILE = path.join(__dirname, '../data/ai-sessions.json');
@@ -170,6 +171,21 @@ function startSession(userId, config = {}) {
   console.log(
     `[AI Engine] Session "${sessionConfig.name}" started for user ${userId}: ${sessionId}`
   );
+
+  // Log session start with config summary
+  tradingLogger.logConfig('Session started', {
+    sessionName: sessionConfig.name,
+    config: {
+      watchlist: sessionConfig.watchlist?.slice(0, 5).join(', ') + (sessionConfig.watchlist?.length > 5 ? '...' : ''),
+      watchlistCount: sessionConfig.watchlist?.length || 0,
+      entryStrategy: sessionConfig.entryStrategy,
+      takeProfitPercent: sessionConfig.takeProfitPercent,
+      stopLossPercent: sessionConfig.stopLossPercent,
+      minConfidence: sessionConfig.minConfidence,
+      autoTrade: sessionConfig.autoTrade,
+      maxPositions: sessionConfig.maxPositions,
+    },
+  });
 
   // Save to disk for persistence
   saveSessions();
@@ -729,6 +745,28 @@ async function evaluateEntry(sessionId, symbol) {
     // Log decision
     logDecision(sessionId, decision);
 
+    // Log to trading logger
+    if (shouldEnter) {
+      tradingLogger.logSignal('ENTRY', symbol, {
+        sessionName: session.name,
+        confidence,
+        reasons: factors,
+        currentPrice,
+        profitTarget: adaptiveProfitTarget,
+        stopLoss,
+        shouldEnter,
+      });
+
+      // Also log indicators for context
+      tradingLogger.logIndicators(symbol, {
+        rsi: indicators.rsi.value,
+        macd: indicators.macd.histogram,
+        adx: indicators.adx.value,
+        volumeRatio: indicators.volume.ratio,
+        bbPercentB: indicators.bollingerBands.percentB,
+      }, session.name);
+    }
+
     // Send to websocket (use userId for notifications)
     if (shouldEnter) {
       websocketServer.sendAIDecision(session.userId, {
@@ -740,6 +778,11 @@ async function evaluateEntry(sessionId, symbol) {
     return decision;
   } catch (error) {
     console.error(`[AI Engine] Error evaluating entry for ${symbol}:`, error);
+    tradingLogger.logError(`Entry evaluation failed for ${symbol}`, {
+      sessionName: session?.name,
+      symbol,
+      error: error.message,
+    });
     return { shouldEnter: false, reason: error.message };
   }
 }
@@ -920,6 +963,18 @@ async function evaluateExit(sessionId, symbol) {
       logDecision(sessionId, decision);
     }
 
+    // Log to trading logger
+    if (shouldExit) {
+      tradingLogger.logSignal('EXIT', symbol, {
+        sessionName: session.name,
+        exitScore,
+        reasons: factors,
+        currentPrice,
+        shouldExit,
+        pnlPercent,
+      });
+    }
+
     if (shouldExit) {
       websocketServer.sendAIDecision(session.userId, {
         ...decision,
@@ -930,6 +985,11 @@ async function evaluateExit(sessionId, symbol) {
     return decision;
   } catch (error) {
     console.error(`[AI Engine] Error evaluating exit for ${symbol}:`, error);
+    tradingLogger.logError(`Exit evaluation failed for ${symbol}`, {
+      sessionName: session?.name,
+      symbol,
+      error: error.message,
+    });
     return { shouldExit: false, reason: error.message };
   }
 }
@@ -1043,6 +1103,15 @@ async function executeEntry(sessionId, symbol, decision) {
       `[AI Engine] Entry order placed: ${quantity} ${symbol} @ market`
     );
 
+    // Log execution to trading logger
+    tradingLogger.logExecution('BUY', symbol, {
+      quantity,
+      price: decision.currentPrice,
+      orderId: order.id,
+      sessionName: session.name,
+      reason: decision.reasons?.slice(0, 2).join(', '),
+    });
+
     // Send notification
     websocketServer.sendTradeExecution(session.userId, {
       tradeId: order.id,
@@ -1062,6 +1131,11 @@ async function executeEntry(sessionId, symbol, decision) {
     setTimeout(() => syncPortfolio(sessionId), 2000);
   } catch (error) {
     console.error(`[AI Engine] Failed to execute entry for ${symbol}:`, error);
+    tradingLogger.logError(`BUY order failed for ${symbol}`, {
+      sessionName: session.name,
+      symbol,
+      error: error.message,
+    });
     websocketServer.sendAlert(session.userId, {
       type: 'error',
       title: 'Order Failed',
@@ -1125,6 +1199,17 @@ async function executeExit(sessionId, symbol, decision) {
 
     // Update stats
     const pnl = decision.pnl || 0;
+
+    // Log execution to trading logger
+    tradingLogger.logExecution('SELL', symbol, {
+      quantity,
+      price: decision.currentPrice,
+      orderId: result.id,
+      sessionName: session.name,
+      reason: decision.exitReason,
+      pnl,
+      pnlPercent: decision.pnlPercent,
+    });
     if (pnl > 0) {
       session.stats.wins++;
       session.stats.consecutiveLosses = 0;
@@ -1165,6 +1250,11 @@ async function executeExit(sessionId, symbol, decision) {
     setTimeout(() => syncPortfolio(sessionId), 2000);
   } catch (error) {
     console.error(`[AI Engine] Failed to execute exit for ${symbol}:`, error);
+    tradingLogger.logError(`SELL order failed for ${symbol}`, {
+      sessionName: session.name,
+      symbol,
+      error: error.message,
+    });
     websocketServer.sendAlert(session.userId, {
       type: 'error',
       title: 'Exit Failed',
@@ -1189,6 +1279,15 @@ function triggerCircuitBreaker(sessionId, reason) {
   console.log(
     `[AI Engine] Circuit breaker triggered for ${session.name}: ${reason}`
   );
+
+  // Log to trading logger
+  tradingLogger.logRisk('CIRCUIT BREAKER', {
+    sessionName: session.name,
+    reason,
+    action: 'Trading paused',
+    value: session.stats.consecutiveLosses,
+    threshold: session.config.consecutiveLossLimit,
+  });
 
   websocketServer.sendAlert(session.userId, {
     type: 'error',
