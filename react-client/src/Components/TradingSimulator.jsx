@@ -195,20 +195,20 @@ const shouldBuy = (price, indicators, cfg, position) => {
 };
 
 // SHARED SELL DECISION LOGIC
-const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex, timestamp) => {
+const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex, timestamp, highWaterMark) => {
   const pnlPercent = ((price - entryPrice) / entryPrice) * 100;
   const minConfidence = cfg.minConfidence || 70;
   const rsiOverbought = cfg.rsiOverbought || 70;
   const profitTargetPercent = cfg.takeProfitPercent || 2;
   const stopLossPercent = cfg.stopLossPercent || 1;
+  const trailingStopPercent = cfg.trailingStopPercent || 0; // Default 0 = disabled
 
   const estHour = getEstHour(timestamp);
   const { rsi, vwap, priceChange } = indicators;
 
-  // Minimum hold time (5 candles, except stop loss or EOD)
+  // Minimum hold time (5 candles, except stop loss, trailing stop, or EOD)
   const candlesSinceEntry = candleIndex - (entryIndex || 0);
   const minHoldCandles = 5;
-  const holdTimeExempt = pnlPercent <= -stopLossPercent || estHour >= 15.75;
 
   // Score-based sell system
   let sellScore = 0;
@@ -222,6 +222,18 @@ const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex,
     sellScore += 40;
     reasons.push(`Stop loss triggered (${pnlPercent.toFixed(2)}%)`);
   }
+
+  // Trailing stop - only activates when in profit and price drops from high
+  let trailingStopTriggered = false;
+  if (trailingStopPercent > 0 && highWaterMark && pnlPercent > 0) {
+    const dropFromHigh = ((highWaterMark - price) / highWaterMark) * 100;
+    if (dropFromHigh >= trailingStopPercent) {
+      sellScore += 35;
+      trailingStopTriggered = true;
+      reasons.push(`Trailing stop (${dropFromHigh.toFixed(2)}% from high $${highWaterMark.toFixed(2)})`);
+    }
+  }
+
   if (rsi > rsiOverbought) {
     sellScore += 20;
     reasons.push(`RSI overbought (${Math.round(rsi)} > ${rsiOverbought})`);
@@ -234,6 +246,9 @@ const shouldSell = (price, entryPrice, indicators, cfg, candleIndex, entryIndex,
     sellScore += 50;
     reasons.push('End of day liquidation');
   }
+
+  // Hold time exempt conditions: stop loss, trailing stop, or EOD
+  const holdTimeExempt = pnlPercent <= -stopLossPercent || trailingStopTriggered || estHour >= 15.75;
 
   const confidence = Math.min(95, 50 + sellScore);
   const canSell = (candlesSinceEntry >= minHoldCandles || holdTimeExempt) &&
@@ -758,6 +773,15 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
 
     // SELL signals - USE SHARED FUNCTION for parity with optimizer
     if (currentPosition) {
+      // Update high water mark for trailing stop
+      const currentHighWaterMark = currentPosition.highWaterMark || currentPosition.entryPrice;
+      const updatedHighWaterMark = Math.max(currentHighWaterMark, price);
+
+      // Update position's highWaterMark if price made new high
+      if (price > currentHighWaterMark) {
+        currentPosition.highWaterMark = price;
+      }
+
       const sellResult = shouldSell(
         price,
         currentPosition.entryPrice,
@@ -765,7 +789,8 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
         cfg,
         index,
         currentPosition.entryIndex,
-        timestamp
+        timestamp,
+        updatedHighWaterMark // Pass high water mark for trailing stop
       );
 
       if (sellResult.shouldSell) {
@@ -779,6 +804,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
           index,
           price,
           entryPrice: currentPosition.entryPrice,
+          highWaterMark: updatedHighWaterMark,
           pnlPercent: sellResult.pnlPercent,
           timestamp,
           sellScore: sellResult.sellScore,
@@ -826,6 +852,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                 entryPrice: price,
                 entryTime: timestamp,
                 entryIndex: candleIndex, // Track candle index for minimum hold time
+                highWaterMark: price, // Track highest price for trailing stop
                 reasons: reasons,
               },
             ];
@@ -1642,14 +1669,17 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
           const positionValue = Math.min(cash * maxPositionPercent, maxPositionDollars);
           const positionSize = Math.floor(positionValue / price);
           if (positionSize > 0) {
-            position = { quantity: positionSize, entryPrice: price, entryIndex: i };
+            position = { quantity: positionSize, entryPrice: price, entryIndex: i, highWaterMark: price };
             cash -= positionSize * price;
           }
         }
       }
       // SELL logic - use SHARED function
       else if (position) {
-        const sellResult = shouldSell(price, position.entryPrice, indicators, testConfig, i, position.entryIndex, timestamp);
+        // Update high water mark for trailing stop
+        position.highWaterMark = Math.max(position.highWaterMark || position.entryPrice, price);
+
+        const sellResult = shouldSell(price, position.entryPrice, indicators, testConfig, i, position.entryIndex, timestamp, position.highWaterMark);
         if (sellResult.shouldSell) {
           const pnl = position.quantity * (price - position.entryPrice);
           trades.push({ pnl, entryPrice: position.entryPrice, exitPrice: price });

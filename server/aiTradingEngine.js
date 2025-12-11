@@ -113,6 +113,10 @@ const DEFAULT_CONFIG = {
   watchlist: [],
   autoTrade: true, // Enable auto-trading by default for paper account
   simulationMode: true, // Tracks virtual P&L without real trades
+  // Exit settings (percentage-based):
+  // takeProfitPercent: 2,     // Take profit at +2% (default)
+  // stopLossPercent: 1,       // Stop loss at -1% (default)
+  // trailingStopPercent: 0,   // Trailing stop disabled by default (set to e.g. 0.5 to enable)
 };
 
 /**
@@ -479,17 +483,24 @@ async function syncPortfolio(sessionId) {
       parseFloat(account.portfolio_value)
     );
 
-    // Update positions (preserve entryTime from existing positions if available)
+    // Update positions (preserve entryTime and highWaterMark from existing positions if available)
     // Note: alpacaClient.getPositions() returns camelCase fields (quantity, avgEntryPrice, etc.)
     const existingPositions = new Map(session.portfolio.positions);
     session.portfolio.positions.clear();
     positions.forEach(pos => {
       const existing = existingPositions.get(pos.symbol);
+      const currentPrice = pos.currentPrice || parseFloat(pos.current_price) || 0;
+      const avgEntryPrice = pos.avgEntryPrice || parseFloat(pos.avg_entry_price) || 0;
+
+      // Track high water mark for trailing stop - update if current price is higher
+      const existingHighWaterMark = existing?.highWaterMark || avgEntryPrice;
+      const highWaterMark = Math.max(existingHighWaterMark, currentPrice);
+
       session.portfolio.positions.set(pos.symbol, {
         symbol: pos.symbol,
         quantity: pos.quantity || parseInt(pos.qty) || 0,
-        averageCost: pos.avgEntryPrice || parseFloat(pos.avg_entry_price) || 0,
-        currentPrice: pos.currentPrice || parseFloat(pos.current_price) || 0,
+        averageCost: avgEntryPrice,
+        currentPrice: currentPrice,
         marketValue: pos.marketValue || parseFloat(pos.market_value) || 0,
         unrealizedPnL: pos.unrealizedPL || parseFloat(pos.unrealized_pl) || 0,
         unrealizedPnLPercent:
@@ -498,6 +509,8 @@ async function syncPortfolio(sessionId) {
         // Preserve entry time from previous sync, or use created_at from Alpaca
         entryTime:
           existing?.entryTime || pos.created_at || new Date().toISOString(),
+        // Track highest price for trailing stop
+        highWaterMark: highWaterMark,
       });
     });
 
@@ -577,94 +590,121 @@ async function evaluateEntry(sessionId, symbol) {
     const indicators = technicalIndicators.getAllIndicators(candles);
     const signals = indicators.signals;
 
+    // Get config with defaults
+    const cfg = session.config;
+    const entryStrategy = cfg.entryStrategy || 'balanced';
+    const rsiOversold = cfg.rsiOversold || 30;
+    const rsiOverbought = cfg.rsiOverbought || 70;
+    const volumeMultiplier = cfg.volumeMultiplier || 1.5;
+    const minSignalsRequired = cfg.minSignalsRequired || 2;
+    const requireVolumeSpike = cfg.requireVolumeSpike !== false;
+    const requireTrendAlignment = cfg.requireTrendAlignment !== false;
+    const requireRsiSignal = cfg.requireRsiSignal !== false;
+
     // Decision factors
     const factors = [];
-    let score = 0;
+    let signalCount = 0;
 
-    // RSI conditions
-    if (indicators.rsi.value >= 30 && indicators.rsi.value <= 70) {
-      score += 10;
-      factors.push('RSI in neutral zone');
-    }
-    if (indicators.rsi.value < 35) {
-      score += 15;
-      factors.push('RSI approaching oversold');
-    }
-    if (indicators.rsi.divergence?.bullish) {
-      score += 20;
-      factors.push('Bullish RSI divergence detected');
-    }
+    // Current price and VWAP
+    const currentPrice = candles[candles.length - 1].close;
+    const priceVsVwap = indicators.vwap?.price
+      ? ((currentPrice - indicators.vwap.price) / indicators.vwap.price) * 100
+      : 0;
+    const belowVwap = priceVsVwap < 0;
+    const volumeRatio = indicators.volume?.ratio || 1;
+    const hasVolumeSpike = volumeRatio >= volumeMultiplier;
 
-    // MACD conditions
-    if (indicators.macd.bullish) {
-      score += 10;
-      factors.push('MACD bullish');
-    }
-    if (indicators.macd.crossover) {
-      score += 20;
-      factors.push('MACD bullish crossover');
+    // Strategy-specific signal checks (matching TradingSimulator)
+    let strategyMatch = false;
+
+    if (entryStrategy === 'dip' || entryStrategy === 'conservative') {
+      // Buy the dip: RSI oversold + below VWAP
+      if (indicators.rsi.value < rsiOversold && belowVwap) {
+        strategyMatch = true;
+        signalCount++;
+        factors.push(`RSI oversold (${indicators.rsi.value.toFixed(1)}) + below VWAP`);
+      }
     }
 
-    // Bollinger Band conditions
+    if (entryStrategy === 'momentum' || entryStrategy === 'aggressive') {
+      // Momentum: RSI between 50-65 with volume or rising
+      if (indicators.rsi.value > 50 && indicators.rsi.value < 65) {
+        strategyMatch = true;
+        signalCount++;
+        factors.push(`RSI momentum zone (${indicators.rsi.value.toFixed(1)})`);
+      }
+      // Aggressive also catches momentum fading
+      if (entryStrategy === 'aggressive' && indicators.rsi.value < 70) {
+        strategyMatch = true;
+        signalCount++;
+        factors.push(`Aggressive entry (RSI < 70)`);
+      }
+    }
+
+    if (entryStrategy === 'balanced') {
+      // Balanced: RSI < 45 + below VWAP
+      if (indicators.rsi.value < 45 && belowVwap) {
+        strategyMatch = true;
+        signalCount++;
+        factors.push(`RSI dip (${indicators.rsi.value.toFixed(1)}) + below VWAP`);
+      }
+    }
+
+    // Additional confirming signals (configurable)
+    if (requireVolumeSpike && hasVolumeSpike) {
+      signalCount++;
+      factors.push(`Volume spike (${volumeRatio.toFixed(2)}x)`);
+    }
+
+    if (requireTrendAlignment && indicators.trend?.shortTerm === 'bullish') {
+      signalCount++;
+      factors.push('Bullish trend alignment');
+    }
+
+    if (requireRsiSignal) {
+      if (indicators.rsi.divergence?.bullish) {
+        signalCount++;
+        factors.push('Bullish RSI divergence');
+      } else if (indicators.rsi.value < 40) {
+        signalCount++;
+        factors.push('RSI oversold zone');
+      }
+    }
+
+    // MACD confirmation
+    if (indicators.macd.bullish || indicators.macd.crossover) {
+      signalCount++;
+      factors.push(indicators.macd.crossover ? 'MACD bullish crossover' : 'MACD bullish');
+    }
+
+    // Bollinger Band oversold
     if (indicators.bollingerBands.percentB < 0.2) {
-      score += 15;
+      signalCount++;
       factors.push('Near lower Bollinger Band');
     }
-    if (indicators.bollingerBands.squeeze) {
-      score += 10;
-      factors.push('Bollinger squeeze (volatility expansion expected)');
-    }
 
-    // VWAP conditions
-    if (indicators.vwap.pricePosition > 0) {
-      score += 10;
-      factors.push('Price above VWAP');
-    }
+    // Calculate confidence based on signals
+    const confidence = Math.min(15 + signalCount * 15, 100);
 
-    // ADX trend strength
-    if (indicators.adx.trending && indicators.adx.bullishDI) {
-      score += 15;
-      factors.push('Strong bullish trend (ADX)');
-    }
+    // Entry requirements: strategy match + minimum signals + confidence threshold
+    const meetsSignalRequirement = signalCount >= minSignalsRequired;
+    const meetsConfidenceRequirement = confidence >= cfg.minConfidence;
+    const shouldEnter = strategyMatch && meetsSignalRequirement && meetsConfidenceRequirement;
 
-    // Volume confirmation
-    if (indicators.volume.aboveAverage) {
-      score += 15;
-      factors.push('High volume confirmation');
-    }
+    // Calculate position size and targets using config percentages
+    const atr = indicators.atr?.value || currentPrice * 0.02;
+    const takeProfitPercent = cfg.takeProfitPercent || 2;
+    const stopLossPercent = cfg.stopLossPercent || 1;
 
-    // EMA alignment
-    if (
-      indicators.trend.shortTerm === 'bullish' &&
-      indicators.trend.mediumTerm === 'bullish'
-    ) {
-      score += 15;
-      factors.push('EMA alignment bullish');
-    }
+    // Use percentage-based targets (matching simulator)
+    const profitTarget = currentPrice * (1 + takeProfitPercent / 100);
+    const stopLoss = currentPrice * (1 - stopLossPercent / 100);
 
-    // Stochastic conditions
-    if (indicators.stochastic.oversold && indicators.stochastic.bullishCross) {
-      score += 15;
-      factors.push('Stochastic oversold with bullish cross');
-    }
-
-    // Calculate confidence
-    const confidence = Math.min(score, 100);
-    const shouldEnter = confidence >= session.config.minConfidence;
-
-    // Calculate position size and targets
-    const currentPrice = candles[candles.length - 1].close;
-    const atr = indicators.atr.value || currentPrice * 0.02;
-    const profitTarget =
-      currentPrice + atr * session.config.profitTargetMultiplier;
-    const stopLoss = currentPrice - atr * session.config.stopLossMultiplier;
-
-    // Calculate adaptive profit target based on volatility
+    // Adaptive targets based on volatility (if enabled)
+    const useAdaptiveTargets = cfg.useAdaptiveTargets !== false;
     const volatilityMultiplier =
-      indicators.bollingerBands.bandwidth > 0.05 ? 1.5 : 1.0;
-    const adaptiveProfitTarget =
-      currentPrice +
-      atr * session.config.profitTargetMultiplier * volatilityMultiplier;
+      useAdaptiveTargets && indicators.bollingerBands?.bandwidth > 0.05 ? 1.2 : 1.0;
+    const adaptiveProfitTarget = currentPrice * (1 + (takeProfitPercent * volatilityMultiplier) / 100);
 
     const decision = {
       shouldEnter,
@@ -750,33 +790,40 @@ async function evaluateExit(sessionId, symbol) {
     let exitScore = 0;
     let exitReason = '';
 
-    // Profit target hit (adaptive)
-    const atr = indicators.atr.value || currentPrice * 0.02;
-    const profitTargetPercent =
-      (atr / position.averageCost) *
-      100 *
-      session.config.profitTargetMultiplier;
+    // Get config with defaults
+    const cfg = session.config;
+    const takeProfitPercent = cfg.takeProfitPercent || 2;
+    const stopLossPercent = cfg.stopLossPercent || 1;
+    const exitOnRsiExtreme = cfg.exitOnRsiExtreme !== false;
+    const rsiOverbought = cfg.rsiOverbought || 70;
 
-    if (pnlPercent >= profitTargetPercent) {
+    // Profit target hit (using percentage config)
+    if (pnlPercent >= takeProfitPercent) {
       exitScore += 50;
       exitReason = 'Profit target reached';
-      factors.push(`Profit target ${profitTargetPercent.toFixed(1)}% reached`);
+      factors.push(`Profit target +${takeProfitPercent}% reached (at +${pnlPercent.toFixed(2)}%)`);
     }
 
-    // Stop loss hit
-    const stopLossPercent =
-      (atr / position.averageCost) *
-      100 *
-      session.config.stopLossMultiplier *
-      -1;
-    if (pnlPercent <= stopLossPercent) {
+    // Stop loss hit (using percentage config)
+    if (pnlPercent <= -stopLossPercent) {
       exitScore += 50;
       exitReason = 'Stop loss triggered';
-      factors.push(`Stop loss ${stopLossPercent.toFixed(1)}% triggered`);
+      factors.push(`Stop loss -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`);
     }
 
-    // RSI overbought
-    if (indicators.rsi.value > 75) {
+    // Trailing stop - only activates when position is in profit
+    const trailingStopPercent = cfg.trailingStopPercent || 0; // Default 0 = disabled
+    if (trailingStopPercent > 0 && position.highWaterMark && pnlPercent > 0) {
+      const dropFromHigh = ((position.highWaterMark - currentPrice) / position.highWaterMark) * 100;
+      if (dropFromHigh >= trailingStopPercent) {
+        exitScore += 45;
+        exitReason = 'Trailing stop triggered';
+        factors.push(`Trailing stop (${dropFromHigh.toFixed(2)}% drop from high $${position.highWaterMark.toFixed(2)})`);
+      }
+    }
+
+    // RSI overbought (configurable)
+    if (exitOnRsiExtreme && indicators.rsi.value > rsiOverbought) {
       exitScore += 20;
       factors.push('RSI overbought');
     }

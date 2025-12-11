@@ -293,7 +293,7 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
             {/* Key Statistics Grid */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(5, 1fr)',
               gap: theme.spacing.sm,
               marginBottom: theme.spacing.md,
             }}>
@@ -301,6 +301,11 @@ const StrategyValidatorPanel = ({ symbol: propSymbol, config, onConfigApply }) =
                 label="Days Tested"
                 value={results.statistics?.totalDays || 0}
                 suffix="days"
+              />
+              <StatBox
+                label="Total Trades"
+                value={results.statistics?.totalTrades || 0}
+                suffix="trades"
               />
               <StatBox
                 label="Avg Daily Return"
