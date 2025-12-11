@@ -49,7 +49,7 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
     return d.toISOString().split('T')[0];
   };
 
-  // Fetch CheddarFlow data with fallback to previous day
+  // Fetch CheddarFlow data with fallback to previous day (only when not synced to chart)
   const fetchCheddarFlow = useCallback(async (sym, targetDate = null, isRetry = false) => {
     if (!isRetry) {
       setFlowLoading(true);
@@ -58,8 +58,11 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
 
     try {
       const today = new Date().toISOString().split('T')[0];
+      // If targetDate is explicitly passed, use it. Otherwise use date prop or today.
       const requestDate = targetDate || date || today;
       const isToday = requestDate === today;
+      // Only allow fallback if no date prop is provided (not synced to chart)
+      const allowFallback = !date;
 
       const response = await fetch(
         `/api/cheddarflow/${sym}?date=${requestDate}&useProfile=true`
@@ -79,7 +82,7 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
         if (hasFlowActivity(data)) {
           setFlowData(data);
           setDataDate(requestDate);
-          setIsLiveData(isToday);
+          setIsLiveData(isToday && !isRetry); // Only live if it's today and not a fallback
           setLastFetchedKey(`${sym}-${requestDate}`);
 
           // Notify parent of sentiment change
@@ -95,19 +98,19 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
               callFlowPercent: data.flowData.callFlowPercent,
               data: data.flowData,
               date: requestDate,
-              isLive: isToday,
+              isLive: isToday && !isRetry,
             });
           }
 
           setFlowLoading(false);
           return data;
-        } else if (isToday && !isRetry) {
-          // No data for today, try previous business day
-          console.log('[CheddarFlow] No data for today, trying previous day...');
+        } else if (isToday && allowFallback && !isRetry) {
+          // No data for today, try previous business day (only if not synced to a specific date)
+          console.log('[CheddarFlow] No data for today, falling back to previous day...');
           const prevDay = getPreviousBusinessDay(requestDate);
           return fetchCheddarFlow(sym, prevDay, true);
         } else {
-          // Either it's a specific date request or retry failed - show what we have
+          // Either it's a specific date request, fallback disabled, or retry failed - show what we have
           setFlowData(data);
           setDataDate(requestDate);
           setIsLiveData(false);
@@ -228,9 +231,10 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
             {isLiveData ? '🔴 LIVE' : `📅 ${dataDate}`}
           </span>
         )}
-        {date && date !== dataDate && (
-          <span style={{ fontSize: '10px', color: theme.colors.textMuted }}>
-            (synced to {date})
+        {/* Only show "synced to" when a date prop is explicitly provided and differs from data */}
+        {date && dataDate && date !== dataDate && (
+          <span style={{ fontSize: '10px', color: '#f59e0b' }}>
+            (requested {date})
           </span>
         )}
       </div>
