@@ -2555,7 +2555,7 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
           <h4
             style={{
               margin: 0,
-              marginBottom: theme.spacing.md,
+              marginBottom: theme.spacing.sm,
               fontSize: theme.typography.fontSize.sm,
               color: theme.colors.gray600,
               display: 'flex',
@@ -2567,11 +2567,21 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
             What the Strategy Sees
           </h4>
 
+          {/* Main content row: Metrics + Mini Chart */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gridTemplateColumns: candles.length > 0 ? '1fr 350px' : '1fr',
               gap: theme.spacing.md,
+              alignItems: 'start',
+            }}
+          >
+          {/* Left side: Indicator metrics grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(6, 1fr)',
+              gap: theme.spacing.sm,
             }}
           >
             {/* RSI Indicator */}
@@ -2892,29 +2902,29 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                   : '-'}
               </div>
             </div>
-          </div>
 
-          {/* Signal Summary */}
-          <div
-            style={{
-              marginTop: theme.spacing.md,
-              padding: theme.spacing.sm,
-              backgroundColor:
-                currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
-                  ? `${theme.colors.success}15`
-                  : currentIndicators.rsi >= 70 && currentIndicators.priceVsVwap > 0
-                    ? `${theme.colors.error}15`
-                    : theme.colors.surface,
-              borderRadius: theme.borderRadius.sm,
-              border: `1px solid ${
-                currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
-                  ? theme.colors.success + '40'
-                  : currentIndicators.rsi >= 70 && currentIndicators.priceVsVwap > 0
-                    ? theme.colors.error + '40'
-                    : theme.colors.gray200
-              }`,
-            }}
-          >
+            {/* Signal Summary - spans full width of left column */}
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                marginTop: theme.spacing.xs,
+                padding: theme.spacing.xs,
+                backgroundColor:
+                  currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
+                    ? `${theme.colors.success}15`
+                    : currentIndicators.rsi >= 70 && currentIndicators.priceVsVwap > 0
+                      ? `${theme.colors.error}15`
+                      : theme.colors.surface,
+                borderRadius: theme.borderRadius.sm,
+                border: `1px solid ${
+                  currentIndicators.rsi <= 30 && currentIndicators.priceVsVwap < 0
+                    ? theme.colors.success + '40'
+                    : currentIndicators.rsi >= 70 && currentIndicators.priceVsVwap > 0
+                      ? theme.colors.error + '40'
+                      : theme.colors.gray200
+                }`,
+              }}
+            >
             <div
               style={{
                 fontSize: theme.typography.fontSize.sm,
@@ -3009,13 +3019,22 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
                 )}
             </div>
           </div>
-        </div>
-      )}
+          </div>
+          {/* End of left column (indicators grid) */}
 
-      {/* Mini Chart (V1) */}
-      {candles.length > 0 && (
-        <div style={{ marginBottom: theme.spacing.md }}>
-          {renderMiniChart()}
+          {/* Right side: Mini Chart */}
+          {candles.length > 0 && (
+            <div style={{
+              backgroundColor: theme.colors.surface,
+              borderRadius: theme.borderRadius.sm,
+              padding: theme.spacing.sm,
+              border: `1px solid ${theme.colors.gray200}`,
+            }}>
+              {renderMiniChart()}
+            </div>
+          )}
+          </div>
+          {/* End of main content row */}
         </div>
       )}
 
