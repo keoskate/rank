@@ -17,6 +17,8 @@ import MetricCard from '../common/MetricCard';
 import StrategyMonitorPanel from '../common/StrategyMonitorPanel';
 import RegimeConfigPanel from '../common/RegimeConfigPanel';
 import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
+import CheddarFlowCard from '../common/CheddarFlowCard';
+import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
@@ -115,6 +117,22 @@ const LiveTradingDashboard = () => {
   // Leveraged ETF Strategy mode
   const [leveragedEtfEnabled, setLeveragedEtfEnabled] = useState(false);
   const [selectedEtfFamily, setSelectedEtfFamily] = useState(null);
+
+  // Experimental panels visibility (Market Regime + Leveraged ETF) - collapsed by default
+  const [showExperimentalPanels, setShowExperimentalPanels] = useState(() => {
+    try {
+      return localStorage.getItem('show-experimental-panels') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleExperimentalPanels = () => {
+    const newValue = !showExperimentalPanels;
+    setShowExperimentalPanels(newValue);
+    try {
+      localStorage.setItem('show-experimental-panels', String(newValue));
+    } catch {}
+  };
 
   // Get locked symbols when ETF mode is enabled
   const lockedSymbols = leveragedEtfEnabled && selectedEtfFamily
@@ -840,6 +858,23 @@ const LiveTradingDashboard = () => {
             }}
           >
             {showSimulator ? 'Hide Simulator' : 'Simulate Trading'}
+          </Button>
+
+          {/* Experimental Analysis Toggle */}
+          <Button
+            variant="ghost"
+            onClick={toggleExperimentalPanels}
+            style={{
+              backgroundColor: showExperimentalPanels ? '#fef3c7' : 'transparent',
+              borderColor: showExperimentalPanels ? '#f59e0b' : theme.colors.gray300,
+              color: showExperimentalPanels ? '#b45309' : theme.colors.gray500,
+              fontSize: theme.typography.fontSize.sm,
+              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+              minWidth: 'auto',
+            }}
+            title="Toggle experimental analysis panels (Market Regime & Leveraged ETF)"
+          >
+            🧪 {showExperimentalPanels ? 'ON' : 'OFF'}
           </Button>
 
           {/* Session controls - based on current status */}
@@ -2807,13 +2842,13 @@ const LiveTradingDashboard = () => {
         />
       )}
 
-      {/* Strategy Monitor & Regime Config */}
+      {/* Strategy Tools Row - Monitor & Validator */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-          gap: theme.spacing.md,
-          marginBottom: theme.spacing.lg,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: theme.spacing.sm,
+          marginBottom: theme.spacing.md,
         }}
       >
         <StrategyMonitorPanel
@@ -2823,49 +2858,14 @@ const LiveTradingDashboard = () => {
             winRate: stats.winRate,
             totalPnL: stats.totalPnL,
             totalTrades: stats.totalTrades,
-            consecutiveLosses: 0, // TODO: Track this in session
-            maxDrawdown: 0, // TODO: Track this in session
+            consecutiveLosses: 0,
+            maxDrawdown: 0,
             profitFactor: stats.wins > 0 ? (stats.wins / Math.max(1, stats.losses)) : 0,
           } : null}
           onAlert={(alertsList) => {
-            // Handle strategy alerts
             alertsList.forEach(alert => {
-              addAlert({
-                type: 'warning',
-                title: 'Strategy Alert',
-                message: alert.message,
-              });
+              addAlert({ type: 'warning', title: 'Strategy Alert', message: alert.message });
             });
-          }}
-        />
-        <RegimeConfigPanel
-          symbol={simulationSymbol || chartSymbol || config.watchlist?.[0] || 'AAPL'}
-          date={simulationDate}
-          onRegimeChange={(data) => {
-            console.log('Regime changed:', data.regime);
-          }}
-        />
-        <LeveragedEtfPanel
-          date={simulationDate}
-          enabled={leveragedEtfEnabled}
-          onEnabledChange={(enabled) => {
-            setLeveragedEtfEnabled(enabled);
-            if (!enabled) {
-              setSelectedEtfFamily(null);
-            }
-          }}
-          onSymbolSelect={(symbol) => {
-            console.log('Leveraged ETF selected:', symbol);
-            setChartSymbol(symbol);
-            setSimulationSymbol(symbol);
-            // Add to watchlist if not present
-            if (!config.watchlist?.includes(symbol)) {
-              const newWatchlist = [...(config.watchlist || []), symbol];
-              updateConfig({ watchlist: newWatchlist });
-            }
-          }}
-          onFamilyChange={(family) => {
-            setSelectedEtfFamily(family);
           }}
         />
         <StrategyValidatorPanel
@@ -2873,6 +2873,69 @@ const LiveTradingDashboard = () => {
           config={config}
         />
       </div>
+
+      {/* Experimental Analysis Panels - Only when enabled via header button */}
+      {showExperimentalPanels && (
+        <div style={{
+          marginBottom: theme.spacing.md,
+          padding: theme.spacing.md,
+          backgroundColor: '#fffbeb',
+          borderRadius: theme.borderRadius.lg,
+          border: '1px solid #fde047',
+        }}>
+          <div style={{
+            fontSize: theme.typography.fontSize.xs,
+            color: '#92400e',
+            marginBottom: theme.spacing.sm,
+          }}>
+            🧪 Experimental - informational only, does not affect trading signals
+          </div>
+          {/* 3-column grid for compact cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: theme.spacing.md,
+            marginBottom: theme.spacing.md,
+          }}>
+            <TechnicalRegimeCard
+              symbol={simulationSymbol || chartSymbol || config.watchlist?.[0] || 'AAPL'}
+              date={simulationDate}
+              onRegimeChange={(data) => {
+                console.log('Regime changed:', data.regime);
+              }}
+            />
+            <CheddarFlowCard
+              symbol={simulationSymbol || chartSymbol || config.watchlist?.[0] || 'QBTS'}
+              date={simulationDate}
+              onSentimentChange={(data) => {
+                console.log('Flow sentiment:', data.sentiment);
+              }}
+            />
+            <LeveragedEtfPanel
+              date={simulationDate}
+              enabled={leveragedEtfEnabled}
+              onEnabledChange={(enabled) => {
+                setLeveragedEtfEnabled(enabled);
+                if (!enabled) {
+                  setSelectedEtfFamily(null);
+                }
+              }}
+              onSymbolSelect={(symbol) => {
+                console.log('Leveraged ETF selected:', symbol);
+                setChartSymbol(symbol);
+                setSimulationSymbol(symbol);
+                if (!config.watchlist?.includes(symbol)) {
+                  const newWatchlist = [...(config.watchlist || []), symbol];
+                  updateConfig({ watchlist: newWatchlist });
+                }
+              }}
+              onFamilyChange={(family) => {
+                setSelectedEtfFamily(family);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Performance Metrics - Connected to real account data */}
       <div
