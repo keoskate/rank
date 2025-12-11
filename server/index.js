@@ -5021,10 +5021,10 @@ const CHEDDARFLOW_EMAIL = process.env.CHEDDARFLOW_EMAIL;
 const CHEDDARFLOW_PASSWORD = process.env.CHEDDARFLOW_PASSWORD;
 
 // Get flow sentiment from CheddarFlow (scraping)
-// Query params: date, useProfile (use existing Chrome profile)
+// Query params: date, stale (return stale cache immediately), refresh (force refresh)
 app.get('/api/cheddarflow/:symbol', async (req, res) => {
   const { symbol } = req.params;
-  const { date, useProfile } = req.query;
+  const { date, stale, refresh } = req.query;
 
   try {
     // Lazy initialize the scraper
@@ -5042,7 +5042,13 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
       });
     }
 
-    let flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
+    // Options for fetching
+    const fetchOptions = {
+      allowStale: stale === 'true',
+      forceRefresh: refresh === 'true',
+    };
+
+    let flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date, fetchOptions);
 
     // If auth needed and we have credentials, try to login and retry
     if (flowData.needsAuth && CHEDDARFLOW_EMAIL && CHEDDARFLOW_PASSWORD) {
@@ -5060,8 +5066,8 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
           console.log('[CheddarFlow] Could not save cookies:', e.message);
         }
 
-        // Retry the fetch
-        flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date);
+        // Retry the fetch (force refresh since we just logged in)
+        flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date, { forceRefresh: true });
       } else {
         flowData.error = 'Auto-login failed. Check CHEDDARFLOW_EMAIL and CHEDDARFLOW_PASSWORD in .env';
       }
@@ -5074,6 +5080,9 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
       date: date || new Date().toISOString().split('T')[0],
       flowData,
       sentiment,
+      fromCache: flowData.fromCache || false,
+      isStale: flowData.isStale || false,
+      cacheTimestamp: flowData.cacheTimestamp || null,
     });
   } catch (error) {
     console.error(`Error fetching CheddarFlow for ${symbol}:`, error);

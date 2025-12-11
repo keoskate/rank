@@ -16,8 +16,9 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// Persistent cookie storage path
+// Persistent storage paths
 const COOKIE_FILE = path.join(__dirname, '../data/cheddarflow-cookies.json');
+const DATA_CACHE_FILE = path.join(__dirname, '../data/cheddarflow-data-cache.json');
 
 class CheddarFlowScraper {
   constructor(options = {}) {
@@ -343,37 +344,107 @@ class CheddarFlowScraper {
   }
 
   /**
-   * Get cached data if available and not expired
+   * Load persistent data cache from file
    */
-  getCached(key) {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      return cached.data;
+  static loadDataCache() {
+    try {
+      if (fs.existsSync(DATA_CACHE_FILE)) {
+        const data = fs.readFileSync(DATA_CACHE_FILE, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.log('[CheddarFlow] Could not load data cache:', error.message);
     }
+    return {};
+  }
+
+  /**
+   * Save data cache to file
+   */
+  static saveDataCache(cache) {
+    try {
+      fs.writeFileSync(DATA_CACHE_FILE, JSON.stringify(cache, null, 2));
+    } catch (error) {
+      console.error('[CheddarFlow] Could not save data cache:', error.message);
+    }
+  }
+
+  /**
+   * Get cached data if available
+   * @param {boolean} allowStale - If true, return stale data (for stale-while-revalidate)
+   */
+  getCached(key, allowStale = false) {
+    // Check in-memory cache first
+    const memCached = this.cache.get(key);
+    if (memCached) {
+      const isFresh = Date.now() - memCached.timestamp < this.cacheTimeout;
+      if (isFresh || allowStale) {
+        return { data: memCached.data, isFresh, timestamp: memCached.timestamp };
+      }
+    }
+
+    // Check persistent cache
+    const diskCache = CheddarFlowScraper.loadDataCache();
+    if (diskCache[key]) {
+      const isFresh = Date.now() - diskCache[key].timestamp < this.cacheTimeout;
+      // Also load into memory cache
+      this.cache.set(key, diskCache[key]);
+      if (isFresh || allowStale) {
+        return { data: diskCache[key].data, isFresh, timestamp: diskCache[key].timestamp };
+      }
+    }
+
     return null;
   }
 
   /**
-   * Set cache
+   * Set cache (both in-memory and persistent)
    */
   setCache(key, data) {
-    this.cache.set(key, { data, timestamp: Date.now() });
+    const cacheEntry = { data, timestamp: Date.now() };
+
+    // In-memory cache
+    this.cache.set(key, cacheEntry);
+
+    // Persistent cache
+    const diskCache = CheddarFlowScraper.loadDataCache();
+    diskCache[key] = cacheEntry;
+
+    // Keep only last 50 entries to prevent unbounded growth
+    const keys = Object.keys(diskCache);
+    if (keys.length > 50) {
+      const sortedKeys = keys.sort((a, b) => diskCache[b].timestamp - diskCache[a].timestamp);
+      const keysToDelete = sortedKeys.slice(50);
+      keysToDelete.forEach(k => delete diskCache[k]);
+    }
+
+    CheddarFlowScraper.saveDataCache(diskCache);
   }
 
   /**
    * Scrape flow sentiment for a symbol on a specific date
    * @param {string} symbol - Stock symbol (e.g., 'QBTS')
    * @param {string} date - Date in YYYY-MM-DD format (defaults to today)
+   * @param {Object} options - Options for fetching
+   * @param {boolean} options.allowStale - Return stale cache while fetching fresh data
+   * @param {boolean} options.forceRefresh - Skip cache and always fetch fresh data
    */
-  async getFlowSentiment(symbol, date = null) {
+  async getFlowSentiment(symbol, date = null, options = {}) {
+    const { allowStale = false, forceRefresh = false } = options;
     const targetDate = date || new Date().toISOString().split('T')[0];
     const cacheKey = `${symbol}-${targetDate}`;
 
-    // Check cache first
-    const cached = this.getCached(cacheKey);
-    if (cached) {
-      console.log(`[CheddarFlow] Using cached data for ${symbol} on ${targetDate}`);
-      return cached;
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cached = this.getCached(cacheKey, allowStale);
+      if (cached && cached.isFresh) {
+        console.log(`[CheddarFlow] Using fresh cached data for ${symbol} on ${targetDate}`);
+        return { ...cached.data, fromCache: true, cacheTimestamp: cached.timestamp };
+      }
+      if (cached && allowStale) {
+        console.log(`[CheddarFlow] Using stale cached data for ${symbol} on ${targetDate}`);
+        return { ...cached.data, fromCache: true, isStale: true, cacheTimestamp: cached.timestamp };
+      }
     }
 
     try {

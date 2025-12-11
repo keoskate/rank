@@ -49,24 +49,31 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
     return d.toISOString().split('T')[0];
   };
 
-  // Fetch CheddarFlow data with fallback to previous day (only when not synced to chart)
-  const fetchCheddarFlow = useCallback(async (sym, targetDate = null, isRetry = false) => {
-    if (!isRetry) {
+  // Fetch CheddarFlow data with stale-while-revalidate pattern
+  const fetchCheddarFlow = useCallback(async (sym, targetDate = null, options = {}) => {
+    const { isRetry = false, useStale = true, forceRefresh = false } = options;
+
+    if (!isRetry && !useStale) {
       setFlowLoading(true);
+    }
+    if (!isRetry) {
       setFlowError(null);
     }
 
     try {
       const today = new Date().toISOString().split('T')[0];
-      // If targetDate is explicitly passed, use it. Otherwise use date prop or today.
       const requestDate = targetDate || date || today;
       const isToday = requestDate === today;
-      // Only allow fallback if no date prop is provided (not synced to chart)
       const allowFallback = !date;
 
-      const response = await fetch(
-        `/api/cheddarflow/${sym}?date=${requestDate}&useProfile=true`
-      );
+      // Build query params
+      const params = new URLSearchParams({
+        date: requestDate,
+        ...(useStale && { stale: 'true' }),
+        ...(forceRefresh && { refresh: 'true' }),
+      });
+
+      const response = await fetch(`/api/cheddarflow/${sym}?${params}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -82,7 +89,7 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
         if (hasFlowActivity(data)) {
           setFlowData(data);
           setDataDate(requestDate);
-          setIsLiveData(isToday && !isRetry); // Only live if it's today and not a fallback
+          setIsLiveData(isToday && !isRetry);
           setLastFetchedKey(`${sym}-${requestDate}`);
 
           // Notify parent of sentiment change
@@ -103,14 +110,20 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           }
 
           setFlowLoading(false);
+
+          // If we got stale data, trigger a background refresh
+          if (data.isStale && !forceRefresh) {
+            console.log('[CheddarFlow] Got stale data, refreshing in background...');
+            // Fire off background refresh (don't await)
+            fetchCheddarFlow(sym, requestDate, { useStale: false, forceRefresh: true }).catch(() => {});
+          }
+
           return data;
         } else if (isToday && allowFallback && !isRetry) {
-          // No data for today, try previous business day (only if not synced to a specific date)
           console.log('[CheddarFlow] No data for today, falling back to previous day...');
           const prevDay = getPreviousBusinessDay(requestDate);
-          return fetchCheddarFlow(sym, prevDay, true);
+          return fetchCheddarFlow(sym, prevDay, { isRetry: true, useStale });
         } else {
-          // Either it's a specific date request, fallback disabled, or retry failed - show what we have
           setFlowData(data);
           setDataDate(requestDate);
           setIsLiveData(false);
@@ -172,10 +185,21 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           {flowData && (
             <span style={{
               fontSize: '10px',
-              color: '#22c55e',
+              color: flowData.isStale ? '#f59e0b' : '#22c55e',
               fontWeight: 'normal',
             }}>
-              ✓
+              {flowData.isStale ? '⟳' : '✓'}
+            </span>
+          )}
+          {flowData?.fromCache && (
+            <span style={{
+              fontSize: '9px',
+              color: theme.colors.textMuted,
+              backgroundColor: theme.colors.gray100,
+              padding: '1px 4px',
+              borderRadius: '3px',
+            }}>
+              cached
             </span>
           )}
         </div>
@@ -199,7 +223,7 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           <Button
             size="small"
             variant="outline"
-            onClick={() => fetchCheddarFlow(symbol)}
+            onClick={() => fetchCheddarFlow(symbol, null, { useStale: false, forceRefresh: true })}
             disabled={flowLoading}
             style={{ padding: '2px 8px', fontSize: '11px' }}
           >
