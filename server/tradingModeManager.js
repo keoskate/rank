@@ -56,6 +56,17 @@ function getBaseURL() {
 }
 
 /**
+ * Get base URL for a specific mode (without changing global state)
+ * @param {string} mode - 'paper' or 'live'
+ */
+function getBaseURLForMode(mode) {
+  if (!ALPACA_ENDPOINTS[mode]) {
+    throw new Error(`Invalid mode: ${mode}`);
+  }
+  return ALPACA_ENDPOINTS[mode];
+}
+
+/**
  * Get API credentials for current mode
  */
 function getCredentials() {
@@ -63,6 +74,23 @@ function getCredentials() {
 
   if (!creds.apiKey || !creds.secretKey) {
     throw new Error(`Missing API credentials for ${currentMode} mode`);
+  }
+
+  return {
+    apiKey: creds.apiKey,
+    secretKey: creds.secretKey,
+  };
+}
+
+/**
+ * Get API credentials for a specific mode (without changing global state)
+ * @param {string} mode - 'paper' or 'live'
+ */
+function getCredentialsForMode(mode) {
+  const creds = CREDENTIALS[mode];
+
+  if (!creds || !creds.apiKey || !creds.secretKey) {
+    throw new Error(`Missing API credentials for ${mode} mode`);
   }
 
   return {
@@ -239,7 +267,9 @@ module.exports = {
   isLiveMode,
   isPaperMode,
   getBaseURL,
+  getBaseURLForMode,
   getCredentials,
+  getCredentialsForMode,
   verifyAccount,
   getSafetyConfig,
   validateOrder,

@@ -2128,8 +2128,11 @@ app.get('/api/quarterly/:symbol/yoy/:metric', async (req, res) => {
 // 18. Get Alpaca account info
 app.get('/api/alpaca/account', async (req, res) => {
   try {
-    const account = await alpacaClient.getAccount();
-    res.json({ success: true, account });
+    // Use mode from query param (paper or live) - passed directly to client without changing global state
+    const { mode } = req.query;
+    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const account = await alpacaClient.getAccount(tradingMode);
+    res.json({ success: true, account, mode: tradingMode || tradingModeManager.getCurrentMode() });
   } catch (error) {
     console.error('❌ Error fetching Alpaca account:', error.message);
     res.status(500).json({ error: error.message });
@@ -2139,8 +2142,11 @@ app.get('/api/alpaca/account', async (req, res) => {
 // 19. Get Alpaca positions
 app.get('/api/alpaca/positions', async (req, res) => {
   try {
-    const positions = await alpacaClient.getPositions();
-    res.json({ success: true, positions });
+    // Use mode from query param (paper or live) - passed directly to client without changing global state
+    const { mode } = req.query;
+    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const positions = await alpacaClient.getPositions(tradingMode);
+    res.json({ success: true, positions, mode: tradingMode || tradingModeManager.getCurrentMode() });
   } catch (error) {
     console.error('❌ Error fetching positions:', error.message);
     res.status(500).json({ error: error.message });
@@ -2151,17 +2157,21 @@ app.get('/api/alpaca/positions', async (req, res) => {
 app.get('/api/alpaca/positions/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
-    const position = await alpacaClient.getPosition(symbol);
+    // Use mode from query param (paper or live) - passed directly to client without changing global state
+    const { mode } = req.query;
+    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const position = await alpacaClient.getPosition(symbol, tradingMode);
 
     if (!position) {
       return res.json({
         success: true,
         position: null,
         message: 'No position found',
+        mode: tradingMode || tradingModeManager.getCurrentMode(),
       });
     }
 
-    res.json({ success: true, position });
+    res.json({ success: true, position, mode: tradingMode || tradingModeManager.getCurrentMode() });
   } catch (error) {
     console.error(
       `❌ Error fetching position for ${req.params.symbol}:`,
@@ -2227,11 +2237,15 @@ app.post('/api/alpaca/orders', async (req, res) => {
 // 22. Get Alpaca orders (with P/L for sell orders)
 app.get('/api/alpaca/orders', async (req, res) => {
   try {
+    // Use mode from query param (paper or live) - passed directly to client without changing global state
+    const { mode } = req.query;
+    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+
     const filters = {};
     if (req.query.status) filters.status = req.query.status;
     if (req.query.limit) filters.limit = req.query.limit;
 
-    const orders = await alpacaClient.getOrders(filters);
+    const orders = await alpacaClient.getOrders(filters, tradingMode);
 
     // Get recent trade activities to enrich sell orders with P/L
     // Activities contain per_share_profit for closed trades
@@ -2240,7 +2254,7 @@ app.get('/api/alpaca/orders', async (req, res) => {
       activities = await alpacaClient.getAccountActivities({
         activity_types: 'FILL',
         page_size: 100,
-      });
+      }, tradingMode);
     } catch (err) {
       console.warn(
         'Could not fetch activities for P/L enrichment:',
@@ -2303,7 +2317,7 @@ app.get('/api/alpaca/orders', async (req, res) => {
       return enriched;
     });
 
-    res.json({ success: true, orders: enrichedOrders });
+    res.json({ success: true, orders: enrichedOrders, mode: tradingMode || tradingModeManager.getCurrentMode() });
   } catch (error) {
     console.error('❌ Error fetching orders:', error.message);
     res.status(500).json({ error: error.message });
@@ -2326,8 +2340,11 @@ app.delete('/api/alpaca/orders/:orderId', async (req, res) => {
 app.delete('/api/alpaca/positions/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
-    const result = await alpacaClient.closePosition(symbol);
-    res.json({ success: true, result });
+    // Use mode from query param (paper or live) - passed directly to client without changing global state
+    const { mode } = req.query;
+    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const result = await alpacaClient.closePosition(symbol, tradingMode);
+    res.json({ success: true, result, mode: tradingMode || tradingModeManager.getCurrentMode() });
   } catch (error) {
     console.error(
       `❌ Error closing position ${req.params.symbol}:`,

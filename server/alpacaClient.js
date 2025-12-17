@@ -40,13 +40,23 @@ async function rateLimit() {
 /**
  * Make authenticated request to Alpaca API
  * Automatically uses the correct endpoint and credentials based on current trading mode
+ * @param {string} method - HTTP method
+ * @param {string} endpoint - API endpoint
+ * @param {object|null} data - Request body data
+ * @param {string|null} mode - Optional mode override ('paper' or 'live') - uses this instead of global mode
  */
-async function alpacaRequest(method, endpoint, data = null) {
+async function alpacaRequest(method, endpoint, data = null, mode = null) {
   await rateLimit();
 
-  // Get credentials and base URL from trading mode manager
-  const credentials = tradingModeManager.getCredentials();
-  const baseURL = tradingModeManager.getBaseURL();
+  // Get credentials and base URL - use mode-specific if provided, otherwise use global
+  let credentials, baseURL;
+  if (mode) {
+    credentials = tradingModeManager.getCredentialsForMode(mode);
+    baseURL = tradingModeManager.getBaseURLForMode(mode);
+  } else {
+    credentials = tradingModeManager.getCredentials();
+    baseURL = tradingModeManager.getBaseURL();
+  }
 
   const config = {
     method,
@@ -79,16 +89,14 @@ async function alpacaRequest(method, endpoint, data = null) {
 /**
  * Get account information
  *
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
  * @returns {Object} - Account details (equity, cash, buying_power, etc.)
  */
-async function getAccount() {
-  const modeInfo = tradingModeManager.getModeInfo();
-  console.log(`📊 Fetching Alpaca account info (${modeInfo.statusText})...`);
+async function getAccount(mode = null) {
+  const modeLabel = mode ? mode.toUpperCase() : tradingModeManager.getModeInfo().statusText;
+  console.log(`📊 Fetching Alpaca account info (${modeLabel})...`);
 
-  const account = await alpacaRequest('GET', '/v2/account');
-
-  // Verify account number matches expected
-  const verification = tradingModeManager.verifyAccount(account.account_number);
+  const account = await alpacaRequest('GET', '/v2/account', null, mode);
 
   console.log(`✅ Account Status: ${account.status}`);
   console.log(
@@ -99,21 +107,19 @@ async function getAccount() {
     `   Buying Power: $${parseFloat(account.buying_power).toLocaleString()}`
   );
 
-  if (!verification.matches) {
-    console.warn(`⚠️  WARNING: Account number mismatch!`);
-  }
-
   return account;
 }
 
 /**
  * Get all open positions
  *
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
  * @returns {Array} - Array of position objects
  */
-async function getPositions() {
-  console.log('📊 Fetching Alpaca positions...');
-  const positions = await alpacaRequest('GET', '/v2/positions');
+async function getPositions(mode = null) {
+  const modeLabel = mode ? mode.toUpperCase() : 'CURRENT';
+  console.log(`📊 Fetching Alpaca positions (${modeLabel})...`);
+  const positions = await alpacaRequest('GET', '/v2/positions', null, mode);
 
   console.log(`✅ Found ${positions.length} open positions`);
 
@@ -135,11 +141,12 @@ async function getPositions() {
  * Get position for a specific symbol
  *
  * @param {string} symbol - Stock symbol
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
  * @returns {Object} - Position details or null
  */
-async function getPosition(symbol) {
+async function getPosition(symbol, mode = null) {
   try {
-    const position = await alpacaRequest('GET', `/v2/positions/${symbol}`);
+    const position = await alpacaRequest('GET', `/v2/positions/${symbol}`, null, mode);
 
     return {
       symbol: position.symbol,
@@ -170,10 +177,13 @@ async function getPosition(symbol) {
  * @param {number} orderParams.limit_price - Limit price (for limit orders)
  * @param {number} orderParams.market_price - Estimated market price (for validation)
  * @param {number} accountValue - Current account value (for validation)
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
  * @returns {Object} - Order details
  */
-async function placeOrder(orderParams, accountValue = null) {
-  const modeInfo = tradingModeManager.getModeInfo();
+async function placeOrder(orderParams, accountValue = null, mode = null) {
+  const modeInfo = mode
+    ? { statusText: mode.toUpperCase() + ' TRADING', isLive: mode === 'live' }
+    : tradingModeManager.getModeInfo();
 
   // Ensure qty is a valid positive integer
   if (orderParams.qty !== undefined) {
@@ -210,7 +220,7 @@ async function placeOrder(orderParams, accountValue = null) {
     `📝 Placing ${orderParams.side} order: ${orderParams.qty} shares of ${orderParams.symbol} (${modeInfo.statusText})`
   );
 
-  const order = await alpacaRequest('POST', '/v2/orders', orderParams);
+  const order = await alpacaRequest('POST', '/v2/orders', orderParams, mode);
 
   console.log(`✅ Order placed: ${order.id} (${order.status})`);
 
@@ -237,13 +247,14 @@ async function placeOrder(orderParams, accountValue = null) {
  * Get all orders (optionally filtered)
  *
  * @param {Object} filters - Optional filters (status, limit, after, until, etc.)
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
  * @returns {Array} - Array of orders
  */
-async function getOrders(filters = {}) {
+async function getOrders(filters = {}, mode = null) {
   const params = new URLSearchParams(filters).toString();
   const endpoint = params ? `/v2/orders?${params}` : '/v2/orders';
 
-  const orders = await alpacaRequest('GET', endpoint);
+  const orders = await alpacaRequest('GET', endpoint, null, mode);
 
   return orders.map(order => ({
     id: order.id,
@@ -343,35 +354,69 @@ async function getBars(
   timeframe = '1Day',
   start = null,
   end = null,
-  limit = 100
+  limit = 10000
 ) {
-  const params = new URLSearchParams({
-    timeframe,
-    limit: limit.toString(),
-  });
+  // Market data uses a different endpoint than trading API
+  const MARKET_DATA_URL = 'https://data.alpaca.markets';
+  const credentials = tradingModeManager.getCredentials();
 
-  if (start) params.append('start', start);
-  if (end) params.append('end', end);
+  const allBars = [];
+  let nextPageToken = null;
+  const maxBarsPerRequest = 1000; // Alpaca's max per request
 
-  const data = await alpacaRequest(
-    'GET',
-    `/v2/stocks/${symbol}/bars?${params.toString()}`
-  );
+  console.log(`📊 Fetching Alpaca bars for ${symbol} (${timeframe}) from ${start} to ${end}`);
 
-  if (!data.bars || data.bars.length === 0) {
-    return [];
+  try {
+    do {
+      await rateLimit();
+
+      const params = new URLSearchParams({
+        timeframe,
+        limit: Math.min(maxBarsPerRequest, limit - allBars.length).toString(),
+      });
+
+      if (start) params.append('start', start);
+      if (end) params.append('end', end);
+      if (nextPageToken) params.append('page_token', nextPageToken);
+
+      const config = {
+        method: 'GET',
+        url: `${MARKET_DATA_URL}/v2/stocks/${symbol}/bars?${params.toString()}`,
+        headers: {
+          'APCA-API-KEY-ID': credentials.apiKey,
+          'APCA-API-SECRET-KEY': credentials.secretKey,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout per request
+      };
+
+      const response = await axios(config);
+      const data = response.data;
+
+      if (data.bars && data.bars.length > 0) {
+        allBars.push(...data.bars);
+        console.log(`   Got ${data.bars.length} bars, total: ${allBars.length}`);
+      }
+
+      nextPageToken = data.next_page_token;
+    } while (nextPageToken && allBars.length < limit);
+
+    console.log(`📊 Alpaca: Retrieved ${allBars.length} total bars for ${symbol}`);
+
+    return allBars.map(bar => ({
+      timestamp: bar.t,
+      open: parseFloat(bar.o),
+      high: parseFloat(bar.h),
+      low: parseFloat(bar.l),
+      close: parseFloat(bar.c),
+      volume: bar.v,
+      vwap: bar.vw ? parseFloat(bar.vw) : null,
+      tradeCount: bar.n,
+    }));
+  } catch (error) {
+    console.error(`❌ Alpaca market data error for ${symbol}:`, error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Alpaca API request failed');
   }
-
-  return data.bars.map(bar => ({
-    timestamp: bar.t,
-    open: parseFloat(bar.o),
-    high: parseFloat(bar.h),
-    low: parseFloat(bar.l),
-    close: parseFloat(bar.c),
-    volume: bar.v,
-    vwap: bar.vw ? parseFloat(bar.vw) : null,
-    tradeCount: bar.n,
-  }));
 }
 
 /**
@@ -562,9 +607,10 @@ async function marketSell(symbol, quantity) {
  * @param {string} symbol - Stock symbol
  * @returns {Object} - Close result
  */
-async function closePosition(symbol) {
-  console.log(`📤 Closing position: ${symbol}`);
-  const result = await alpacaRequest('DELETE', `/v2/positions/${symbol}`);
+async function closePosition(symbol, mode = null) {
+  const modeLabel = mode ? mode.toUpperCase() : 'DEFAULT';
+  console.log(`📤 Closing position: ${symbol} (${modeLabel})`);
+  const result = await alpacaRequest('DELETE', `/v2/positions/${symbol}`, null, mode);
   console.log(`✅ Position closed: ${symbol}`);
   return result;
 }
@@ -589,9 +635,10 @@ async function closeAllPositions() {
  * Used for P/L calculation on sell orders
  *
  * @param {Object} filters - { activity_types, date, until, after, direction, page_size }
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
  * @returns {Array} - Array of activities
  */
-async function getAccountActivities(filters = {}) {
+async function getAccountActivities(filters = {}, mode = null) {
   let queryParams = [];
 
   // Default to FILL activities (completed trades)
@@ -607,7 +654,9 @@ async function getAccountActivities(filters = {}) {
   const queryString = queryParams.length ? `?${queryParams.join('&')}` : '';
   const activities = await alpacaRequest(
     'GET',
-    `/v2/account/activities${queryString}`
+    `/v2/account/activities${queryString}`,
+    null,
+    mode
   );
 
   return activities;
