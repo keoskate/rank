@@ -1682,15 +1682,81 @@ const LiveTradingDashboard = () => {
               <div
                 style={{
                   marginTop: theme.spacing.sm,
-                  padding: theme.spacing.sm,
-                  backgroundColor: `${theme.colors.info}15`,
+                  padding: theme.spacing.md,
+                  backgroundColor: `${theme.colors.info}10`,
                   borderRadius: theme.borderRadius.sm,
-                  fontSize: theme.typography.fontSize.sm,
-                  color: theme.colors.info,
-                  fontWeight: theme.typography.fontWeight.medium,
+                  border: `1px solid ${theme.colors.info}30`,
                 }}
               >
-                Crypto Mode: Use symbols like BTC, ETH, SOL. No Pattern Day Trade (PDT) restrictions apply.
+                <div
+                  style={{
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.info,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    marginBottom: theme.spacing.sm,
+                  }}
+                >
+                  Crypto Mode: No PDT restrictions, 24/7 trading
+                </div>
+                <div
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.gray600,
+                    marginBottom: theme.spacing.sm,
+                  }}
+                >
+                  Click to add supported crypto symbols to your watchlist:
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: theme.spacing.xs,
+                  }}
+                >
+                  {[
+                    { symbol: 'BTC', name: 'Bitcoin' },
+                    { symbol: 'ETH', name: 'Ethereum' },
+                    { symbol: 'SOL', name: 'Solana' },
+                    { symbol: 'DOGE', name: 'Dogecoin' },
+                    { symbol: 'AVAX', name: 'Avalanche' },
+                    { symbol: 'LINK', name: 'Chainlink' },
+                    { symbol: 'LTC', name: 'Litecoin' },
+                    { symbol: 'DOT', name: 'Polkadot' },
+                    { symbol: 'SHIB', name: 'Shiba Inu' },
+                    { symbol: 'UNI', name: 'Uniswap' },
+                  ].map(crypto => {
+                    const isInWatchlist = config.watchlist.includes(crypto.symbol);
+                    return (
+                      <button
+                        key={crypto.symbol}
+                        onClick={() => {
+                          if (!isInWatchlist) {
+                            updateConfig('watchlist', [...config.watchlist, crypto.symbol]);
+                          }
+                        }}
+                        disabled={isInWatchlist}
+                        title={isInWatchlist ? `${crypto.name} is already in watchlist` : `Add ${crypto.name} to watchlist`}
+                        style={{
+                          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                          fontSize: theme.typography.fontSize.xs,
+                          fontWeight: theme.typography.fontWeight.medium,
+                          backgroundColor: isInWatchlist
+                            ? theme.colors.success
+                            : theme.colors.info,
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: theme.borderRadius.sm,
+                          cursor: isInWatchlist ? 'default' : 'pointer',
+                          opacity: isInWatchlist ? 0.7 : 1,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {isInWatchlist ? '✓' : '+'} {crypto.symbol}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

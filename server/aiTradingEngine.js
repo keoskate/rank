@@ -882,8 +882,9 @@ async function startTradingLoop(sessionId) {
       return;
     }
 
-    // Check if market is open
-    if (!isMarketOpen()) {
+    // Check if market is open (skip for crypto - trades 24/7)
+    const sessionAssetType = currentSession.config?.assetType;
+    if (assetUtils.marketHoursApply(sessionAssetType) && !isMarketOpen()) {
       // Send status update (only once per hour to avoid spam)
       websocketServer.sendAlert(currentSession.userId, {
         type: 'info',
