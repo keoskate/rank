@@ -12,7 +12,7 @@
  *
  * Used across: Strategy Lab, Trading Simulator, A/B Testing, Live Trading
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import theme from '../../theme';
 import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
 

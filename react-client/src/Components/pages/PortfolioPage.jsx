@@ -16,22 +16,41 @@ const PortfolioPage = () => {
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [allOrders, setAllOrders] = useState([]); // For debugging - more orders
   const [aiSession, setAiSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Persist trading mode to localStorage
+  const [tradingMode, setTradingMode] = useState(() => {
+    try {
+      return localStorage.getItem('portfolio-trading-mode') || 'paper';
+    } catch {
+      return 'paper';
+    }
+  });
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  // Persist tradingMode to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('portfolio-trading-mode', tradingMode);
+    } catch {}
+  }, [tradingMode]);
 
   useEffect(() => {
     fetchPortfolioData();
     const interval = setInterval(fetchPortfolioData, 10000); // Refresh every 10s for live updates
     return () => clearInterval(interval);
-  }, []);
+  }, [tradingMode]); // Re-fetch when mode changes
 
   const fetchPortfolioData = async () => {
     try {
-      const [accountRes, positionsRes, ordersRes, sessionRes] =
+      const modeParam = `mode=${tradingMode}`;
+      const [accountRes, positionsRes, ordersRes, allOrdersRes, sessionRes] =
         await Promise.all([
-          fetch('/api/alpaca/account'),
-          fetch('/api/alpaca/positions'),
-          fetch('/api/alpaca/orders?status=all&limit=10'),
+          fetch(`/api/alpaca/account?${modeParam}`),
+          fetch(`/api/alpaca/positions?${modeParam}`),
+          fetch(`/api/alpaca/orders?status=all&limit=10&${modeParam}`),
+          fetch(`/api/alpaca/orders?status=all&limit=50&${modeParam}`), // More orders for debugging
           fetch('/api/ai/session/default_user'),
         ]);
 
@@ -50,6 +69,12 @@ const PortfolioPage = () => {
         const data = await ordersRes.json();
         const ordersArray = data.orders || data;
         setRecentOrders(Array.isArray(ordersArray) ? ordersArray : []);
+      }
+
+      if (allOrdersRes.ok) {
+        const data = await allOrdersRes.json();
+        const ordersArray = data.orders || data;
+        setAllOrders(Array.isArray(ordersArray) ? ordersArray : []);
       }
 
       if (sessionRes.ok) {
@@ -124,8 +149,67 @@ const PortfolioPage = () => {
               color: theme.colors.gray600,
             }}
           >
-            Paper Trading Account
+            {tradingMode === 'paper' ? 'Paper Trading Account' : 'Live Trading Account'}
           </p>
+        </div>
+
+        {/* Account Mode Toggle */}
+        <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            style={{
+              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+              fontSize: theme.typography.fontSize.sm,
+              backgroundColor: showDebugPanel ? theme.colors.gray200 : 'transparent',
+              color: theme.colors.gray600,
+              border: `1px solid ${theme.colors.gray300}`,
+              borderRadius: theme.borderRadius.md,
+              cursor: 'pointer',
+            }}
+          >
+            {showDebugPanel ? 'Hide' : 'Show'} Debug
+          </button>
+          <div
+            style={{
+              display: 'flex',
+              backgroundColor: theme.colors.gray100,
+              borderRadius: theme.borderRadius.md,
+              padding: '2px',
+            }}
+          >
+            <button
+              onClick={() => setTradingMode('paper')}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: tradingMode === 'paper' ? theme.typography.fontWeight.bold : theme.typography.fontWeight.medium,
+                backgroundColor: tradingMode === 'paper' ? theme.colors.warning : 'transparent',
+                color: tradingMode === 'paper' ? '#fff' : theme.colors.gray600,
+                border: 'none',
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Paper
+            </button>
+            <button
+              onClick={() => setTradingMode('live')}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: tradingMode === 'live' ? theme.typography.fontWeight.bold : theme.typography.fontWeight.medium,
+                backgroundColor: tradingMode === 'live' ? theme.colors.success : 'transparent',
+                color: tradingMode === 'live' ? '#fff' : theme.colors.gray600,
+                border: 'none',
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Live
+            </button>
+          </div>
         </div>
       </div>
 
@@ -617,6 +701,222 @@ const PortfolioPage = () => {
           )}
         </Card>
       </div>
+
+      {/* Debug Panel - Expanded Trade History */}
+      {showDebugPanel && (
+        <Card style={{ marginTop: theme.spacing.lg }}>
+          <h3
+            style={{
+              margin: 0,
+              marginBottom: theme.spacing.md,
+              fontSize: theme.typography.fontSize.md,
+              fontWeight: theme.typography.fontWeight.bold,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}
+          >
+            Trade Activity Log
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                padding: '2px 8px',
+                borderRadius: theme.borderRadius.sm,
+                backgroundColor: tradingMode === 'paper' ? theme.colors.warning + '20' : theme.colors.success + '20',
+                color: tradingMode === 'paper' ? theme.colors.warning : theme.colors.success,
+              }}
+            >
+              {tradingMode.toUpperCase()}
+            </span>
+          </h3>
+
+          {/* Summary Stats */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: theme.spacing.md,
+              padding: theme.spacing.md,
+              backgroundColor: theme.colors.gray50,
+              borderRadius: theme.borderRadius.md,
+              marginBottom: theme.spacing.md,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Total Orders
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold }}>
+                {allOrders.length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Filled Orders
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold }}>
+                {allOrders.filter(o => o.status === 'filled').length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Buy Orders
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.success }}>
+                {allOrders.filter(o => o.side === 'buy').length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Sell Orders
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.error }}>
+                {allOrders.filter(o => o.side === 'sell').length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Canceled
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray500 }}>
+                {allOrders.filter(o => o.status === 'canceled').length}
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Order List */}
+          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: theme.typography.fontSize.xs,
+              }}
+            >
+              <thead>
+                <tr style={{ borderBottom: `2px solid ${theme.colors.gray200}`, textAlign: 'left' }}>
+                  <th style={{ padding: theme.spacing.xs, position: 'sticky', top: 0, backgroundColor: '#fff' }}>Time</th>
+                  <th style={{ padding: theme.spacing.xs, position: 'sticky', top: 0, backgroundColor: '#fff' }}>Symbol</th>
+                  <th style={{ padding: theme.spacing.xs, position: 'sticky', top: 0, backgroundColor: '#fff' }}>Side</th>
+                  <th style={{ padding: theme.spacing.xs, textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#fff' }}>Qty</th>
+                  <th style={{ padding: theme.spacing.xs, textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#fff' }}>Price</th>
+                  <th style={{ padding: theme.spacing.xs, textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#fff' }}>Total</th>
+                  <th style={{ padding: theme.spacing.xs, position: 'sticky', top: 0, backgroundColor: '#fff' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ padding: theme.spacing.lg, textAlign: 'center', color: theme.colors.gray500 }}>
+                      No orders found for this account
+                    </td>
+                  </tr>
+                ) : (
+                  allOrders.map((order, idx) => {
+                    const filledAt = order.filledAt || order.filled_at;
+                    const createdAt = order.createdAt || order.created_at;
+                    const displayTime = filledAt || createdAt;
+                    const qty = parseFloat(order.filledQty || order.filled_qty || order.qty || order.quantity || 0);
+                    const price = parseFloat(order.filledAvgPrice || order.filled_avg_price || order.limitPrice || order.limit_price || 0);
+                    const total = qty * price;
+
+                    return (
+                      <tr
+                        key={order.id || idx}
+                        style={{
+                          borderBottom: `1px solid ${theme.colors.gray100}`,
+                          backgroundColor: idx % 2 === 0 ? '#fff' : theme.colors.gray50,
+                        }}
+                      >
+                        <td style={{ padding: theme.spacing.xs, fontFamily: 'monospace' }}>
+                          {displayTime ? new Date(displayTime).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          }) : '--'}
+                        </td>
+                        <td style={{ padding: theme.spacing.xs, fontWeight: theme.typography.fontWeight.bold }}>
+                          {order.symbol}
+                        </td>
+                        <td style={{ padding: theme.spacing.xs }}>
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: theme.borderRadius.sm,
+                              backgroundColor: order.side === 'buy' ? theme.colors.success + '20' : theme.colors.error + '20',
+                              color: order.side === 'buy' ? theme.colors.success : theme.colors.error,
+                              fontWeight: theme.typography.fontWeight.medium,
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {order.side}
+                          </span>
+                        </td>
+                        <td style={{ padding: theme.spacing.xs, textAlign: 'right', fontFamily: 'monospace' }}>
+                          {qty > 0 ? qty : '--'}
+                        </td>
+                        <td style={{ padding: theme.spacing.xs, textAlign: 'right', fontFamily: 'monospace' }}>
+                          {price > 0 ? formatCurrency(price) : '--'}
+                        </td>
+                        <td style={{ padding: theme.spacing.xs, textAlign: 'right', fontFamily: 'monospace', fontWeight: theme.typography.fontWeight.medium }}>
+                          {total > 0 ? formatCurrency(total) : '--'}
+                        </td>
+                        <td style={{ padding: theme.spacing.xs }}>
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: theme.borderRadius.sm,
+                              fontSize: theme.typography.fontSize.xs,
+                              backgroundColor:
+                                order.status === 'filled' ? theme.colors.success + '20' :
+                                order.status === 'canceled' ? theme.colors.gray200 :
+                                order.status === 'new' || order.status === 'pending_new' ? theme.colors.primary + '20' :
+                                theme.colors.warning + '20',
+                              color:
+                                order.status === 'filled' ? theme.colors.success :
+                                order.status === 'canceled' ? theme.colors.gray500 :
+                                order.status === 'new' || order.status === 'pending_new' ? theme.colors.primary :
+                                theme.colors.warning,
+                            }}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Account Debug Info */}
+          <div
+            style={{
+              marginTop: theme.spacing.md,
+              padding: theme.spacing.md,
+              backgroundColor: theme.colors.gray50,
+              borderRadius: theme.borderRadius.md,
+              fontFamily: 'monospace',
+              fontSize: theme.typography.fontSize.xs,
+            }}
+          >
+            <div style={{ marginBottom: theme.spacing.xs, fontWeight: theme.typography.fontWeight.bold }}>
+              Account Details ({tradingMode.toUpperCase()})
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.sm }}>
+              <div>Account ID: {account?.id || account?.accountNumber || '--'}</div>
+              <div>Status: {account?.status || '--'}</div>
+              <div>Equity: {formatCurrency(account?.equity)}</div>
+              <div>Cash: {formatCurrency(account?.cash)}</div>
+              <div>Buying Power: {formatCurrency(account?.buyingPower || account?.buying_power)}</div>
+              <div>Day Trade Count: {account?.daytradeCount || account?.daytrade_count || 0}</div>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

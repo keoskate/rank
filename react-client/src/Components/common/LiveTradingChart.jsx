@@ -46,9 +46,19 @@ const isMarketOpen = () => {
   return day >= 1 && day <= 5 && estHour >= MARKET_OPEN_HOUR && estHour < MARKET_CLOSE_HOUR;
 };
 
+// Timeframe options
+const TIMEFRAMES = [
+  { key: '1D', label: '1D', days: 1 },
+  { key: '1W', label: '1W', days: 7 },
+  { key: '3M', label: '3M', days: 90 },
+  { key: '6M', label: '6M', days: 180 },
+  { key: '1Y', label: '1Y', days: 365 },
+];
+
 const LiveTradingChart = ({
   symbol = 'NVDA',
   sessionId = null,
+  sessionStatus = 'stopped', // 'running', 'paused', 'stopped'
   trades = [],
   positions = [],
   height = 200,
@@ -62,42 +72,85 @@ const LiveTradingChart = ({
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [marketStatus, setMarketStatus] = useState(isMarketOpen() ? 'open' : 'closed');
+  const [timeframe, setTimeframe] = useState('1D'); // Default to current day
   const refreshTimerRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Fetch intraday candles
+  // Get date range for the selected timeframe
+  const getDateRange = () => {
+    const today = new Date();
+    const fromDate = new Date();
+    const tf = TIMEFRAMES.find(t => t.key === timeframe) || TIMEFRAMES[0];
+    fromDate.setDate(today.getDate() - tf.days);
+
+    return {
+      from: fromDate.toISOString().split('T')[0],
+      to: today.toISOString().split('T')[0],
+    };
+  };
+
+  // Determine multiplier and timespan based on timeframe
+  const getAggregateParams = () => {
+    switch (timeframe) {
+      case '1D':
+        return { multiplier: 1, timespan: 'minute' };
+      case '1W':
+        return { multiplier: 5, timespan: 'minute' };
+      case '3M':
+      case '6M':
+        return { multiplier: 1, timespan: 'day' };
+      case '1Y':
+        return { multiplier: 1, timespan: 'day' };
+      default:
+        return { multiplier: 1, timespan: 'minute' };
+    }
+  };
+
+  // Main fetch logic
   const fetchCandles = useCallback(async () => {
     try {
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
+      setLoading(true);
+      setError(null);
+
+      const { from, to } = getDateRange();
+      const { multiplier, timespan } = getAggregateParams();
 
       const response = await fetch(
-        `/api/polygon/aggregates/${symbol}?` +
-        `multiplier=1&timespan=minute&from=${today}&to=${today}`
+        `/api/polygon/aggregates/${symbol}/${multiplier}/${timespan}?from=${from}&to=${to}`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch candles');
+      // Handle non-JSON responses gracefully
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        // No data available - show empty chart, don't error
+        setCandles([]);
+        setLoading(false);
+        return;
       }
 
       const data = await response.json();
+      const bars = data.results || data.candles || [];
 
-      if (data.candles && data.candles.length > 0) {
-        // Filter to market hours only
-        const marketCandles = data.candles.filter(c => {
-          const hour = getEstHour(c.timestamp || c.t);
-          return hour >= MARKET_OPEN_HOUR && hour < MARKET_CLOSE_HOUR;
-        });
+      if (bars.length > 0) {
+        let processedCandles = bars;
 
-        setCandles(marketCandles);
+        // For 1D view, filter to market hours only
+        if (timeframe === '1D') {
+          processedCandles = bars.filter(c => {
+            const hour = getEstHour(c.timestamp || c.t);
+            return hour >= MARKET_OPEN_HOUR && hour < MARKET_CLOSE_HOUR;
+          });
+        }
+
+        setCandles(processedCandles);
 
         // Set day open from first candle
-        if (marketCandles.length > 0) {
-          const firstCandle = marketCandles[0];
+        if (processedCandles.length > 0) {
+          const firstCandle = processedCandles[0];
           setDayOpen(firstCandle.open || firstCandle.o);
 
           // Set current price from latest candle
-          const lastCandle = marketCandles[marketCandles.length - 1];
+          const lastCandle = processedCandles[processedCandles.length - 1];
           const price = lastCandle.close || lastCandle.c;
           setCurrentPrice(price);
           setLastUpdate(new Date());
@@ -106,16 +159,18 @@ const LiveTradingChart = ({
             onPriceUpdate(price);
           }
         }
-
-        setError(null);
+      } else {
+        // No data - show empty chart (market may be closed with no data yet)
+        setCandles([]);
       }
     } catch (err) {
       console.error('Error fetching candles:', err);
-      setError(err.message);
+      // Don't show error to user - just show empty chart
+      setCandles([]);
     } finally {
       setLoading(false);
     }
-  }, [symbol, onPriceUpdate]);
+  }, [symbol, timeframe, onPriceUpdate]);
 
   // Also fetch current quote for more real-time price
   const fetchQuote = useCallback(async () => {
@@ -138,7 +193,6 @@ const LiveTradingChart = ({
 
   // Initial fetch and setup refresh
   useEffect(() => {
-    setLoading(true);
     fetchCandles();
 
     // Update market status
@@ -147,10 +201,10 @@ const LiveTradingChart = ({
     };
     checkMarket();
 
-    // Setup refresh interval
+    // Setup refresh interval - only refresh when on 1D view and session is running
     refreshTimerRef.current = setInterval(() => {
       checkMarket();
-      if (isMarketOpen()) {
+      if (timeframe === '1D' && sessionStatus === 'running' && isMarketOpen()) {
         fetchCandles();
         fetchQuote();
       }
@@ -161,16 +215,16 @@ const LiveTradingChart = ({
         clearInterval(refreshTimerRef.current);
       }
     };
-  }, [fetchCandles, fetchQuote, refreshInterval]);
+  }, [fetchCandles, fetchQuote, refreshInterval, sessionStatus, timeframe]);
 
-  // Refetch when symbol changes
+  // Refetch when symbol or timeframe changes
   useEffect(() => {
     setLoading(true);
     setCandles([]);
     setCurrentPrice(null);
     setDayOpen(null);
     fetchCandles();
-  }, [symbol]);
+  }, [symbol, timeframe]);
 
   // Calculate P&L for current position
   const calculatePositionPnL = useCallback(() => {
@@ -202,7 +256,16 @@ const LiveTradingChart = ({
             fontSize: theme.typography.fontSize.sm,
           }}
         >
-          {loading ? 'Loading chart data...' : 'No data available for today'}
+          {loading ? 'Loading chart data...' : (
+            <span>
+              No data available yet
+              {timeframe === '1D' && marketStatus === 'closed' && (
+                <span style={{ display: 'block', marginTop: '4px', fontSize: '11px' }}>
+                  Market is closed - chart will update when market opens
+                </span>
+              )}
+            </span>
+          )}
         </div>
       );
     }
@@ -460,6 +523,28 @@ const LiveTradingChart = ({
           >
             {marketStatus === 'open' ? '● LIVE' : '○ CLOSED'}
           </span>
+
+          {/* Timeframe toggles */}
+          <div style={{ display: 'flex', gap: '2px' }}>
+            {TIMEFRAMES.map(tf => (
+              <button
+                key={tf.key}
+                onClick={() => setTimeframe(tf.key)}
+                style={{
+                  padding: '2px 8px',
+                  fontSize: theme.typography.fontSize.xs,
+                  border: 'none',
+                  borderRadius: theme.borderRadius.sm,
+                  cursor: 'pointer',
+                  backgroundColor: timeframe === tf.key ? theme.colors.primary : theme.colors.gray100,
+                  color: timeframe === tf.key ? '#fff' : theme.colors.textMuted,
+                  fontWeight: timeframe === tf.key ? 'bold' : 'normal',
+                }}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Price and P&L */}

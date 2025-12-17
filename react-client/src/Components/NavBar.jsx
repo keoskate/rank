@@ -20,6 +20,7 @@ const NavBar = () => {
 
   const toolsNav = [
     { path: '/strategy-lab', label: 'Strategy Lab' },
+    { path: '/charlie-strategy', label: 'Charlie Strategy' },
     { path: '/overnight', label: 'Overnight Optimizer' },
     { path: '/backtest', label: 'Backtesting' },
     { path: '/day-trading', label: 'Day Trading Lab' },

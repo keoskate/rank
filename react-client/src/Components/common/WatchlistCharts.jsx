@@ -205,12 +205,12 @@ const WatchlistCharts = ({
                       fontSize: theme.typography.fontSize.xs,
                       padding: '2px 6px',
                       borderRadius: theme.borderRadius.sm,
-                      backgroundColor: parseFloat(position.unrealized_pl || 0) >= 0 ? '#dcfce7' : '#fee2e2',
-                      color: parseFloat(position.unrealized_pl || 0) >= 0 ? '#166534' : '#991b1b',
+                      backgroundColor: parseFloat(position.unrealizedPL || position.unrealized_pl || 0) >= 0 ? '#dcfce7' : '#fee2e2',
+                      color: parseFloat(position.unrealizedPL || position.unrealized_pl || 0) >= 0 ? '#166534' : '#991b1b',
                     }}
                   >
-                    {parseFloat(position.qty || 0)} shares | {parseFloat(position.unrealized_pl || 0) >= 0 ? '+' : ''}
-                    ${parseFloat(position.unrealized_pl || 0).toFixed(2)}
+                    {parseFloat(position.quantity || position.qty || 0)} shares | {parseFloat(position.unrealizedPL || position.unrealized_pl || 0) >= 0 ? '+' : ''}
+                    ${parseFloat(position.unrealizedPL || position.unrealized_pl || 0).toFixed(2)}
                   </span>
                 )}
                 {symbolTrades.length > 0 && (

@@ -26,6 +26,7 @@ import ABTestPage from './pages/ABTestPage';
 import WalkForwardPage from './pages/WalkForwardPage';
 import StrategyLabPage from './pages/StrategyLabPage';
 import OvernightOptimizationPage from './pages/OvernightOptimizationPage';
+import CharlieStrategyPage from './pages/CharlieStrategyPage';
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -64,6 +65,7 @@ function App() {
                 <Route path="/walk-forward" element={<WalkForwardPage />} />
                 <Route path="/strategy-lab" element={<StrategyLabPage />} />
                 <Route path="/overnight" element={<OvernightOptimizationPage />} />
+                <Route path="/charlie-strategy" element={<CharlieStrategyPage />} />
 
                 {/* Legacy routes (keep accessible) */}
                 <Route path="/invest" element={<InvestTab />} />
