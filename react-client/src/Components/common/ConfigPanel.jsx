@@ -117,6 +117,18 @@ const STRATEGY_PRESETS = {
 
 // Config field metadata with risk levels and tooltips
 const CONFIG_SCHEMA = {
+  'Asset Type': {
+    assetType: {
+      label: 'Asset Class',
+      type: 'select',
+      options: [
+        { value: 'stocks', label: 'Stocks & ETFs' },
+        { value: 'crypto', label: 'Cryptocurrency' },
+      ],
+      tooltip: 'Stocks are subject to PDT rules. Crypto trades 24/7 with no PDT restrictions.',
+      risk: 'neutral',
+    },
+  },
   'Capital Allocation': {
     allocatedCapital: {
       label: 'Capital ($)',
@@ -627,7 +639,11 @@ const ConfigPanel = ({
     if (value !== undefined && value !== null && !Number.isNaN(value)) return value;
     if (DEFAULT_TRADING_CONFIG[field] !== undefined) return DEFAULT_TRADING_CONFIG[field];
     if (schema.type === 'boolean') return false;
-    if (schema.type === 'select') return schema.options[0];
+    if (schema.type === 'select') {
+      // Support both string options and {value, label} object options
+      const firstOpt = schema.options[0];
+      return typeof firstOpt === 'object' ? firstOpt.value : firstOpt;
+    }
     return schema.min || 0;
   };
 
@@ -789,17 +805,25 @@ const ConfigPanel = ({
     }
 
     if (schema.type === 'select') {
+      // Support both string options and {value, label} object options
+      const defaultValue = typeof schema.options[0] === 'object'
+        ? schema.options[0].value
+        : schema.options[0];
       return (
         <select
-          value={value || schema.options[0]}
+          value={value || defaultValue}
           onChange={e => handleChange(field, e.target.value)}
           style={inputStyle}
         >
-          {schema.options.map(opt => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
+          {schema.options.map(opt => {
+            const optValue = typeof opt === 'object' ? opt.value : opt;
+            const optLabel = typeof opt === 'object' ? opt.label : opt;
+            return (
+              <option key={optValue} value={optValue}>
+                {optLabel}
+              </option>
+            );
+          })}
         </select>
       );
     }

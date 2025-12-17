@@ -490,7 +490,282 @@ async function getAggregates(
   }
 }
 
+// ============================================================
+// CRYPTO-SPECIFIC ENDPOINTS (isolated from stock endpoints)
+// ============================================================
+// These functions handle cryptocurrency data from Polygon
+// Crypto symbols use format: X:BTCUSD (X: prefix + pair without slash)
+
+const assetUtils = require('./assetUtils');
+
+/**
+ * Fetch historical aggregates (OHLCV) for a cryptocurrency
+ *
+ * @param {string} symbol - Crypto symbol (BTC, ETH, BTC/USD, BTCUSD, X:BTCUSD all accepted)
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
+ * @param {string} timespan - minute, hour, day, week, month
+ * @param {number} multiplier - Timespan multiplier (e.g., 5 for 5 minutes)
+ * @returns {Array} - Array of OHLCV bars
+ */
+async function getCryptoHistoricalAggregates(
+  symbol,
+  startDate,
+  endDate,
+  timespan = 'day',
+  multiplier = 1
+) {
+  await rateLimit();
+
+  // Normalize to Polygon crypto format (X:BTCUSD)
+  const normalizedSymbol = assetUtils.normalizeForPolygonCrypto(symbol);
+  console.log(`🪙 Polygon: Fetching crypto aggregates for ${normalizedSymbol} (${startDate} to ${endDate})`);
+
+  try {
+    const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${normalizedSymbol}/range/${multiplier}/${timespan}/${startDate}/${endDate}`;
+
+    const response = await axios.get(url, {
+      params: {
+        adjusted: 'true',
+        sort: 'asc',
+        apiKey: POLYGON_API_KEY,
+      },
+      timeout: 30000,
+    });
+
+    if (response.data.status === 'ERROR') {
+      throw new Error(response.data.error || 'Polygon API error');
+    }
+
+    if (!response.data.results || response.data.results.length === 0) {
+      console.warn(
+        `⚠️ No crypto historical data found for ${normalizedSymbol} (${startDate} to ${endDate})`
+      );
+      return [];
+    }
+
+    // Transform Polygon format to our format
+    const bars = response.data.results.map(bar => ({
+      date: new Date(bar.t).toISOString().split('T')[0],
+      timestamp: bar.t,
+      open: bar.o,
+      high: bar.h,
+      low: bar.l,
+      close: bar.c,
+      volume: bar.v,
+      vwap: bar.vw,
+      transactions: bar.n,
+    }));
+
+    console.log(
+      `🪙 Polygon: Fetched ${bars.length} crypto bars for ${normalizedSymbol}`
+    );
+    return bars;
+  } catch (error) {
+    if (error.response?.status === 429) {
+      console.error(`❌ Rate limit exceeded for crypto ${normalizedSymbol}`);
+      throw new Error('Rate limit exceeded - please wait before retrying');
+    }
+
+    console.error(
+      `❌ Error fetching crypto historical data for ${normalizedSymbol}:`,
+      error.message
+    );
+    throw error;
+  }
+}
+
+/**
+ * Get crypto aggregates with flexible API signature
+ * Used by AI trading engine for crypto analysis
+ *
+ * @param {string} symbol - Crypto symbol
+ * @param {number} multiplier - Size of timespan multiplier
+ * @param {string} timespan - minute, hour, day, week, month
+ * @param {Object} options - Optional parameters { from, to, limit }
+ * @returns {Array} - Array of OHLCV bars
+ */
+async function getCryptoAggregates(
+  symbol,
+  multiplier = 1,
+  timespan = 'day',
+  options = {}
+) {
+  await rateLimit();
+
+  // Normalize to Polygon crypto format
+  const normalizedSymbol = assetUtils.normalizeForPolygonCrypto(symbol);
+
+  // Helper to convert date to YYYY-MM-DD string
+  const toDateString = d => {
+    if (!d) return null;
+    if (typeof d === 'string') return d.split('T')[0];
+    if (d instanceof Date) return d.toISOString().split('T')[0];
+    return String(d);
+  };
+
+  // Default to last 30 days if no dates specified
+  const endDate =
+    toDateString(options.to) || new Date().toISOString().split('T')[0];
+  const startDate =
+    toDateString(options.from) ||
+    (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      return d.toISOString().split('T')[0];
+    })();
+
+  console.log(`🪙 Polygon: Getting crypto aggregates for ${normalizedSymbol}`);
+
+  try {
+    const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${normalizedSymbol}/range/${multiplier}/${timespan}/${startDate}/${endDate}`;
+
+    const response = await axios.get(url, {
+      params: {
+        adjusted: 'true',
+        sort: 'asc',
+        limit: options.limit || 50000,
+        apiKey: POLYGON_API_KEY,
+      },
+      timeout: 30000,
+    });
+
+    if (response.data.status === 'ERROR') {
+      throw new Error(response.data.error || 'Polygon API error');
+    }
+
+    if (!response.data.results || response.data.results.length === 0) {
+      console.warn(`⚠️ No crypto aggregate data found for ${normalizedSymbol}`);
+      return [];
+    }
+
+    // Transform Polygon format to our format
+    const bars = response.data.results.map(bar => ({
+      date: new Date(bar.t).toISOString().split('T')[0],
+      time: Math.floor(bar.t / 1000), // Unix timestamp for lightweight-charts
+      timestamp: bar.t,
+      open: bar.o,
+      high: bar.h,
+      low: bar.l,
+      close: bar.c,
+      volume: bar.v,
+      vwap: bar.vw,
+      transactions: bar.n,
+    }));
+
+    console.log(
+      `🪙 Polygon: Fetched ${bars.length} ${multiplier}${timespan} crypto bars for ${normalizedSymbol}`
+    );
+    return bars;
+  } catch (error) {
+    if (error.response?.status === 429) {
+      console.error(`❌ Rate limit exceeded for crypto ${normalizedSymbol}`);
+      throw new Error('Rate limit exceeded - please wait before retrying');
+    }
+
+    console.error(
+      `❌ Error fetching crypto aggregates for ${normalizedSymbol}:`,
+      error.message
+    );
+    throw error;
+  }
+}
+
+/**
+ * Get latest trade for a cryptocurrency
+ *
+ * @param {string} symbol - Crypto symbol
+ * @returns {Object} - Latest trade data
+ */
+async function getCryptoLatestTrade(symbol) {
+  await rateLimit();
+
+  const normalizedSymbol = assetUtils.normalizeForPolygonCrypto(symbol);
+  console.log(`🪙 Polygon: Fetching crypto latest trade for ${normalizedSymbol}`);
+
+  try {
+    const url = `${POLYGON_BASE_URL}/v1/last/crypto/${normalizedSymbol}`;
+
+    const response = await axios.get(url, {
+      params: {
+        apiKey: POLYGON_API_KEY,
+      },
+      timeout: 10000,
+    });
+
+    if (response.data.status === 'ERROR') {
+      throw new Error(response.data.error || 'Failed to fetch crypto trade');
+    }
+
+    const result = response.data.last;
+
+    return {
+      symbol: normalizedSymbol,
+      price: result.price,
+      size: result.size,
+      exchange: result.exchange,
+      timestamp: result.timestamp,
+      conditions: result.conditions,
+    };
+  } catch (error) {
+    console.error(
+      `❌ Error fetching crypto trade for ${normalizedSymbol}:`,
+      error.message
+    );
+    throw error;
+  }
+}
+
+/**
+ * Get previous day's close for a cryptocurrency
+ *
+ * @param {string} symbol - Crypto symbol
+ * @returns {Object} - Previous day's OHLCV data
+ */
+async function getCryptoPreviousClose(symbol) {
+  await rateLimit();
+
+  const normalizedSymbol = assetUtils.normalizeForPolygonCrypto(symbol);
+  console.log(`🪙 Polygon: Fetching crypto previous close for ${normalizedSymbol}`);
+
+  try {
+    const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${normalizedSymbol}/prev`;
+
+    const response = await axios.get(url, {
+      params: {
+        adjusted: 'true',
+        apiKey: POLYGON_API_KEY,
+      },
+      timeout: 10000,
+    });
+
+    if (!response.data.results || response.data.results.length === 0) {
+      return null;
+    }
+
+    const result = response.data.results[0];
+
+    return {
+      symbol: normalizedSymbol,
+      date: new Date(result.t).toISOString().split('T')[0],
+      open: result.o,
+      high: result.h,
+      low: result.l,
+      close: result.c,
+      volume: result.v,
+      vwap: result.vw,
+    };
+  } catch (error) {
+    console.error(
+      `❌ Error fetching crypto previous close for ${normalizedSymbol}:`,
+      error.message
+    );
+    return null;
+  }
+}
+
 module.exports = {
+  // Stock endpoints
   getHistoricalAggregates,
   getAggregates,
   getLatestQuote,
@@ -501,4 +776,10 @@ module.exports = {
   calculateSMA,
   calculateVolatility,
   batchGetHistoricalData,
+
+  // Crypto-specific endpoints (isolated from stock endpoints)
+  getCryptoHistoricalAggregates,
+  getCryptoAggregates,
+  getCryptoLatestTrade,
+  getCryptoPreviousClose,
 };

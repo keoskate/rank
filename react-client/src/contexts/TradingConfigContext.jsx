@@ -16,6 +16,10 @@ const TRADING_CONFIG_KEY = 'keo-stocks-trading-config';
 
 // Default config values - single source of truth
 export const DEFAULT_TRADING_CONFIG = {
+  // === ASSET TYPE ===
+  // 'stocks' or 'crypto' - determines API routing and PDT rules
+  assetType: 'stocks',
+
   // === CAPITAL ALLOCATION ===
   watchlist: [
     // Tech Giants

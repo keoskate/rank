@@ -19,6 +19,7 @@ const alpacaClient = require('./alpacaClient');
 const polygonClient = require('./polygonClient');
 const websocketServer = require('./websocketServer');
 const tradingLogger = require('./tradingLogger');
+const assetUtils = require('./assetUtils');
 
 // Session persistence file
 const SESSION_FILE = path.join(__dirname, '../data/ai-sessions.json');
@@ -46,6 +47,48 @@ const TRADE_COOLDOWN_MINUTES = 15;
 // Map structure: sessionId -> Map(symbol -> entryContext)
 // This enables ML models to learn which entry conditions lead to successful trades
 const entryContexts = new Map();
+
+// Leveraged ETF classification for regime-aware trading
+// Bullish ETFs profit in up markets, Bearish ETFs profit in down markets
+const BULLISH_ETFS = ['SOXL', 'QBTX', 'PLTU', 'TQQQ', 'SPXL', 'UPRO', 'TECL', 'FNGU'];
+const BEARISH_ETFS = ['SOXS', 'QBTZ', 'SQQQ', 'SPXS', 'TECS', 'FNGD'];
+
+/**
+ * Determine ETF type for regime-aware trading
+ * @param {string} symbol - Stock symbol
+ * @returns {string} 'bullish', 'bearish', or 'neutral'
+ */
+function getEtfType(symbol) {
+  const upperSymbol = symbol.toUpperCase();
+  if (BULLISH_ETFS.includes(upperSymbol)) return 'bullish';
+  if (BEARISH_ETFS.includes(upperSymbol)) return 'bearish';
+  return 'neutral';
+}
+
+/**
+ * Check if position is counter-trend (e.g., bullish ETF in bear market)
+ * @param {string} etfType - 'bullish', 'bearish', or 'neutral'
+ * @param {string} marketRegime - 'bull', 'bear', or 'sideways'
+ * @returns {boolean} True if position is counter-trend
+ */
+function isCounterTrend(etfType, marketRegime) {
+  if (etfType === 'bullish' && marketRegime === 'bear') return true;
+  if (etfType === 'bearish' && marketRegime === 'bull') return true;
+  return false;
+}
+
+/**
+ * Check if position aligns with market regime
+ * @param {string} etfType - 'bullish', 'bearish', or 'neutral'
+ * @param {string} marketRegime - 'bull', 'bear', or 'sideways'
+ * @returns {boolean} True if position aligns with regime
+ */
+function isRegimeAligned(etfType, marketRegime) {
+  if (etfType === 'bullish' && marketRegime === 'bull') return true;
+  if (etfType === 'bearish' && marketRegime === 'bear') return true;
+  if (etfType === 'neutral') return true;
+  return false;
+}
 
 /**
  * Save sessions to file for persistence
@@ -144,6 +187,7 @@ const MARKET_CLOSE_MINUTE = 0;
 // Note: Field names align with frontend TradingConfigContext.jsx for seamless import
 const DEFAULT_CONFIG = {
   name: 'Default Strategy',
+  assetType: 'stocks', // 'stocks' or 'crypto' - determines API routing and PDT rules
   timeframes: ['dayTrading'],
   maxPositions: 5,
   maxPositionSizePercent: 10,
@@ -169,6 +213,82 @@ const DEFAULT_CONFIG = {
   useAdaptiveTargets: true,
   exitOnRsiExtreme: true,
 };
+
+// ============================================================
+// ASSET TYPE-AWARE API ROUTING
+// ============================================================
+// These helper functions route API calls to the correct endpoints
+// based on the session's assetType (stocks vs crypto)
+
+/**
+ * Get aggregates (price bars) for a symbol, routing to correct API based on asset type
+ * @param {string} symbol - Symbol to fetch
+ * @param {number} multiplier - Timespan multiplier
+ * @param {string} timespan - minute, hour, day, etc.
+ * @param {Object} options - { from, to, limit }
+ * @param {string} assetType - 'stocks' or 'crypto'
+ * @returns {Array} - Array of OHLCV bars
+ */
+async function getAggregatesForAsset(symbol, multiplier, timespan, options, assetType) {
+  if (assetUtils.isCrypto(assetType)) {
+    return polygonClient.getCryptoAggregates(symbol, multiplier, timespan, options);
+  }
+  return polygonClient.getAggregates(symbol, multiplier, timespan, options);
+}
+
+/**
+ * Get latest quote for a symbol, routing to correct API based on asset type
+ * @param {string} symbol - Symbol to fetch
+ * @param {string} assetType - 'stocks' or 'crypto'
+ * @returns {Object} - Quote data
+ */
+async function getLatestQuoteForAsset(symbol, assetType) {
+  if (assetUtils.isCrypto(assetType)) {
+    return alpacaClient.getCryptoLatestQuote(symbol);
+  }
+  return alpacaClient.getLatestQuote(symbol);
+}
+
+/**
+ * Place an order, routing to correct API based on asset type
+ * @param {Object} orderParams - Order parameters
+ * @param {string} tradingMode - 'live' or 'paper'
+ * @param {string} assetType - 'stocks' or 'crypto'
+ * @returns {Object} - Order result
+ */
+async function placeOrderForAsset(orderParams, tradingMode, assetType) {
+  if (assetUtils.isCrypto(assetType)) {
+    return alpacaClient.placeCryptoOrder(orderParams, tradingMode);
+  }
+  return alpacaClient.placeOrder(orderParams, tradingMode);
+}
+
+/**
+ * Get positions, routing to correct API based on asset type
+ * @param {string} tradingMode - 'live' or 'paper'
+ * @param {string} assetType - 'stocks' or 'crypto'
+ * @returns {Array} - Array of positions
+ */
+async function getPositionsForAsset(tradingMode, assetType) {
+  if (assetUtils.isCrypto(assetType)) {
+    return alpacaClient.getCryptoPositions(tradingMode);
+  }
+  return alpacaClient.getPositions(tradingMode);
+}
+
+/**
+ * Close a position, routing to correct API based on asset type
+ * @param {string} symbol - Symbol to close
+ * @param {string} tradingMode - 'live' or 'paper'
+ * @param {string} assetType - 'stocks' or 'crypto'
+ * @returns {Object} - Close result
+ */
+async function closePositionForAsset(symbol, tradingMode, assetType) {
+  if (assetUtils.isCrypto(assetType)) {
+    return alpacaClient.closeCryptoPosition(symbol, tradingMode);
+  }
+  return alpacaClient.closePosition(symbol, tradingMode);
+}
 
 /**
  * Initialize a new trading session
@@ -360,10 +480,13 @@ async function deleteSession(sessionId, options = {}) {
       `[AI Engine] PANIC SELL: Closing ${positions.length} positions for session "${sessionName}" (${tradingMode.toUpperCase()})`
     );
 
+    // Get asset type for crypto/stock routing
+    const sessionAssetType = session.config.assetType || 'stocks';
+
     for (const position of positions) {
       if (position.quantity > 0) {
         try {
-          const order = await alpacaClient.placeOrder(
+          const order = await placeOrderForAsset(
             {
               symbol: position.symbol,
               qty: position.quantity,
@@ -371,8 +494,8 @@ async function deleteSession(sessionId, options = {}) {
               type: 'market',
               time_in_force: 'day',
             },
-            null,
-            tradingMode
+            tradingMode,
+            sessionAssetType
           );
 
           closedPositions.push({
@@ -460,8 +583,9 @@ async function panicSell(sessionId) {
   );
 
   // Also check actual Alpaca positions for watchlist symbols
+  const assetType = session.config.assetType || 'stocks';
   try {
-    const alpacaPositions = await alpacaClient.getPositions(tradingMode);
+    const alpacaPositions = await getPositionsForAsset(tradingMode, assetType);
     const watchlistPositions = alpacaPositions.filter(p =>
       watchlistSymbols.includes(p.symbol)
     );
@@ -490,10 +614,13 @@ async function panicSell(sessionId) {
     }
 
     // Close each position
+    // Get asset type for crypto/stock routing
+    const sessionAssetType = session.config.assetType || 'stocks';
+
     for (const [symbol, position] of positionsToClose) {
       if (position.quantity > 0) {
         try {
-          const order = await alpacaClient.placeOrder(
+          const order = await placeOrderForAsset(
             {
               symbol: position.symbol,
               qty: position.quantity,
@@ -501,8 +628,8 @@ async function panicSell(sessionId) {
               type: 'market',
               time_in_force: 'day',
             },
-            null,
-            tradingMode
+            tradingMode,
+            sessionAssetType
           );
 
           closedPositions.push({
@@ -825,8 +952,9 @@ async function syncPortfolio(sessionId) {
   try {
     // Get the trading mode for this session (paper or live)
     const tradingMode = getSessionTradingMode(session);
+    const assetType = session.config.assetType || 'stocks';
     const account = await alpacaClient.getAccount(tradingMode);
-    const positions = await alpacaClient.getPositions(tradingMode);
+    const positions = await getPositionsForAsset(tradingMode, assetType);
 
     session.portfolio.cash = parseFloat(account.cash);
     session.portfolio.initialValue = parseFloat(account.portfolio_value);
@@ -957,10 +1085,12 @@ async function evaluateEntry(sessionId, symbol) {
 
   try {
     // Get recent candles (5-minute for intraday)
-    const candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
+    // Use asset-type-aware helper for crypto/stock routing
+    const sessionAssetType = session.config.assetType || 'stocks';
+    const candles = await getAggregatesForAsset(symbol, 5, 'minute', {
       from: new Date(Date.now() - 24 * 60 * 60 * 1000),
       to: new Date(),
-    });
+    }, sessionAssetType);
 
     if (!candles || candles.length < 50) {
       return { shouldEnter: false, reason: 'Insufficient data' };
@@ -980,6 +1110,22 @@ async function evaluateEntry(sessionId, symbol) {
     const requireVolumeSpike = cfg.requireVolumeSpike !== false;
     const requireTrendAlignment = cfg.requireTrendAlignment !== false;
     const requireRsiSignal = cfg.requireRsiSignal !== false;
+
+    // Regime-aware trading: determine market regime and ETF type
+    const etfType = getEtfType(symbol);
+    const trend = indicators.trend || {};
+
+    // Determine overall market regime from short and medium term trends
+    let marketRegime = 'sideways';
+    if (trend.shortTerm === 'bullish' && trend.mediumTerm === 'bullish') {
+      marketRegime = 'bull';
+    } else if (trend.shortTerm === 'bearish' && trend.mediumTerm === 'bearish') {
+      marketRegime = 'bear';
+    }
+
+    // Check if this trade would be counter-trend
+    const isTradeCounterTrend = isCounterTrend(etfType, marketRegime);
+    const isTradeAligned = isRegimeAligned(etfType, marketRegime);
 
     // Decision factors
     const factors = [];
@@ -1078,9 +1224,38 @@ async function evaluateEntry(sessionId, symbol) {
       factors.push('Near lower Bollinger Band');
     }
 
-    // Calculate confidence based on signals (aligned with simulator: 50 + signals * 15, capped at 95)
-    // Simulator uses: Math.min(95, 50 + signals * 15)
-    const confidence = Math.min(50 + signalCount * 15, 95);
+    // Calculate base confidence based on signals (aligned with simulator: 50 + signals * 15, capped at 95)
+    let confidence = Math.min(50 + signalCount * 15, 95);
+
+    // REGIME-AWARE CONFIDENCE ADJUSTMENTS
+    // Favor trades that align with market regime, penalize counter-trend trades
+    if (etfType !== 'neutral') {
+      if (isTradeAligned) {
+        // Bonus for regime-aligned trades (e.g., bearish ETF in bear market)
+        signalCount++;
+        confidence = Math.min(confidence + 10, 95);
+        factors.push(`Regime-aligned: ${etfType} ETF in ${marketRegime} market`);
+      } else if (isTradeCounterTrend) {
+        // Penalty for counter-trend trades (e.g., bullish ETF in bear market)
+        // Require much higher signals to overcome the disadvantage
+        confidence = Math.max(confidence - 20, 0);
+        factors.push(`⚠️ Counter-trend: ${etfType} ETF in ${marketRegime} market`);
+
+        // For counter-trend trades, require extra confirmation
+        if (signalCount < minSignalsRequired + 1) {
+          console.log(
+            `[AI Engine] ${symbol}: Counter-trend trade blocked - need ${minSignalsRequired + 1} signals, have ${signalCount}`
+          );
+          return {
+            shouldEnter: false,
+            reason: `Counter-trend trade: ${etfType} ETF in ${marketRegime} market requires extra confirmation`,
+            etfType,
+            marketRegime,
+            counterTrend: true,
+          };
+        }
+      }
+    }
 
     // Entry requirements: strategy match + minimum signals + confidence threshold
     const meetsSignalRequirement = signalCount >= minSignalsRequired;
@@ -1091,7 +1266,7 @@ async function evaluateEntry(sessionId, symbol) {
     // Only log when there's a potential trade signal
     if (strategyMatch) {
       console.log(
-        `[AI Engine] ${symbol}: strategyMatch! RSI=${indicators.rsi.value.toFixed(1)}, VWAP=${priceVsVwap > 0 ? 'above' : 'below'}, signals=${signalCount}, confidence=${confidence}%, shouldEnter=${shouldEnter}`
+        `[AI Engine] ${symbol}: strategyMatch! RSI=${indicators.rsi.value.toFixed(1)}, VWAP=${priceVsVwap > 0 ? 'above' : 'below'}, signals=${signalCount}, confidence=${confidence}%, regime=${marketRegime}, etfType=${etfType}, shouldEnter=${shouldEnter}`
       );
     }
 
@@ -1198,33 +1373,47 @@ async function evaluateExit(sessionId, symbol) {
   const position = session.portfolio.positions.get(symbol);
   if (!position) return { shouldExit: false };
 
-  // Minimum hold time - aligned with simulator (5 candles at ~1 min each = ~5 min, but real-time needs more buffer)
-  // Increased from 5 to 10 minutes to prevent rapid churning
-  const MIN_HOLD_MINUTES = 10;
-  const entryTime = position.entryTime || position.createdAt;
-  if (entryTime) {
-    const holdDuration = Date.now() - new Date(entryTime).getTime();
-    const holdMinutes = holdDuration / (1000 * 60);
-    if (holdMinutes < MIN_HOLD_MINUTES) {
-      console.log(
-        `[AI Engine] ${symbol}: Holding for ${holdMinutes.toFixed(1)} min (min: ${MIN_HOLD_MINUTES} min)`
-      );
-      return { shouldExit: false, reason: 'Minimum hold time not reached' };
-    }
-  }
-
   try {
-    // Get recent candles
-    const candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
+    // Get recent candles first (needed for regime detection)
+    // Use asset-type-aware helper for crypto/stock routing
+    const sessionAssetType = session.config.assetType || 'stocks';
+    const candles = await getAggregatesForAsset(symbol, 5, 'minute', {
       from: new Date(Date.now() - 24 * 60 * 60 * 1000),
       to: new Date(),
-    });
+    }, sessionAssetType);
 
     if (!candles || candles.length < 50) {
       return { shouldExit: false };
     }
 
     const indicators = technicalIndicators.getAllIndicators(candles);
+
+    // Determine regime for dynamic hold time
+    const etfType = getEtfType(symbol);
+    const trend = indicators.trend || {};
+    let marketRegime = 'sideways';
+    if (trend.shortTerm === 'bullish' && trend.mediumTerm === 'bullish') {
+      marketRegime = 'bull';
+    } else if (trend.shortTerm === 'bearish' && trend.mediumTerm === 'bearish') {
+      marketRegime = 'bear';
+    }
+    const isPositionCounterTrend = isCounterTrend(etfType, marketRegime);
+
+    // Minimum hold time - reduced for counter-trend positions
+    // Normal: 10 min, Counter-trend: 5 min (need to exit faster)
+    const MIN_HOLD_MINUTES = isPositionCounterTrend ? 5 : 10;
+    const entryTime = position.entryTime || position.createdAt;
+    if (entryTime) {
+      const holdDuration = Date.now() - new Date(entryTime).getTime();
+      const holdMinutes = holdDuration / (1000 * 60);
+      if (holdMinutes < MIN_HOLD_MINUTES) {
+        console.log(
+          `[AI Engine] ${symbol}: Holding for ${holdMinutes.toFixed(1)} min (min: ${MIN_HOLD_MINUTES} min${isPositionCounterTrend ? ' [counter-trend]' : ''})`
+        );
+        return { shouldExit: false, reason: 'Minimum hold time not reached' };
+      }
+    }
+
     const currentPrice = candles[candles.length - 1].close;
     const pnlPercent = position.unrealizedPnLPercent;
 
@@ -1357,6 +1546,27 @@ async function evaluateExit(sessionId, symbol) {
       }
     }
 
+    // REGIME-AWARE EXIT PRESSURE
+    // Counter-trend positions (e.g., bullish ETF in bear market) get extra exit pressure
+    if (isPositionCounterTrend && etfType !== 'neutral') {
+      // Add exit pressure for counter-trend positions
+      exitScore += 25;
+      factors.push(`⚠️ Counter-trend position: ${etfType} ETF in ${marketRegime} market`);
+
+      // If losing on a counter-trend position, increase pressure significantly
+      if (pnlPercent < 0) {
+        exitScore += 15;
+        factors.push('Counter-trend position showing loss - urgent exit');
+      }
+
+      // Even small profits should be taken quickly on counter-trend trades
+      if (pnlPercent > 0.5) {
+        exitScore += 20;
+        exitReason = exitReason || 'Taking quick profit on counter-trend trade';
+        factors.push('Quick scalp profit on counter-trend trade');
+      }
+    }
+
     // Exit threshold aligned with simulator (was 40, now 50 to match simulator logic)
     // This prevents premature exits from weak signals
     const shouldExit = exitScore >= 50;
@@ -1443,6 +1653,66 @@ async function executeEntry(sessionId, symbol, decision) {
     // Get the trading mode for this session (needed for all Alpaca calls)
     const tradingMode = getSessionTradingMode(session);
 
+    // PDT PROTECTION: Check if we can day trade before buying in live mode
+    // This prevents buying stocks we won't be able to sell same-day due to PDT rules
+    // NOTE: PDT rules do NOT apply to crypto (crypto is commodity, not security)
+    const assetType = session.config.assetType || 'stocks';
+    if (tradingMode === 'live' && assetUtils.pdtApplies(assetType)) {
+      try {
+        const pdtStatus = await alpacaClient.getPDTStatus('live');
+
+        // If we can't day trade, log risk warning and either block or proceed with caution
+        if (!pdtStatus.canDayTrade) {
+          tradingLogger.logRisk('PDT LIMIT REACHED', {
+            sessionName: session.name,
+            reason: `Day trade limit reached (${pdtStatus.daytradeCount}/${pdtStatus.daytradeLimit})`,
+            value: pdtStatus.daytradeCount,
+            threshold: pdtStatus.daytradeLimit,
+            action: 'Blocking day trade entry - position would need overnight hold',
+          });
+
+          websocketServer.sendAlert(session.userId, {
+            type: 'warning',
+            title: 'PDT Protection',
+            message: `[${session.name}] Skipping ${symbol} buy - PDT limit reached (${pdtStatus.daytradeCount}/3). Any new position must be held overnight.`,
+            severity: 'high',
+            sessionId: session.sessionId,
+            sessionName: session.name,
+          });
+
+          console.log(
+            `[AI Engine] PDT Protection: Blocking ${symbol} buy - day trade limit reached (${pdtStatus.daytradeCount}/3)`
+          );
+
+          // Block the trade - can't day trade
+          return;
+        }
+
+        // Warn if we're getting close to PDT limit
+        if (pdtStatus.pdtWarning) {
+          tradingLogger.logRisk('PDT WARNING', {
+            sessionName: session.name,
+            reason: `Low day trades remaining (${pdtStatus.daytradesRemaining} left)`,
+            value: pdtStatus.daytradeCount,
+            threshold: pdtStatus.daytradeLimit,
+            action: 'Proceeding with caution - consider swing trading',
+          });
+
+          websocketServer.sendAlert(session.userId, {
+            type: 'warning',
+            title: 'PDT Warning',
+            message: `[${session.name}] Only ${pdtStatus.daytradesRemaining} day trade(s) remaining. Consider swing trading.`,
+            severity: 'medium',
+            sessionId: session.sessionId,
+            sessionName: session.name,
+          });
+        }
+      } catch (pdtError) {
+        // Log but don't block - PDT check is advisory
+        console.warn(`[AI Engine] PDT check failed: ${pdtError.message}`);
+      }
+    }
+
     // Calculate position size
     const portfolioValue =
       session.portfolio.cash +
@@ -1517,7 +1787,8 @@ async function executeEntry(sessionId, symbol, decision) {
     );
 
     // Place order via Alpaca with session-specific trading mode
-    const order = await alpacaClient.placeOrder(
+    // Use asset-type-aware helper for crypto/stock routing
+    const order = await placeOrderForAsset(
       {
         symbol,
         qty: quantity,
@@ -1525,8 +1796,8 @@ async function executeEntry(sessionId, symbol, decision) {
         type: 'market',
         time_in_force: 'day',
       },
-      null,
-      tradingMode
+      tradingMode,
+      assetType
     );
 
     console.log(
@@ -1617,6 +1888,10 @@ async function executeExit(sessionId, symbol, decision) {
   try {
     // Get the trading mode for this session (needed for all Alpaca calls)
     const tradingMode = getSessionTradingMode(session);
+    const assetType = session.config.assetType || 'stocks';
+
+    // Normalize symbol for the asset type
+    const normalizedSymbol = assetUtils.normalizeSymbol(symbol, assetType, 'alpaca');
 
     // Get the actual position from Alpaca to get accurate quantity
     let quantity = decision.quantity;
@@ -1624,14 +1899,14 @@ async function executeExit(sessionId, symbol, decision) {
       // Fetch position from Alpaca directly using session-specific mode
       try {
         const alpacaPosition = await alpacaClient.getPosition(
-          symbol,
+          normalizedSymbol,
           tradingMode
         );
         quantity =
-          parseInt(alpacaPosition.qty) || parseInt(alpacaPosition.quantity);
+          parseFloat(alpacaPosition.qty) || parseFloat(alpacaPosition.quantity);
       } catch (e) {
         console.error(
-          `[AI Engine] Could not get position for ${symbol} (${tradingMode}):`,
+          `[AI Engine] Could not get position for ${normalizedSymbol} (${tradingMode}):`,
           e.message
         );
         return;
@@ -1639,12 +1914,12 @@ async function executeExit(sessionId, symbol, decision) {
     }
 
     if (!quantity || quantity <= 0) {
-      console.log(`[AI Engine] No valid quantity to sell for ${symbol}`);
+      console.log(`[AI Engine] No valid quantity to sell for ${normalizedSymbol}`);
       return;
     }
 
     // Close position via Alpaca with session-specific trading mode
-    const result = await alpacaClient.closePosition(symbol, tradingMode);
+    const result = await closePositionForAsset(normalizedSymbol, tradingMode, assetType);
 
     console.log(
       `[AI Engine] Exit order placed for ${symbol} (${quantity} shares, ${tradingMode.toUpperCase()})`
@@ -1868,18 +2143,24 @@ async function manualOverride(sessionId, symbol, action, quantity) {
   const session = sessions.get(sessionId);
   if (!session) return { error: 'No active session' };
 
+  const assetType = session.config.assetType || 'stocks';
+  const tradingMode = session.config.tradingMode || 'paper';
+
+  // Normalize symbol for the asset type
+  const normalizedSymbol = assetUtils.normalizeSymbol(symbol, assetType, 'alpaca');
+
   try {
     if (action === 'buy') {
-      const order = await alpacaClient.placeOrder({
-        symbol,
+      const order = await placeOrderForAsset({
+        symbol: normalizedSymbol,
         qty: quantity,
         side: 'buy',
         type: 'market',
-        time_in_force: 'day',
-      });
+        time_in_force: assetUtils.isCrypto(assetType) ? 'gtc' : 'day',
+      }, tradingMode, assetType);
 
       logDecision(sessionId, {
-        symbol,
+        symbol: normalizedSymbol,
         action: 'MANUAL_BUY',
         quantity,
         timestamp: new Date(),
@@ -1887,10 +2168,10 @@ async function manualOverride(sessionId, symbol, action, quantity) {
 
       return { success: true, orderId: order.id };
     } else if (action === 'sell') {
-      const result = await alpacaClient.closePosition(symbol);
+      const result = await closePositionForAsset(normalizedSymbol, tradingMode, assetType);
 
       logDecision(sessionId, {
-        symbol,
+        symbol: normalizedSymbol,
         action: 'MANUAL_SELL',
         quantity,
         timestamp: new Date(),
