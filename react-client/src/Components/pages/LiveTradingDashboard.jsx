@@ -23,9 +23,13 @@ import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import TradingLogPanel from '../common/TradingLogPanel';
+import ErrorBoundary from '../common/ErrorBoundary';
 // LiveTradingChart removed - now using TradingViewChart
 import theme from '../../theme';
-import { useTradingConfig, DEFAULT_TRADING_CONFIG } from '../../contexts/TradingConfigContext';
+import {
+  useTradingConfig,
+  DEFAULT_TRADING_CONFIG,
+} from '../../contexts/TradingConfigContext';
 import {
   loadAudioSettings,
   saveAudioSettings,
@@ -97,7 +101,12 @@ const LiveTradingDashboard = () => {
   const [chartIndicators, setChartIndicators] = useState({});
 
   // Configuration state - use shared context
-  const { config, updateConfig: contextUpdateConfig, resetConfig: resetConfigContext, lastSaved } = useTradingConfig();
+  const {
+    config,
+    updateConfig: contextUpdateConfig,
+    resetConfig: resetConfigContext,
+    lastSaved,
+  } = useTradingConfig();
   const [showConfig, setShowConfig] = useState(false);
   const [configSection, setConfigSection] = useState('capital'); // 'capital', 'risk', 'ai', 'entry', 'exit'
   const [configLoaded, setConfigLoaded] = useState(false); // Track if we've loaded config from server
@@ -154,7 +163,8 @@ const LiveTradingDashboard = () => {
   // If sync is enabled, default to first watchlist symbol; otherwise use localStorage
   const [researchSymbol, setResearchSymbol] = useState(() => {
     try {
-      const syncEnabled = localStorage.getItem('sync-research-with-chart') === 'true';
+      const syncEnabled =
+        localStorage.getItem('sync-research-with-chart') === 'true';
       if (syncEnabled) {
         // Will be overwritten by useEffect when chart/simulation symbol loads
         return 'QBTS';
@@ -173,9 +183,10 @@ const LiveTradingDashboard = () => {
   });
 
   // Get locked symbols when ETF mode is enabled
-  const lockedSymbols = leveragedEtfEnabled && selectedEtfFamily
-    ? [selectedEtfFamily.base, selectedEtfFamily.bull, selectedEtfFamily.bear]
-    : null;
+  const lockedSymbols =
+    leveragedEtfEnabled && selectedEtfFamily
+      ? [selectedEtfFamily.base, selectedEtfFamily.bull, selectedEtfFamily.bear]
+      : null;
 
   // Sync showSimulator state to ref (for use in polling interval without re-creating interval)
   useEffect(() => {
@@ -192,7 +203,10 @@ const LiveTradingDashboard = () => {
   // Persist sync with chart preference
   useEffect(() => {
     try {
-      localStorage.setItem('sync-research-with-chart', syncResearchWithChart.toString());
+      localStorage.setItem(
+        'sync-research-with-chart',
+        syncResearchWithChart.toString()
+      );
     } catch {}
   }, [syncResearchWithChart]);
 
@@ -202,7 +216,8 @@ const LiveTradingDashboard = () => {
     if (!syncResearchWithChart) return;
 
     // Determine the active symbol to sync with
-    const activeSymbol = simulationSymbol || chartSymbol || config.watchlist?.[0];
+    const activeSymbol =
+      simulationSymbol || chartSymbol || config.watchlist?.[0];
     if (activeSymbol && activeSymbol !== researchSymbol) {
       setResearchSymbol(activeSymbol);
     }
@@ -335,7 +350,18 @@ const LiveTradingDashboard = () => {
   }, [urlSessionId]);
 
   // Fetch initial data and set up live polling
+  // CRITICAL: Wait for config to be loaded from session before fetching account/positions
+  // This ensures we use the correct trading mode (paper vs live) for this session
   useEffect(() => {
+    // Don't fetch account data until we have a session and config is loaded
+    // This prevents using stale localStorage config before session config is applied
+    if (!configLoaded && urlSessionId) {
+      console.log(
+        '[LiveTrading] Waiting for session config before fetching account data...'
+      );
+      return;
+    }
+
     fetchAccount();
     fetchPositions();
     fetchOrderStats();
@@ -348,13 +374,59 @@ const LiveTradingDashboard = () => {
       fetchPositions();
       fetchOrderStats();
       // Don't fetch session details (which can overwrite config) if user is editing or simulator is open
-      if (urlSessionId && !isEditingConfigRef.current && !showSimulatorRef.current) {
+      if (
+        urlSessionId &&
+        !isEditingConfigRef.current &&
+        !showSimulatorRef.current
+      ) {
         fetchSessionDetails(urlSessionId);
       }
     }, 10000);
 
     return () => clearInterval(pollInterval);
-  }, [urlSessionId]); // Don't include isEditingConfig - use ref instead
+  }, [urlSessionId, configLoaded]); // Include configLoaded to re-run when config is ready
+
+  // Re-fetch account data when paperTradeOnly mode changes
+  // This ensures we show the correct account balance for Paper vs Live
+  // Also updates allocatedCapital to match the new account's available cash
+  useEffect(() => {
+    // Only re-fetch if config is loaded (to avoid initial double-fetch)
+    if (configLoaded) {
+      console.log(
+        `[LiveTrading] Trading mode changed to ${config.paperTradeOnly ? 'PAPER' : 'LIVE'}, refreshing account data...`
+      );
+
+      // Fetch account and update allocated capital to match
+      const fetchAndUpdateCapital = async () => {
+        const mode = config.paperTradeOnly === false ? 'live' : 'paper';
+        try {
+          const res = await fetch(`/api/alpaca/account?mode=${mode}`);
+          const data = await res.json();
+          if (res.ok) {
+            const accountData = data.account || data;
+            setAccount(accountData);
+            setAccountLoading(false);
+
+            // Auto-update allocated capital to match the account's available cash
+            const availableCash = parseFloat(accountData.cash || 0);
+            if (availableCash > 0) {
+              console.log(
+                `[LiveTrading] Updating allocated capital to $${availableCash.toLocaleString()} (${mode} account)`
+              );
+              updateConfig('allocatedCapital', Math.floor(availableCash));
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch account:', err);
+          setAccountLoading(false);
+        }
+      };
+
+      fetchAndUpdateCapital();
+      fetchPositions();
+      fetchOrderStats();
+    }
+  }, [config.paperTradeOnly, configLoaded]);
 
   // Auto-scroll decisions - DISABLED to prevent UI jumping while user configures
   // useEffect(() => {
@@ -363,7 +435,10 @@ const LiveTradingDashboard = () => {
 
   const fetchAccount = async () => {
     try {
-      const res = await fetch('/api/alpaca/account');
+      // Determine trading mode based on session config
+      // paperTradeOnly: true = paper, false = live, undefined = paper (safe default)
+      const mode = config.paperTradeOnly === false ? 'live' : 'paper';
+      const res = await fetch(`/api/alpaca/account?mode=${mode}`);
       const data = await res.json();
       if (res.ok) {
         // API returns {success: true, account: {...}}
@@ -378,7 +453,10 @@ const LiveTradingDashboard = () => {
 
   const fetchPositions = async () => {
     try {
-      const res = await fetch('/api/alpaca/positions');
+      // Determine trading mode based on session config
+      // paperTradeOnly: true = paper, false = live, undefined = paper (safe default)
+      const mode = config.paperTradeOnly === false ? 'live' : 'paper';
+      const res = await fetch(`/api/alpaca/positions?mode=${mode}`);
       const data = await res.json();
       if (res.ok) {
         // API may return {success: true, positions: [...]} or direct array
@@ -395,14 +473,21 @@ const LiveTradingDashboard = () => {
   // Fetch order statistics from Alpaca
   const fetchOrderStats = async () => {
     try {
-      // Fetch filled orders (today's completed trades)
+      // Determine trading mode based on session config
+      // paperTradeOnly: true = paper, false = live
+      // Default to paper for safety
+      const mode = config.paperTradeOnly === false ? 'live' : 'paper';
+
+      // Fetch filled orders (today's completed trades) from the correct account
       const filledRes = await fetch(
-        '/api/alpaca/orders?status=filled&limit=100'
+        `/api/alpaca/orders?status=filled&limit=100&mode=${mode}`
       );
       const filledData = await filledRes.json();
 
-      // Fetch pending/open orders
-      const pendingRes = await fetch('/api/alpaca/orders?status=open&limit=50');
+      // Fetch pending/open orders from the correct account
+      const pendingRes = await fetch(
+        `/api/alpaca/orders?status=open&limit=50&mode=${mode}`
+      );
       const pendingData = await pendingRes.json();
 
       if (filledRes.ok && pendingRes.ok) {
@@ -410,10 +495,14 @@ const LiveTradingDashboard = () => {
         const pendingOrders = pendingData.orders || [];
 
         // Filter to today's orders
+        // API returns camelCase field names: createdAt, filledAvgPrice, filledQty
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayOrders = filledOrders.filter(order => {
-          const orderDate = new Date(order.filled_at || order.submitted_at);
+          // Use createdAt from our API (camelCase) or fall back to snake_case from raw Alpaca
+          const orderDate = new Date(
+            order.createdAt || order.filled_at || order.submitted_at
+          );
           return orderDate >= today;
         });
 
@@ -429,12 +518,24 @@ const LiveTradingDashboard = () => {
 
         // Update recentTrades for LiveTradingChart
         // Format trades with needed fields for chart markers
+        // API returns camelCase: filledAvgPrice, filledQty, quantity, createdAt
         const formattedTrades = todayOrders.map(order => ({
           symbol: order.symbol,
           side: order.side,
-          price: parseFloat(order.filled_avg_price || order.limit_price || 0),
-          quantity: parseInt(order.filled_qty || order.qty || 0),
-          timestamp: order.filled_at || order.submitted_at,
+          price: parseFloat(
+            order.filledAvgPrice ||
+              order.filled_avg_price ||
+              order.limit_price ||
+              0
+          ),
+          quantity: parseInt(
+            order.filledQty ||
+              order.filled_qty ||
+              order.quantity ||
+              order.qty ||
+              0
+          ),
+          timestamp: order.createdAt || order.filled_at || order.submitted_at,
           orderId: order.id,
         }));
         setRecentTrades(formattedTrades);
@@ -667,12 +768,18 @@ const LiveTradingDashboard = () => {
 
   const closePosition = async symbol => {
     try {
-      const res = await fetch(`/api/alpaca/positions/${symbol}`, {
+      // Use session's trading mode for the close position call
+      const mode = config.paperTradeOnly === false ? 'live' : 'paper';
+      const res = await fetch(`/api/alpaca/positions/${symbol}?mode=${mode}`, {
         method: 'DELETE',
       });
 
       if (res.ok) {
-        addAlert('success', 'Position Closed', `Closed position in ${symbol}`);
+        addAlert(
+          'success',
+          'Position Closed',
+          `Closed position in ${symbol} (${mode.toUpperCase()})`
+        );
         fetchPositions();
       }
     } catch (err) {
@@ -701,29 +808,43 @@ const LiveTradingDashboard = () => {
     contextUpdateConfig({ [key]: value });
 
     // Immediately sync critical settings to backend if we have an active session
-    const criticalSettings = ['autoTrade', 'minConfidence', 'watchlist', 'maxPositions'];
+    const criticalSettings = [
+      'autoTrade',
+      'minConfidence',
+      'watchlist',
+      'maxPositions',
+    ];
     if (urlSessionId && criticalSettings.includes(key)) {
       fetch(`/api/ai/session/${urlSessionId}/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [key]: value }),
-      }).then(res => {
-        if (res.ok) {
-          console.log(`[Config] Synced ${key}=${value} to server`);
-        }
-      }).catch(err => console.error('[Config] Sync failed:', err));
+      })
+        .then(res => {
+          if (res.ok) {
+            console.log(`[Config] Synced ${key}=${value} to server`);
+          }
+        })
+        .catch(err => console.error('[Config] Sync failed:', err));
     }
   };
 
   // Load a saved config from localStorage (from simulator ConfigPanel)
-  const loadSavedConfig = (name) => {
-    const loaded = savedConfigs[name];
+  const loadSavedConfig = configName => {
+    const loaded = savedConfigs[configName];
     if (loaded) {
-      // Apply all fields from the saved config
+      // Apply all fields from the saved config EXCEPT 'name' and 'allocatedCapital'
+      // - 'name': preserve session name
+      // - 'allocatedCapital': should be based on the selected account's available cash, not saved config
       Object.entries(loaded).forEach(([key, value]) => {
+        if (key === 'name' || key === 'allocatedCapital') return;
         contextUpdateConfig({ [key]: value });
       });
-      addAlert('success', 'Config Loaded', `Loaded "${name}" configuration`);
+      addAlert(
+        'success',
+        'Config Loaded',
+        `Loaded "${configName}" configuration (capital unchanged)`
+      );
       setShowLoadConfigDropdown(false);
     }
   };
@@ -731,7 +852,9 @@ const LiveTradingDashboard = () => {
   // Refresh saved configs from localStorage
   const refreshSavedConfigs = () => {
     try {
-      const configs = JSON.parse(localStorage.getItem('saved-trading-configs') || '{}');
+      const configs = JSON.parse(
+        localStorage.getItem('saved-trading-configs') || '{}'
+      );
       setSavedConfigs(configs);
     } catch (e) {
       console.error('Failed to load saved configs:', e);
@@ -882,6 +1005,24 @@ const LiveTradingDashboard = () => {
                 {urlSessionId.slice(0, 8)}...
               </span>
             )}
+            {/* Paper/Live Trading Mode Indicator */}
+            {!config.paperTradeOnly && (
+              <span
+                style={{
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  fontSize: theme.typography.fontSize.xs,
+                  fontWeight: 'bold',
+                  padding: '2px 8px',
+                  borderRadius: theme.borderRadius.sm,
+                  marginLeft: theme.spacing.sm,
+                  animation: 'pulse 2s infinite',
+                  textTransform: 'uppercase',
+                }}
+              >
+                LIVE TRADING
+              </span>
+            )}
           </div>
         </div>
 
@@ -946,8 +1087,12 @@ const LiveTradingDashboard = () => {
             variant="ghost"
             onClick={toggleExperimentalPanels}
             style={{
-              backgroundColor: showExperimentalPanels ? '#fef3c7' : 'transparent',
-              borderColor: showExperimentalPanels ? '#f59e0b' : theme.colors.gray300,
+              backgroundColor: showExperimentalPanels
+                ? '#fef3c7'
+                : 'transparent',
+              borderColor: showExperimentalPanels
+                ? '#f59e0b'
+                : theme.colors.gray300,
               color: showExperimentalPanels ? '#b45309' : theme.colors.gray500,
               fontSize: theme.typography.fontSize.sm,
               padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
@@ -1006,31 +1151,56 @@ const LiveTradingDashboard = () => {
       )}
 
       {/* Empty Watchlist Warning Banner - Always visible when watchlist is empty and session is running */}
-      {config.watchlist.length === 0 && sessionStatus === 'running' && !showConfig && (
-        <Card
-          style={{
-            marginBottom: theme.spacing.lg,
-            padding: theme.spacing.md,
-            backgroundColor: `${theme.colors.warning}15`,
-            border: `2px solid ${theme.colors.warning}`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
-            <span style={{ fontSize: '28px' }}>⚠️</span>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ margin: 0, color: theme.colors.warning, marginBottom: theme.spacing.xs }}>
-                No Symbols in Watchlist - Trading Disabled
-              </h4>
-              <p style={{ margin: 0, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-                Your trading session is running but has no symbols to analyze. Add symbols to the watchlist to enable trading.
-              </p>
+      {config.watchlist.length === 0 &&
+        sessionStatus === 'running' &&
+        !showConfig && (
+          <Card
+            style={{
+              marginBottom: theme.spacing.lg,
+              padding: theme.spacing.md,
+              backgroundColor: `${theme.colors.warning}15`,
+              border: `2px solid ${theme.colors.warning}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.md,
+              }}
+            >
+              <span style={{ fontSize: '28px' }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <h4
+                  style={{
+                    margin: 0,
+                    color: theme.colors.warning,
+                    marginBottom: theme.spacing.xs,
+                  }}
+                >
+                  No Symbols in Watchlist - Trading Disabled
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
+                  Your trading session is running but has no symbols to analyze.
+                  Add symbols to the watchlist to enable trading.
+                </p>
+              </div>
+              <Button
+                variant="warning"
+                size="small"
+                onClick={() => setShowConfig(true)}
+              >
+                Configure Watchlist
+              </Button>
             </div>
-            <Button variant="warning" size="small" onClick={() => setShowConfig(true)}>
-              Configure Watchlist
-            </Button>
-          </div>
-        </Card>
-      )}
+          </Card>
+        )}
 
       {/* Configuration Panel - Enhanced */}
       {showConfig && (
@@ -1068,7 +1238,13 @@ const LiveTradingDashboard = () => {
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: theme.spacing.sm,
+                alignItems: 'center',
+              }}
+            >
               {/* Load Config Dropdown */}
               <div style={{ position: 'relative' }}>
                 <Button
@@ -1099,8 +1275,15 @@ const LiveTradingDashboard = () => {
                     }}
                   >
                     {Object.keys(savedConfigs).length === 0 ? (
-                      <div style={{ padding: theme.spacing.md, color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
-                        No saved configs found. Save a config from the Simulator to import it here.
+                      <div
+                        style={{
+                          padding: theme.spacing.md,
+                          color: theme.colors.gray500,
+                          fontSize: theme.typography.fontSize.sm,
+                        }}
+                      >
+                        No saved configs found. Save a config from the Simulator
+                        to import it here.
                       </div>
                     ) : (
                       Object.keys(savedConfigs).map(name => (
@@ -1117,8 +1300,13 @@ const LiveTradingDashboard = () => {
                             cursor: 'pointer',
                             fontSize: theme.typography.fontSize.sm,
                           }}
-                          onMouseEnter={e => e.target.style.backgroundColor = theme.colors.gray100}
-                          onMouseLeave={e => e.target.style.backgroundColor = 'transparent'}
+                          onMouseEnter={e =>
+                            (e.target.style.backgroundColor =
+                              theme.colors.gray100)
+                          }
+                          onMouseLeave={e =>
+                            (e.target.style.backgroundColor = 'transparent')
+                          }
                         >
                           {name}
                         </button>
@@ -1156,13 +1344,144 @@ const LiveTradingDashboard = () => {
             >
               <span style={{ fontSize: '20px' }}>⚠️</span>
               <div>
-                <strong style={{ color: theme.colors.error }}>No symbols in watchlist!</strong>
-                <p style={{ margin: 0, marginTop: '4px', fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-                  Add symbols below to enable trading. Without a watchlist, the AI has no stocks to analyze.
+                <strong style={{ color: theme.colors.error }}>
+                  No symbols in watchlist!
+                </strong>
+                <p
+                  style={{
+                    margin: 0,
+                    marginTop: '4px',
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
+                  Add symbols below to enable trading. Without a watchlist, the
+                  AI has no stocks to analyze.
                 </p>
               </div>
             </div>
           )}
+
+          {/* Account Mode Toggle - Primary setting that determines capital context */}
+          <div
+            style={{
+              marginBottom: theme.spacing.lg,
+              padding: theme.spacing.md,
+              backgroundColor: config.paperTradeOnly
+                ? `${theme.colors.warning}10`
+                : `${theme.colors.error}08`,
+              borderRadius: theme.borderRadius.md,
+              border: `2px solid ${config.paperTradeOnly ? theme.colors.warning : theme.colors.error}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: config.paperTradeOnly
+                      ? theme.colors.warning
+                      : theme.colors.error,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                  }}
+                >
+                  {config.paperTradeOnly ? '📝' : '💰'} Trading Account
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
+                  {config.paperTradeOnly
+                    ? 'Using paper account for simulation - no real money at risk'
+                    : 'Using LIVE account - real trades will be executed!'}
+                </p>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  backgroundColor: theme.colors.gray100,
+                  borderRadius: theme.borderRadius.md,
+                  padding: '3px',
+                }}
+              >
+                <button
+                  onClick={() => updateConfig('paperTradeOnly', true)}
+                  style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: config.paperTradeOnly
+                      ? theme.typography.fontWeight.bold
+                      : theme.typography.fontWeight.medium,
+                    backgroundColor: config.paperTradeOnly
+                      ? theme.colors.warning
+                      : 'transparent',
+                    color: config.paperTradeOnly
+                      ? '#fff'
+                      : theme.colors.gray600,
+                    border: 'none',
+                    borderRadius: theme.borderRadius.sm,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  📝 Paper
+                </button>
+                <button
+                  onClick={() => updateConfig('paperTradeOnly', false)}
+                  style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: !config.paperTradeOnly
+                      ? theme.typography.fontWeight.bold
+                      : theme.typography.fontWeight.medium,
+                    backgroundColor: !config.paperTradeOnly
+                      ? theme.colors.error
+                      : 'transparent',
+                    color: !config.paperTradeOnly
+                      ? '#fff'
+                      : theme.colors.gray600,
+                    border: 'none',
+                    borderRadius: theme.borderRadius.sm,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  💰 Live
+                </button>
+              </div>
+            </div>
+            {!config.paperTradeOnly && (
+              <div
+                style={{
+                  marginTop: theme.spacing.sm,
+                  padding: theme.spacing.sm,
+                  backgroundColor: `${theme.colors.error}15`,
+                  borderRadius: theme.borderRadius.sm,
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.error,
+                  fontWeight: theme.typography.fontWeight.medium,
+                }}
+              >
+                ⚠️ WARNING: Live trading enabled. Real money will be used for
+                trades. Available:{' '}
+                {account?.cash
+                  ? `$${parseFloat(account.cash).toLocaleString()}`
+                  : 'Loading...'}
+              </div>
+            )}
+          </div>
 
           {/* Config Section Tabs */}
           <div
@@ -1222,9 +1541,38 @@ const LiveTradingDashboard = () => {
                     margin: 0,
                     marginBottom: theme.spacing.xs,
                     color: theme.colors.info,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
                   }}
                 >
                   Capital Summary
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      padding: '2px 8px',
+                      borderRadius: theme.borderRadius.sm,
+                      backgroundColor: config.paperTradeOnly
+                        ? theme.colors.warning
+                        : theme.colors.error,
+                      color: '#fff',
+                    }}
+                  >
+                    {config.paperTradeOnly ? 'PAPER' : 'LIVE'}
+                  </span>
+                  {account && (
+                    <span
+                      style={{
+                        fontSize: theme.typography.fontSize.sm,
+                        color: theme.colors.gray500,
+                        fontWeight: 'normal',
+                      }}
+                    >
+                      (Account: $
+                      {parseFloat(account.cash || 0).toLocaleString()}{' '}
+                      available)
+                    </span>
+                  )}
                 </h4>
                 <div
                   style={{
@@ -1543,33 +1891,32 @@ const LiveTradingDashboard = () => {
                   >
                     Max Position Size ($)
                   </label>
-                  <input
-                    type="number"
-                    min="100"
-                    max="1000000"
-                    step="100"
-                    value={config.maxPositionSize}
-                    onChange={e =>
-                      updateConfig(
-                        'maxPositionSize',
-                        parseInt(e.target.value) || 0
-                      )
-                    }
+                  <div
                     style={{
                       width: '100%',
                       padding: theme.spacing.sm,
+                      backgroundColor: theme.colors.gray100,
                       border: `1px solid ${theme.colors.gray300}`,
                       borderRadius: theme.borderRadius.sm,
                       fontSize: theme.typography.fontSize.md,
+                      fontWeight: theme.typography.fontWeight.semibold,
+                      color: theme.colors.gray700,
                     }}
-                  />
+                  >
+                    $
+                    {Math.floor(
+                      config.allocatedCapital *
+                        (config.maxPositionSizePercent / 100)
+                    ).toLocaleString()}
+                  </div>
                   <span
                     style={{
                       fontSize: theme.typography.fontSize.xs,
                       color: theme.colors.gray500,
                     }}
                   >
-                    Absolute max $ per trade
+                    Calculated: {config.maxPositionSizePercent}% of $
+                    {config.allocatedCapital.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1654,9 +2001,25 @@ const LiveTradingDashboard = () => {
                     margin: 0,
                     marginBottom: theme.spacing.xs,
                     color: theme.colors.warning,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
                   }}
                 >
                   Risk Profile
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      padding: '2px 8px',
+                      borderRadius: theme.borderRadius.sm,
+                      backgroundColor: config.paperTradeOnly
+                        ? theme.colors.warning
+                        : theme.colors.error,
+                      color: '#fff',
+                    }}
+                  >
+                    {config.paperTradeOnly ? 'PAPER' : 'LIVE'}
+                  </span>
                 </h4>
                 <p
                   style={{
@@ -2918,51 +3281,65 @@ const LiveTradingDashboard = () => {
           }}
           onDateChange={setSimulationDate}
           onSymbolChange={setSimulationSymbol}
-          initialSymbol={leveragedEtfEnabled && lockedSymbols ? lockedSymbols[0] : undefined}
+          initialSymbol={
+            leveragedEtfEnabled && lockedSymbols ? lockedSymbols[0] : undefined
+          }
           lockedSymbols={lockedSymbols}
         />
       )}
 
       {/* Experimental Analysis Panels - Only when enabled via header button */}
       {showExperimentalPanels && (
-        <div style={{
-          marginBottom: theme.spacing.md,
-          padding: theme.spacing.md,
-          backgroundColor: '#fffbeb',
-          borderRadius: theme.borderRadius.lg,
-          border: '1px solid #fde047',
-        }}>
-          {/* Header with Research Symbol Input */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+        <div
+          style={{
             marginBottom: theme.spacing.md,
-            paddingBottom: theme.spacing.sm,
-            borderBottom: '1px solid #fde047',
-          }}>
-            <div style={{
+            padding: theme.spacing.md,
+            backgroundColor: '#fffbeb',
+            borderRadius: theme.borderRadius.lg,
+            border: '1px solid #fde047',
+          }}
+        >
+          {/* Header with Research Symbol Input */}
+          <div
+            style={{
               display: 'flex',
               alignItems: 'center',
-              gap: theme.spacing.md,
-            }}>
-              <span style={{
-                fontSize: theme.typography.fontSize.sm,
-                color: '#92400e',
-                fontWeight: 'bold',
-              }}>
-                🧪 Research Symbol
-              </span>
-              <div style={{
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing.md,
+              paddingBottom: theme.spacing.sm,
+              borderBottom: '1px solid #fde047',
+            }}
+          >
+            <div
+              style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: theme.spacing.xs,
-              }}>
+                gap: theme.spacing.md,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  color: '#92400e',
+                  fontWeight: 'bold',
+                }}
+              >
+                🧪 Research Symbol
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.spacing.xs,
+                }}
+              >
                 <input
                   type="text"
                   value={researchSymbol}
-                  onChange={(e) => setResearchSymbol(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
+                  onChange={e =>
+                    setResearchSymbol(e.target.value.toUpperCase())
+                  }
+                  onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.target.blur();
                     }
@@ -2975,171 +3352,264 @@ const LiveTradingDashboard = () => {
                     width: '80px',
                     border: `2px solid ${syncResearchWithChart ? theme.colors.gray300 : '#f59e0b'}`,
                     borderRadius: theme.borderRadius.md,
-                    backgroundColor: syncResearchWithChart ? theme.colors.gray100 : 'white',
-                    color: syncResearchWithChart ? theme.colors.textMuted : theme.colors.text,
+                    backgroundColor: syncResearchWithChart
+                      ? theme.colors.gray100
+                      : 'white',
+                    color: syncResearchWithChart
+                      ? theme.colors.textMuted
+                      : theme.colors.text,
                     textAlign: 'center',
                     textTransform: 'uppercase',
                   }}
                   placeholder="QBTS"
                 />
               </div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: theme.typography.fontSize.xs,
-                color: theme.colors.textMuted,
-                cursor: 'pointer',
-              }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textMuted,
+                  cursor: 'pointer',
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={syncResearchWithChart}
-                  onChange={(e) => setSyncResearchWithChart(e.target.checked)}
+                  onChange={e => setSyncResearchWithChart(e.target.checked)}
                   style={{ width: '14px', height: '14px' }}
                 />
                 Sync with chart
               </label>
             </div>
-            <span style={{
-              fontSize: theme.typography.fontSize.xs,
-              color: '#92400e',
-            }}>
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: '#92400e',
+              }}
+            >
               Informational only - does not affect trading signals
             </span>
           </div>
 
           {/* Signal Checklist + Detail Cards Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '280px 1fr',
-            gap: theme.spacing.md,
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '280px 1fr',
+              gap: theme.spacing.md,
+            }}
+          >
             {/* Signal Checklist - Left Column */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: theme.borderRadius.md,
-              padding: theme.spacing.md,
-              border: '1px solid #e5e7eb',
-            }}>
-              <div style={{
-                fontSize: theme.typography.fontSize.sm,
-                fontWeight: 'bold',
-                marginBottom: theme.spacing.sm,
-                color: theme.colors.text,
-              }}>
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: theme.borderRadius.md,
+                padding: theme.spacing.md,
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  fontWeight: 'bold',
+                  marginBottom: theme.spacing.sm,
+                  color: theme.colors.text,
+                }}
+              >
                 📊 Signal Checklist
               </div>
               {/* Regime Signal */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: theme.spacing.xs,
-                borderBottom: '1px solid #f3f4f6',
-              }}>
-                <span style={{ fontSize: theme.typography.fontSize.sm }}>Technical Regime</span>
-                <span style={{
-                  fontSize: theme.typography.fontSize.xs,
-                  padding: '2px 8px',
-                  borderRadius: theme.borderRadius.sm,
-                  backgroundColor: signalData.regime?.regime === 'bull' ? '#dcfce7'
-                    : signalData.regime?.regime === 'bear' ? '#fee2e2'
-                    : signalData.regime ? '#fef9c3' : '#f3f4f6',
-                  color: signalData.regime?.regime === 'bull' ? '#166534'
-                    : signalData.regime?.regime === 'bear' ? '#991b1b'
-                    : signalData.regime ? '#854d0e' : '#6b7280',
-                }}>
-                  {signalData.regime?.regime === 'bull' ? '✅ BULL'
-                    : signalData.regime?.regime === 'bear' ? '❌ BEAR'
-                    : signalData.regime?.regime === 'sideways' ? '⚠️ SIDEWAYS'
-                    : '⏳ Loading'}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: theme.spacing.xs,
+                  borderBottom: '1px solid #f3f4f6',
+                }}
+              >
+                <span style={{ fontSize: theme.typography.fontSize.sm }}>
+                  Technical Regime
+                </span>
+                <span
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor:
+                      signalData.regime?.regime === 'bull'
+                        ? '#dcfce7'
+                        : signalData.regime?.regime === 'bear'
+                          ? '#fee2e2'
+                          : signalData.regime
+                            ? '#fef9c3'
+                            : '#f3f4f6',
+                    color:
+                      signalData.regime?.regime === 'bull'
+                        ? '#166534'
+                        : signalData.regime?.regime === 'bear'
+                          ? '#991b1b'
+                          : signalData.regime
+                            ? '#854d0e'
+                            : '#6b7280',
+                  }}
+                >
+                  {signalData.regime?.regime === 'bull'
+                    ? '✅ BULL'
+                    : signalData.regime?.regime === 'bear'
+                      ? '❌ BEAR'
+                      : signalData.regime?.regime === 'sideways'
+                        ? '⚠️ SIDEWAYS'
+                        : '⏳ Loading'}
                 </span>
               </div>
               {/* CheddarFlow Signal */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: theme.spacing.xs,
-                borderBottom: '1px solid #f3f4f6',
-              }}>
-                <span style={{ fontSize: theme.typography.fontSize.sm }}>CheddarFlow</span>
-                <span style={{
-                  fontSize: theme.typography.fontSize.xs,
-                  padding: '2px 8px',
-                  borderRadius: theme.borderRadius.sm,
-                  backgroundColor: signalData.flow?.sentiment === 'bullish' ? '#dcfce7'
-                    : signalData.flow?.sentiment === 'bearish' ? '#fee2e2'
-                    : signalData.flow ? '#fef9c3' : '#f3f4f6',
-                  color: signalData.flow?.sentiment === 'bullish' ? '#166534'
-                    : signalData.flow?.sentiment === 'bearish' ? '#991b1b'
-                    : signalData.flow ? '#854d0e' : '#6b7280',
-                }}>
-                  {signalData.flow?.sentiment === 'bullish' ? '✅ Bullish'
-                    : signalData.flow?.sentiment === 'bearish' ? '❌ Bearish'
-                    : signalData.flow?.sentiment === 'neutral' ? '⚠️ Neutral'
-                    : '⏳ Loading'}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: theme.spacing.xs,
+                  borderBottom: '1px solid #f3f4f6',
+                }}
+              >
+                <span style={{ fontSize: theme.typography.fontSize.sm }}>
+                  CheddarFlow
+                </span>
+                <span
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor:
+                      signalData.flow?.sentiment === 'bullish'
+                        ? '#dcfce7'
+                        : signalData.flow?.sentiment === 'bearish'
+                          ? '#fee2e2'
+                          : signalData.flow
+                            ? '#fef9c3'
+                            : '#f3f4f6',
+                    color:
+                      signalData.flow?.sentiment === 'bullish'
+                        ? '#166534'
+                        : signalData.flow?.sentiment === 'bearish'
+                          ? '#991b1b'
+                          : signalData.flow
+                            ? '#854d0e'
+                            : '#6b7280',
+                  }}
+                >
+                  {signalData.flow?.sentiment === 'bullish'
+                    ? '✅ Bullish'
+                    : signalData.flow?.sentiment === 'bearish'
+                      ? '❌ Bearish'
+                      : signalData.flow?.sentiment === 'neutral'
+                        ? '⚠️ Neutral'
+                        : '⏳ Loading'}
                 </span>
               </div>
               {/* Market Tide Signal */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: theme.spacing.xs,
-                borderBottom: '1px solid #f3f4f6',
-              }}>
-                <span style={{ fontSize: theme.typography.fontSize.sm }}>Market Tide (UW)</span>
-                <span style={{
-                  fontSize: theme.typography.fontSize.xs,
-                  padding: '2px 8px',
-                  borderRadius: theme.borderRadius.sm,
-                  backgroundColor: signalData.marketTide?.sentiment === 'bullish' ? '#dcfce7'
-                    : signalData.marketTide?.sentiment === 'bearish' ? '#fee2e2'
-                    : signalData.marketTide ? '#fef9c3' : '#f3f4f6',
-                  color: signalData.marketTide?.sentiment === 'bullish' ? '#166534'
-                    : signalData.marketTide?.sentiment === 'bearish' ? '#991b1b'
-                    : signalData.marketTide ? '#854d0e' : '#6b7280',
-                }}>
-                  {signalData.marketTide?.sentiment === 'bullish' ? '✅ Bullish'
-                    : signalData.marketTide?.sentiment === 'bearish' ? '❌ Bearish'
-                    : signalData.marketTide?.configured === false ? '🔑 No API Key'
-                    : '⏳ Loading'}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: theme.spacing.xs,
+                  borderBottom: '1px solid #f3f4f6',
+                }}
+              >
+                <span style={{ fontSize: theme.typography.fontSize.sm }}>
+                  Market Tide (UW)
+                </span>
+                <span
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor:
+                      signalData.marketTide?.sentiment === 'bullish'
+                        ? '#dcfce7'
+                        : signalData.marketTide?.sentiment === 'bearish'
+                          ? '#fee2e2'
+                          : signalData.marketTide
+                            ? '#fef9c3'
+                            : '#f3f4f6',
+                    color:
+                      signalData.marketTide?.sentiment === 'bullish'
+                        ? '#166534'
+                        : signalData.marketTide?.sentiment === 'bearish'
+                          ? '#991b1b'
+                          : signalData.marketTide
+                            ? '#854d0e'
+                            : '#6b7280',
+                  }}
+                >
+                  {signalData.marketTide?.sentiment === 'bullish'
+                    ? '✅ Bullish'
+                    : signalData.marketTide?.sentiment === 'bearish'
+                      ? '❌ Bearish'
+                      : signalData.marketTide?.configured === false
+                        ? '🔑 No API Key'
+                        : '⏳ Loading'}
                 </span>
               </div>
               {/* Overall Summary */}
-              <div style={{
-                marginTop: theme.spacing.sm,
-                padding: theme.spacing.sm,
-                backgroundColor: '#f9fafb',
-                borderRadius: theme.borderRadius.sm,
-                textAlign: 'center',
-              }}>
-                <div style={{
-                  fontSize: theme.typography.fontSize.xs,
-                  color: theme.colors.textMuted,
-                  marginBottom: '4px',
-                }}>
+              <div
+                style={{
+                  marginTop: theme.spacing.sm,
+                  padding: theme.spacing.sm,
+                  backgroundColor: '#f9fafb',
+                  borderRadius: theme.borderRadius.sm,
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.textMuted,
+                    marginBottom: '4px',
+                  }}
+                >
                   Overall Sentiment
                 </div>
-                <div style={{
-                  fontSize: theme.typography.fontSize.lg,
-                  fontWeight: 'bold',
-                  color: (() => {
-                    const signals = [signalData.regime?.regime, signalData.flow?.sentiment, signalData.marketTide?.sentiment];
-                    const bullish = signals.filter(s => s === 'bull' || s === 'bullish').length;
-                    const bearish = signals.filter(s => s === 'bear' || s === 'bearish').length;
-                    const total = signals.filter(s => s).length;
-                    if (total === 0) return theme.colors.textMuted;
-                    if (bullish > bearish) return '#166534';
-                    if (bearish > bullish) return '#991b1b';
-                    return '#854d0e';
-                  })(),
-                }}>
+                <div
+                  style={{
+                    fontSize: theme.typography.fontSize.lg,
+                    fontWeight: 'bold',
+                    color: (() => {
+                      const signals = [
+                        signalData.regime?.regime,
+                        signalData.flow?.sentiment,
+                        signalData.marketTide?.sentiment,
+                      ];
+                      const bullish = signals.filter(
+                        s => s === 'bull' || s === 'bullish'
+                      ).length;
+                      const bearish = signals.filter(
+                        s => s === 'bear' || s === 'bearish'
+                      ).length;
+                      const total = signals.filter(s => s).length;
+                      if (total === 0) return theme.colors.textMuted;
+                      if (bullish > bearish) return '#166534';
+                      if (bearish > bullish) return '#991b1b';
+                      return '#854d0e';
+                    })(),
+                  }}
+                >
                   {(() => {
-                    const signals = [signalData.regime?.regime, signalData.flow?.sentiment, signalData.marketTide?.sentiment];
-                    const bullish = signals.filter(s => s === 'bull' || s === 'bullish').length;
-                    const bearish = signals.filter(s => s === 'bear' || s === 'bearish').length;
+                    const signals = [
+                      signalData.regime?.regime,
+                      signalData.flow?.sentiment,
+                      signalData.marketTide?.sentiment,
+                    ];
+                    const bullish = signals.filter(
+                      s => s === 'bull' || s === 'bullish'
+                    ).length;
+                    const bearish = signals.filter(
+                      s => s === 'bear' || s === 'bearish'
+                    ).length;
                     const total = signals.filter(s => s).length;
                     if (total === 0) return 'Analyzing...';
                     return `${bullish}/${total} Bullish`;
@@ -3149,30 +3619,38 @@ const LiveTradingDashboard = () => {
             </div>
 
             {/* Detail Cards - Right Column */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: theme.spacing.md,
-            }}>
-              <TechnicalRegimeCard
-                symbol={researchSymbol}
-                date={syncResearchWithChart ? simulationDate : null}
-                onRegimeChange={(data) => {
-                  setSignalData(prev => ({ ...prev, regime: data }));
-                }}
-              />
-              <CheddarFlowCard
-                symbol={researchSymbol}
-                date={syncResearchWithChart ? simulationDate : null}
-                onSentimentChange={(data) => {
-                  setSignalData(prev => ({ ...prev, flow: data }));
-                }}
-              />
-              <MarketTideCard
-                onSentimentChange={(data) => {
-                  setSignalData(prev => ({ ...prev, marketTide: data }));
-                }}
-              />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: theme.spacing.md,
+              }}
+            >
+              <ErrorBoundary message="Technical Regime unavailable">
+                <TechnicalRegimeCard
+                  symbol={researchSymbol}
+                  date={syncResearchWithChart ? simulationDate : null}
+                  onRegimeChange={data => {
+                    setSignalData(prev => ({ ...prev, regime: data }));
+                  }}
+                />
+              </ErrorBoundary>
+              <ErrorBoundary message="CheddarFlow unavailable">
+                <CheddarFlowCard
+                  symbol={researchSymbol}
+                  date={syncResearchWithChart ? simulationDate : null}
+                  onSentimentChange={data => {
+                    setSignalData(prev => ({ ...prev, flow: data }));
+                  }}
+                />
+              </ErrorBoundary>
+              <ErrorBoundary message="Market Tide unavailable">
+                <MarketTideCard
+                  onSentimentChange={data => {
+                    setSignalData(prev => ({ ...prev, marketTide: data }));
+                  }}
+                />
+              </ErrorBoundary>
             </div>
           </div>
         </div>
@@ -3187,36 +3665,53 @@ const LiveTradingDashboard = () => {
           marginBottom: theme.spacing.md,
         }}
       >
-        <StrategyMonitorPanel
-          symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
-          versionId={'default'}
-          sessionStats={urlSessionId ? {
-            winRate: stats.winRate,
-            totalPnL: stats.totalPnL,
-            totalTrades: stats.totalTrades,
-            consecutiveLosses: 0,
-            maxDrawdown: 0,
-            profitFactor: stats.wins > 0 ? (stats.wins / Math.max(1, stats.losses)) : 0,
-          } : null}
-          onAlert={(alertsList) => {
-            alertsList.forEach(alert => {
-              addAlert({ type: 'warning', title: 'Strategy Alert', message: alert.message });
-            });
-          }}
-        />
-        <StrategyValidatorPanel
-          symbol={simulationSymbol || chartSymbol}
-          config={config}
-        />
+        <ErrorBoundary message="Strategy Monitor unavailable">
+          <StrategyMonitorPanel
+            symbol={chartSymbol || config.watchlist?.[0] || 'AAPL'}
+            versionId={'default'}
+            sessionStats={
+              urlSessionId
+                ? {
+                    winRate: stats.winRate,
+                    totalPnL: stats.totalPnL,
+                    totalTrades: stats.totalTrades,
+                    consecutiveLosses: 0,
+                    maxDrawdown: 0,
+                    profitFactor:
+                      stats.wins > 0
+                        ? stats.wins / Math.max(1, stats.losses)
+                        : 0,
+                  }
+                : null
+            }
+            onAlert={alertsList => {
+              alertsList.forEach(alert => {
+                addAlert({
+                  type: 'warning',
+                  title: 'Strategy Alert',
+                  message: alert.message,
+                });
+              });
+            }}
+          />
+        </ErrorBoundary>
+        <ErrorBoundary message="Strategy Validator unavailable">
+          <StrategyValidatorPanel
+            symbol={simulationSymbol || chartSymbol}
+            config={config}
+          />
+        </ErrorBoundary>
       </div>
 
       {/* Trading Log Panel - Diagnostics and debugging */}
-      <TradingLogPanel
-        sessionId={urlSessionId}
-        autoRefresh={sessionStatus === 'running'}
-        refreshInterval={3000}
-        defaultCollapsed={false}
-      />
+      <ErrorBoundary message="Trading Log panel encountered an error. Trading continues normally.">
+        <TradingLogPanel
+          sessionId={urlSessionId}
+          autoRefresh={sessionStatus === 'running'}
+          refreshInterval={3000}
+          defaultCollapsed={false}
+        />
+      </ErrorBoundary>
 
       {/* Performance Metrics - Connected to real account data */}
       <div
@@ -3526,94 +4021,101 @@ const LiveTradingDashboard = () => {
                 fontSize: theme.typography.fontSize.sm,
               }}
             >
-              {decisions.length === 0 ? (
+              {/* Filter to only show actionable decisions (shouldEnter=true or shouldExit=true) */}
+              {decisions.filter(d => d.shouldEnter || d.shouldExit).length ===
+              0 ? (
                 <p style={{ color: theme.colors.gray500 }}>
-                  No decisions yet. Start trading to see AI analysis.
+                  No trade signals yet. AI is analyzing but waiting for entry
+                  criteria to be met.
                 </p>
               ) : (
-                decisions.map((decision, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: theme.spacing.sm,
-                      marginBottom: theme.spacing.sm,
-                      backgroundColor:
-                        decision.action === 'BUY'
-                          ? theme.colors.success + '10'
-                          : decision.action === 'SELL'
-                            ? theme.colors.error + '10'
-                            : theme.colors.gray100,
-                      borderRadius: theme.borderRadius.sm,
-                      borderLeft: `3px solid ${
-                        decision.action === 'BUY'
-                          ? theme.colors.success
-                          : decision.action === 'SELL'
-                            ? theme.colors.error
-                            : theme.colors.gray300
-                      }`,
-                    }}
-                  >
+                decisions
+                  .filter(d => d.shouldEnter || d.shouldExit)
+                  .map((decision, idx) => (
                     <div
+                      key={idx}
                       style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
+                        padding: theme.spacing.sm,
+                        marginBottom: theme.spacing.sm,
+                        backgroundColor:
+                          decision.action === 'BUY'
+                            ? theme.colors.success + '10'
+                            : decision.action === 'SELL'
+                              ? theme.colors.error + '10'
+                              : theme.colors.gray100,
+                        borderRadius: theme.borderRadius.sm,
+                        borderLeft: `3px solid ${
+                          decision.action === 'BUY'
+                            ? theme.colors.success
+                            : decision.action === 'SELL'
+                              ? theme.colors.error
+                              : theme.colors.gray300
+                        }`,
                       }}
                     >
-                      <span
-                        style={{ fontWeight: theme.typography.fontWeight.bold }}
-                      >
-                        {decision.symbol}
-                      </span>
-                      <span
+                      <div
                         style={{
-                          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                          backgroundColor:
-                            decision.action === 'BUY'
-                              ? theme.colors.success
-                              : decision.action === 'SELL'
-                                ? theme.colors.error
-                                : theme.colors.gray400,
-                          color: '#fff',
-                          borderRadius: theme.borderRadius.sm,
-                          fontSize: theme.typography.fontSize.xs,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
                         }}
                       >
-                        {decision.action}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        marginTop: theme.spacing.xs,
-                        color: theme.colors.gray600,
-                      }}
-                    >
-                      Confidence: {decision.confidence}%
-                    </div>
-                    {decision.reasons && decision.reasons.length > 0 && (
-                      <ul
+                        <span
+                          style={{
+                            fontWeight: theme.typography.fontWeight.bold,
+                          }}
+                        >
+                          {decision.symbol}
+                        </span>
+                        <span
+                          style={{
+                            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                            backgroundColor:
+                              decision.action === 'BUY'
+                                ? theme.colors.success
+                                : decision.action === 'SELL'
+                                  ? theme.colors.error
+                                  : theme.colors.gray400,
+                            color: '#fff',
+                            borderRadius: theme.borderRadius.sm,
+                            fontSize: theme.typography.fontSize.xs,
+                          }}
+                        >
+                          {decision.action}
+                        </span>
+                      </div>
+                      <div
                         style={{
-                          margin: `${theme.spacing.xs} 0 0 0`,
-                          paddingLeft: theme.spacing.md,
+                          marginTop: theme.spacing.xs,
                           color: theme.colors.gray600,
                         }}
                       >
-                        {decision.reasons.slice(0, 3).map((reason, i) => (
-                          <li key={i}>{reason}</li>
-                        ))}
-                      </ul>
-                    )}
-                    <div
-                      style={{
-                        marginTop: theme.spacing.xs,
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray400,
-                      }}
-                    >
-                      {new Date(decision.timestamp).toLocaleTimeString()}
+                        Confidence: {decision.confidence}%
+                      </div>
+                      {decision.reasons && decision.reasons.length > 0 && (
+                        <ul
+                          style={{
+                            margin: `${theme.spacing.xs} 0 0 0`,
+                            paddingLeft: theme.spacing.md,
+                            color: theme.colors.gray600,
+                          }}
+                        >
+                          {decision.reasons.slice(0, 3).map((reason, i) => (
+                            <li key={i}>{reason}</li>
+                          ))}
+                        </ul>
+                      )}
+                      <div
+                        style={{
+                          marginTop: theme.spacing.xs,
+                          fontSize: theme.typography.fontSize.xs,
+                          color: theme.colors.gray400,
+                        }}
+                      >
+                        {new Date(decision.timestamp).toLocaleTimeString()}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))
               )}
               <div ref={decisionsEndRef} />
             </div>
