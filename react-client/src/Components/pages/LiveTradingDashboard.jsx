@@ -282,6 +282,10 @@ const LiveTradingDashboard = () => {
     });
 
     socket.on('ai_decision', decision => {
+      // Filter by session - only process if from current session or no session filter
+      if (decision.sessionId && urlSessionId && decision.sessionId !== urlSessionId) {
+        return; // Ignore decisions from other sessions
+      }
       setDecisions(prev => [...prev.slice(-49), decision]);
       // Announce AI decisions if enabled
       if (decision.action === 'BUY' || decision.action === 'SELL') {
@@ -302,6 +306,10 @@ const LiveTradingDashboard = () => {
     });
 
     socket.on('trade_executed', trade => {
+      // Filter by session - only process if from current session or no session filter
+      if (trade.sessionId && urlSessionId && trade.sessionId !== urlSessionId) {
+        return; // Ignore trades from other sessions
+      }
       addAlert(
         trade.status === 'filled' ? 'success' : 'info',
         `Trade ${trade.side.toUpperCase()}`,
@@ -314,6 +322,10 @@ const LiveTradingDashboard = () => {
     });
 
     socket.on('alert', alert => {
+      // Filter by session - only process if from current session or no session filter
+      if (alert.sessionId && urlSessionId && alert.sessionId !== urlSessionId) {
+        return; // Ignore alerts from other sessions
+      }
       addAlert(alert.type, alert.title, alert.message);
     });
 
@@ -333,7 +345,7 @@ const LiveTradingDashboard = () => {
         socket.disconnect();
       }
     };
-  }, [chartSymbol]);
+  }, [chartSymbol, urlSessionId]); // Include urlSessionId to re-register handlers when session changes
 
   // Fetch session details when URL sessionId changes
   useEffect(() => {
@@ -746,6 +758,46 @@ const LiveTradingDashboard = () => {
     }
   };
 
+  // Panic sell - immediately close all positions for this session
+  const [panicSelling, setPanicSelling] = useState(false);
+  const panicSell = async () => {
+    if (!urlSessionId) return;
+
+    // Confirmation dialog
+    if (!window.confirm('PANIC SELL: This will immediately sell ALL positions at market price. Are you sure?')) {
+      return;
+    }
+
+    setPanicSelling(true);
+    try {
+      const res = await fetch(`/api/ai/session/${urlSessionId}/panic-sell`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const soldCount = data.results?.length || 0;
+        addAlert(
+          'warning',
+          'PANIC SELL Executed',
+          `Closed ${soldCount} position(s) at market price`
+        );
+        // Refresh positions
+        fetchPositions();
+        fetchAccount();
+      } else {
+        addAlert('error', 'Panic Sell Failed', data.error || 'Unknown error');
+      }
+    } catch (err) {
+      setError(err.message);
+      addAlert('error', 'Panic Sell Failed', err.message);
+    } finally {
+      setPanicSelling(false);
+    }
+  };
+
   const fetchChartData = async symbol => {
     try {
       const res = await fetch(`/api/indicators/${symbol}`);
@@ -1023,6 +1075,23 @@ const LiveTradingDashboard = () => {
                 LIVE TRADING
               </span>
             )}
+            {/* Asset Type Indicator */}
+            <span
+              style={{
+                backgroundColor: config.assetType === 'crypto'
+                  ? theme.colors.info
+                  : theme.colors.gray500,
+                color: 'white',
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: 'bold',
+                padding: '2px 8px',
+                borderRadius: theme.borderRadius.sm,
+                marginLeft: theme.spacing.sm,
+                textTransform: 'uppercase',
+              }}
+            >
+              {config.assetType === 'crypto' ? 'CRYPTO' : 'STOCKS'}
+            </span>
           </div>
         </div>
 
@@ -1117,6 +1186,19 @@ const LiveTradingDashboard = () => {
               <Button variant="danger" onClick={stopTrading}>
                 Stop
               </Button>
+              <Button
+                variant="danger"
+                onClick={panicSell}
+                disabled={panicSelling}
+                style={{
+                  backgroundColor: '#7f1d1d',
+                  borderColor: '#991b1b',
+                  fontWeight: 'bold',
+                }}
+                title="Emergency: Immediately sell ALL positions at market price"
+              >
+                {panicSelling ? 'Selling...' : 'PANIC SELL'}
+              </Button>
             </>
           )}
           {urlSessionId && sessionStatus === 'paused' && (
@@ -1126,6 +1208,19 @@ const LiveTradingDashboard = () => {
               </Button>
               <Button variant="danger" onClick={stopTrading}>
                 Stop
+              </Button>
+              <Button
+                variant="danger"
+                onClick={panicSell}
+                disabled={panicSelling}
+                style={{
+                  backgroundColor: '#7f1d1d',
+                  borderColor: '#991b1b',
+                  fontWeight: 'bold',
+                }}
+                title="Emergency: Immediately sell ALL positions at market price"
+              >
+                {panicSelling ? 'Selling...' : 'PANIC SELL'}
               </Button>
             </>
           )}
@@ -1483,6 +1578,123 @@ const LiveTradingDashboard = () => {
             )}
           </div>
 
+          {/* Asset Type Selector */}
+          <div
+            style={{
+              marginBottom: theme.spacing.lg,
+              padding: theme.spacing.md,
+              backgroundColor: config.assetType === 'crypto'
+                ? `${theme.colors.info}10`
+                : `${theme.colors.gray200}50`,
+              borderRadius: theme.borderRadius.md,
+              border: `2px solid ${config.assetType === 'crypto' ? theme.colors.info : theme.colors.gray300}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: theme.spacing.xs,
+                    color: config.assetType === 'crypto'
+                      ? theme.colors.info
+                      : theme.colors.gray700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                  }}
+                >
+                  {config.assetType === 'crypto' ? '₿' : '📊'} Asset Type
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.gray600,
+                  }}
+                >
+                  {config.assetType === 'crypto'
+                    ? 'Cryptocurrency - No PDT rules, 24/7 trading'
+                    : 'Stocks & ETFs - Subject to PDT rules, market hours only'}
+                </p>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  backgroundColor: theme.colors.gray100,
+                  borderRadius: theme.borderRadius.md,
+                  padding: '3px',
+                }}
+              >
+                <button
+                  onClick={() => updateConfig('assetType', 'stocks')}
+                  style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: config.assetType !== 'crypto'
+                      ? theme.typography.fontWeight.bold
+                      : theme.typography.fontWeight.medium,
+                    backgroundColor: config.assetType !== 'crypto'
+                      ? theme.colors.gray600
+                      : 'transparent',
+                    color: config.assetType !== 'crypto'
+                      ? '#fff'
+                      : theme.colors.gray600,
+                    border: 'none',
+                    borderRadius: theme.borderRadius.sm,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  📊 Stocks
+                </button>
+                <button
+                  onClick={() => updateConfig('assetType', 'crypto')}
+                  style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    fontSize: theme.typography.fontSize.md,
+                    fontWeight: config.assetType === 'crypto'
+                      ? theme.typography.fontWeight.bold
+                      : theme.typography.fontWeight.medium,
+                    backgroundColor: config.assetType === 'crypto'
+                      ? theme.colors.info
+                      : 'transparent',
+                    color: config.assetType === 'crypto'
+                      ? '#fff'
+                      : theme.colors.gray600,
+                    border: 'none',
+                    borderRadius: theme.borderRadius.sm,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  ₿ Crypto
+                </button>
+              </div>
+            </div>
+            {config.assetType === 'crypto' && (
+              <div
+                style={{
+                  marginTop: theme.spacing.sm,
+                  padding: theme.spacing.sm,
+                  backgroundColor: `${theme.colors.info}15`,
+                  borderRadius: theme.borderRadius.sm,
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.info,
+                  fontWeight: theme.typography.fontWeight.medium,
+                }}
+              >
+                Crypto Mode: Use symbols like BTC, ETH, SOL. No Pattern Day Trade (PDT) restrictions apply.
+              </div>
+            )}
+          </div>
+
           {/* Config Section Tabs */}
           <div
             style={{
@@ -1559,6 +1771,19 @@ const LiveTradingDashboard = () => {
                     }}
                   >
                     {config.paperTradeOnly ? 'PAPER' : 'LIVE'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      padding: '2px 8px',
+                      borderRadius: theme.borderRadius.sm,
+                      backgroundColor: config.assetType === 'crypto'
+                        ? theme.colors.info
+                        : theme.colors.gray500,
+                      color: '#fff',
+                    }}
+                  >
+                    {config.assetType === 'crypto' ? 'CRYPTO' : 'STOCKS'}
                   </span>
                   {account && (
                     <span
