@@ -337,19 +337,88 @@ function stopSession(sessionId) {
 /**
  * Delete a trading session permanently
  * @param {string} sessionId - Session identifier
+ * @param {object} options - Deletion options
+ * @param {boolean} options.closePositions - Whether to sell all positions first (panic sell)
  * @returns {object} Deletion result
  */
-function deleteSession(sessionId) {
+async function deleteSession(sessionId, options = {}) {
   const session = sessions.get(sessionId);
   if (!session) {
     return { error: 'Session not found', sessionId };
   }
 
   const sessionName = session.name;
+  const closedPositions = [];
+  const errors = [];
+
+  // If closePositions is enabled, sell all positions first (panic sell)
+  if (options.closePositions) {
+    const tradingMode = getSessionTradingMode(session);
+    const positions = Array.from(session.portfolio.positions.values());
+
+    console.log(
+      `[AI Engine] PANIC SELL: Closing ${positions.length} positions for session "${sessionName}" (${tradingMode.toUpperCase()})`
+    );
+
+    for (const position of positions) {
+      if (position.quantity > 0) {
+        try {
+          const order = await alpacaClient.placeOrder(
+            {
+              symbol: position.symbol,
+              qty: position.quantity,
+              side: 'sell',
+              type: 'market',
+              time_in_force: 'day',
+            },
+            null,
+            tradingMode
+          );
+
+          closedPositions.push({
+            symbol: position.symbol,
+            quantity: position.quantity,
+            orderId: order.id,
+            estimatedLoss: position.unrealizedPnL,
+          });
+
+          tradingLogger.logExecution('PANIC_SELL', position.symbol, {
+            quantity: position.quantity,
+            price: position.currentPrice,
+            orderId: order.id,
+            sessionName,
+            reason: 'Session deleted - panic sell',
+            pnl: position.unrealizedPnL,
+            pnlPercent: position.unrealizedPnLPercent,
+          });
+
+          console.log(
+            `[AI Engine] Panic sold ${position.quantity} ${position.symbol} (P/L: $${position.unrealizedPnL?.toFixed(2) || '?'})`
+          );
+        } catch (err) {
+          console.error(
+            `[AI Engine] Failed to panic sell ${position.symbol}:`,
+            err.message
+          );
+          errors.push({
+            symbol: position.symbol,
+            error: err.message,
+          });
+        }
+      }
+    }
+  }
+
+  // Stop the session first if it's running
+  if (session.status === 'running') {
+    stopSession(sessionId);
+  }
 
   // Remove from memory
   sessions.delete(sessionId);
   decisionHistory.delete(sessionId);
+  entryContexts.delete(sessionId);
+  tradeCooldowns.delete(sessionId);
 
   // Save to disk
   saveSessions();
@@ -361,6 +430,131 @@ function deleteSession(sessionId) {
     sessionId,
     name: sessionName,
     message: `Session "${sessionName}" has been permanently deleted`,
+    closedPositions: closedPositions.length > 0 ? closedPositions : undefined,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
+ * Panic sell - immediately close all positions for a session
+ * @param {string} sessionId - Session identifier
+ * @returns {object} Result with closed positions
+ */
+async function panicSell(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) {
+    return { error: 'Session not found', sessionId };
+  }
+
+  const sessionName = session.name;
+  const tradingMode = getSessionTradingMode(session);
+  const closedPositions = [];
+  const errors = [];
+
+  // Get all positions (from session AND from Alpaca for the watchlist)
+  const sessionPositions = Array.from(session.portfolio.positions.values());
+  const watchlistSymbols = session.config.watchlist || [];
+
+  console.log(
+    `[AI Engine] PANIC SELL initiated for session "${sessionName}" (${tradingMode.toUpperCase()})`
+  );
+
+  // Also check actual Alpaca positions for watchlist symbols
+  try {
+    const alpacaPositions = await alpacaClient.getPositions(tradingMode);
+    const watchlistPositions = alpacaPositions.filter(p =>
+      watchlistSymbols.includes(p.symbol)
+    );
+
+    // Merge with session positions, preferring Alpaca data for accuracy
+    const positionsToClose = new Map();
+
+    // Add session positions
+    for (const pos of sessionPositions) {
+      positionsToClose.set(pos.symbol, {
+        symbol: pos.symbol,
+        quantity: pos.quantity,
+        currentPrice: pos.currentPrice,
+        unrealizedPnL: pos.unrealizedPnL,
+      });
+    }
+
+    // Override with Alpaca positions (more accurate)
+    for (const pos of watchlistPositions) {
+      positionsToClose.set(pos.symbol, {
+        symbol: pos.symbol,
+        quantity: parseFloat(pos.qty),
+        currentPrice: parseFloat(pos.current_price),
+        unrealizedPnL: parseFloat(pos.unrealized_pl),
+      });
+    }
+
+    // Close each position
+    for (const [symbol, position] of positionsToClose) {
+      if (position.quantity > 0) {
+        try {
+          const order = await alpacaClient.placeOrder(
+            {
+              symbol: position.symbol,
+              qty: position.quantity,
+              side: 'sell',
+              type: 'market',
+              time_in_force: 'day',
+            },
+            null,
+            tradingMode
+          );
+
+          closedPositions.push({
+            symbol: position.symbol,
+            quantity: position.quantity,
+            orderId: order.id,
+            estimatedLoss: position.unrealizedPnL,
+          });
+
+          tradingLogger.logExecution('PANIC_SELL', position.symbol, {
+            quantity: position.quantity,
+            price: position.currentPrice,
+            orderId: order.id,
+            sessionName,
+            reason: 'Manual panic sell',
+            pnl: position.unrealizedPnL,
+          });
+
+          console.log(
+            `[AI Engine] Panic sold ${position.quantity} ${position.symbol}`
+          );
+        } catch (err) {
+          console.error(
+            `[AI Engine] Failed to panic sell ${position.symbol}:`,
+            err.message
+          );
+          errors.push({
+            symbol: position.symbol,
+            error: err.message,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[AI Engine] Failed to fetch Alpaca positions:', err.message);
+    errors.push({ error: err.message });
+  }
+
+  // Clear session positions
+  session.portfolio.positions.clear();
+  saveSessions();
+
+  // Sync portfolio after panic sell
+  setTimeout(() => syncPortfolio(sessionId), 2000);
+
+  return {
+    success: true,
+    sessionId,
+    sessionName,
+    closedPositions,
+    errors: errors.length > 0 ? errors : undefined,
+    message: `Panic sell completed: ${closedPositions.length} positions closed`,
   };
 }
 
@@ -1061,12 +1255,13 @@ async function evaluateExit(sessionId, symbol) {
       );
     }
 
-    // Stop loss hit (using percentage config) - immediate exit
+    // Stop loss hit (using percentage config) - IMMEDIATE EXIT (must exceed threshold alone)
+    // This is a critical risk management rule - stop loss should ALWAYS trigger exit
     if (pnlPercent <= -stopLossPercent) {
-      exitScore += 40;
+      exitScore += 100; // Guarantee exit - stop loss is non-negotiable
       exitReason = 'Stop loss triggered';
       factors.push(
-        `Stop loss -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`
+        `STOP LOSS -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`
       );
     }
 
@@ -1744,6 +1939,7 @@ module.exports = {
   cloneSession,
   pauseSession,
   resumeSession,
+  panicSell, // Emergency sell all positions for a session
   getSessionStatus,
   getSession,
   getAllUserSessions,

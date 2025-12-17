@@ -2130,9 +2130,13 @@ app.get('/api/alpaca/account', async (req, res) => {
   try {
     // Use mode from query param (paper or live) - passed directly to client without changing global state
     const { mode } = req.query;
-    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
     const account = await alpacaClient.getAccount(tradingMode);
-    res.json({ success: true, account, mode: tradingMode || tradingModeManager.getCurrentMode() });
+    res.json({
+      success: true,
+      account,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
   } catch (error) {
     console.error('❌ Error fetching Alpaca account:', error.message);
     res.status(500).json({ error: error.message });
@@ -2144,9 +2148,13 @@ app.get('/api/alpaca/positions', async (req, res) => {
   try {
     // Use mode from query param (paper or live) - passed directly to client without changing global state
     const { mode } = req.query;
-    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
     const positions = await alpacaClient.getPositions(tradingMode);
-    res.json({ success: true, positions, mode: tradingMode || tradingModeManager.getCurrentMode() });
+    res.json({
+      success: true,
+      positions,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
   } catch (error) {
     console.error('❌ Error fetching positions:', error.message);
     res.status(500).json({ error: error.message });
@@ -2159,7 +2167,7 @@ app.get('/api/alpaca/positions/:symbol', async (req, res) => {
     const { symbol } = req.params;
     // Use mode from query param (paper or live) - passed directly to client without changing global state
     const { mode } = req.query;
-    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
     const position = await alpacaClient.getPosition(symbol, tradingMode);
 
     if (!position) {
@@ -2171,7 +2179,11 @@ app.get('/api/alpaca/positions/:symbol', async (req, res) => {
       });
     }
 
-    res.json({ success: true, position, mode: tradingMode || tradingModeManager.getCurrentMode() });
+    res.json({
+      success: true,
+      position,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
   } catch (error) {
     console.error(
       `❌ Error fetching position for ${req.params.symbol}:`,
@@ -2239,7 +2251,7 @@ app.get('/api/alpaca/orders', async (req, res) => {
   try {
     // Use mode from query param (paper or live) - passed directly to client without changing global state
     const { mode } = req.query;
-    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
 
     const filters = {};
     if (req.query.status) filters.status = req.query.status;
@@ -2251,10 +2263,13 @@ app.get('/api/alpaca/orders', async (req, res) => {
     // Activities contain per_share_profit for closed trades
     let activities = [];
     try {
-      activities = await alpacaClient.getAccountActivities({
-        activity_types: 'FILL',
-        page_size: 100,
-      }, tradingMode);
+      activities = await alpacaClient.getAccountActivities(
+        {
+          activity_types: 'FILL',
+          page_size: 100,
+        },
+        tradingMode
+      );
     } catch (err) {
       console.warn(
         'Could not fetch activities for P/L enrichment:',
@@ -2317,7 +2332,11 @@ app.get('/api/alpaca/orders', async (req, res) => {
       return enriched;
     });
 
-    res.json({ success: true, orders: enrichedOrders, mode: tradingMode || tradingModeManager.getCurrentMode() });
+    res.json({
+      success: true,
+      orders: enrichedOrders,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
   } catch (error) {
     console.error('❌ Error fetching orders:', error.message);
     res.status(500).json({ error: error.message });
@@ -2342,9 +2361,13 @@ app.delete('/api/alpaca/positions/:symbol', async (req, res) => {
     const { symbol } = req.params;
     // Use mode from query param (paper or live) - passed directly to client without changing global state
     const { mode } = req.query;
-    const tradingMode = (mode === 'paper' || mode === 'live') ? mode : null;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
     const result = await alpacaClient.closePosition(symbol, tradingMode);
-    res.json({ success: true, result, mode: tradingMode || tradingModeManager.getCurrentMode() });
+    res.json({
+      success: true,
+      result,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
   } catch (error) {
     console.error(
       `❌ Error closing position ${req.params.symbol}:`,
@@ -2393,13 +2416,13 @@ app.get('/api/alpaca/bars/:symbol/:timeframe', async (req, res) => {
 
     // Map timeframe to Alpaca format
     const timeframeMap = {
-      '1': '1Min',
-      '5': '5Min',
-      '15': '15Min',
-      '30': '30Min',
-      '60': '1Hour',
-      'hour': '1Hour',
-      'day': '1Day',
+      1: '1Min',
+      5: '5Min',
+      15: '15Min',
+      30: '30Min',
+      60: '1Hour',
+      hour: '1Hour',
+      day: '1Day',
       '1Day': '1Day',
     };
 
@@ -3353,19 +3376,42 @@ app.post('/api/ai/session/resume', async (req, res) => {
 });
 
 // Delete AI trading session permanently
+// Query param: closePositions=true to panic sell all positions before deleting
 app.delete('/api/ai/session/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
+    const closePositions = req.query.closePositions === 'true';
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId required' });
     }
-    const result = aiTradingEngine.deleteSession(sessionId);
+    const result = await aiTradingEngine.deleteSession(sessionId, {
+      closePositions,
+    });
     if (result.error) {
       return res.status(404).json(result);
     }
     res.json(result);
   } catch (error) {
     console.error('Error deleting AI session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Panic sell - immediately close all positions for a session without deleting it
+app.post('/api/ai/session/:sessionId/panic-sell', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    console.log(`[API] Panic sell requested for session ${sessionId}`);
+    const result = await aiTradingEngine.panicSell(sessionId);
+    if (result.error) {
+      return res.status(404).json(result);
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Error executing panic sell:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -3377,7 +3423,10 @@ app.post('/api/ai/session/clone', async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId required' });
     }
-    const result = aiTradingEngine.cloneSession(sessionId, { name, paperTrading });
+    const result = aiTradingEngine.cloneSession(sessionId, {
+      name,
+      paperTrading,
+    });
     if (result.error) {
       return res.status(404).json(result);
     }
@@ -3931,7 +3980,9 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
     const candles = await getCachedHistoricalData(symbol, date, 'minute');
 
     if (!candles || candles.length === 0) {
-      return res.status(404).json({ error: `No intraday data found for ${symbol} on ${date}` });
+      return res
+        .status(404)
+        .json({ error: `No intraday data found for ${symbol} on ${date}` });
     }
 
     // Run the simulation bar-by-bar
@@ -3950,7 +4001,8 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
     const calculateRSI = (values, period, index) => {
       if (index < period) return 50;
       const slice = values.slice(index - period, index);
-      let gains = 0, losses = 0;
+      let gains = 0,
+        losses = 0;
       for (let i = 1; i < slice.length; i++) {
         const change = slice[i] - slice[i - 1];
         if (change > 0) gains += change;
@@ -3960,7 +4012,7 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
       const avgLoss = losses / period;
       if (avgLoss === 0) return 100;
       const rs = avgGain / avgLoss;
-      return 100 - (100 / (1 + rs));
+      return 100 - 100 / (1 + rs);
     };
 
     // Process each candle
@@ -3973,7 +4025,8 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
       // Check for exit if in position
       if (position) {
         const pnl = (price - position.entryPrice) * position.shares;
-        const pnlPercent = ((price - position.entryPrice) / position.entryPrice) * 100;
+        const pnlPercent =
+          ((price - position.entryPrice) / position.entryPrice) * 100;
         const mfe = Math.max(position.mfe || 0, pnlPercent);
         const mae = Math.min(position.mae || 0, pnlPercent);
         position.mfe = mfe;
@@ -4016,22 +4069,30 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
       }
 
       // Check for entry if not in position
-      if (!position && i < candles.length - 30) { // Don't enter near end of day
-        const rsiInRange = rsi >= strategyConfig.entryRsiMin && rsi <= strategyConfig.entryRsiMax;
+      if (!position && i < candles.length - 30) {
+        // Don't enter near end of day
+        const rsiInRange =
+          rsi >= strategyConfig.entryRsiMin &&
+          rsi <= strategyConfig.entryRsiMax;
 
         // Simple momentum check - price above recent MA
         const recentCloses = closes.slice(Math.max(0, i - 20), i);
-        const ma20 = recentCloses.reduce((a, b) => a + b, 0) / recentCloses.length;
+        const ma20 =
+          recentCloses.reduce((a, b) => a + b, 0) / recentCloses.length;
         const aboveMA = price > ma20;
 
         // Volume check - current volume above average
-        const volumes = candles.slice(Math.max(0, i - 20), i).map(c => c.volume || c.v || 0);
+        const volumes = candles
+          .slice(Math.max(0, i - 20), i)
+          .map(c => c.volume || c.v || 0);
         const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
         const currentVolume = candle.volume || candle.v || 0;
         const goodVolume = currentVolume > avgVolume * 0.8;
 
         if (rsiInRange && aboveMA && goodVolume) {
-          const shares = Math.floor((equity * (strategyConfig.positionSizePercent / 100)) / price);
+          const shares = Math.floor(
+            (equity * (strategyConfig.positionSizePercent / 100)) / price
+          );
           if (shares > 0) {
             position = {
               entryTime: time,
@@ -4053,7 +4114,8 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
 
     const grossProfit = wins.reduce((sum, t) => sum + t.pnl, 0);
     const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
-    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
+    const profitFactor =
+      grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
 
     res.json({
       success: true,
@@ -4087,20 +4149,35 @@ app.post('/api/backtest/random-days', async (req, res) => {
     }
 
     // Get available trading days
-    const start = startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const start =
+      startDate ||
+      new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
     const end = endDate || new Date().toISOString().split('T')[0];
 
     // Fetch daily data to find valid trading days
-    const dailyCandles = await polygonClient.getHistoricalAggregates(symbol, start, end, 'day');
+    const dailyCandles = await polygonClient.getHistoricalAggregates(
+      symbol,
+      start,
+      end,
+      'day'
+    );
     if (!dailyCandles || dailyCandles.length === 0) {
-      return res.status(404).json({ error: `No historical data found for ${symbol} between ${start} and ${end}` });
+      return res
+        .status(404)
+        .json({
+          error: `No historical data found for ${symbol} between ${start} and ${end}`,
+        });
     }
 
     // Get available dates (weekdays with data)
     const availableDates = dailyCandles
       .map(c => {
         const d = c.date || c.t;
-        return typeof d === 'number' ? new Date(d).toISOString().split('T')[0] : d.split('T')[0];
+        return typeof d === 'number'
+          ? new Date(d).toISOString().split('T')[0]
+          : d.split('T')[0];
       })
       .filter(d => {
         const day = new Date(d).getDay();
@@ -4109,7 +4186,10 @@ app.post('/api/backtest/random-days', async (req, res) => {
 
     // Randomly select dates
     const shuffled = [...availableDates].sort(() => Math.random() - 0.5);
-    const selectedDates = shuffled.slice(0, Math.min(numDays, availableDates.length));
+    const selectedDates = shuffled.slice(
+      0,
+      Math.min(numDays, availableDates.length)
+    );
 
     // Run simulation on each date
     const dailyResults = [];
@@ -4126,15 +4206,19 @@ app.post('/api/backtest/random-days', async (req, res) => {
             body: { symbol, date, config },
           };
           const mockRes = {
-            json: (data) => resolve(data),
-            status: () => ({ json: (data) => reject(new Error(data.error)) }),
+            json: data => resolve(data),
+            status: () => ({ json: data => reject(new Error(data.error)) }),
           };
 
           // Make internal call
-          app._router.handle({ ...mockReq, method: 'POST', url: '/api/backtest/day-simulation' }, mockRes, (err) => {
-            if (err) reject(err);
-          });
-        }).catch(async (err) => {
+          app._router.handle(
+            { ...mockReq, method: 'POST', url: '/api/backtest/day-simulation' },
+            mockRes,
+            err => {
+              if (err) reject(err);
+            }
+          );
+        }).catch(async err => {
           // Fallback: directly run the simulation logic
           const candles = await getCachedHistoricalData(symbol, date, 'minute');
           if (!candles || candles.length === 0) {
@@ -4175,7 +4259,8 @@ app.post('/api/backtest/random-days', async (req, res) => {
       }
     }
 
-    const avgDailyPnl = dailyResults.length > 0 ? totalPnl / dailyResults.length : 0;
+    const avgDailyPnl =
+      dailyResults.length > 0 ? totalPnl / dailyResults.length : 0;
     const overallWinRate = totalTrades > 0 ? totalWins / totalTrades : 0;
 
     res.json({
@@ -4216,11 +4301,18 @@ app.post('/api/regime/watchlist', async (req, res) => {
     // Fetch historical data for each symbol
     const symbolData = {};
     const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
 
     for (const symbol of symbolsToFetch) {
       try {
-        const candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+        const candles = await polygonClient.getHistoricalAggregates(
+          symbol,
+          startDate,
+          endDate,
+          'day'
+        );
         if (candles && candles.length > 0) {
           symbolData[symbol] = candles.map(c => ({
             open: c.open || c.o,
@@ -4321,7 +4413,11 @@ app.post('/api/strategy-versions', (req, res) => {
     if (!symbol || !config) {
       return res.status(400).json({ error: 'symbol and config are required' });
     }
-    const result = strategyVersionControl.createVersion(symbol, config, options);
+    const result = strategyVersionControl.createVersion(
+      symbol,
+      config,
+      options
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4333,7 +4429,10 @@ app.post('/api/strategy-versions/:symbol/promote', (req, res) => {
   try {
     const { symbol } = req.params;
     const { versionId } = req.body;
-    const result = strategyVersionControl.promoteToProduction(symbol, versionId);
+    const result = strategyVersionControl.promoteToProduction(
+      symbol,
+      versionId
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4438,7 +4537,11 @@ app.post('/api/overnight/jobs/:id/start', async (req, res) => {
     const dataFetcher = async (symbol, startDate, endDate) => {
       try {
         // Try to get from historicalDataManager first
-        const data = await historicalDataManager.getDailyBars(symbol, startDate, endDate);
+        const data = await historicalDataManager.getDailyBars(
+          symbol,
+          startDate,
+          endDate
+        );
         if (data && data.length > 0) return data;
 
         // Fallback to polygon
@@ -4479,7 +4582,9 @@ app.post('/api/overnight/jobs/:id/cancel', async (req, res) => {
     const result = await overnightOptimizer.cancelJob(id);
 
     if (!result) {
-      return res.status(404).json({ error: 'Job not found or cannot be cancelled' });
+      return res
+        .status(404)
+        .json({ error: 'Job not found or cannot be cancelled' });
     }
 
     res.json({
@@ -4544,7 +4649,9 @@ app.post('/api/overnight/jobs/:id/apply', async (req, res) => {
     const applied = [];
 
     // Apply best config for each symbol that was optimized
-    for (const [symbol, symbolResults] of Object.entries(results.symbolResults || {})) {
+    for (const [symbol, symbolResults] of Object.entries(
+      results.symbolResults || {}
+    )) {
       if (symbolResults.bestConfig) {
         try {
           // Save as a new strategy version
@@ -4688,16 +4795,27 @@ app.get('/api/costs/:symbol', (req, res) => {
 
   try {
     const profile = transactionCostModel.getProfile(symbol);
-    const roundTripCost = transactionCostModel.getRoundTripCost(symbol, parseFloat(price) || 100);
+    const roundTripCost = transactionCostModel.getRoundTripCost(
+      symbol,
+      parseFloat(price) || 100
+    );
 
     res.json({
       symbol: symbol.toUpperCase(),
       profile,
       roundTripCost,
       executionPrices: {
-        buy: transactionCostModel.getExecutionPrice(symbol, parseFloat(price) || 100, 'BUY'),
-        sell: transactionCostModel.getExecutionPrice(symbol, parseFloat(price) || 100, 'SELL'),
-      }
+        buy: transactionCostModel.getExecutionPrice(
+          symbol,
+          parseFloat(price) || 100,
+          'BUY'
+        ),
+        sell: transactionCostModel.getExecutionPrice(
+          symbol,
+          parseFloat(price) || 100,
+          'SELL'
+        ),
+      },
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4768,13 +4886,13 @@ app.get('/api/leveraged/:symbol', (req, res) => {
         info,
         decay,
         backtestProxy: backtest,
-        rules: leveragedEtfRules.getRulesSummary()
+        rules: leveragedEtfRules.getRulesSummary(),
       });
     } else {
       res.json({
         symbol: symbol.toUpperCase(),
         isLeveraged: false,
-        message: `${symbol} is not a leveraged ETF - no special rules apply`
+        message: `${symbol} is not a leveraged ETF - no special rules apply`,
       });
     }
   } catch (error) {
@@ -4787,7 +4905,7 @@ app.get('/api/leveraged', (req, res) => {
   try {
     res.json({
       etfs: leveragedEtfRules.getAllLeveragedEtfs(),
-      rules: leveragedEtfRules.getRulesSummary()
+      rules: leveragedEtfRules.getRulesSummary(),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4804,13 +4922,19 @@ app.post('/api/leveraged/apply-constraints', (req, res) => {
 
   try {
     const time = currentTime ? new Date(currentTime) : new Date();
-    const result = leveragedEtfRules.applyConstraints(symbol, decision, time, currentPosition, vix);
+    const result = leveragedEtfRules.applyConstraints(
+      symbol,
+      decision,
+      time,
+      currentPosition,
+      vix
+    );
 
     // Add timing info
     result.timing = {
       currentTime: time.toISOString(),
       isMarketHours: leveragedEtfRules.isMarketHours(time),
-      timeUntilForcedExit: leveragedEtfRules.getTimeUntilForcedExit(time)
+      timeUntilForcedExit: leveragedEtfRules.getTimeUntilForcedExit(time),
     };
 
     res.json(result);
@@ -4825,10 +4949,15 @@ app.get('/api/leveraged/:symbol/decay', (req, res) => {
   const { days } = req.query;
 
   try {
-    const decay = leveragedEtfRules.calculateExpectedDecay(symbol, parseInt(days) || 1);
+    const decay = leveragedEtfRules.calculateExpectedDecay(
+      symbol,
+      parseInt(days) || 1
+    );
 
     if (!decay) {
-      return res.status(404).json({ error: `${symbol} is not a leveraged ETF` });
+      return res
+        .status(404)
+        .json({ error: `${symbol} is not a leveraged ETF` });
     }
 
     res.json(decay);
@@ -4856,27 +4985,31 @@ app.get('/api/regime/:symbol', async (req, res) => {
     startDate.setDate(startDate.getDate() - lookbackDays);
 
     // Format dates for polygon API
-    const formatDate = (d) => d.toISOString().split('T')[0];
+    const formatDate = d => d.toISOString().split('T')[0];
 
-    const candles = await polygonClient.getHistoricalAggregates(
-      symbol,
-      formatDate(startDate),
-      formatDate(endDate),
-      'day'
-    ).catch(() => []);
+    const candles = await polygonClient
+      .getHistoricalAggregates(
+        symbol,
+        formatDate(startDate),
+        formatDate(endDate),
+        'day'
+      )
+      .catch(() => []);
 
     if (!candles || candles.length < 50) {
       return res.status(400).json({
         error: 'Insufficient data for regime detection',
         candlesAvailable: candles?.length || 0,
-        required: 50
+        required: 50,
       });
     }
 
     const regime = regimeDetector.detectRegime(candles);
 
     // Add default config recommendation
-    regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(regime.regime);
+    regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(
+      regime.regime
+    );
 
     res.json({
       symbol: symbol.toUpperCase(),
@@ -4884,8 +5017,8 @@ app.get('/api/regime/:symbol', async (req, res) => {
       dataRange: {
         start: formatDate(startDate),
         end: formatDate(endDate),
-        candlesUsed: candles.length
-      }
+        candlesUsed: candles.length,
+      },
     });
   } catch (error) {
     console.error(`Error detecting regime for ${symbol}:`, error);
@@ -4904,20 +5037,22 @@ app.get('/api/regime/:symbol/timeline', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - lookbackDays);
 
-    const formatDate = (d) => d.toISOString().split('T')[0];
+    const formatDate = d => d.toISOString().split('T')[0];
 
-    const candles = await polygonClient.getHistoricalAggregates(
-      symbol,
-      formatDate(startDate),
-      formatDate(endDate),
-      'day'
-    ).catch(() => []);
+    const candles = await polygonClient
+      .getHistoricalAggregates(
+        symbol,
+        formatDate(startDate),
+        formatDate(endDate),
+        'day'
+      )
+      .catch(() => []);
 
     if (!candles || candles.length < 60) {
       return res.status(400).json({
         error: 'Insufficient data for timeline',
         candlesAvailable: candles?.length || 0,
-        required: 60
+        required: 60,
       });
     }
 
@@ -4931,8 +5066,8 @@ app.get('/api/regime/:symbol/timeline', async (req, res) => {
       dataRange: {
         start: formatDate(startDate),
         end: formatDate(endDate),
-        totalDays: candles.length
-      }
+        totalDays: candles.length,
+      },
     });
   } catch (error) {
     console.error(`Error getting regime timeline for ${symbol}:`, error);
@@ -4950,7 +5085,9 @@ app.post('/api/regime/detect', (req, res) => {
 
   try {
     const regime = regimeDetector.detectRegime(candles, options);
-    regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(regime.regime);
+    regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(
+      regime.regime
+    );
     res.json(regime);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4964,18 +5101,24 @@ app.get('/api/regime/config/:regime', (req, res) => {
   const validRegimes = ['bull', 'bear', 'sideways'];
   if (!validRegimes.includes(regime.toLowerCase())) {
     return res.status(400).json({
-      error: `Invalid regime. Must be one of: ${validRegimes.join(', ')}`
+      error: `Invalid regime. Must be one of: ${validRegimes.join(', ')}`,
     });
   }
 
   try {
-    const config = regimeDetector.getDefaultConfigForRegime(regime.toLowerCase());
-    const recommendation = regimeDetector.getStrategyRecommendation(regime.toLowerCase(), 'moderate', 0.015);
+    const config = regimeDetector.getDefaultConfigForRegime(
+      regime.toLowerCase()
+    );
+    const recommendation = regimeDetector.getStrategyRecommendation(
+      regime.toLowerCase(),
+      'moderate',
+      0.015
+    );
 
     res.json({
       regime: regime.toLowerCase(),
       config,
-      recommendation
+      recommendation,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5036,13 +5179,15 @@ app.get('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 90);
 
-    const formatDate = (d) => d.toISOString().split('T')[0];
-    const candles = await polygonClient.getHistoricalAggregates(
-      family.baseSymbol,
-      formatDate(startDate),
-      formatDate(endDate),
-      'day'
-    ).catch(() => []);
+    const formatDate = d => d.toISOString().split('T')[0];
+    const candles = await polygonClient
+      .getHistoricalAggregates(
+        family.baseSymbol,
+        formatDate(startDate),
+        formatDate(endDate),
+        'day'
+      )
+      .catch(() => []);
 
     let technicalRegime = { regime: 'unknown', confidence: 0 };
     if (candles && candles.length >= 50) {
@@ -5050,15 +5195,27 @@ app.get('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
     }
 
     // Try to get flow sentiment (if CheddarFlow scraper is available)
-    let flowSentiment = { sentiment: 'neutral', confidence: 0, reasons: ['Flow data not available'] };
+    let flowSentiment = {
+      sentiment: 'neutral',
+      confidence: 0,
+      reasons: ['Flow data not available'],
+    };
     // Note: CheddarFlow scraping requires browser - skip for now in basic analysis
     // Use manual flow input via POST endpoint instead
 
     // Make decision
-    const decision = leveragedEtfStrategy.makeDecision(technicalRegime, flowSentiment, family);
+    const decision = leveragedEtfStrategy.makeDecision(
+      technicalRegime,
+      flowSentiment,
+      family
+    );
 
     // Get position sizing recommendation
-    const positionSizing = leveragedEtfStrategy.getPositionSizing(decision, 25000, 2);
+    const positionSizing = leveragedEtfStrategy.getPositionSizing(
+      decision,
+      25000,
+      2
+    );
 
     res.json({
       symbol: symbol.toUpperCase(),
@@ -5096,13 +5253,15 @@ app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 90);
 
-    const formatDate = (d) => d.toISOString().split('T')[0];
-    const candles = await polygonClient.getHistoricalAggregates(
-      family.baseSymbol,
-      formatDate(startDate),
-      formatDate(endDate),
-      'day'
-    ).catch(() => []);
+    const formatDate = d => d.toISOString().split('T')[0];
+    const candles = await polygonClient
+      .getHistoricalAggregates(
+        family.baseSymbol,
+        formatDate(startDate),
+        formatDate(endDate),
+        'day'
+      )
+      .catch(() => []);
 
     let technicalRegime = { regime: 'unknown', confidence: 0 };
     if (candles && candles.length >= 50) {
@@ -5113,10 +5272,18 @@ app.post('/api/leveraged-etf/analyze/:symbol', async (req, res) => {
     const flowSentiment = leveragedEtfStrategy.analyzeFlowSentiment(flowData);
 
     // Make decision
-    const decision = leveragedEtfStrategy.makeDecision(technicalRegime, flowSentiment, family);
+    const decision = leveragedEtfStrategy.makeDecision(
+      technicalRegime,
+      flowSentiment,
+      family
+    );
 
     // Get position sizing recommendation
-    const positionSizing = leveragedEtfStrategy.getPositionSizing(decision, accountValue, riskPercent);
+    const positionSizing = leveragedEtfStrategy.getPositionSizing(
+      decision,
+      accountValue,
+      riskPercent
+    );
 
     res.json({
       symbol: symbol.toUpperCase(),
@@ -5153,15 +5320,19 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
     // Lazy initialize the scraper
     if (!cheddarFlowScraper) {
       const hasCredentials = CHEDDARFLOW_EMAIL && CHEDDARFLOW_PASSWORD;
-      console.log(`[CheddarFlow] Initializing scraper (credentials: ${hasCredentials ? 'yes' : 'no'})`);
+      console.log(
+        `[CheddarFlow] Initializing scraper (credentials: ${hasCredentials ? 'yes' : 'no'})`
+      );
 
       cheddarFlowScraper = new CheddarFlowScraper({
         headless: true, // Always headless with credentials
         useExistingProfile: false,
-        credentials: hasCredentials ? {
-          email: CHEDDARFLOW_EMAIL,
-          password: CHEDDARFLOW_PASSWORD,
-        } : null,
+        credentials: hasCredentials
+          ? {
+              email: CHEDDARFLOW_EMAIL,
+              password: CHEDDARFLOW_PASSWORD,
+            }
+          : null,
       });
     }
 
@@ -5171,13 +5342,20 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
       forceRefresh: refresh === 'true',
     };
 
-    let flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date, fetchOptions);
+    let flowData = await cheddarFlowScraper.getFlowSentiment(
+      symbol,
+      date,
+      fetchOptions
+    );
 
     // If auth needed and we have credentials, try to login and retry
     if (flowData.needsAuth && CHEDDARFLOW_EMAIL && CHEDDARFLOW_PASSWORD) {
       console.log('[CheddarFlow] Session expired, attempting auto-login...');
 
-      const loginSuccess = await cheddarFlowScraper.login(CHEDDARFLOW_EMAIL, CHEDDARFLOW_PASSWORD);
+      const loginSuccess = await cheddarFlowScraper.login(
+        CHEDDARFLOW_EMAIL,
+        CHEDDARFLOW_PASSWORD
+      );
 
       if (loginSuccess) {
         // Save cookies for next time
@@ -5190,9 +5368,12 @@ app.get('/api/cheddarflow/:symbol', async (req, res) => {
         }
 
         // Retry the fetch (force refresh since we just logged in)
-        flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date, { forceRefresh: true });
+        flowData = await cheddarFlowScraper.getFlowSentiment(symbol, date, {
+          forceRefresh: true,
+        });
       } else {
-        flowData.error = 'Auto-login failed. Check CHEDDARFLOW_EMAIL and CHEDDARFLOW_PASSWORD in .env';
+        flowData.error =
+          'Auto-login failed. Check CHEDDARFLOW_EMAIL and CHEDDARFLOW_PASSWORD in .env';
       }
     }
 
@@ -5256,7 +5437,10 @@ app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
 
   try {
     // Lazy initialize the scraper with profile option
-    if (!cheddarFlowScraper || (useProfile === 'true' && !cheddarFlowScraper.useExistingProfile)) {
+    if (
+      !cheddarFlowScraper ||
+      (useProfile === 'true' && !cheddarFlowScraper.useExistingProfile)
+    ) {
       if (cheddarFlowScraper) {
         await cheddarFlowScraper.close();
       }
@@ -5266,7 +5450,10 @@ app.get('/api/cheddarflow/:symbol/screenshot', async (req, res) => {
       });
     }
 
-    const screenshotPath = await cheddarFlowScraper.takeScreenshot(symbol, date);
+    const screenshotPath = await cheddarFlowScraper.takeScreenshot(
+      symbol,
+      date
+    );
     if (screenshotPath) {
       res.json({
         success: true,
@@ -5328,7 +5515,10 @@ app.get('/api/unusual-whales/status', (req, res) => {
 
 // Initialize backtester with dependencies
 const regimeDetectorInstance = new RegimeDetector();
-const strategyBacktester = new StrategyBacktester(polygonClient, regimeDetectorInstance);
+const strategyBacktester = new StrategyBacktester(
+  polygonClient,
+  regimeDetectorInstance
+);
 
 /**
  * Run multi-day strategy validation
@@ -5358,11 +5548,14 @@ app.post('/api/strategy-validator/run', async (req, res) => {
 
     if (daysDiff < 5) {
       return res.status(400).json({
-        error: 'Date range too small. Minimum 5 days for meaningful statistics.',
+        error:
+          'Date range too small. Minimum 5 days for meaningful statistics.',
       });
     }
 
-    console.log(`[Backtest API] Running backtest for ${symbol} from ${startDate} to ${endDate}`);
+    console.log(
+      `[Backtest API] Running backtest for ${symbol} from ${startDate} to ${endDate}`
+    );
 
     const results = await strategyBacktester.runBacktest(
       symbol.toUpperCase(),
@@ -5391,8 +5584,16 @@ app.get('/api/strategy-validator/range/:symbol', async (req, res) => {
       return res.status(400).json({ error: 'startDate and endDate required' });
     }
 
-    const tradingDays = await strategyBacktester.getTradingDays(symbol, startDate, endDate);
-    const buyAndHold = await strategyBacktester.calculateBuyAndHold(symbol, startDate, endDate);
+    const tradingDays = await strategyBacktester.getTradingDays(
+      symbol,
+      startDate,
+      endDate
+    );
+    const buyAndHold = await strategyBacktester.calculateBuyAndHold(
+      symbol,
+      startDate,
+      endDate
+    );
 
     res.json({
       symbol,
@@ -5531,7 +5732,10 @@ app.put('/api/versions/:symbol/promote', (req, res) => {
       return res.status(400).json({ error: 'versionId is required' });
     }
 
-    const result = strategyVersionControl.promoteToProduction(symbol, versionId);
+    const result = strategyVersionControl.promoteToProduction(
+      symbol,
+      versionId
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5565,7 +5769,11 @@ app.put('/api/versions/:symbol/:versionId/metrics', (req, res) => {
       return res.status(400).json({ error: 'metrics is required' });
     }
 
-    const result = strategyVersionControl.updateMetrics(symbol, versionId, metrics);
+    const result = strategyVersionControl.updateMetrics(
+      symbol,
+      versionId,
+      metrics
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5579,10 +5787,16 @@ app.get('/api/versions/:symbol/compare', (req, res) => {
     const { versionA, versionB } = req.query;
 
     if (!versionA || !versionB) {
-      return res.status(400).json({ error: 'versionA and versionB query params required' });
+      return res
+        .status(400)
+        .json({ error: 'versionA and versionB query params required' });
     }
 
-    const result = strategyVersionControl.compareVersions(symbol, versionA, versionB);
+    const result = strategyVersionControl.compareVersions(
+      symbol,
+      versionA,
+      versionB
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5595,10 +5809,15 @@ app.post('/api/versions/:symbol/:versionId/clone', (req, res) => {
     const { symbol, versionId } = req.params;
     const { modifications, description, tag } = req.body;
 
-    const result = strategyVersionControl.cloneVersion(symbol, versionId, modifications, {
-      description,
-      tag,
-    });
+    const result = strategyVersionControl.cloneVersion(
+      symbol,
+      versionId,
+      modifications,
+      {
+        description,
+        tag,
+      }
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5645,11 +5864,21 @@ app.post('/api/config/:symbol/detect', async (req, res) => {
     // If no candles provided, fetch recent data
     if (!candles || candles.length === 0) {
       const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+      const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      candles = await polygonClient.getHistoricalAggregates(
+        symbol,
+        startDate,
+        endDate,
+        'day'
+      );
     }
 
-    const result = regimeAwareConfigStore.getConfigWithDetection(symbol, candles);
+    const result = regimeAwareConfigStore.getConfigWithDetection(
+      symbol,
+      candles
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5683,7 +5912,11 @@ app.post('/api/config/:symbol/regime/:regime', (req, res) => {
       return res.status(400).json({ error: 'config is required' });
     }
 
-    const result = regimeAwareConfigStore.setRegimeConfig(symbol, regime, config);
+    const result = regimeAwareConfigStore.setRegimeConfig(
+      symbol,
+      regime,
+      config
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -5765,13 +5998,22 @@ app.post('/api/optimize/walk-forward', async (req, res) => {
     let data = historicalData;
     if (!data || data.length === 0) {
       const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+      const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      const candles = await polygonClient.getHistoricalAggregates(
+        symbol,
+        startDate,
+        endDate,
+        'day'
+      );
       data = candles.map(c => ({ date: c.date || c.t, ...c }));
     }
 
     // Create optimizer with custom options if provided
-    const optimizer = options ? new WalkForwardOptimizer(options) : walkForwardOptimizer;
+    const optimizer = options
+      ? new WalkForwardOptimizer(options)
+      : walkForwardOptimizer;
 
     // Define backtest function using existing backtest engine
     const backtestFn = async (config, windowData) => {
@@ -5811,8 +6053,15 @@ app.post('/api/optimize/quick-validate', async (req, res) => {
     let data = historicalData;
     if (!data || data.length === 0) {
       const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const candles = await polygonClient.getHistoricalAggregates(symbol, startDate, endDate, 'day');
+      const startDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      const candles = await polygonClient.getHistoricalAggregates(
+        symbol,
+        startDate,
+        endDate,
+        'day'
+      );
       data = candles.map(c => ({ date: c.date || c.t, ...c }));
     }
 
@@ -5829,7 +6078,11 @@ app.post('/api/optimize/quick-validate', async (req, res) => {
       };
     };
 
-    const result = await walkForwardOptimizer.quickValidation(data, config, backtestFn);
+    const result = await walkForwardOptimizer.quickValidation(
+      data,
+      config,
+      backtestFn
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -6010,7 +6263,11 @@ app.post('/api/ab-tests/:testId/variants/:variantId/backtest', (req, res) => {
       return res.status(400).json({ error: 'trades array is required' });
     }
 
-    const result = abTestingEngine.recordBacktestResults(testId, variantId, trades);
+    const result = abTestingEngine.recordBacktestResults(
+      testId,
+      variantId,
+      trades
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -6082,7 +6339,11 @@ app.get('/api/monitors/symbol/:symbol', (req, res) => {
   try {
     const { symbol } = req.params;
     const monitors = strategyMonitor.getMonitorsForSymbol(symbol);
-    res.json({ symbol: symbol.toUpperCase(), monitors, count: monitors.length });
+    res.json({
+      symbol: symbol.toUpperCase(),
+      monitors,
+      count: monitors.length,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -6196,15 +6457,22 @@ app.get('/api/monitors/alerts', (req, res) => {
 });
 
 // Acknowledge an alert
-app.post('/api/monitors/:symbol/:versionId/alerts/:alertId/acknowledge', (req, res) => {
-  try {
-    const { symbol, versionId, alertId } = req.params;
-    const result = strategyMonitor.acknowledgeAlert(symbol, versionId, alertId);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+app.post(
+  '/api/monitors/:symbol/:versionId/alerts/:alertId/acknowledge',
+  (req, res) => {
+    try {
+      const { symbol, versionId, alertId } = req.params;
+      const result = strategyMonitor.acknowledgeAlert(
+        symbol,
+        versionId,
+        alertId
+      );
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   }
-});
+);
 
 // Update thresholds
 app.put('/api/monitors/:symbol/:versionId/thresholds', (req, res) => {
@@ -6216,7 +6484,11 @@ app.put('/api/monitors/:symbol/:versionId/thresholds', (req, res) => {
       return res.status(400).json({ error: 'thresholds object is required' });
     }
 
-    const result = strategyMonitor.updateThresholds(symbol, versionId, thresholds);
+    const result = strategyMonitor.updateThresholds(
+      symbol,
+      versionId,
+      thresholds
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -6233,7 +6505,11 @@ app.post('/api/monitors/:symbol/:versionId/baseline', (req, res) => {
       return res.status(400).json({ error: 'metrics object is required' });
     }
 
-    const result = strategyMonitor.setHistoricalBaseline(symbol, versionId, metrics);
+    const result = strategyMonitor.setHistoricalBaseline(
+      symbol,
+      versionId,
+      metrics
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -6342,7 +6618,10 @@ app.get('/api/indicators/:symbol/signals', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(`Error fetching signals for ${req.params.symbol}:`, error.message);
+    console.error(
+      `Error fetching signals for ${req.params.symbol}:`,
+      error.message
+    );
     res.status(500).json({ error: error.message });
   }
 });
@@ -6389,7 +6668,10 @@ app.get('/api/patterns/:symbol/detect', async (req, res) => {
 
     // Detect patterns
     if (candles.length >= 20) {
-      const patternResult = patternRecognitionService.detectHeuristicPatterns(candles, indicators);
+      const patternResult = patternRecognitionService.detectHeuristicPatterns(
+        candles,
+        indicators
+      );
 
       res.json({
         success: true,
@@ -6424,7 +6706,10 @@ app.get('/api/patterns/:symbol/detect', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(`Error detecting patterns for ${req.params.symbol}:`, error.message);
+    console.error(
+      `Error detecting patterns for ${req.params.symbol}:`,
+      error.message
+    );
     res.status(500).json({ error: error.message });
   }
 });
@@ -6441,7 +6726,10 @@ app.post('/api/patterns/:symbol/predict', async (req, res) => {
       });
     }
 
-    const prediction = await patternRecognitionService.predictPattern(candles, indicators);
+    const prediction = await patternRecognitionService.predictPattern(
+      candles,
+      indicators
+    );
 
     res.json({
       success: true,
@@ -6450,7 +6738,10 @@ app.post('/api/patterns/:symbol/predict', async (req, res) => {
       isMLPrediction: true,
     });
   } catch (error) {
-    console.error(`Error predicting patterns for ${req.params.symbol}:`, error.message);
+    console.error(
+      `Error predicting patterns for ${req.params.symbol}:`,
+      error.message
+    );
     res.status(500).json({ error: error.message });
   }
 });
