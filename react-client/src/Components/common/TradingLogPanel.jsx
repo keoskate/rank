@@ -21,6 +21,7 @@ import theme from '../../theme';
 // Log level colors and icons
 const LOG_STYLES = {
   EXEC: { color: '#22c55e', bg: '#dcfce7', icon: '💰' },
+  OUTCOME: { color: '#f97316', bg: '#ffedd5', icon: '🎯' }, // ML learning - trade outcomes
   SIGNAL: { color: '#3b82f6', bg: '#dbeafe', icon: '📊' },
   INDICATOR: { color: '#8b5cf6', bg: '#ede9fe', icon: '📈' },
   CONFIG: { color: '#6b7280', bg: '#f3f4f6', icon: '⚙️' },
@@ -30,7 +31,7 @@ const LOG_STYLES = {
 };
 
 // Format timestamp for display
-const formatTime = (timestamp) => {
+const formatTime = timestamp => {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('en-US', {
     hour12: false,
@@ -41,7 +42,7 @@ const formatTime = (timestamp) => {
 };
 
 // Format log entry for clipboard
-const formatLogForClipboard = (log) => {
+const formatLogForClipboard = log => {
   const style = LOG_STYLES[log.level] || LOG_STYLES.INFO;
   let line = `[${formatTime(log.timestamp)}] ${style.icon} [${log.level}]`;
 
@@ -155,12 +156,11 @@ const TradingLogPanel = ({
   };
 
   // Filter logs by level
-  const filteredLogs = filter === 'ALL'
-    ? logs
-    : logs.filter(log => log.level === filter);
+  const filteredLogs =
+    filter === 'ALL' ? logs : logs.filter(log => log.level === filter);
 
   // Render individual log entry
-  const renderLogEntry = (log) => {
+  const renderLogEntry = log => {
     const style = LOG_STYLES[log.level] || LOG_STYLES.INFO;
 
     return (
@@ -184,9 +184,7 @@ const TradingLogPanel = ({
           </span>
 
           {/* Icon & Level */}
-          <span style={{ flexShrink: 0 }}>
-            {style.icon}
-          </span>
+          <span style={{ flexShrink: 0 }}>{style.icon}</span>
 
           {/* Symbol badge */}
           {log.symbol && (
@@ -239,7 +237,13 @@ const TradingLogPanel = ({
           marginBottom: isCollapsed ? 0 : theme.spacing.sm,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}
+        >
           <h3
             style={{
               margin: 0,
@@ -276,12 +280,18 @@ const TradingLogPanel = ({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}
+        >
           {/* Filter dropdown */}
           {!isCollapsed && (
             <select
               value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              onChange={e => setFilter(e.target.value)}
               style={{
                 padding: '4px 8px',
                 borderRadius: theme.borderRadius.sm,
@@ -292,6 +302,7 @@ const TradingLogPanel = ({
             >
               <option value="ALL">All Levels</option>
               <option value="EXEC">Executions</option>
+              <option value="OUTCOME">ML Outcomes</option>
               <option value="SIGNAL">Signals</option>
               <option value="INDICATOR">Indicators</option>
               <option value="RISK">Risk</option>
@@ -399,7 +410,7 @@ const TradingLogPanel = ({
               <input
                 type="checkbox"
                 checked={autoScroll}
-                onChange={(e) => setAutoScroll(e.target.checked)}
+                onChange={e => setAutoScroll(e.target.checked)}
               />
               Auto-scroll
             </label>
