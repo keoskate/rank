@@ -34,6 +34,7 @@ if (!fs.existsSync(LOG_DIR)) {
 // Log levels with priorities
 const LOG_LEVELS = {
   EXEC: { priority: 1, emoji: '💰', color: '#22c55e' },
+  OUTCOME: { priority: 1.5, emoji: '🎯', color: '#f97316' }, // ML learning - complete trade outcome
   SIGNAL: { priority: 2, emoji: '📊', color: '#3b82f6' },
   INDICATOR: { priority: 3, emoji: '📈', color: '#8b5cf6' },
   CONFIG: { priority: 4, emoji: '⚙️', color: '#6b7280' },
@@ -112,13 +113,18 @@ function createLogEntry(level, message, data = {}) {
  * Log trade execution
  */
 function logExecution(action, symbol, data) {
-  const { quantity, price, orderId, sessionName, reason, pnl, pnlPercent } = data;
+  const { quantity, price, orderId, sessionName, reason, pnl, pnlPercent } =
+    data;
 
   let message = `${action.toUpperCase()} ${quantity} shares @ $${price?.toFixed(2) || 'market'}`;
 
   if (pnl !== undefined) {
-    const pnlStr = pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
-    const pctStr = pnlPercent !== undefined ? ` (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)` : '';
+    const pnlStr =
+      pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
+    const pctStr =
+      pnlPercent !== undefined
+        ? ` (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`
+        : '';
     message += ` | P/L: ${pnlStr}${pctStr}`;
   }
 
@@ -143,7 +149,17 @@ function logExecution(action, symbol, data) {
  * Log trading signal
  */
 function logSignal(type, symbol, data) {
-  const { confidence, reasons, currentPrice, profitTarget, stopLoss, sessionName, shouldEnter, shouldExit, exitScore } = data;
+  const {
+    confidence,
+    reasons,
+    currentPrice,
+    profitTarget,
+    stopLoss,
+    sessionName,
+    shouldEnter,
+    shouldExit,
+    exitScore,
+  } = data;
 
   let message = `${type.toUpperCase()} signal`;
 
@@ -191,11 +207,16 @@ function logIndicators(symbol, indicators, sessionName = null) {
 
   const parts = [];
   if (rsi !== undefined) parts.push(`RSI:${rsi.toFixed(1)}`);
-  if (macd !== undefined) parts.push(`MACD:${macd >= 0 ? '+' : ''}${macd.toFixed(3)}`);
+  if (macd !== undefined)
+    parts.push(`MACD:${macd >= 0 ? '+' : ''}${macd.toFixed(3)}`);
   if (adx !== undefined) parts.push(`ADX:${adx.toFixed(1)}`);
   if (volumeRatio !== undefined) parts.push(`Vol:${volumeRatio.toFixed(2)}x`);
-  if (bbPercentB !== undefined) parts.push(`BB%:${(bbPercentB * 100).toFixed(0)}%`);
-  if (vwapPosition !== undefined) parts.push(`VWAP:${vwapPosition >= 0 ? '+' : ''}${vwapPosition.toFixed(2)}%`);
+  if (bbPercentB !== undefined)
+    parts.push(`BB%:${(bbPercentB * 100).toFixed(0)}%`);
+  if (vwapPosition !== undefined)
+    parts.push(
+      `VWAP:${vwapPosition >= 0 ? '+' : ''}${vwapPosition.toFixed(2)}%`
+    );
 
   const message = parts.join(' | ');
 
@@ -210,7 +231,15 @@ function logIndicators(symbol, indicators, sessionName = null) {
  * Log position update
  */
 function logPosition(action, symbol, data) {
-  const { quantity, avgCost, currentPrice, unrealizedPnL, unrealizedPnLPercent, sessionName, highWaterMark } = data;
+  const {
+    quantity,
+    avgCost,
+    currentPrice,
+    unrealizedPnL,
+    unrealizedPnLPercent,
+    sessionName,
+    highWaterMark,
+  } = data;
 
   let message = `${action}: ${quantity} shares @ avg $${avgCost?.toFixed(2) || '?'}`;
 
@@ -219,8 +248,14 @@ function logPosition(action, symbol, data) {
   }
 
   if (unrealizedPnL !== undefined) {
-    const pnlStr = unrealizedPnL >= 0 ? `+$${unrealizedPnL.toFixed(2)}` : `-$${Math.abs(unrealizedPnL).toFixed(2)}`;
-    const pctStr = unrealizedPnLPercent !== undefined ? ` (${unrealizedPnLPercent >= 0 ? '+' : ''}${unrealizedPnLPercent.toFixed(2)}%)` : '';
+    const pnlStr =
+      unrealizedPnL >= 0
+        ? `+$${unrealizedPnL.toFixed(2)}`
+        : `-$${Math.abs(unrealizedPnL).toFixed(2)}`;
+    const pctStr =
+      unrealizedPnLPercent !== undefined
+        ? ` (${unrealizedPnLPercent >= 0 ? '+' : ''}${unrealizedPnLPercent.toFixed(2)}%)`
+        : '';
     message += ` | Unrealized: ${pnlStr}${pctStr}`;
   }
 
@@ -324,7 +359,13 @@ function logInfo(message, data = {}) {
  * @returns {Array} Log entries
  */
 function getLogs(options = {}) {
-  const { limit = 100, level = null, sessionId = null, symbol = null, since = null } = options;
+  const {
+    limit = 100,
+    level = null,
+    sessionId = null,
+    symbol = null,
+    since = null,
+  } = options;
 
   let filtered = [...logBuffer];
 
@@ -334,7 +375,9 @@ function getLogs(options = {}) {
   }
 
   if (sessionId) {
-    filtered = filtered.filter(log => log.sessionId === sessionId || log.sessionName);
+    filtered = filtered.filter(
+      log => log.sessionId === sessionId || log.sessionName
+    );
   }
 
   if (symbol) {
@@ -381,9 +424,75 @@ function clearLogs() {
  * Export logs to JSON file
  */
 function exportLogs(filename = null) {
-  const exportFile = filename || path.join(LOG_DIR, `trading-log-${Date.now()}.json`);
+  const exportFile =
+    filename || path.join(LOG_DIR, `trading-log-${Date.now()}.json`);
   fs.writeFileSync(exportFile, JSON.stringify(logBuffer, null, 2));
   return exportFile;
+}
+
+/**
+ * Log complete trade outcome for ML learning
+ * Captures entry context + exit context + outcome in a single record for ML training
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {object} data - Trade outcome data
+ * @param {object} data.entryContext - Entry conditions (indicators, confidence, reasons)
+ * @param {object} data.exitContext - Exit conditions (exitReason, indicators)
+ * @param {number} data.pnl - Profit/loss amount
+ * @param {number} data.pnlPercent - Profit/loss percentage
+ * @param {number} data.holdingPeriodMinutes - How long position was held
+ * @param {boolean} data.successful - Whether the trade was profitable
+ */
+function logTradeOutcome(symbol, data) {
+  const {
+    sessionName,
+    entryContext,
+    exitReason,
+    pnl,
+    pnlPercent,
+    holdingPeriodMinutes,
+    successful,
+    tradingMode,
+  } = data;
+
+  const outcomeStr = successful ? 'WIN' : 'LOSS';
+  const pnlStr =
+    pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
+  const pctStr =
+    pnlPercent !== undefined
+      ? ` (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`
+      : '';
+  const holdingStr = holdingPeriodMinutes
+    ? ` | Held ${holdingPeriodMinutes}m`
+    : '';
+
+  const message = `${outcomeStr}: ${pnlStr}${pctStr}${holdingStr} | Exit: ${exitReason}`;
+
+  // Include full entry context for ML correlation
+  return createLogEntry('OUTCOME', message, {
+    symbol,
+    sessionName,
+    tradingMode,
+    // Trade outcome
+    pnl,
+    pnlPercent,
+    successful,
+    holdingPeriodMinutes,
+    exitReason,
+    // Entry context (for ML learning)
+    entryContext: {
+      entryTime: entryContext?.entryTime,
+      entryPrice: entryContext?.entryPrice,
+      confidence: entryContext?.confidence,
+      reasons: entryContext?.reasons || [],
+      indicators: entryContext?.indicators || {},
+      regime: entryContext?.regime,
+      profitTarget: entryContext?.profitTarget,
+      stopLoss: entryContext?.stopLoss,
+    },
+    // ML classification label
+    mlLabel: successful ? 'profitable' : 'unprofitable',
+  });
 }
 
 module.exports = {
@@ -396,6 +505,7 @@ module.exports = {
   logRisk,
   logError,
   logInfo,
+  logTradeOutcome, // ML learning - complete trade outcome with entry context
 
   // Log retrieval
   getLogs,

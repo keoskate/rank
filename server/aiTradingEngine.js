@@ -35,6 +35,18 @@ const sessions = new Map();
 // Decision history for audit
 const decisionHistory = new Map();
 
+// Cooldown tracking - prevents rapid re-entry after selling
+// Map structure: sessionId -> Map(symbol -> lastSellTimestamp)
+const tradeCooldowns = new Map();
+
+// Cooldown period in minutes - must wait this long after selling before buying same symbol again
+const TRADE_COOLDOWN_MINUTES = 15;
+
+// Entry context tracking for ML learning - stores entry conditions to correlate with outcomes
+// Map structure: sessionId -> Map(symbol -> entryContext)
+// This enables ML models to learn which entry conditions lead to successful trades
+const entryContexts = new Map();
+
 /**
  * Save sessions to file for persistence
  */
@@ -65,6 +77,7 @@ function loadSessions() {
   try {
     if (fs.existsSync(SESSION_FILE)) {
       const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'));
+      let cleanedDecisions = 0;
       Object.entries(data).forEach(([sessionId, session]) => {
         // Restore Map from array
         session.portfolio.positions = new Map(
@@ -73,6 +86,17 @@ function loadSessions() {
         // Convert dates
         session.startTime = new Date(session.startTime);
         if (session.endTime) session.endTime = new Date(session.endTime);
+
+        // Clean up non-actionable decisions (shouldEnter=false and shouldExit=false)
+        // These were logged in older versions but clutter the decision feed
+        if (session.decisions && session.decisions.length > 0) {
+          const before = session.decisions.length;
+          session.decisions = session.decisions.filter(
+            d => d.shouldEnter === true || d.shouldExit === true
+          );
+          cleanedDecisions += before - session.decisions.length;
+        }
+
         sessions.set(sessionId, session);
 
         // Restart trading loop if session was running
@@ -84,6 +108,12 @@ function loadSessions() {
         }
       });
       console.log(`[AI Engine] Loaded ${sessions.size} session(s) from disk`);
+      if (cleanedDecisions > 0) {
+        console.log(
+          `[AI Engine] Cleaned ${cleanedDecisions} non-actionable decisions from history`
+        );
+        saveSessions(); // Save the cleaned data
+      }
     }
   } catch (err) {
     console.error('[AI Engine] Failed to load sessions:', err.message);
@@ -92,6 +122,17 @@ function loadSessions() {
 
 // Load sessions on module initialization
 loadSessions();
+
+/**
+ * Get the trading mode for a session based on its config
+ * @param {object} session - Session object
+ * @returns {string} 'paper' or 'live'
+ */
+function getSessionTradingMode(session) {
+  // paperTradeOnly: true = paper mode, false = live mode
+  // Default to paper for safety
+  return session.config.paperTradeOnly === false ? 'live' : 'paper';
+}
 
 // Trading hours (Eastern Time)
 const MARKET_OPEN_HOUR = 9;
@@ -185,7 +226,9 @@ function startSession(userId, config = {}) {
   tradingLogger.logConfig('Session started', {
     sessionName: sessionConfig.name,
     config: {
-      watchlist: sessionConfig.watchlist?.slice(0, 5).join(', ') + (sessionConfig.watchlist?.length > 5 ? '...' : ''),
+      watchlist:
+        sessionConfig.watchlist?.slice(0, 5).join(', ') +
+        (sessionConfig.watchlist?.length > 5 ? '...' : ''),
       watchlistCount: sessionConfig.watchlist?.length || 0,
       entryStrategy: sessionConfig.entryStrategy,
       takeProfitPercent: sessionConfig.takeProfitPercent,
@@ -221,14 +264,12 @@ function getAllUserSessions(userId) {
   sessions.forEach((session, sessionId) => {
     if (session.userId === userId) {
       // Get recent decisions (last 3) for preview
-      const recentDecisions = (session.decisions || [])
-        .slice(-3)
-        .map(d => ({
-          action: d.action,
-          symbol: d.symbol,
-          reason: d.reason,
-          timestamp: d.timestamp,
-        }));
+      const recentDecisions = (session.decisions || []).slice(-3).map(d => ({
+        action: d.action,
+        symbol: d.symbol,
+        reason: d.reason,
+        timestamp: d.timestamp,
+      }));
 
       userSessions.push({
         sessionId,
@@ -236,7 +277,8 @@ function getAllUserSessions(userId) {
         status: session.status,
         startTime: session.startTime,
         endTime: session.endTime,
-        lastActivity: session.lastActivity || session.endTime || session.startTime,
+        lastActivity:
+          session.lastActivity || session.endTime || session.startTime,
         stats: session.stats,
         config: session.config,
         watchlist: session.config?.watchlist || [],
@@ -461,7 +503,7 @@ function getSessionStatus(id) {
     config: session.config,
     stats: session.stats,
     positions: Array.from(session.portfolio.positions.values()),
-    recentDecisions: session.decisions.slice(-10),
+    recentDecisions: session.decisions.slice(-50),
     circuitBreakerTriggered: session.circuitBreakerTriggered,
     alerts: session.alerts.slice(-10),
   };
@@ -485,7 +527,7 @@ function getSession(sessionId) {
     config: session.config,
     stats: session.stats,
     positions: Array.from(session.portfolio.positions.values()),
-    recentDecisions: session.decisions.slice(-10),
+    recentDecisions: session.decisions.slice(-50),
     circuitBreakerTriggered: session.circuitBreakerTriggered,
     alerts: session.alerts.slice(-10),
   };
@@ -500,9 +542,17 @@ async function startTradingLoop(sessionId) {
   if (!session) return;
 
   // Sync portfolio with Alpaca
-  await syncPortfolio(sessionId);
+  try {
+    await syncPortfolio(sessionId);
+  } catch (error) {
+    console.error(
+      `[AI Engine] Portfolio sync failed for "${session.name}":`,
+      error.message
+    );
+  }
 
   // Trading interval (check every 30 seconds)
+  console.log(`[AI Engine] Trading loop started for "${session.name}"`);
   const interval = setInterval(async () => {
     const currentSession = sessions.get(sessionId);
 
@@ -513,7 +563,7 @@ async function startTradingLoop(sessionId) {
 
     // Check if market is open
     if (!isMarketOpen()) {
-      // Send status update
+      // Send status update (only once per hour to avoid spam)
       websocketServer.sendAlert(currentSession.userId, {
         type: 'info',
         title: 'Market Closed',
@@ -579,8 +629,10 @@ async function syncPortfolio(sessionId) {
   if (!session) return;
 
   try {
-    const account = await alpacaClient.getAccount();
-    const positions = await alpacaClient.getPositions();
+    // Get the trading mode for this session (paper or live)
+    const tradingMode = getSessionTradingMode(session);
+    const account = await alpacaClient.getAccount(tradingMode);
+    const positions = await alpacaClient.getPositions(tradingMode);
 
     session.portfolio.cash = parseFloat(account.cash);
     session.portfolio.initialValue = parseFloat(account.portfolio_value);
@@ -595,8 +647,10 @@ async function syncPortfolio(sessionId) {
     session.portfolio.positions.clear();
     positions.forEach(pos => {
       const existing = existingPositions.get(pos.symbol);
-      const currentPrice = pos.currentPrice || parseFloat(pos.current_price) || 0;
-      const avgEntryPrice = pos.avgEntryPrice || parseFloat(pos.avg_entry_price) || 0;
+      const currentPrice =
+        pos.currentPrice || parseFloat(pos.current_price) || 0;
+      const avgEntryPrice =
+        pos.avgEntryPrice || parseFloat(pos.avg_entry_price) || 0;
 
       // Track high water mark for trailing stop - update if current price is higher
       const existingHighWaterMark = existing?.highWaterMark || avgEntryPrice;
@@ -621,7 +675,7 @@ async function syncPortfolio(sessionId) {
     });
 
     console.log(
-      `[AI Engine] Portfolio synced: $${session.portfolio.cash.toFixed(2)} cash, ${session.portfolio.positions.size} positions`
+      `[AI Engine] Portfolio synced (${tradingMode.toUpperCase()}): $${session.portfolio.cash.toFixed(2)} cash, ${session.portfolio.positions.size} positions`
     );
 
     // Periodically save session state
@@ -640,6 +694,13 @@ async function analyzeAndTrade(sessionId) {
   if (!session) return;
 
   const { watchlist, maxPositions, minConfidence } = session.config;
+
+  // Log only when there are symbols to analyze
+  if (watchlist?.length > 0) {
+    console.log(
+      `[AI Engine] Analyzing ${watchlist.length} symbols for "${session.name}"`
+    );
+  }
 
   // Get current positions
   const currentPositions = Array.from(session.portfolio.positions.keys());
@@ -681,6 +742,25 @@ async function evaluateEntry(sessionId, symbol) {
   const session = sessions.get(sessionId);
   if (!session) return { shouldEnter: false };
 
+  // Check cooldown - prevent re-entry too soon after selling
+  const sessionCooldowns = tradeCooldowns.get(sessionId);
+  if (sessionCooldowns) {
+    const lastSellTime = sessionCooldowns.get(symbol);
+    if (lastSellTime) {
+      const minutesSinceSell = (Date.now() - lastSellTime) / (1000 * 60);
+      if (minutesSinceSell < TRADE_COOLDOWN_MINUTES) {
+        console.log(
+          `[AI Engine] ${symbol}: Cooldown active (${minutesSinceSell.toFixed(1)} of ${TRADE_COOLDOWN_MINUTES} min)`
+        );
+        return {
+          shouldEnter: false,
+          reason: `Cooldown: ${(TRADE_COOLDOWN_MINUTES - minutesSinceSell).toFixed(0)} min remaining`,
+          cooldownRemaining: TRADE_COOLDOWN_MINUTES - minutesSinceSell,
+        };
+      }
+    }
+  }
+
   try {
     // Get recent candles (5-minute for intraday)
     const candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
@@ -713,8 +793,10 @@ async function evaluateEntry(sessionId, symbol) {
 
     // Current price and VWAP
     const currentPrice = candles[candles.length - 1].close;
-    const priceVsVwap = indicators.vwap?.price
-      ? ((currentPrice - indicators.vwap.price) / indicators.vwap.price) * 100
+    // Note: indicators service returns vwap.value, not vwap.price
+    const vwapValue = indicators.vwap?.value || indicators.vwap?.price;
+    const priceVsVwap = vwapValue
+      ? ((currentPrice - vwapValue) / vwapValue) * 100
       : 0;
     const belowVwap = priceVsVwap < 0;
     const volumeRatio = indicators.volume?.ratio || 1;
@@ -728,7 +810,9 @@ async function evaluateEntry(sessionId, symbol) {
       if (indicators.rsi.value < rsiOversold && belowVwap) {
         strategyMatch = true;
         signalCount++;
-        factors.push(`RSI oversold (${indicators.rsi.value.toFixed(1)}) + below VWAP`);
+        factors.push(
+          `RSI oversold (${indicators.rsi.value.toFixed(1)}) + below VWAP`
+        );
       }
     }
 
@@ -748,11 +832,20 @@ async function evaluateEntry(sessionId, symbol) {
     }
 
     if (entryStrategy === 'balanced') {
-      // Balanced: RSI < 45 + below VWAP
-      if (indicators.rsi.value < 45 && belowVwap) {
+      // Balanced: RSI < 45 + below VWAP (matching backtester logic)
+      const balancedRsiThreshold = (rsiOversold || 30) + 15; // Default 45
+      if (indicators.rsi.value < balancedRsiThreshold && belowVwap) {
         strategyMatch = true;
+        signalCount++; // Signal 1: RSI dip
+        signalCount++; // Signal 2: Below VWAP (matching backtester - these are two conditions)
+        factors.push(
+          `RSI dip (${indicators.rsi.value.toFixed(1)}) + below VWAP`
+        );
+      }
+      // Balanced also gets signal for moderate RSI (not overbought) - matching backtester
+      if (indicators.rsi.value < 60) {
         signalCount++;
-        factors.push(`RSI dip (${indicators.rsi.value.toFixed(1)}) + below VWAP`);
+        factors.push(`RSI neutral (${indicators.rsi.value.toFixed(1)})`);
       }
     }
 
@@ -780,7 +873,9 @@ async function evaluateEntry(sessionId, symbol) {
     // MACD confirmation
     if (indicators.macd.bullish || indicators.macd.crossover) {
       signalCount++;
-      factors.push(indicators.macd.crossover ? 'MACD bullish crossover' : 'MACD bullish');
+      factors.push(
+        indicators.macd.crossover ? 'MACD bullish crossover' : 'MACD bullish'
+      );
     }
 
     // Bollinger Band oversold
@@ -789,13 +884,22 @@ async function evaluateEntry(sessionId, symbol) {
       factors.push('Near lower Bollinger Band');
     }
 
-    // Calculate confidence based on signals
-    const confidence = Math.min(15 + signalCount * 15, 100);
+    // Calculate confidence based on signals (aligned with simulator: 50 + signals * 15, capped at 95)
+    // Simulator uses: Math.min(95, 50 + signals * 15)
+    const confidence = Math.min(50 + signalCount * 15, 95);
 
     // Entry requirements: strategy match + minimum signals + confidence threshold
     const meetsSignalRequirement = signalCount >= minSignalsRequired;
     const meetsConfidenceRequirement = confidence >= cfg.minConfidence;
-    const shouldEnter = strategyMatch && meetsSignalRequirement && meetsConfidenceRequirement;
+    const shouldEnter =
+      strategyMatch && meetsSignalRequirement && meetsConfidenceRequirement;
+
+    // Only log when there's a potential trade signal
+    if (strategyMatch) {
+      console.log(
+        `[AI Engine] ${symbol}: strategyMatch! RSI=${indicators.rsi.value.toFixed(1)}, VWAP=${priceVsVwap > 0 ? 'above' : 'below'}, signals=${signalCount}, confidence=${confidence}%, shouldEnter=${shouldEnter}`
+      );
+    }
 
     // Calculate position size and targets using config percentages
     const atr = indicators.atr?.value || currentPrice * 0.02;
@@ -809,8 +913,11 @@ async function evaluateEntry(sessionId, symbol) {
     // Adaptive targets based on volatility (if enabled)
     const useAdaptiveTargets = cfg.useAdaptiveTargets !== false;
     const volatilityMultiplier =
-      useAdaptiveTargets && indicators.bollingerBands?.bandwidth > 0.05 ? 1.2 : 1.0;
-    const adaptiveProfitTarget = currentPrice * (1 + (takeProfitPercent * volatilityMultiplier) / 100);
+      useAdaptiveTargets && indicators.bollingerBands?.bandwidth > 0.05
+        ? 1.2
+        : 1.0;
+    const adaptiveProfitTarget =
+      currentPrice * (1 + (takeProfitPercent * volatilityMultiplier) / 100);
 
     const decision = {
       shouldEnter,
@@ -832,8 +939,11 @@ async function evaluateEntry(sessionId, symbol) {
       timestamp: new Date(),
     };
 
-    // Log decision
-    logDecision(sessionId, decision);
+    // Only log decisions that will actually execute (shouldEnter = true)
+    // This keeps the decision feed clean and aligned with actual trades
+    if (shouldEnter) {
+      logDecision(sessionId, decision);
+    }
 
     // Log to trading logger
     if (shouldEnter) {
@@ -848,13 +958,17 @@ async function evaluateEntry(sessionId, symbol) {
       });
 
       // Also log indicators for context
-      tradingLogger.logIndicators(symbol, {
-        rsi: indicators.rsi.value,
-        macd: indicators.macd.histogram,
-        adx: indicators.adx.value,
-        volumeRatio: indicators.volume.ratio,
-        bbPercentB: indicators.bollingerBands.percentB,
-      }, session.name);
+      tradingLogger.logIndicators(
+        symbol,
+        {
+          rsi: indicators.rsi.value,
+          macd: indicators.macd.histogram,
+          adx: indicators.adx.value,
+          volumeRatio: indicators.volume.ratio,
+          bbPercentB: indicators.bollingerBands.percentB,
+        },
+        session.name
+      );
     }
 
     // Send to websocket (use userId for notifications)
@@ -890,8 +1004,9 @@ async function evaluateExit(sessionId, symbol) {
   const position = session.portfolio.positions.get(symbol);
   if (!position) return { shouldExit: false };
 
-  // Minimum hold time - don't evaluate exit within first 5 minutes of entry
-  const MIN_HOLD_MINUTES = 5;
+  // Minimum hold time - aligned with simulator (5 candles at ~1 min each = ~5 min, but real-time needs more buffer)
+  // Increased from 5 to 10 minutes to prevent rapid churning
+  const MIN_HOLD_MINUTES = 10;
   const entryTime = position.entryTime || position.createdAt;
   if (entryTime) {
     const holdDuration = Date.now() - new Date(entryTime).getTime();
@@ -930,34 +1045,54 @@ async function evaluateExit(sessionId, symbol) {
     const exitOnRsiExtreme = cfg.exitOnRsiExtreme !== false;
     const rsiOverbought = cfg.rsiOverbought || 70;
 
-    // Profit target hit (using percentage config)
+    // Exit point values aligned with simulator:
+    // - Stop loss: 40 pts (was 50)
+    // - Profit target: 30 pts (was 50) - should be confirmed with other signals
+    // - Trailing stop: 35 pts (was 45)
+    // - RSI overbought: 20 pts (same)
+    // - EOD: 50 pts (same as simulator)
+
+    // Profit target hit (using percentage config) - reduced points, needs confirmation
     if (pnlPercent >= takeProfitPercent) {
-      exitScore += 50;
+      exitScore += 30;
       exitReason = 'Profit target reached';
-      factors.push(`Profit target +${takeProfitPercent}% reached (at +${pnlPercent.toFixed(2)}%)`);
+      factors.push(
+        `Profit target +${takeProfitPercent}% reached (at +${pnlPercent.toFixed(2)}%)`
+      );
     }
 
-    // Stop loss hit (using percentage config)
+    // Stop loss hit (using percentage config) - immediate exit
     if (pnlPercent <= -stopLossPercent) {
-      exitScore += 50;
+      exitScore += 40;
       exitReason = 'Stop loss triggered';
-      factors.push(`Stop loss -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`);
+      factors.push(
+        `Stop loss -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`
+      );
     }
 
     // Trailing stop - now a % of gains to lock in (e.g., 50 means lock in 50% of gains)
     // 0 = disabled, values 0-100 represent % of gains to protect
     const trailingStopOfTP = cfg.trailingStopPercent || 0;
     const entryPrice = position.averageCost;
-    if (trailingStopOfTP > 0 && position.highWaterMark && position.highWaterMark > entryPrice && pnlPercent > 0) {
+    if (
+      trailingStopOfTP > 0 &&
+      position.highWaterMark &&
+      position.highWaterMark > entryPrice &&
+      pnlPercent > 0
+    ) {
       const gainFromEntry = position.highWaterMark - entryPrice;
-      const allowedDropFromHigh = gainFromEntry * (100 - trailingStopOfTP) / 100;
+      const allowedDropFromHigh =
+        (gainFromEntry * (100 - trailingStopOfTP)) / 100;
       const triggerPrice = position.highWaterMark - allowedDropFromHigh;
-      const lockedInGainPercent = ((triggerPrice - entryPrice) / entryPrice) * 100;
+      const lockedInGainPercent =
+        ((triggerPrice - entryPrice) / entryPrice) * 100;
 
       if (currentPrice <= triggerPrice) {
-        exitScore += 45;
+        exitScore += 35;
         exitReason = 'Trailing stop triggered';
-        factors.push(`Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${((position.highWaterMark - entryPrice) / entryPrice * 100).toFixed(2)}% gain)`);
+        factors.push(
+          `Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${(((position.highWaterMark - entryPrice) / entryPrice) * 100).toFixed(2)}% gain)`
+        );
       }
     }
 
@@ -1027,7 +1162,9 @@ async function evaluateExit(sessionId, symbol) {
       }
     }
 
-    const shouldExit = exitScore >= 40;
+    // Exit threshold aligned with simulator (was 40, now 50 to match simulator logic)
+    // This prevents premature exits from weak signals
+    const shouldExit = exitScore >= 50;
 
     const decision = {
       shouldExit,
@@ -1048,8 +1185,9 @@ async function evaluateExit(sessionId, symbol) {
       timestamp: new Date(),
     };
 
-    // Log decision
-    if (factors.length > 0) {
+    // Only log decisions that will actually execute (shouldExit = true)
+    // This keeps the decision feed clean and aligned with actual trades
+    if (shouldExit) {
       logDecision(sessionId, decision);
     }
 
@@ -1107,6 +1245,9 @@ async function executeEntry(sessionId, symbol, decision) {
   }
 
   try {
+    // Get the trading mode for this session (needed for all Alpaca calls)
+    const tradingMode = getSessionTradingMode(session);
+
     // Calculate position size
     const portfolioValue =
       session.portfolio.cash +
@@ -1118,16 +1259,16 @@ async function executeEntry(sessionId, symbol, decision) {
     // Ensure we have valid portfolio value (fetch from Alpaca if needed)
     let effectivePortfolioValue = portfolioValue;
     if (!effectivePortfolioValue || effectivePortfolioValue < 1000) {
-      // Fallback: fetch from Alpaca directly
+      // Fallback: fetch from Alpaca directly using session-specific mode
       try {
-        const account = await alpacaClient.getAccount();
+        const account = await alpacaClient.getAccount(tradingMode);
         effectivePortfolioValue =
           parseFloat(account.equity) ||
           parseFloat(account.portfolio_value) ||
           100000;
         session.portfolio.cash = parseFloat(account.cash) || 0;
         console.log(
-          `[AI Engine] Fetched account value: $${effectivePortfolioValue.toFixed(2)}`
+          `[AI Engine] Fetched account value (${tradingMode.toUpperCase()}): $${effectivePortfolioValue.toFixed(2)}`
         );
       } catch (e) {
         effectivePortfolioValue = 100000; // Default fallback
@@ -1177,20 +1318,24 @@ async function executeEntry(sessionId, symbol, decision) {
     }
 
     console.log(
-      `[AI Engine] Calculated position: ${quantity} shares of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)})`
+      `[AI Engine] Calculated position: ${quantity} shares of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)}, mode: ${tradingMode.toUpperCase()})`
     );
 
-    // Place order via Alpaca
-    const order = await alpacaClient.placeOrder({
-      symbol,
-      qty: quantity,
-      side: 'buy',
-      type: 'market',
-      time_in_force: 'day',
-    });
+    // Place order via Alpaca with session-specific trading mode
+    const order = await alpacaClient.placeOrder(
+      {
+        symbol,
+        qty: quantity,
+        side: 'buy',
+        type: 'market',
+        time_in_force: 'day',
+      },
+      null,
+      tradingMode
+    );
 
     console.log(
-      `[AI Engine] Entry order placed: ${quantity} ${symbol} @ market`
+      `[AI Engine] Entry order placed: ${quantity} ${symbol} @ market (${tradingMode.toUpperCase()})`
     );
 
     // Log execution to trading logger
@@ -1200,6 +1345,23 @@ async function executeEntry(sessionId, symbol, decision) {
       orderId: order.id,
       sessionName: session.name,
       reason: decision.reasons?.slice(0, 2).join(', '),
+    });
+
+    // Store entry context for ML learning - correlate entry conditions with trade outcomes
+    if (!entryContexts.has(sessionId)) {
+      entryContexts.set(sessionId, new Map());
+    }
+    entryContexts.get(sessionId).set(symbol, {
+      entryTime: new Date().toISOString(),
+      entryPrice: decision.currentPrice,
+      quantity,
+      confidence: decision.confidence,
+      reasons: decision.reasons || [],
+      indicators: decision.indicators || {},
+      profitTarget: decision.profitTarget,
+      stopLoss: decision.stopLoss,
+      regime: decision.regime,
+      tradingMode,
     });
 
     // Send notification
@@ -1258,17 +1420,23 @@ async function executeExit(sessionId, symbol, decision) {
   }
 
   try {
+    // Get the trading mode for this session (needed for all Alpaca calls)
+    const tradingMode = getSessionTradingMode(session);
+
     // Get the actual position from Alpaca to get accurate quantity
     let quantity = decision.quantity;
     if (!quantity || quantity <= 0) {
-      // Fetch position from Alpaca directly
+      // Fetch position from Alpaca directly using session-specific mode
       try {
-        const alpacaPosition = await alpacaClient.getPosition(symbol);
+        const alpacaPosition = await alpacaClient.getPosition(
+          symbol,
+          tradingMode
+        );
         quantity =
           parseInt(alpacaPosition.qty) || parseInt(alpacaPosition.quantity);
       } catch (e) {
         console.error(
-          `[AI Engine] Could not get position for ${symbol}:`,
+          `[AI Engine] Could not get position for ${symbol} (${tradingMode}):`,
           e.message
         );
         return;
@@ -1280,11 +1448,20 @@ async function executeExit(sessionId, symbol, decision) {
       return;
     }
 
-    // Close position via Alpaca
-    const result = await alpacaClient.closePosition(symbol);
+    // Close position via Alpaca with session-specific trading mode
+    const result = await alpacaClient.closePosition(symbol, tradingMode);
 
     console.log(
-      `[AI Engine] Exit order placed for ${symbol} (${quantity} shares)`
+      `[AI Engine] Exit order placed for ${symbol} (${quantity} shares, ${tradingMode.toUpperCase()})`
+    );
+
+    // Set cooldown for this symbol to prevent rapid re-entry
+    if (!tradeCooldowns.has(sessionId)) {
+      tradeCooldowns.set(sessionId, new Map());
+    }
+    tradeCooldowns.get(sessionId).set(symbol, Date.now());
+    console.log(
+      `[AI Engine] ${symbol}: Cooldown started (${TRADE_COOLDOWN_MINUTES} min)`
     );
 
     // Update stats
@@ -1300,6 +1477,29 @@ async function executeExit(sessionId, symbol, decision) {
       pnl,
       pnlPercent: decision.pnlPercent,
     });
+
+    // Log complete trade outcome for ML learning
+    const entryContext = entryContexts.get(sessionId)?.get(symbol) || null;
+    const holdingPeriodMinutes = entryContext?.entryTime
+      ? differenceInMinutes(new Date(), parseISO(entryContext.entryTime))
+      : null;
+
+    tradingLogger.logTradeOutcome(symbol, {
+      sessionName: session.name,
+      entryContext,
+      exitReason: decision.exitReason,
+      pnl,
+      pnlPercent: decision.pnlPercent,
+      holdingPeriodMinutes,
+      successful: pnl > 0,
+      tradingMode,
+    });
+
+    // Clear entry context after trade completes
+    if (entryContexts.has(sessionId)) {
+      entryContexts.get(sessionId).delete(symbol);
+    }
+
     if (pnl > 0) {
       session.stats.wins++;
       session.stats.consecutiveLosses = 0;
@@ -1308,7 +1508,10 @@ async function executeExit(sessionId, symbol, decision) {
       session.stats.consecutiveLosses++;
 
       // Check circuit breaker (support both field names for backwards compatibility)
-      const consecutiveLimit = session.config.maxConsecutiveLosses || session.config.consecutiveLossLimit || 3;
+      const consecutiveLimit =
+        session.config.maxConsecutiveLosses ||
+        session.config.consecutiveLossLimit ||
+        3;
       if (session.stats.consecutiveLosses >= consecutiveLimit) {
         triggerCircuitBreaker(sessionId, 'Consecutive loss limit reached');
       }
@@ -1375,7 +1578,10 @@ function triggerCircuitBreaker(sessionId, reason) {
     reason,
     action: 'Trading paused',
     value: session.stats.consecutiveLosses,
-    threshold: session.config.maxConsecutiveLosses || session.config.consecutiveLossLimit || 3,
+    threshold:
+      session.config.maxConsecutiveLosses ||
+      session.config.consecutiveLossLimit ||
+      3,
   });
 
   websocketServer.sendAlert(session.userId, {
@@ -1413,10 +1619,13 @@ function logDecision(sessionId, decision) {
     session.decisions = session.decisions.slice(-1000);
   }
 
-  // Also store in decision history
+  // Also store in decision history (in-memory cache)
   const history = decisionHistory.get(sessionId) || [];
   history.push(decision);
   decisionHistory.set(sessionId, history);
+
+  // Persist to disk so decisions survive page refresh/server restart
+  saveSessions();
 }
 
 /**
@@ -1426,6 +1635,12 @@ function logDecision(sessionId, decision) {
  * @returns {Array} Decision history
  */
 function getDecisionHistory(sessionId, limit = 100) {
+  // Use session.decisions as primary source (persisted to disk)
+  // Fall back to in-memory decisionHistory for backwards compatibility
+  const session = sessions.get(sessionId);
+  if (session && session.decisions && session.decisions.length > 0) {
+    return session.decisions.slice(-limit);
+  }
   const history = decisionHistory.get(sessionId) || [];
   return history.slice(-limit);
 }
