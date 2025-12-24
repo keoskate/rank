@@ -248,6 +248,35 @@ function validateStockSymbol(symbol) {
 }
 
 /**
+ * Extract the base symbol from any crypto format
+ * Examples: BTCUSD -> BTC, BTC/USD -> BTC, X:BTCUSD -> BTC, BTC -> BTC
+ * @param {string} symbol - Input symbol in any format
+ * @returns {string} Base symbol (e.g., 'BTC')
+ */
+function getBaseSymbol(symbol) {
+  if (!symbol) return symbol;
+
+  let upper = symbol.toUpperCase().trim();
+
+  // Remove X: prefix (Polygon format)
+  if (upper.startsWith('X:')) {
+    upper = upper.slice(2);
+  }
+
+  // Remove /USD suffix
+  if (upper.includes('/USD')) {
+    return upper.split('/')[0];
+  }
+
+  // Remove USD suffix (handle BTCUSD -> BTC)
+  if (upper.endsWith('USD') && upper.length > 3) {
+    return upper.slice(0, -3);
+  }
+
+  return upper;
+}
+
+/**
  * Validate symbol based on asset type
  * @param {string} symbol - Symbol to validate
  * @param {string} assetType - 'stocks' or 'crypto'
@@ -368,6 +397,7 @@ module.exports = {
   normalizeForAlpacaCrypto,
   normalizeForPolygonCrypto,
   normalizeStockSymbol,
+  getBaseSymbol,
 
   // Validation
   validateSymbol,

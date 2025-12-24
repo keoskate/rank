@@ -59,6 +59,9 @@ const OvernightOptimizer = require('./overnightOptimizer');
 const LeveragedEtfStrategy = require('./leveragedEtfStrategy');
 const CheddarFlowScraper = require('./cheddarFlowScraper');
 
+// Asset utilities for crypto/stock detection
+const assetUtils = require('./assetUtils');
+
 // Trading Logger for diagnostics
 const tradingLogger = require('./tradingLogger');
 
@@ -119,9 +122,26 @@ async function getCachedHistoricalData(symbol, date, interval = 'minute') {
   }
 
   console.log(`🌐 Cache MISS for ${symbol} on ${date} - fetching...`);
-  const data = await polygonClient
-    .getHistoricalAggregates(symbol, date, date, interval)
-    .catch(() => []);
+
+  // Detect if this is a crypto symbol
+  const upperSymbol = symbol.toUpperCase();
+  const isCryptoSymbol =
+    assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+    upperSymbol.includes('/USD') ||
+    upperSymbol.startsWith('X:');
+
+  let data;
+  if (isCryptoSymbol) {
+    // Use crypto API for crypto symbols
+    data = await polygonClient
+      .getCryptoHistoricalAggregates(symbol, date, date, interval)
+      .catch(() => []);
+  } else {
+    // Use stock API for stocks
+    data = await polygonClient
+      .getHistoricalAggregates(symbol, date, date, interval)
+      .catch(() => []);
+  }
 
   historicalDataCache.set(key, {
     data,
@@ -986,6 +1006,13 @@ app.post('/api/strategy/backtest', async (req, res) => {
     // Remove the target symbol if it's in the list to avoid duplication
     const marketStocks = rankingStocks.filter(s => s !== symbol);
 
+    // Detect if this is a crypto symbol (crypto trades 24/7, including weekends)
+    const upperSymbol = symbol.toUpperCase();
+    const isCryptoSymbol =
+      assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+      upperSymbol.includes('/USD') ||
+      upperSymbol.startsWith('X:');
+
     // Fetch historical intraday data for the date range
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -994,8 +1021,8 @@ app.post('/api/strategy/backtest', async (req, res) => {
     // Get all trading days in range
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dayOfWeek = d.getDay();
-      // Skip weekends
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      // Skip weekends for stocks only - crypto trades 24/7
+      if (isCryptoSymbol || (dayOfWeek !== 0 && dayOfWeek !== 6)) {
         tradingDays.push(d.toISOString().split('T')[0]);
       }
     }
@@ -1162,6 +1189,13 @@ app.post('/api/strategy/optimize', async (req, res) => {
     console.log(`🔍 Optimizing strategy for ${symbol}...`);
     console.log(`⚡ Pre-caching historical data for parallel execution...`);
 
+    // Detect if this is a crypto symbol (crypto trades 24/7, including weekends)
+    const upperSymbol = symbol.toUpperCase();
+    const isCryptoSymbol =
+      assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+      upperSymbol.includes('/USD') ||
+      upperSymbol.startsWith('X:');
+
     // Get all trading days in range
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -1169,7 +1203,8 @@ app.post('/api/strategy/optimize', async (req, res) => {
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dayOfWeek = d.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      // Skip weekends for stocks only - crypto trades 24/7
+      if (isCryptoSymbol || (dayOfWeek !== 0 && dayOfWeek !== 6)) {
         tradingDays.push(d.toISOString().split('T')[0]);
       }
     }
@@ -2143,6 +2178,49 @@ app.get('/api/alpaca/account', async (req, res) => {
   }
 });
 
+// Get PDT (Pattern Day Trade) status
+app.get('/api/alpaca/pdt-status', async (req, res) => {
+  try {
+    // Use mode from query param (paper or live) - passed directly to client without changing global state
+    const { mode } = req.query;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+    const pdtStatus = await alpacaClient.getPDTStatus(tradingMode);
+    res.json({
+      success: true,
+      ...pdtStatus,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
+  } catch (error) {
+    console.error('❌ Error fetching PDT status:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get Portfolio History (equity and P&L over time)
+app.get('/api/alpaca/portfolio-history', async (req, res) => {
+  try {
+    const { mode, period, timeframe, date_start, date_end, extended_hours } = req.query;
+    const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+
+    const options = {};
+    if (period) options.period = period;
+    if (timeframe) options.timeframe = timeframe;
+    if (date_start) options.date_start = date_start;
+    if (date_end) options.date_end = date_end;
+    if (extended_hours !== undefined) options.extended_hours = extended_hours === 'true';
+
+    const history = await alpacaClient.getPortfolioHistory(options, tradingMode);
+    res.json({
+      success: true,
+      ...history,
+      mode: tradingMode || tradingModeManager.getCurrentMode(),
+    });
+  } catch (error) {
+    console.error('❌ Error fetching portfolio history:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 19. Get Alpaca positions
 app.get('/api/alpaca/positions', async (req, res) => {
   try {
@@ -2484,6 +2562,12 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
     const { symbol } = req.params;
     console.log(`📊 Fetching comprehensive analysis for ${symbol}...`);
 
+    // Detect if this is a crypto symbol (BTC, ETH, etc.)
+    const upperSymbol = symbol.toUpperCase();
+    const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                           upperSymbol.includes('/USD') ||
+                           upperSymbol.startsWith('X:');
+
     // Calculate date range for historical data (100 days)
     const endDate = new Date();
     const startDate = new Date();
@@ -2491,14 +2575,26 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    // Use Polygon for historical data (same as rankings endpoint - more reliable)
+    // Use Polygon for historical data - route to crypto or stocks API
     const polygonClient = require('./polygonClient');
-    const bars = await polygonClient
-      .getHistoricalAggregates(symbol, startDateStr, endDateStr)
-      .catch(e => {
-        console.error(`❌ Polygon bars fetch failed for ${symbol}:`, e.message);
-        return { error: e.message };
-      });
+    let bars;
+
+    if (isCryptoSymbol) {
+      console.log(`🪙 Routing ${symbol} analysis to crypto API`);
+      bars = await polygonClient
+        .getCryptoHistoricalAggregates(symbol, startDateStr, endDateStr, 'day', 1)
+        .catch(e => {
+          console.error(`❌ Polygon crypto bars fetch failed for ${symbol}:`, e.message);
+          return { error: e.message };
+        });
+    } else {
+      bars = await polygonClient
+        .getHistoricalAggregates(symbol, startDateStr, endDateStr)
+        .catch(e => {
+          console.error(`❌ Polygon bars fetch failed for ${symbol}:`, e.message);
+          return { error: e.message };
+        });
+    }
 
     // We need at least bars data to provide analysis
     if (bars.error || !bars || bars.length === 0) {
@@ -2508,12 +2604,29 @@ app.get('/api/stock/analysis/:symbol', async (req, res) => {
     }
 
     // Get latest quote from Polygon for current price
-    const latestQuote = await polygonClient.getLatestQuote(symbol).catch(e => {
-      console.log(
-        `⚠️  Polygon quote fetch failed for ${symbol} (may be normal if market closed)`
-      );
-      return { error: e.message };
-    });
+    let latestQuote;
+    if (isCryptoSymbol) {
+      const cryptoData = await polygonClient.getCryptoPreviousClose(symbol).catch(e => {
+        console.log(`⚠️  Polygon crypto quote fetch failed for ${symbol}`);
+        return null;
+      });
+      if (cryptoData) {
+        latestQuote = {
+          price: cryptoData.close,
+          bidPrice: null,
+          askPrice: null,
+        };
+      } else {
+        latestQuote = { error: 'No crypto quote available' };
+      }
+    } else {
+      latestQuote = await polygonClient.getLatestQuote(symbol).catch(e => {
+        console.log(
+          `⚠️  Polygon quote fetch failed for ${symbol} (may be normal if market closed)`
+        );
+        return { error: e.message };
+      });
+    }
 
     // Extract current price - use latest bar close price if real-time data unavailable
     const latestBar = bars[bars.length - 1];
@@ -3513,10 +3626,25 @@ app.post('/api/ai/patterns/analyze', async (req, res) => {
     // Get candles
     const toDate = new Date();
     const fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
-      from: fromDate.toISOString().split('T')[0],
-      to: toDate.toISOString().split('T')[0],
-    });
+
+    // Detect if this is a crypto symbol
+    const upperSymbol = symbol.toUpperCase();
+    const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                           upperSymbol.includes('/USD') ||
+                           upperSymbol.startsWith('X:');
+
+    let candles;
+    if (isCryptoSymbol) {
+      candles = await polygonClient.getCryptoAggregates(symbol, 5, 'minute', {
+        from: fromDate.toISOString().split('T')[0],
+        to: toDate.toISOString().split('T')[0],
+      });
+    } else {
+      candles = await polygonClient.getAggregates(symbol, 5, 'minute', {
+        from: fromDate.toISOString().split('T')[0],
+        to: toDate.toISOString().split('T')[0],
+      });
+    }
 
     if (!candles || candles.length < 50) {
       return res.status(400).json({ error: 'Insufficient data' });
@@ -3638,15 +3766,36 @@ app.get('/api/indicators/:symbol', async (req, res) => {
     }
 
     const fromDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
-    const candles = await polygonClient.getAggregates(
-      symbol,
-      parseInt(timeframe),
-      unit,
-      {
-        from: fromDate.toISOString().split('T')[0],
-        to: toDate.toISOString().split('T')[0],
-      }
-    );
+
+    // Detect if this is a crypto symbol (BTC, ETH, etc.)
+    const upperSymbol = symbol.toUpperCase();
+    const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                           upperSymbol.includes('/USD') ||
+                           upperSymbol.startsWith('X:');
+
+    let candles;
+    if (isCryptoSymbol) {
+      console.log(`🪙 Indicators: Routing ${symbol} to crypto aggregates API`);
+      candles = await polygonClient.getCryptoAggregates(
+        symbol,
+        parseInt(timeframe),
+        unit,
+        {
+          from: fromDate.toISOString().split('T')[0],
+          to: toDate.toISOString().split('T')[0],
+        }
+      );
+    } else {
+      candles = await polygonClient.getAggregates(
+        symbol,
+        parseInt(timeframe),
+        unit,
+        {
+          from: fromDate.toISOString().split('T')[0],
+          to: toDate.toISOString().split('T')[0],
+        }
+      );
+    }
 
     if (!candles || candles.length < 20) {
       return res.status(400).json({ error: 'Insufficient data' });
@@ -4090,9 +4239,19 @@ app.post('/api/backtest/day-simulation', async (req, res) => {
         const goodVolume = currentVolume > avgVolume * 0.8;
 
         if (rsiInRange && aboveMA && goodVolume) {
-          const shares = Math.floor(
-            (equity * (strategyConfig.positionSizePercent / 100)) / price
-          );
+          // Detect if this is a crypto symbol (use fractional shares for high-priced assets)
+          const upperSym = symbol.toUpperCase();
+          const isCryptoSym =
+            assetUtils.CRYPTO_BASE_TO_PAIR[upperSym] ||
+            upperSym.includes('/USD') ||
+            upperSym.startsWith('X:');
+
+          // Use fractional shares for crypto, whole shares for stocks
+          const positionValue = equity * (strategyConfig.positionSizePercent / 100);
+          const shares = isCryptoSym
+            ? positionValue / price  // Fractional for crypto
+            : Math.floor(positionValue / price);  // Whole shares for stocks
+
           if (shares > 0) {
             position = {
               entryTime: time,
@@ -4688,37 +4847,69 @@ app.get('/api/polygon/quote/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
 
-    // Try getLatestQuote first, fallback to getPreviousClose
-    let quote = await polygonClient.getLatestQuote(symbol).catch(e => {
-      console.log(
-        `Real-time quote unavailable for ${symbol}, trying previous close`
-      );
-      return null;
-    });
+    // Detect if this is a crypto symbol (BTC, ETH, etc.)
+    const upperSymbol = symbol.toUpperCase();
+    const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                           upperSymbol.includes('/USD') ||
+                           upperSymbol.startsWith('X:');
 
-    if (!quote) {
-      // Fallback to previous close (works with free Polygon API)
-      const prevClose = await polygonClient
-        .getPreviousClose(symbol)
+    let quote = null;
+
+    if (isCryptoSymbol) {
+      // For crypto, use crypto previous close which has current data
+      console.log(`🪙 Routing ${symbol} quote to crypto API`);
+      const cryptoData = await polygonClient
+        .getCryptoPreviousClose(symbol)
         .catch(e => {
-          console.error(
-            `Error fetching previous close for ${symbol}:`,
-            e.message
-          );
+          console.error(`Error fetching crypto quote for ${symbol}:`, e.message);
           return null;
         });
 
-      if (prevClose) {
+      if (cryptoData) {
         quote = {
-          last: prevClose.close,
-          close: prevClose.close,
-          open: prevClose.open,
-          high: prevClose.high,
-          low: prevClose.low,
-          volume: prevClose.volume,
-          prevClose: prevClose.close,
-          timestamp: prevClose.timestamp,
+          last: cryptoData.close,
+          close: cryptoData.close,
+          open: cryptoData.open,
+          high: cryptoData.high,
+          low: cryptoData.low,
+          volume: cryptoData.volume,
+          prevClose: cryptoData.close,
+          timestamp: cryptoData.timestamp,
         };
+      }
+    } else {
+      // For stocks: Try getLatestQuote first, fallback to getPreviousClose
+      quote = await polygonClient.getLatestQuote(symbol).catch(e => {
+        console.log(
+          `Real-time quote unavailable for ${symbol}, trying previous close`
+        );
+        return null;
+      });
+
+      if (!quote) {
+        // Fallback to previous close (works with free Polygon API)
+        const prevClose = await polygonClient
+          .getPreviousClose(symbol)
+          .catch(e => {
+            console.error(
+              `Error fetching previous close for ${symbol}:`,
+              e.message
+            );
+            return null;
+          });
+
+        if (prevClose) {
+          quote = {
+            last: prevClose.close,
+            close: prevClose.close,
+            open: prevClose.open,
+            high: prevClose.high,
+            low: prevClose.low,
+            volume: prevClose.volume,
+            prevClose: prevClose.close,
+            timestamp: prevClose.timestamp,
+          };
+        }
       }
     }
 
@@ -4753,7 +4944,7 @@ app.get('/api/polygon/details/:symbol', async (req, res) => {
   }
 });
 
-// Get aggregates (OHLCV bars)
+// Get aggregates (OHLCV bars) - auto-detects crypto vs stock symbols
 app.get(
   '/api/polygon/aggregates/:symbol/:multiplier/:timespan',
   async (req, res) => {
@@ -4761,15 +4952,35 @@ app.get(
       const { symbol, multiplier, timespan } = req.params;
       const { from, to } = req.query;
 
-      const bars = await polygonClient
-        .getAggregates(symbol, parseInt(multiplier), timespan, {
-          from,
-          to,
-        })
-        .catch(e => {
-          console.error(`Error fetching aggregates for ${symbol}:`, e.message);
-          return [];
-        });
+      // Detect if this is a crypto symbol (BTC, ETH, etc.)
+      const upperSymbol = symbol.toUpperCase();
+      const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                             upperSymbol.includes('/USD') ||
+                             upperSymbol.startsWith('X:');
+
+      let bars;
+      if (isCryptoSymbol) {
+        console.log(`🪙 Routing ${symbol} to crypto aggregates API`);
+        bars = await polygonClient
+          .getCryptoAggregates(symbol, parseInt(multiplier), timespan, {
+            from,
+            to,
+          })
+          .catch(e => {
+            console.error(`Error fetching crypto aggregates for ${symbol}:`, e.message);
+            return [];
+          });
+      } else {
+        bars = await polygonClient
+          .getAggregates(symbol, parseInt(multiplier), timespan, {
+            from,
+            to,
+          })
+          .catch(e => {
+            console.error(`Error fetching aggregates for ${symbol}:`, e.message);
+            return [];
+          });
+      }
 
       res.json({ results: bars });
     } catch (error) {

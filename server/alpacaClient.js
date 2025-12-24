@@ -125,7 +125,7 @@ async function getPositions(mode = null) {
 
   return positions.map(pos => ({
     symbol: pos.symbol,
-    quantity: parseInt(pos.qty),
+    quantity: parseFloat(pos.qty), // Use parseFloat to support fractional crypto quantities
     side: pos.side,
     avgEntryPrice: parseFloat(pos.avg_entry_price),
     currentPrice: parseFloat(pos.current_price),
@@ -150,7 +150,7 @@ async function getPosition(symbol, mode = null) {
 
     return {
       symbol: position.symbol,
-      quantity: parseInt(position.qty),
+      quantity: parseFloat(position.qty), // Use parseFloat to support fractional crypto quantities
       side: position.side,
       avgEntryPrice: parseFloat(position.avg_entry_price),
       currentPrice: parseFloat(position.current_price),
@@ -269,6 +269,32 @@ async function getOrders(filters = {}, mode = null) {
       : null,
     createdAt: order.created_at,
   }));
+}
+
+/**
+ * Get a specific order by ID
+ *
+ * @param {string} orderId - Order ID to retrieve
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
+ * @returns {Object} - Order data with fill price if filled
+ */
+async function getOrderById(orderId, mode = null) {
+  const order = await alpacaRequest('GET', `/v2/orders/${orderId}`, null, mode);
+
+  return {
+    id: order.id,
+    symbol: order.symbol,
+    side: order.side,
+    quantity: parseInt(order.qty),
+    filledQty: parseInt(order.filled_qty || 0),
+    type: order.type,
+    status: order.status,
+    filledAvgPrice: order.filled_avg_price
+      ? parseFloat(order.filled_avg_price)
+      : null,
+    createdAt: order.created_at,
+    filledAt: order.filled_at,
+  };
 }
 
 /**
@@ -714,15 +740,16 @@ async function getCryptoPositions(mode = null) {
  * @returns {Object} - Close result
  */
 async function closeCryptoPosition(symbol, mode = null) {
-  const normalizedSymbol = assetUtils.normalizeForAlpacaCrypto(symbol);
-  // URL encode the symbol since it contains a slash
-  const encodedSymbol = encodeURIComponent(normalizedSymbol);
+  // For positions API, Alpaca stores crypto as "BTCUSD" (no slash)
+  // NOT "BTC/USD" which is used for orders
+  const baseSymbol = assetUtils.getBaseSymbol(symbol);
+  const positionSymbol = `${baseSymbol}USD`; // BTCUSD format for positions API
 
   const modeLabel = mode ? mode.toUpperCase() : 'DEFAULT';
-  console.log(`🪙 Closing crypto position: ${normalizedSymbol} (${modeLabel})`);
+  console.log(`🪙 Closing crypto position: ${positionSymbol} (${modeLabel})`);
 
-  const result = await alpacaRequest('DELETE', `/v2/positions/${encodedSymbol}`, null, mode);
-  console.log(`✅ Crypto position closed: ${normalizedSymbol}`);
+  const result = await alpacaRequest('DELETE', `/v2/positions/${positionSymbol}`, null, mode);
+  console.log(`✅ Crypto position closed: ${positionSymbol}`);
   return result;
 }
 
@@ -742,10 +769,22 @@ async function validatePriceWithPolygon(symbol, polygonClient) {
     `\n🔍 Cross-validating ${symbol} prices between Alpaca and Polygon...`
   );
 
+  // Detect if this is a crypto symbol
+  const upperSymbol = symbol.toUpperCase();
+  const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                         upperSymbol.includes('/USD') ||
+                         upperSymbol.startsWith('X:');
+
   try {
-    // Get latest price from both sources
-    const alpacaTrade = await getLatestTrade(symbol);
-    const polygonQuote = await polygonClient.getLatestQuote(symbol);
+    // Get latest price from both sources (with crypto detection)
+    let alpacaTrade, polygonQuote;
+    if (isCryptoSymbol) {
+      alpacaTrade = await getCryptoLatestTrade(symbol);
+      polygonQuote = await polygonClient.getCryptoPreviousClose(symbol);
+    } else {
+      alpacaTrade = await getLatestTrade(symbol);
+      polygonQuote = await polygonClient.getLatestQuote(symbol);
+    }
 
     const alpacaPrice = alpacaTrade.price;
     const polygonPrice = polygonQuote.price;
@@ -993,6 +1032,44 @@ async function getPDTStatus(mode = null) {
 }
 
 /**
+ * Get portfolio history (equity and P&L over time)
+ *
+ * @param {Object} options - Query options
+ * @param {string} options.period - Duration (e.g., '1D', '1W', '1M', '3M', '1A')
+ * @param {string} options.timeframe - Resolution ('1Min', '5Min', '15Min', '1H', '1D')
+ * @param {string} options.date_start - Start date (YYYY-MM-DD)
+ * @param {string} options.date_end - End date (YYYY-MM-DD)
+ * @param {boolean} options.extended_hours - Include extended hours
+ * @param {string|null} mode - Optional mode override ('paper' or 'live')
+ * @returns {Object} - Portfolio history with timestamps, equity, profit_loss, profit_loss_pct
+ */
+async function getPortfolioHistory(options = {}, mode = null) {
+  const modeLabel = mode ? mode.toUpperCase() : 'CURRENT';
+  console.log(`📊 Fetching portfolio history (${modeLabel})...`);
+
+  const queryParams = [];
+  if (options.period) queryParams.push(`period=${options.period}`);
+  if (options.timeframe) queryParams.push(`timeframe=${options.timeframe}`);
+  if (options.date_start) queryParams.push(`date_start=${options.date_start}`);
+  if (options.date_end) queryParams.push(`date_end=${options.date_end}`);
+  if (options.extended_hours !== undefined) queryParams.push(`extended_hours=${options.extended_hours}`);
+
+  const queryString = queryParams.length ? `?${queryParams.join('&')}` : '';
+  const history = await alpacaRequest('GET', `/v2/account/portfolio/history${queryString}`, null, mode);
+
+  console.log(`✅ Got ${history.timestamp?.length || 0} portfolio history data points`);
+
+  return {
+    timestamp: history.timestamp || [],
+    equity: history.equity || [],
+    profitLoss: history.profit_loss || [],
+    profitLossPct: history.profit_loss_pct || [],
+    baseValue: history.base_value,
+    timeframe: history.timeframe,
+  };
+}
+
+/**
  * Get account activities (trades, fills, etc.)
  * Used for P/L calculation on sell orders
  *
@@ -1028,6 +1105,7 @@ module.exports = {
   // Account management
   getAccount,
   getAccountActivities,
+  getPortfolioHistory,
   getPDTStatus,
 
   // Positions
@@ -1039,6 +1117,7 @@ module.exports = {
   // Orders
   placeOrder,
   getOrders,
+  getOrderById,
   cancelOrder,
   cancelAllOrders,
   marketBuy,

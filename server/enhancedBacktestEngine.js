@@ -7,6 +7,27 @@
 
 const polygonClient = require('./polygonClient');
 const technicalIndicators = require('./technicalIndicatorsService');
+const assetUtils = require('./assetUtils');
+
+/**
+ * Helper to get aggregates with automatic crypto detection
+ * @param {string} symbol - Symbol to fetch
+ * @param {number} multiplier - Timespan multiplier
+ * @param {string} timespan - minute, hour, day, etc.
+ * @param {Object} options - { from, to }
+ * @returns {Array} - Array of OHLCV bars
+ */
+async function getAggregatesWithCryptoDetection(symbol, multiplier, timespan, options) {
+  const upperSymbol = symbol.toUpperCase();
+  const isCryptoSymbol = assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+                         upperSymbol.includes('/USD') ||
+                         upperSymbol.startsWith('X:');
+
+  if (isCryptoSymbol) {
+    return polygonClient.getCryptoAggregates(symbol, multiplier, timespan, options);
+  }
+  return polygonClient.getAggregates(symbol, multiplier, timespan, options);
+}
 
 /**
  * Run a comprehensive backtest with what-if analysis
@@ -26,8 +47,8 @@ async function runEnhancedBacktest(params) {
     timeframe = 'day',
   } = params;
 
-  // Fetch historical data
-  const candles = await polygonClient.getAggregates(symbol, 1, timeframe, {
+  // Fetch historical data (with crypto detection)
+  const candles = await getAggregatesWithCryptoDetection(symbol, 1, timeframe, {
     from: new Date(startDate),
     to: new Date(endDate),
   });
@@ -827,7 +848,7 @@ function generateRecommendations(baseResults, whatIfResults) {
 async function optimizeStrategy(params) {
   const { symbol, startDate, endDate, initialCapital = 100000 } = params;
 
-  const candles = await polygonClient.getAggregates(symbol, 1, 'day', {
+  const candles = await getAggregatesWithCryptoDetection(symbol, 1, 'day', {
     from: new Date(startDate),
     to: new Date(endDate),
   });
