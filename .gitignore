@@ -77,3 +77,18 @@ docs/internal/
 *.tmp
 *.temp
 .cache/
+
+# E2E test screenshots (generated, can be large)
+tests/screenshots/
+
+# Server backup files
+server/*.bak
+
+# Log files
+*.log
+server.log
+react-client/*.log
+data/logs/
+
+# Trading logs
+data/logs/trading.log

@@ -23,7 +23,7 @@ module.exports = {
     filename: 'bundle.js',
     publicPath: '/', // Important for dev server
   },
-  devtool: 'eval-source-map', // Enable source maps for debugging
+  devtool: 'source-map', // CSP-compliant source maps (no eval)
   devServer: {
     contentBase: DIST_DIR,
     hot: true,
