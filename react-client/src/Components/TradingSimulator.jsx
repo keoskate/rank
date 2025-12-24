@@ -24,6 +24,18 @@ const MARKET_OPEN_HOUR = 9.5; // 9:30 AM EST
 const MARKET_CLOSE_HOUR = 16; // 4:00 PM EST
 const DEFAULT_SIMULATION_DURATION = 6000; // 6 seconds in ms
 
+// Common crypto symbols for detection
+const CRYPTO_SYMBOLS = ['BTC', 'ETH', 'LTC', 'BCH', 'LINK', 'UNI', 'AAVE', 'AVAX', 'BAT', 'CRV', 'DOGE', 'DOT', 'GRT', 'MKR', 'SHIB', 'SOL', 'SUSHI', 'USDC', 'USDT', 'XTZ', 'YFI'];
+
+// Check if symbol is a cryptocurrency
+const isCryptoSymbol = (sym) => {
+  if (!sym) return false;
+  const upper = sym.toUpperCase();
+  return CRYPTO_SYMBOLS.includes(upper) ||
+         upper.includes('/USD') ||
+         upper.startsWith('X:');
+};
+
 // Convert timestamp to EST hour (handles timezone correctly)
 const getEstHour = timestamp => {
   const date = new Date(timestamp);
@@ -552,12 +564,16 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
         return estHour < MARKET_OPEN_HOUR;
       });
 
-      // Filter to market hours only for trading (9:30 AM - 4:00 PM EST)
-      const marketCandles = allValidCandles.filter(candle => {
-        const timestamp = candle.timestamp || candle.t;
-        const estHour = getEstHour(timestamp);
-        return estHour >= MARKET_OPEN_HOUR && estHour < MARKET_CLOSE_HOUR;
-      });
+      // Filter to market hours only for trading (9:30 AM - 4:00 PM EST for stocks)
+      // Crypto trades 24/7 so we use all valid candles
+      const isCrypto = isCryptoSymbol(symbol);
+      const marketCandles = isCrypto
+        ? allValidCandles // Crypto: use all 24hr data
+        : allValidCandles.filter(candle => {
+            const timestamp = candle.timestamp || candle.t;
+            const estHour = getEstHour(timestamp);
+            return estHour >= MARKET_OPEN_HOUR && estHour < MARKET_CLOSE_HOUR;
+          });
 
       // Calculate pre-market gap info if there's pre-market data
       if (preMarketCandles.length > 0 && marketCandles.length > 0) {
@@ -847,7 +863,11 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
           const maxPositionPercent = (activeConfig?.maxPositionSizePercent || 50) / 100;
           const maxPositionDollars = activeConfig?.maxPositionSize || prev.cash;
           const positionValue = Math.min(prev.cash * maxPositionPercent, maxPositionDollars);
-          const positionSize = Math.floor(positionValue / price);
+
+          // Use fractional shares for crypto (high-priced assets), whole shares for stocks
+          const positionSize = isCryptoSymbol(symbol)
+            ? positionValue / price  // Fractional for crypto
+            : Math.floor(positionValue / price);  // Whole shares for stocks
 
           if (positionSize > 0) {
             const cost = positionSize * price;
@@ -1678,7 +1698,12 @@ const TradingSimulator = ({ onComplete, onDateChange, onSymbolChange, initialSym
           const maxPositionPercent = (testConfig.maxPositionSizePercent || 50) / 100;
           const maxPositionDollars = testConfig.maxPositionSize || cash;
           const positionValue = Math.min(cash * maxPositionPercent, maxPositionDollars);
-          const positionSize = Math.floor(positionValue / price);
+
+          // Use fractional shares for crypto (high-priced assets), whole shares for stocks
+          const positionSize = isCryptoSymbol(symbol)
+            ? positionValue / price  // Fractional for crypto
+            : Math.floor(positionValue / price);  // Whole shares for stocks
+
           if (positionSize > 0) {
             position = { quantity: positionSize, entryPrice: price, entryIndex: i, highWaterMark: price };
             cash -= positionSize * price;

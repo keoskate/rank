@@ -26,6 +26,15 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
   const onSentimentChangeRef = useRef(onSentimentChange);
   onSentimentChangeRef.current = onSentimentChange;
 
+  // Ref to prevent duplicate background refreshes
+  const backgroundRefreshInProgress = useRef(false);
+  // Store date prop in ref to avoid recreating fetchCheddarFlow
+  const dateRef = useRef(date);
+  dateRef.current = date;
+  // Store flowData in ref for access without dependency
+  const flowDataRef = useRef(flowData);
+  flowDataRef.current = flowData;
+
   // Helper to check if data has meaningful content
   const hasFlowActivity = (data) => {
     if (!data?.flowData) return false;
@@ -50,10 +59,20 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
   };
 
   // Fetch CheddarFlow data with stale-while-revalidate pattern
+  // Note: We use refs for date and flowData to avoid recreating this callback
   const fetchCheddarFlow = useCallback(async (sym, targetDate = null, options = {}) => {
-    const { isRetry = false, useStale = true, forceRefresh = false } = options;
+    const { isRetry = false, useStale = true, forceRefresh = false, isBackgroundRefresh = false } = options;
 
-    if (!isRetry && !useStale) {
+    // Prevent duplicate background refreshes
+    if (isBackgroundRefresh) {
+      if (backgroundRefreshInProgress.current) {
+        console.log('[CheddarFlow] Background refresh already in progress, skipping');
+        return null;
+      }
+      backgroundRefreshInProgress.current = true;
+    }
+
+    if (!isRetry && !useStale && !isBackgroundRefresh) {
       setFlowLoading(true);
     }
     if (!isRetry) {
@@ -62,9 +81,9 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
 
     try {
       const today = new Date().toISOString().split('T')[0];
-      const requestDate = targetDate || date || today;
+      const requestDate = targetDate || dateRef.current || today;
       const isToday = requestDate === today;
-      const allowFallback = !date;
+      const allowFallback = !dateRef.current;
 
       // Build query params
       const params = new URLSearchParams({
@@ -82,6 +101,7 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
         if (data.flowData?.needsAuth || data.flowData?.error?.includes('expired')) {
           setFlowError('Session expired. Please check your CheddarFlow credentials in .env');
           setFlowLoading(false);
+          if (isBackgroundRefresh) backgroundRefreshInProgress.current = false;
           return null;
         }
 
@@ -110,29 +130,34 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           }
 
           setFlowLoading(false);
+          if (isBackgroundRefresh) backgroundRefreshInProgress.current = false;
 
-          // If we got stale data, trigger a background refresh
-          if (data.isStale && !forceRefresh) {
+          // If we got stale data and this is NOT already a background refresh, trigger one
+          if (data.isStale && !forceRefresh && !isBackgroundRefresh) {
             console.log('[CheddarFlow] Got stale data, refreshing in background...');
-            // Fire off background refresh (don't await)
-            fetchCheddarFlow(sym, requestDate, { useStale: false, forceRefresh: true }).catch(() => {});
+            // Fire off background refresh (don't await) - mark as background to prevent loops
+            fetchCheddarFlow(sym, requestDate, { useStale: false, forceRefresh: true, isBackgroundRefresh: true }).catch(() => {
+              backgroundRefreshInProgress.current = false;
+            });
           }
 
           return data;
         } else if (isToday && allowFallback && !isRetry) {
           console.log('[CheddarFlow] No data for today, falling back to previous day...');
+          if (isBackgroundRefresh) backgroundRefreshInProgress.current = false;
           const prevDay = getPreviousBusinessDay(requestDate);
           return fetchCheddarFlow(sym, prevDay, { isRetry: true, useStale });
         } else {
           // No meaningful data - only update state if we don't already have good data
           // This prevents clearing good cached data with empty responses
-          if (!flowData || !hasFlowActivity(flowData)) {
+          if (!flowDataRef.current || !hasFlowActivity(flowDataRef.current)) {
             setFlowData(data);
             setDataDate(requestDate);
             setIsLiveData(false);
           }
           setLastFetchedKey(`${sym}-${requestDate}`);
           setFlowLoading(false);
+          if (isBackgroundRefresh) backgroundRefreshInProgress.current = false;
           return data;
         }
       } else {
@@ -143,25 +168,32 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
           setFlowError(err.error || 'Failed to fetch flow data');
         }
         setFlowLoading(false);
+        if (isBackgroundRefresh) backgroundRefreshInProgress.current = false;
         return null;
       }
     } catch (err) {
       setFlowError('Could not connect to CheddarFlow');
       setFlowLoading(false);
+      if (isBackgroundRefresh) backgroundRefreshInProgress.current = false;
       return null;
     }
-  }, [date]);
+  }, []); // No dependencies - uses refs for date and flowData
+
+  // Track last fetched key in a ref to avoid dependency loop
+  const lastFetchedKeyRef = useRef(lastFetchedKey);
+  lastFetchedKeyRef.current = lastFetchedKey;
 
   // Auto-fetch when symbol or date changes
   useEffect(() => {
     const targetDate = date || new Date().toISOString().split('T')[0];
     const fetchKey = `${symbol}-${targetDate}`;
-    if (autoFetchFlow && symbol && fetchKey !== lastFetchedKey) {
+    // Use ref to check lastFetchedKey without adding it as dependency
+    if (autoFetchFlow && symbol && fetchKey !== lastFetchedKeyRef.current) {
       // If a specific date is provided (sync with chart), use that date directly
       // Otherwise, let fetchCheddarFlow handle today with fallback
       fetchCheddarFlow(symbol, date || null);
     }
-  }, [symbol, date, autoFetchFlow, fetchCheddarFlow, lastFetchedKey]);
+  }, [symbol, date, autoFetchFlow, fetchCheddarFlow]); // Removed lastFetchedKey - use ref instead
 
   const getSentimentColor = (sentimentText) => {
     const s = sentimentText?.toLowerCase() || '';
@@ -403,7 +435,7 @@ const CheddarFlowCard = ({ symbol = 'QBTS', date, onSentimentChange }) => {
             </div>
 
             {/* Put Flow */}
-            <div style={{
+            <div style={{ 
               padding: theme.spacing.sm,
               backgroundColor: '#fef2f2',
               borderRadius: theme.borderRadius.md,

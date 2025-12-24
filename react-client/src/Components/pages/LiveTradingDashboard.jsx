@@ -189,8 +189,28 @@ const LiveTradingDashboard = () => {
       : null;
 
   // Sync showSimulator state to ref (for use in polling interval without re-creating interval)
+  // Also manage editing protection: when simulator is open, mark as editing
+  // When simulator closes, keep editing protection for 15 seconds (grace period)
   useEffect(() => {
     showSimulatorRef.current = showSimulator;
+
+    if (showSimulator) {
+      // Simulator opened - mark as editing to prevent config overwrite
+      isEditingConfigRef.current = true;
+      setIsEditingConfig(true);
+      // Clear any pending timeout
+      if (configEditTimeoutRef.current) {
+        clearTimeout(configEditTimeoutRef.current);
+        configEditTimeoutRef.current = null;
+      }
+    } else {
+      // Simulator closed - keep protection for 15 seconds grace period
+      // This prevents immediate overwrite when hiding simulator
+      configEditTimeoutRef.current = setTimeout(() => {
+        isEditingConfigRef.current = false;
+        setIsEditingConfig(false);
+      }, 15000);
+    }
   }, [showSimulator]);
 
   // Persist research symbol to localStorage
@@ -310,15 +330,23 @@ const LiveTradingDashboard = () => {
       if (trade.sessionId && urlSessionId && trade.sessionId !== urlSessionId) {
         return; // Ignore trades from other sessions
       }
+      // Build alert message - include P&L for sell trades
+      let alertMessage = `${trade.quantity} ${trade.symbol} @ $${trade.price.toFixed(2)}`;
+      if (trade.side?.toLowerCase() === 'sell' && trade.pnl !== undefined && trade.pnl !== null) {
+        const pnlSign = trade.pnl >= 0 ? '+' : '';
+        alertMessage += ` (${pnlSign}$${trade.pnl.toFixed(2)})`;
+      }
       addAlert(
         trade.status === 'filled' ? 'success' : 'info',
         `Trade ${trade.side.toUpperCase()}`,
-        `${trade.quantity} ${trade.symbol} @ $${trade.price.toFixed(2)}`
+        alertMessage
       );
       // Announce trade via audio
       announceTrade(trade);
       // Refresh positions
       fetchPositions();
+      // Also refresh order stats to update trade markers on chart
+      fetchOrderStats();
     });
 
     socket.on('alert', alert => {
@@ -574,10 +602,11 @@ const LiveTradingDashboard = () => {
         // Never overwrite when user is editing to prevent losing their changes
         // Use ref to get current editing state (avoids closure issues)
         // CRITICAL: Also don't overwrite when simulator is open - it uses its own config edits
+        // BUG FIX: Use showSimulatorRef.current instead of showSimulator state to avoid stale closure
         if (
           data.config &&
           !isEditingConfigRef.current &&
-          !showSimulator &&
+          !showSimulatorRef.current &&
           (!configLoaded || forceLoadConfig)
         ) {
           contextUpdateConfig(data.config);
@@ -586,6 +615,10 @@ const LiveTradingDashboard = () => {
         // Restore alerts from server session (only on initial load)
         if (data.alerts && data.alerts.length > 0 && !configLoaded) {
           setAlerts(data.alerts.map((a, i) => ({ ...a, id: Date.now() + i })));
+        }
+        // Restore trading log from server session (only on initial load)
+        if (data.tradingLog && data.tradingLog.length > 0 && !configLoaded) {
+          setRecentTrades(data.tradingLog);
         }
         console.log(
           `[LiveTrading] Loaded session "${data.name}" (${data.status})`
@@ -933,15 +966,18 @@ const LiveTradingDashboard = () => {
     }
 
     try {
+      // Exclude 'name' from config updates - session name should only be set explicitly,
+      // not overwritten by config syncs (which may contain stale names from localStorage)
+      const { name: _excludedName, ...configWithoutName } = config;
       const res = await fetch(`/api/ai/session/${urlSessionId}/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        body: JSON.stringify(configWithoutName),
       });
 
       if (res.ok) {
         addAlert('success', 'Config Saved', 'Trading configuration updated');
-        socket?.emit('update_config', { sessionId: urlSessionId, config });
+        socket?.emit('update_config', { sessionId: urlSessionId, config: configWithoutName });
         setShowConfig(false);
       }
     } catch (err) {
@@ -4112,7 +4148,7 @@ const LiveTradingDashboard = () => {
                 trades={recentTrades || []}
                 positions={positions || []}
                 height={300}
-                refreshInterval={sessionStatus === 'running' ? 15000 : 60000}
+                refreshInterval={sessionStatus === 'running' ? 10000 : 60000}
                 maxCharts={5}
               />
             </div>
@@ -4193,7 +4229,11 @@ const LiveTradingDashboard = () => {
                   <tbody>
                     {(Array.isArray(positions) ? positions : []).map(pos => {
                       // Handle both camelCase (from alpacaClient) and snake_case (raw API) field names
-                      const qty = pos.quantity || pos.qty;
+                      const rawQty = pos.quantity || pos.qty;
+                      // Detect if this is a crypto position (symbol contains USD or / like BTCUSD or BTC/USD)
+                      const isCrypto = pos.symbol?.includes('USD') || pos.symbol?.includes('/') || pos.assetClass === 'crypto';
+                      // Format qty: show 8 decimal places for crypto (fractional), whole numbers for stocks
+                      const qty = isCrypto && rawQty < 1 ? rawQty.toFixed(8) : (Number.isInteger(rawQty) ? rawQty : rawQty.toFixed(4));
                       const avgPrice = pos.avgEntryPrice || pos.avg_entry_price;
                       const currentPrice =
                         pos.currentPrice || pos.current_price;

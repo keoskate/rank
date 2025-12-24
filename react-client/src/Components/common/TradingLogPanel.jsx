@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import Card from './Card';
 import theme from '../../theme';
 
@@ -77,7 +78,8 @@ const TradingLogPanel = ({
   const logContainerRef = useRef(null);
   const refreshTimerRef = useRef(null);
 
-  // Fetch logs from server
+  // Fetch logs from server (only on initial load, not periodically)
+  // Real-time updates come via WebSocket, so we don't want to overwrite them
   const fetchLogs = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -89,34 +91,31 @@ const TradingLogPanel = ({
       const response = await fetch(`/api/trading/logs?${params}`);
       const data = await response.json();
 
-      if (data.success) {
-        setLogs(data.logs || []);
+      if (data.success && data.logs && data.logs.length > 0) {
+        // Only set logs if we got some from the server (historical logs)
+        // This preserves WebSocket logs if the API returns empty
+        setLogs(prev => {
+          // Merge server logs with existing, avoiding duplicates by id
+          const existingIds = new Set(prev.map(l => l.id));
+          const newLogs = data.logs.filter(l => !existingIds.has(l.id));
+          return [...newLogs, ...prev].slice(-maxLogs);
+        });
         setError(null);
-      } else {
-        setError(data.error || 'Failed to fetch logs');
       }
     } catch (err) {
-      setError(err.message);
+      // Don't show error for logs - they're optional
+      console.warn('Failed to fetch trading logs:', err.message);
     } finally {
       setLoading(false);
     }
   }, [sessionId, symbol, maxLogs, filter]);
 
-  // Initial fetch and auto-refresh
+  // Initial fetch only (no periodic refresh - WebSocket handles real-time updates)
   useEffect(() => {
     setLoading(true);
     fetchLogs();
-
-    if (autoRefresh) {
-      refreshTimerRef.current = setInterval(fetchLogs, refreshInterval);
-    }
-
-    return () => {
-      if (refreshTimerRef.current) {
-        clearInterval(refreshTimerRef.current);
-      }
-    };
-  }, [fetchLogs, autoRefresh, refreshInterval]);
+    // No interval refresh - WebSocket provides real-time updates
+  }, [fetchLogs]);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -124,6 +123,40 @@ const TradingLogPanel = ({
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logs, autoScroll, isCollapsed]);
+
+  // WebSocket real-time log updates
+  useEffect(() => {
+    const socket = io(window.location.origin);
+
+    // Authenticate with a default user ID (for trading logs)
+    socket.emit('authenticate', { userId: 'trading-log-panel' });
+
+    // Listen for real-time trading log entries
+    socket.on('trading_log', logEntry => {
+      // Filter by session if specified
+      if (sessionId && logEntry.sessionId && logEntry.sessionId !== sessionId) {
+        return;
+      }
+      // Filter by symbol if specified
+      if (symbol && logEntry.symbol && logEntry.symbol !== symbol) {
+        return;
+      }
+      // Filter by level if not ALL
+      if (filter !== 'ALL' && logEntry.level !== filter) {
+        return;
+      }
+
+      // Add to logs, keeping maxLogs limit
+      setLogs(prev => {
+        const updated = [...prev, logEntry].slice(-maxLogs);
+        return updated;
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [sessionId, symbol, filter, maxLogs]);
 
   // Copy logs to clipboard
   const copyLogs = () => {

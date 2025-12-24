@@ -313,17 +313,31 @@ const TradingViewChart = ({
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // Sync time scales between main chart and RSI
+    // Sync time scales between main chart and RSI using TIME RANGE (not logical range)
+    // This ensures both charts show the same time period even if RSI has fewer data points
     if (rsiChart) {
-      chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-        if (range && rsiChart) {
-          rsiChart.timeScale().setVisibleLogicalRange(range);
+      let isSyncing = false; // Prevent infinite loop
+
+      chart.timeScale().subscribeVisibleTimeRangeChange((timeRange) => {
+        if (isSyncing || !timeRange || !rsiChart) return;
+        isSyncing = true;
+        try {
+          rsiChart.timeScale().setVisibleRange(timeRange);
+        } catch (e) {
+          // Ignore errors if RSI doesn't have data in this range
         }
+        isSyncing = false;
       });
-      rsiChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-        if (range && chart) {
-          chart.timeScale().setVisibleLogicalRange(range);
+
+      rsiChart.timeScale().subscribeVisibleTimeRangeChange((timeRange) => {
+        if (isSyncing || !timeRange || !chart) return;
+        isSyncing = true;
+        try {
+          chart.timeScale().setVisibleRange(timeRange);
+        } catch (e) {
+          // Ignore errors
         }
+        isSyncing = false;
       });
     }
 
@@ -503,77 +517,52 @@ const TradingViewChart = ({
   };
 
   /**
-   * Calculate Ultimate RSI (LuxAlgo-style)
-   * Based on Pine Script from TradingView
+   * Calculate Standard RSI (Relative Strength Index)
+   * Uses Wilder's smoothing method (exponential moving average)
    *
-   * Uses range-based calculation:
-   * - If upper range expands: diff = range (bullish)
-   * - If lower range expands: diff = -range (bearish)
-   * - Otherwise: diff = price change
+   * RSI = 100 - (100 / (1 + RS))
+   * RS = Average Gain / Average Loss
    *
    * Returns both RSI and signal line values
    */
-  const calculateUltimateRSI = (data, length = 14, signalLength = 14) => {
+  const calculateStandardRSI = (data, length = 14, signalLength = 14) => {
     if (!Array.isArray(data) || data.length < length + 1) return { rsi: [], signal: [] };
 
-    // Extract close prices and calculate ranges
+    // Extract close prices
     const closes = data.map(d => d.close);
-    const highs = data.map(d => d.high);
-    const lows = data.map(d => d.low);
 
-    // Calculate rolling highest high and lowest low
-    const upper = [];
-    const lower = [];
-    for (let i = 0; i < data.length; i++) {
-      if (i < length - 1) {
-        upper.push(null);
-        lower.push(null);
-      } else {
-        let maxHigh = highs[i];
-        let minLow = lows[i];
-        for (let j = 1; j < length; j++) {
-          maxHigh = Math.max(maxHigh, highs[i - j]);
-          minLow = Math.min(minLow, lows[i - j]);
-        }
-        upper.push(maxHigh);
-        lower.push(minLow);
-      }
+    // Calculate price changes
+    const changes = [];
+    for (let i = 1; i < closes.length; i++) {
+      changes.push(closes[i] - closes[i - 1]);
     }
 
-    // Calculate diff based on range expansion
-    const diff = [];
-    for (let i = 0; i < data.length; i++) {
-      if (i < length || upper[i] === null) {
-        diff.push(0);
-      } else {
-        const range = upper[i] - lower[i];
-        const priceChange = closes[i] - closes[i - 1];
-        const prevUpper = upper[i - 1];
-        const prevLower = lower[i - 1];
+    // Separate gains and losses
+    const gains = changes.map(c => (c > 0 ? c : 0));
+    const losses = changes.map(c => (c < 0 ? Math.abs(c) : 0));
 
-        if (upper[i] > prevUpper) {
-          diff.push(range); // Bullish expansion
-        } else if (lower[i] < prevLower) {
-          diff.push(-range); // Bearish expansion
-        } else {
-          diff.push(priceChange); // Normal price change
-        }
-      }
-    }
-
-    // Calculate RMA of diff (numerator) and RMA of abs(diff) (denominator)
-    const diffSlice = diff.slice(length);
-    const absDiffSlice = diffSlice.map(d => Math.abs(d));
-
-    const numRMA = calculateRMA(diffSlice, length);
-    const denRMA = calculateRMA(absDiffSlice, length);
-
-    // Calculate Ultimate RSI: (num/den) * 50 + 50
+    // Calculate RSI using Wilder's smoothing
     const rsiValues = [];
-    for (let i = 0; i < numRMA.length; i++) {
-      const den = denRMA[i] || 0.0001; // Avoid division by zero
-      const rsiValue = (numRMA[i] / den) * 50 + 50;
-      rsiValues.push(Math.max(0, Math.min(100, rsiValue))); // Clamp to 0-100
+
+    // First RSI: use simple average for initial value
+    let avgGain = gains.slice(0, length).reduce((a, b) => a + b, 0) / length;
+    let avgLoss = losses.slice(0, length).reduce((a, b) => a + b, 0) / length;
+
+    for (let i = length; i < changes.length; i++) {
+      if (i === length) {
+        // First RSI value
+        const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+        const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
+        rsiValues.push(rsi);
+      } else {
+        // Subsequent values use Wilder's smoothing
+        avgGain = (avgGain * (length - 1) + gains[i]) / length;
+        avgLoss = (avgLoss * (length - 1) + losses[i]) / length;
+
+        const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+        const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
+        rsiValues.push(Math.max(0, Math.min(100, rsi)));
+      }
     }
 
     // Calculate signal line (EMA of RSI)
@@ -595,7 +584,8 @@ const TradingViewChart = ({
     }
 
     // Build result arrays with timestamps
-    const startIndex = length + length - 1; // Account for both lookback periods
+    // RSI starts at index (length + 1) because we need length periods of changes
+    const startIndex = length + 1;
     const rsiResult = [];
     const signalResult = [];
 
@@ -712,19 +702,28 @@ const TradingViewChart = ({
         ema9SeriesRef.current.setData(indicators.ema9 ? ema9Data : []);
       }
 
-      // Calculate and update Ultimate RSI (respects both showRSI prop and indicator toggle)
+      // Calculate and update Standard RSI (respects both showRSI prop and indicator toggle)
       if (showRSI && indicators.rsi && rsiSeriesRef.current && candleData.length >= 30) {
-        const { rsi, signal } = calculateUltimateRSI(candleData, 14, 14);
+        const { rsi, signal } = calculateStandardRSI(candleData, 14, 14);
         if (rsi.length > 0) {
           rsiSeriesRef.current.setData(rsi);
         }
         if (signal.length > 0 && rsiSignalSeriesRef.current) {
           rsiSignalSeriesRef.current.setData(signal);
         }
-
-        // Fit RSI chart content
-        if (rsiChartRef.current) {
-          rsiChartRef.current.timeScale().fitContent();
+        // Sync RSI time range to match main chart after data is set
+        // Use setTimeout to ensure main chart's fitContent has completed
+        if (rsiChartRef.current && chartRef.current) {
+          setTimeout(() => {
+            try {
+              const mainTimeRange = chartRef.current?.timeScale().getVisibleRange();
+              if (mainTimeRange && rsiChartRef.current) {
+                rsiChartRef.current.timeScale().setVisibleRange(mainTimeRange);
+              }
+            } catch (e) {
+              // Ignore errors if range isn't available yet
+            }
+          }, 50);
         }
       } else if (rsiSeriesRef.current) {
         // Clear RSI data if disabled
@@ -741,9 +740,25 @@ const TradingViewChart = ({
     trades.forEach((trade, index) => {
       const tradeTime = Math.floor(new Date(trade.timestamp).getTime() / 1000);
 
-      // Find if this trade is visible
-      const isVisible = candleData.some(c => Math.abs(c.time - tradeTime) < 300); // Within 5 min
-      if (!isVisible) return;
+      // Find the closest candle to this trade's timestamp
+      // For daily charts, candles are 86400 seconds apart, so we need to find the candle
+      // that contains this trade (same day) or is closest to it
+      let closestCandle = null;
+      let closestDiff = Infinity;
+
+      for (const c of candleData) {
+        const diff = Math.abs(c.time - tradeTime);
+        // Check if trade falls within this candle's day (for daily candles)
+        // or is within a reasonable range for intraday candles
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          closestCandle = c;
+        }
+      }
+
+      // Only show marker if we found a candle within 1 day (86400 seconds)
+      // This handles both intraday (5-min candles) and daily candles
+      if (!closestCandle || closestDiff > 86400) return;
 
       // Support both formats: type='BUY'/'SELL' (simulator) and side='buy'/'sell' (live)
       const tradeType = (trade.type || trade.side || '').toUpperCase();
@@ -751,7 +766,7 @@ const TradingViewChart = ({
 
       if (tradeType === 'BUY') {
         markers.push({
-          time: tradeTime,
+          time: closestCandle.time, // Use candle time for proper alignment
           position: 'belowBar',
           color: '#22c55e',
           shape: 'arrowUp',
@@ -759,7 +774,7 @@ const TradingViewChart = ({
         });
       } else if (tradeType === 'SELL') {
         markers.push({
-          time: tradeTime,
+          time: closestCandle.time, // Use candle time for proper alignment
           position: 'aboveBar',
           color: '#ef4444',
           shape: 'arrowDown',

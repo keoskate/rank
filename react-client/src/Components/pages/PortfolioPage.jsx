@@ -10,6 +10,7 @@ import theme from '../../theme';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import MetricCard from '../common/MetricCard';
+import PortfolioPerformanceChart from '../common/PortfolioPerformanceChart';
 
 const PortfolioPage = () => {
   const navigate = useNavigate();
@@ -102,7 +103,7 @@ const PortfolioPage = () => {
     return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
   };
 
-  const totalPnL = positions.reduce(
+  const unrealizedPnL = positions.reduce(
     (sum, pos) => sum + parseFloat(pos.unrealizedPL || pos.unrealized_pl || 0),
     0
   );
@@ -112,8 +113,9 @@ const PortfolioPage = () => {
   const lastEquity = parseFloat(
     account?.last_equity || account?.lastEquity || 0
   );
-  const totalPnLPercent =
-    equity && lastEquity ? (equity - lastEquity) / lastEquity : 0;
+  // Today's P&L is the difference between current equity and yesterday's closing equity
+  const todaysPnL = equity && lastEquity ? equity - lastEquity : 0;
+  const todaysPnLPercent = lastEquity ? todaysPnL / lastEquity : 0;
 
   return (
     <div
@@ -239,11 +241,18 @@ const PortfolioPage = () => {
         />
         <MetricCard
           label="Today's P&L"
-          value={formatCurrency(totalPnL)}
-          subtext={formatPercent(totalPnLPercent)}
-          variant={totalPnL >= 0 ? 'success' : 'error'}
+          value={formatCurrency(todaysPnL)}
+          subtext={formatPercent(todaysPnLPercent)}
+          variant={todaysPnL >= 0 ? 'success' : 'error'}
         />
       </div>
+
+      {/* Performance Chart */}
+      <PortfolioPerformanceChart
+        tradingMode={tradingMode}
+        orders={allOrders}
+        height={280}
+      />
 
       {/* Positions */}
       <Card style={{ marginBottom: theme.spacing.lg }}>
@@ -330,7 +339,11 @@ const PortfolioPage = () => {
                     parseFloat(
                       pos.unrealizedPLPercent || pos.unrealized_plpc || 0
                     );
-                  const qty = pos.quantity || pos.qty;
+                  const rawQty = pos.quantity || pos.qty;
+                  // Detect if this is a crypto position (symbol contains USD or / like BTCUSD or BTC/USD)
+                  const isCrypto = pos.symbol?.includes('USD') || pos.symbol?.includes('/') || pos.assetClass === 'crypto';
+                  // Format qty: show 8 decimal places for crypto (fractional), whole numbers for stocks
+                  const qty = isCrypto && rawQty < 1 ? rawQty.toFixed(8) : (Number.isInteger(rawQty) ? rawQty : rawQty.toFixed(4));
                   const avgPrice = pos.avgEntryPrice || pos.avg_entry_price;
                   const currentPrice = pos.currentPrice || pos.current_price;
                   const isPositive = pnl >= 0;

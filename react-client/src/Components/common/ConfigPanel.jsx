@@ -128,6 +128,12 @@ const CONFIG_SCHEMA = {
       tooltip: 'Stocks are subject to PDT rules. Crypto trades 24/7 with no PDT restrictions.',
       risk: 'neutral',
     },
+    watchlist: {
+      label: 'Watchlist',
+      type: 'watchlist',
+      tooltip: 'Comma-separated list of symbols to trade. For crypto use BTC, ETH, etc.',
+      risk: 'neutral',
+    },
   },
   'Capital Allocation': {
     allocatedCapital: {
@@ -639,6 +645,7 @@ const ConfigPanel = ({
     if (value !== undefined && value !== null && !Number.isNaN(value)) return value;
     if (DEFAULT_TRADING_CONFIG[field] !== undefined) return DEFAULT_TRADING_CONFIG[field];
     if (schema.type === 'boolean') return false;
+    if (schema.type === 'watchlist') return [];
     if (schema.type === 'select') {
       // Support both string options and {value, label} object options
       const firstOpt = schema.options[0];
@@ -777,6 +784,7 @@ const ConfigPanel = ({
       // View mode - display only
       let displayValue = value;
       if (typeof value === 'boolean') displayValue = value ? 'Yes' : 'No';
+      else if (Array.isArray(value)) displayValue = value.join(', ');
       else if (field.includes('Capital') || field.includes('PositionSize'))
         displayValue = `$${Number(value).toLocaleString()}`;
       else if (field.includes('Percent') || field === 'minConfidence') displayValue = `${value}%`;
@@ -798,6 +806,28 @@ const ConfigPanel = ({
     // Edit mode
     if (schema.type === 'boolean') {
       return renderToggle(field, schema, value);
+    }
+
+    if (schema.type === 'watchlist') {
+      const watchlistStr = Array.isArray(value) ? value.join(', ') : '';
+      return (
+        <input
+          type="text"
+          value={watchlistStr}
+          onChange={e => {
+            const symbols = e.target.value
+              .split(',')
+              .map(s => s.trim().toUpperCase())
+              .filter(s => s.length > 0);
+            handleChange(field, symbols);
+          }}
+          placeholder="BTC, ETH, NVDA, TSLA..."
+          style={{
+            ...inputStyle,
+            width: '100%',
+          }}
+        />
+      );
     }
 
     if (schema.type === 'slider') {
@@ -1387,7 +1417,10 @@ const ConfigPanel = ({
                     key={field}
                     onMouseEnter={() => setHoveredField(field)}
                     onMouseLeave={() => setHoveredField(null)}
-                    style={{ position: 'relative' }}
+                    style={{
+                      position: 'relative',
+                      gridColumn: schema.type === 'watchlist' ? '1 / -1' : undefined,
+                    }}
                   >
                     <label
                       style={{

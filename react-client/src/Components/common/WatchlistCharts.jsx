@@ -34,6 +34,10 @@ const WatchlistCharts = ({
   const [expandedSymbol, setExpandedSymbol] = useState(null);
   // Global timeframe state (all charts use the same timeframe)
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1]); // Default 5m
+  // Track last update time for each symbol
+  const [lastUpdated, setLastUpdated] = useState({});
+  // Timer to force re-render for relative time display
+  const [, setTick] = useState(0);
 
   // Generate cache key for symbol + timeframe
   const getCacheKey = (symbol, tf) => `${symbol}:${tf.value}:${tf.unit}`;
@@ -55,6 +59,11 @@ const WatchlistCharts = ({
         setChartDataBySymbol(prev => ({
           ...prev,
           [cacheKey]: data.candles,
+        }));
+        // Track when this symbol was last updated
+        setLastUpdated(prev => ({
+          ...prev,
+          [cacheKey]: Date.now(),
         }));
       }
     } catch (err) {
@@ -97,18 +106,57 @@ const WatchlistCharts = ({
     });
   };
 
+  // Timer to update relative time display every second
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      setTick(t => t + 1);
+    }, 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  // Format relative time (e.g., "5s ago", "1m ago")
+  const formatRelativeTime = (timestamp) => {
+    if (!timestamp) return '';
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    return `${Math.floor(minutes / 60)}h ago`;
+  };
+
+  // Extract base crypto symbol (BTCUSD -> BTC, BTC/USD -> BTC)
+  const getBaseSymbol = (sym) => {
+    if (!sym) return '';
+    let upper = sym.toUpperCase().trim();
+    // Remove /USD suffix
+    if (upper.includes('/USD')) {
+      return upper.split('/')[0];
+    }
+    // Remove USD suffix (handle BTCUSD -> BTC)
+    if (upper.endsWith('USD') && upper.length > 3) {
+      return upper.slice(0, -3);
+    }
+    return upper;
+  };
+
   // Get trades for a specific symbol
+  // Handles crypto symbol formats: BTC, BTCUSD, BTC/USD all match
   const getTradesForSymbol = (symbol) => {
-    return trades.filter(t =>
-      t.symbol?.toUpperCase() === symbol.toUpperCase()
-    );
+    const baseSymbol = getBaseSymbol(symbol);
+    return trades.filter(t => {
+      const tradeBase = getBaseSymbol(t.symbol);
+      return tradeBase === baseSymbol || t.symbol?.toUpperCase() === symbol.toUpperCase();
+    });
   };
 
   // Get position for a specific symbol
+  // Handles crypto symbol formats: BTC, BTCUSD, BTC/USD all match
   const getPositionForSymbol = (symbol) => {
-    return positions.find(p =>
-      p.symbol?.toUpperCase() === symbol.toUpperCase()
-    ) || null;
+    const baseSymbol = getBaseSymbol(symbol);
+    return positions.find(p => {
+      const posBase = getBaseSymbol(p.symbol);
+      return posBase === baseSymbol || p.symbol?.toUpperCase() === symbol.toUpperCase();
+    }) || null;
   };
 
   // Symbols to display (limited)
@@ -126,6 +174,15 @@ const WatchlistCharts = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+      {/* CSS for pulse animation */}
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+          }
+        `}
+      </style>
       {/* Timeframe Selector - Global for all charts */}
       <div style={{
         display: 'flex',
@@ -224,17 +281,43 @@ const WatchlistCharts = ({
                   </span>
                 )}
               </div>
-              <button
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  color: theme.colors.textMuted,
-                }}
-              >
-                {isExpanded ? '▼' : '▶'}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+                {/* Live indicator with pulsing animation */}
+                {lastUpdated[cacheKey] && (
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '10px',
+                      color: isLoading ? theme.colors.textMuted : '#22c55e',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: isLoading ? theme.colors.textMuted : '#22c55e',
+                        animation: isLoading ? 'none' : 'pulse 2s infinite',
+                      }}
+                    />
+                    {isLoading ? 'updating...' : formatRelativeTime(lastUpdated[cacheKey])}
+                  </span>
+                )}
+                <button
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    color: theme.colors.textMuted,
+                  }}
+                >
+                  {isExpanded ? '▼' : '▶'}
+                </button>
+              </div>
             </div>
 
             {/* Chart */}
