@@ -189,6 +189,10 @@ const MultiSessionView = () => {
     s => !openSessions.some(os => os.sessionId === s.sessionId)
   );
 
+  // Check if we're waiting for a session to load from URL
+  const isLoadingFromUrl =
+    urlSessionId && !openSessions.some(s => s.sessionId === urlSessionId);
+
   // If no sessions open and no URL param, show empty state
   if (openSessions.length === 0 && !urlSessionId) {
     return (
@@ -245,6 +249,21 @@ const MultiSessionView = () => {
             onClose={() => setShowPicker(false)}
           />
         )}
+      </div>
+    );
+  }
+
+  // Show loading state while fetching session from URL
+  if (isLoadingFromUrl) {
+    return (
+      <div
+        style={{
+          padding: theme.spacing.xl,
+          textAlign: 'center',
+          color: theme.colors.gray600,
+        }}
+      >
+        Loading session...
       </div>
     );
   }
