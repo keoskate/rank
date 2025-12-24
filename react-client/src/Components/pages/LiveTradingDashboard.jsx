@@ -48,9 +48,14 @@ let socket = null;
 // Use useTradingConfig() hook to access config, updateConfig, resetConfig
 // DEFAULT_CONFIG is now DEFAULT_TRADING_CONFIG from the context
 
-const LiveTradingDashboard = () => {
-  // Get sessionId from URL params
-  const { sessionId: urlSessionId } = useParams();
+const LiveTradingDashboard = ({
+  sessionId: propSessionId,
+  onSessionUpdate,
+  isMultiSessionMode = false,
+}) => {
+  // Get sessionId from props (multi-session mode) or URL params (standalone mode)
+  const { sessionId: urlParamSessionId } = useParams();
+  const urlSessionId = propSessionId || urlParamSessionId;
   const navigate = useNavigate();
 
   // Session state - now driven by URL
@@ -598,6 +603,14 @@ const LiveTradingDashboard = () => {
         if (data.recentDecisions) {
           setDecisions(data.recentDecisions);
         }
+        // Notify parent of session updates (for multi-session tab bar)
+        if (onSessionUpdate) {
+          onSessionUpdate({
+            name: data.name || '',
+            status: data.status,
+            stats: data.stats || {},
+          });
+        }
         // Only load config from server on initial load OR when explicitly requested
         // Never overwrite when user is editing to prevent losing their changes
         // Use ref to get current editing state (avoids closure issues)
@@ -624,8 +637,10 @@ const LiveTradingDashboard = () => {
           `[LiveTrading] Loaded session "${data.name}" (${data.status})`
         );
       } else if (data.status === 'not_found') {
-        // Session doesn't exist, redirect to sessions list
-        navigate('/live-trading');
+        // Session doesn't exist, redirect to sessions list (only in standalone mode)
+        if (!isMultiSessionMode) {
+          navigate('/live-trading');
+        }
       }
     } catch (err) {
       console.error('Failed to fetch session details:', err);
@@ -1029,20 +1044,22 @@ const LiveTradingDashboard = () => {
         }}
       >
         <div>
-          <Link
-            to="/live-trading"
-            style={{
-              color: theme.colors.gray500,
-              fontSize: theme.typography.fontSize.sm,
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginBottom: theme.spacing.xs,
-            }}
-          >
-            ← Back to Sessions
-          </Link>
+          {!isMultiSessionMode && (
+            <Link
+              to="/live-trading"
+              style={{
+                color: theme.colors.gray500,
+                fontSize: theme.typography.fontSize.sm,
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginBottom: theme.spacing.xs,
+              }}
+            >
+              ← Back to Sessions
+            </Link>
+          )}
           <h1 style={{ margin: 0, fontSize: theme.typography.fontSize.xxl }}>
             {sessionName || 'New Session'}
           </h1>

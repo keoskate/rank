@@ -19,9 +19,9 @@ import PortfolioPage from './pages/PortfolioPage';
 import BacktestPage from './pages/BacktestPage';
 import IntradayAnalyzerPage from './pages/IntradayAnalyzerPage';
 import TradingSessionsList from './pages/TradingSessionsList';
-import LiveTradingDashboard from './pages/LiveTradingDashboard';
+import MultiSessionView from './pages/MultiSessionView';
 import TradeImportPage from './pages/TradeImportPage';
-import PerformanceAnalytics from './pages/PerformanceAnalytics';
+// PerformanceAnalytics now embedded in PortfolioPage as Analytics tab
 import ABTestPage from './pages/ABTestPage';
 import WalkForwardPage from './pages/WalkForwardPage';
 import StrategyLabPage from './pages/StrategyLabPage';
@@ -33,6 +33,9 @@ import InvestTab from './pages/InvestTab';
 import PaperTradingPage from './pages/PaperTradingPage';
 import AIResearchPage from './pages/AIResearchPage';
 import DataValidationTest from './DataValidationTest';
+
+// Developer Tools
+import ComponentCatalog from './pages/ComponentCatalog';
 
 function App() {
   return (
@@ -57,10 +60,10 @@ function App() {
                 <Route path="/live-trading" element={<TradingSessionsList />} />
                 <Route
                   path="/live-trading/:sessionId"
-                  element={<LiveTradingDashboard />}
+                  element={<MultiSessionView />}
                 />
                 <Route path="/import-trades" element={<TradeImportPage />} />
-                <Route path="/analytics" element={<PerformanceAnalytics />} />
+                {/* Analytics is now accessible via /portfolio?tab=analytics */}
                 <Route path="/ab-testing" element={<ABTestPage />} />
                 <Route path="/walk-forward" element={<WalkForwardPage />} />
                 <Route path="/strategy-lab" element={<StrategyLabPage />} />
@@ -75,6 +78,9 @@ function App() {
                   path="/test-validation"
                   element={<DataValidationTest />}
                 />
+
+                {/* Developer Tools */}
+                <Route path="/dev/components" element={<ComponentCatalog />} />
               </Routes>
             </ErrorBoundary>
           </div>
