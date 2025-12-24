@@ -18,7 +18,10 @@ const path = require('path');
 
 // Persistent storage paths
 const COOKIE_FILE = path.join(__dirname, '../data/cheddarflow-cookies.json');
-const DATA_CACHE_FILE = path.join(__dirname, '../data/cheddarflow-data-cache.json');
+const DATA_CACHE_FILE = path.join(
+  __dirname,
+  '../data/cheddarflow-data-cache.json'
+);
 
 class CheddarFlowScraper {
   constructor(options = {}) {
@@ -48,7 +51,10 @@ class CheddarFlowScraper {
         const data = fs.readFileSync(COOKIE_FILE, 'utf8');
         const parsed = JSON.parse(data);
         // Check if cookies are less than 7 days old
-        if (parsed.savedAt && Date.now() - parsed.savedAt < 7 * 24 * 60 * 60 * 1000) {
+        if (
+          parsed.savedAt &&
+          Date.now() - parsed.savedAt < 7 * 24 * 60 * 60 * 1000
+        ) {
           console.log('[CheddarFlow] Loaded saved cookies from file');
           return parsed.cookies;
         }
@@ -85,7 +91,13 @@ class CheddarFlowScraper {
     const homeDir = os.homedir();
 
     // macOS Chrome profile path
-    return path.join(homeDir, 'Library', 'Application Support', 'Google', 'Chrome');
+    return path.join(
+      homeDir,
+      'Library',
+      'Application Support',
+      'Google',
+      'Chrome'
+    );
   }
 
   /**
@@ -111,14 +123,17 @@ class CheddarFlowScraper {
 
     // Use existing Chrome profile if specified
     if (useProfile) {
-      const chromePath = profilePath || CheddarFlowScraper.getDefaultChromeProfilePath();
+      const chromePath =
+        profilePath || CheddarFlowScraper.getDefaultChromeProfilePath();
       console.log(`[CheddarFlow] Using Chrome profile at: ${chromePath}`);
       launchOptions.userDataDir = chromePath;
       launchOptions.args.push('--profile-directory=Default');
 
       // Can't run headless with user data dir easily, and need to avoid conflicts
       // with running Chrome instance
-      console.log('[CheddarFlow] Note: Using existing profile. Make sure Chrome is closed.');
+      console.log(
+        '[CheddarFlow] Note: Using existing profile. Make sure Chrome is closed.'
+      );
     }
 
     try {
@@ -147,19 +162,27 @@ class CheddarFlowScraper {
       }
 
       // Handle login if credentials provided (and no cookies)
-      if (this.credentials && this.credentials.email && this.credentials.password) {
-        const loginSuccess = await this.login(this.credentials.email, this.credentials.password);
+      if (
+        this.credentials &&
+        this.credentials.email &&
+        this.credentials.password
+      ) {
+        const loginSuccess = await this.login(
+          this.credentials.email,
+          this.credentials.password
+        );
         if (loginSuccess) {
           // Save cookies for future use
           const newCookies = await this.exportCookies();
           CheddarFlowScraper.saveCookies(newCookies);
         }
       }
-
     } catch (error) {
       console.error('[CheddarFlow] Failed to launch browser:', error.message);
       if (error.message.includes('user data directory is already in use')) {
-        console.error('[CheddarFlow] Please close Chrome browser and try again.');
+        console.error(
+          '[CheddarFlow] Please close Chrome browser and try again.'
+        );
       }
       throw error;
     }
@@ -182,7 +205,10 @@ class CheddarFlowScraper {
       const currentUrl = this.page.url();
       console.log('[CheddarFlow] Current URL:', currentUrl);
 
-      if (!currentUrl.includes('auth.cheddarflow') && !currentUrl.includes('login')) {
+      if (
+        !currentUrl.includes('auth.cheddarflow') &&
+        !currentUrl.includes('login')
+      ) {
         console.log('[CheddarFlow] Already logged in!');
         return true;
       }
@@ -202,7 +228,9 @@ class CheddarFlowScraper {
       let emailInput = null;
       for (const selector of emailSelectors) {
         try {
-          emailInput = await this.page.waitForSelector(selector, { timeout: 5000 });
+          emailInput = await this.page.waitForSelector(selector, {
+            timeout: 5000,
+          });
           if (emailInput) {
             console.log(`[CheddarFlow] Found email input: ${selector}`);
             break;
@@ -234,7 +262,9 @@ class CheddarFlowScraper {
       let passwordInput = null;
       for (const selector of passwordSelectors) {
         try {
-          passwordInput = await this.page.waitForSelector(selector, { timeout: 5000 });
+          passwordInput = await this.page.waitForSelector(selector, {
+            timeout: 5000,
+          });
           if (passwordInput) {
             console.log(`[CheddarFlow] Found password input: ${selector}`);
             break;
@@ -285,13 +315,17 @@ class CheddarFlowScraper {
 
       // Wait for navigation after login
       console.log('[CheddarFlow] Waiting for redirect after login...');
-      await this.page.waitForNavigation({
-        waitUntil: 'networkidle2',
-        timeout: 30000
-      }).catch(() => {
-        // Navigation might not trigger if already on target page
-        console.log('[CheddarFlow] Navigation wait timed out, checking URL...');
-      });
+      await this.page
+        .waitForNavigation({
+          waitUntil: 'networkidle2',
+          timeout: 30000,
+        })
+        .catch(() => {
+          // Navigation might not trigger if already on target page
+          console.log(
+            '[CheddarFlow] Navigation wait timed out, checking URL...'
+          );
+        });
 
       // Give it a moment to settle
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -303,7 +337,9 @@ class CheddarFlowScraper {
       if (finalUrl.includes('auth.cheddarflow') || finalUrl.includes('login')) {
         // Still on login page - check for error messages
         const errorText = await this.page.evaluate(() => {
-          const errorEl = document.querySelector('[class*="error"], [class*="alert"], [role="alert"]');
+          const errorEl = document.querySelector(
+            '[class*="error"], [class*="alert"], [role="alert"]'
+          );
           return errorEl ? errorEl.innerText : null;
         });
 
@@ -315,7 +351,6 @@ class CheddarFlowScraper {
 
       console.log('[CheddarFlow] Login successful!');
       return true;
-
     } catch (error) {
       console.error('[CheddarFlow] Login failed:', error.message);
       return false;
@@ -379,7 +414,11 @@ class CheddarFlowScraper {
     if (memCached) {
       const isFresh = Date.now() - memCached.timestamp < this.cacheTimeout;
       if (isFresh || allowStale) {
-        return { data: memCached.data, isFresh, timestamp: memCached.timestamp };
+        return {
+          data: memCached.data,
+          isFresh,
+          timestamp: memCached.timestamp,
+        };
       }
     }
 
@@ -390,7 +429,11 @@ class CheddarFlowScraper {
       // Also load into memory cache
       this.cache.set(key, diskCache[key]);
       if (isFresh || allowStale) {
-        return { data: diskCache[key].data, isFresh, timestamp: diskCache[key].timestamp };
+        return {
+          data: diskCache[key].data,
+          isFresh,
+          timestamp: diskCache[key].timestamp,
+        };
       }
     }
 
@@ -413,7 +456,9 @@ class CheddarFlowScraper {
     // Keep only last 50 entries to prevent unbounded growth
     const keys = Object.keys(diskCache);
     if (keys.length > 50) {
-      const sortedKeys = keys.sort((a, b) => diskCache[b].timestamp - diskCache[a].timestamp);
+      const sortedKeys = keys.sort(
+        (a, b) => diskCache[b].timestamp - diskCache[a].timestamp
+      );
       const keysToDelete = sortedKeys.slice(50);
       keysToDelete.forEach(k => delete diskCache[k]);
     }
@@ -438,12 +483,25 @@ class CheddarFlowScraper {
     if (!forceRefresh) {
       const cached = this.getCached(cacheKey, allowStale);
       if (cached && cached.isFresh) {
-        console.log(`[CheddarFlow] Using fresh cached data for ${symbol} on ${targetDate}`);
-        return { ...cached.data, fromCache: true, cacheTimestamp: cached.timestamp };
+        console.log(
+          `[CheddarFlow] Using fresh cached data for ${symbol} on ${targetDate}`
+        );
+        return {
+          ...cached.data,
+          fromCache: true,
+          cacheTimestamp: cached.timestamp,
+        };
       }
       if (cached && allowStale) {
-        console.log(`[CheddarFlow] Using stale cached data for ${symbol} on ${targetDate}`);
-        return { ...cached.data, fromCache: true, isStale: true, cacheTimestamp: cached.timestamp };
+        console.log(
+          `[CheddarFlow] Using stale cached data for ${symbol} on ${targetDate}`
+        );
+        return {
+          ...cached.data,
+          fromCache: true,
+          isStale: true,
+          cacheTimestamp: cached.timestamp,
+        };
       }
     }
 
@@ -466,7 +524,10 @@ class CheddarFlowScraper {
 
       // Check if redirected to login page
       const currentUrl = this.page.url();
-      if (currentUrl.includes('login') || currentUrl.includes('auth.cheddarflow')) {
+      if (
+        currentUrl.includes('login') ||
+        currentUrl.includes('auth.cheddarflow')
+      ) {
         console.log('[CheddarFlow] Session expired - redirected to login');
         // Clear invalid cookies
         try {
@@ -510,7 +571,9 @@ class CheddarFlowScraper {
 
         // Flow sentiment (Bullish/Bearish/Neutral)
         if (allText.includes('Flow sentiment')) {
-          const sentimentMatch = allText.match(/Flow sentiment[\s\S]*?(Bullish|Bearish|Neutral)/i);
+          const sentimentMatch = allText.match(
+            /Flow sentiment[\s\S]*?(Bullish|Bearish|Neutral)/i
+          );
           if (sentimentMatch) {
             result.sentimentText = sentimentMatch[1];
           }
@@ -518,7 +581,9 @@ class CheddarFlowScraper {
 
         // Try to extract the sentiment percentage from the progress bar
         // Look for a progress bar or percentage near the sentiment
-        const progressBars = document.querySelectorAll('[role="progressbar"], [class*="progress"], [class*="bar"]');
+        const progressBars = document.querySelectorAll(
+          '[role="progressbar"], [class*="progress"], [class*="bar"]'
+        );
         progressBars.forEach(bar => {
           const width = bar.style?.width;
           if (width && width.includes('%')) {
@@ -547,13 +612,17 @@ class CheddarFlowScraper {
         }
 
         // Look for the circular indicator value (usually shows as 0.xx)
-        const circleValues = allText.match(/Put to call[\s\S]*?([\d.]+)[\s\S]*?([\d.]+)/i);
+        const circleValues = allText.match(
+          /Put to call[\s\S]*?([\d.]+)[\s\S]*?([\d.]+)/i
+        );
         if (circleValues && circleValues[2]) {
           result.putCallRatioDisplay = parseFloat(circleValues[2]);
         }
 
         // Call flow value and dollar amount (e.g., "$549.8M")
-        const callFlowSection = allText.match(/Call flow[\s\S]*?\$([\d.,]+)([KMB])?/i);
+        const callFlowSection = allText.match(
+          /Call flow[\s\S]*?\$([\d.,]+)([KMB])?/i
+        );
         if (callFlowSection) {
           let value = parseFloat(callFlowSection[1].replace(/,/g, ''));
           const multiplier = callFlowSection[2];
@@ -564,7 +633,9 @@ class CheddarFlowScraper {
         }
 
         // Put flow value
-        const putFlowSection = allText.match(/Put flow[\s\S]*?\$([\d.,]+)([KMB])?/i);
+        const putFlowSection = allText.match(
+          /Put flow[\s\S]*?\$([\d.,]+)([KMB])?/i
+        );
         if (putFlowSection) {
           let value = parseFloat(putFlowSection[1].replace(/,/g, ''));
           const multiplier = putFlowSection[2];
@@ -592,9 +663,10 @@ class CheddarFlowScraper {
           }
           // Find contract count - look for numbers with commas that aren't part of dollar amounts
           // Contract counts are typically large numbers (1,000+) shown separately from the $XXX.XK amount
-          const contractMatches = afterCallFlow.match(/\n\s*([\d,]+)\s*\n/g) ||
-                                  afterCallFlow.match(/>([\d,]+)</g) ||
-                                  afterCallFlow.match(/\s([\d,]{4,})\s/g);
+          const contractMatches =
+            afterCallFlow.match(/\n\s*([\d,]+)\s*\n/g) ||
+            afterCallFlow.match(/>([\d,]+)</g) ||
+            afterCallFlow.match(/\s([\d,]{4,})\s/g);
           if (contractMatches) {
             for (const match of contractMatches) {
               const num = parseInt(match.replace(/[^\d]/g, ''));
@@ -607,7 +679,9 @@ class CheddarFlowScraper {
           }
         }
 
-        const putSection = allText.substring(allText.toLowerCase().indexOf('put flow'));
+        const putSection = allText.substring(
+          allText.toLowerCase().indexOf('put flow')
+        );
         if (putSection) {
           // Find percentage
           const pctMatch = putSection.match(/([\d.]+)%/);
@@ -615,9 +689,10 @@ class CheddarFlowScraper {
             result.putFlowPercent = parseFloat(pctMatch[1]);
           }
           // Find contract count
-          const contractMatches = putSection.match(/\n\s*([\d,]+)\s*\n/g) ||
-                                  putSection.match(/>([\d,]+)</g) ||
-                                  putSection.match(/\s([\d,]{4,})\s/g);
+          const contractMatches =
+            putSection.match(/\n\s*([\d,]+)\s*\n/g) ||
+            putSection.match(/>([\d,]+)</g) ||
+            putSection.match(/\s([\d,]{4,})\s/g);
           if (contractMatches) {
             for (const match of contractMatches) {
               const num = parseInt(match.replace(/[^\d]/g, ''));
@@ -661,7 +736,6 @@ class CheddarFlowScraper {
 
       console.log(`[CheddarFlow] Scraped data for ${symbol}:`, flowData);
       return flowData;
-
     } catch (error) {
       console.error(`[CheddarFlow] Error scraping ${symbol}:`, error.message);
       return {
@@ -694,7 +768,8 @@ class CheddarFlowScraper {
       // Wait for content to load
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      const screenshotPath = outputPath || `./data/cheddarflow-${symbol}-${targetDate}.png`;
+      const screenshotPath =
+        outputPath || `./data/cheddarflow-${symbol}-${targetDate}.png`;
       await this.page.screenshot({
         path: screenshotPath,
         fullPage: false,
@@ -702,9 +777,11 @@ class CheddarFlowScraper {
 
       console.log(`[CheddarFlow] Screenshot saved to ${screenshotPath}`);
       return screenshotPath;
-
     } catch (error) {
-      console.error(`[CheddarFlow] Screenshot error for ${symbol}:`, error.message);
+      console.error(
+        `[CheddarFlow] Screenshot error for ${symbol}:`,
+        error.message
+      );
       return null;
     }
   }
@@ -744,19 +821,27 @@ class CheddarFlowScraper {
       if (flowData.putCallRatio < 0.3) {
         if (sentiment !== 'bearish') sentiment = 'bullish';
         confidence += 15;
-        reasons.push(`Very low P/C ratio (${flowData.putCallRatio.toFixed(2)}) = strong bullish`);
+        reasons.push(
+          `Very low P/C ratio (${flowData.putCallRatio.toFixed(2)}) = strong bullish`
+        );
       } else if (flowData.putCallRatio < 0.5) {
         if (sentiment !== 'bearish') sentiment = 'bullish';
         confidence += 10;
-        reasons.push(`Low P/C ratio (${flowData.putCallRatio.toFixed(2)}) = bullish`);
+        reasons.push(
+          `Low P/C ratio (${flowData.putCallRatio.toFixed(2)}) = bullish`
+        );
       } else if (flowData.putCallRatio > 1.5) {
         if (sentiment !== 'bullish') sentiment = 'bearish';
         confidence += 15;
-        reasons.push(`High P/C ratio (${flowData.putCallRatio.toFixed(2)}) = strong bearish`);
+        reasons.push(
+          `High P/C ratio (${flowData.putCallRatio.toFixed(2)}) = strong bearish`
+        );
       } else if (flowData.putCallRatio > 1.0) {
         if (sentiment !== 'bullish') sentiment = 'bearish';
         confidence += 10;
-        reasons.push(`Elevated P/C ratio (${flowData.putCallRatio.toFixed(2)}) = bearish`);
+        reasons.push(
+          `Elevated P/C ratio (${flowData.putCallRatio.toFixed(2)}) = bearish`
+        );
       }
     }
 
