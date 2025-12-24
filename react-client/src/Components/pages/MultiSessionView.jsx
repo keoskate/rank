@@ -280,30 +280,18 @@ const MultiSessionView = () => {
         onOpenSessionPicker={handleOpenPicker}
       />
 
-      {/* Session Content - render all open sessions, hide inactive ones */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {openSessions.map(session => (
-          <div
-            key={session.sessionId}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              overflow: 'auto',
-              display: session.sessionId === activeSessionId ? 'block' : 'none',
-            }}
-          >
-            <LiveTradingDashboard
-              sessionId={session.sessionId}
-              onSessionUpdate={updates =>
-                handleSessionUpdate(session.sessionId, updates)
-              }
-              isMultiSessionMode={true}
-            />
-          </div>
-        ))}
+      {/* Session Content - only render the active session (single mount to avoid shared state issues) */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {activeSessionId && (
+          <LiveTradingDashboard
+            key={activeSessionId}
+            sessionId={activeSessionId}
+            onSessionUpdate={updates =>
+              handleSessionUpdate(activeSessionId, updates)
+            }
+            isMultiSessionMode={true}
+          />
+        )}
       </div>
 
       {/* Session Picker Modal */}
