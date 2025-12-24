@@ -113,7 +113,7 @@ function createLogEntry(level, message, data = {}) {
  * Log trade execution
  */
 function logExecution(action, symbol, data) {
-  const { quantity, price, orderId, sessionName, reason, pnl, pnlPercent } =
+  const { quantity, price, orderId, sessionId, sessionName, reason, pnl, pnlPercent } =
     data;
 
   let message = `${action.toUpperCase()} ${quantity} shares @ $${price?.toFixed(2) || 'market'}`;
@@ -134,6 +134,7 @@ function logExecution(action, symbol, data) {
 
   return createLogEntry('EXEC', message, {
     symbol,
+    sessionId,
     sessionName,
     action,
     quantity,
@@ -155,6 +156,7 @@ function logSignal(type, symbol, data) {
     currentPrice,
     profitTarget,
     stopLoss,
+    sessionId,
     sessionName,
     shouldEnter,
     shouldExit,
@@ -186,6 +188,7 @@ function logSignal(type, symbol, data) {
 
   return createLogEntry('SIGNAL', message, {
     symbol,
+    sessionId,
     sessionName,
     signalType: type,
     confidence,
@@ -202,7 +205,9 @@ function logSignal(type, symbol, data) {
 /**
  * Log indicator state
  */
-function logIndicators(symbol, indicators, sessionName = null) {
+function logIndicators(symbol, indicators, sessionInfo = {}) {
+  const sessionId = typeof sessionInfo === 'string' ? null : sessionInfo.sessionId;
+  const sessionName = typeof sessionInfo === 'string' ? sessionInfo : sessionInfo.sessionName;
   const { rsi, macd, adx, volumeRatio, bbPercentB, vwapPosition } = indicators;
 
   const parts = [];
@@ -222,6 +227,7 @@ function logIndicators(symbol, indicators, sessionName = null) {
 
   return createLogEntry('INDICATOR', message, {
     symbol,
+    sessionId,
     sessionName,
     indicators,
   });
@@ -237,6 +243,7 @@ function logPosition(action, symbol, data) {
     currentPrice,
     unrealizedPnL,
     unrealizedPnLPercent,
+    sessionId,
     sessionName,
     highWaterMark,
   } = data;
@@ -265,6 +272,7 @@ function logPosition(action, symbol, data) {
 
   return createLogEntry('INFO', message, {
     symbol,
+    sessionId,
     sessionName,
     action,
     quantity,
@@ -280,7 +288,7 @@ function logPosition(action, symbol, data) {
  * Log configuration change
  */
 function logConfig(action, data) {
-  const { sessionName, field, oldValue, newValue, config } = data;
+  const { sessionId, sessionName, field, oldValue, newValue, config } = data;
 
   let message = action;
 
@@ -289,6 +297,7 @@ function logConfig(action, data) {
   }
 
   return createLogEntry('CONFIG', message, {
+    sessionId,
     sessionName,
     field,
     oldValue,
@@ -301,7 +310,7 @@ function logConfig(action, data) {
  * Log risk management event
  */
 function logRisk(event, data) {
-  const { sessionName, reason, value, threshold, action } = data;
+  const { sessionId, sessionName, reason, value, threshold, action } = data;
 
   let message = event;
 
@@ -318,6 +327,7 @@ function logRisk(event, data) {
   }
 
   return createLogEntry('RISK', message, {
+    sessionId,
     sessionName,
     event,
     reason,
@@ -331,7 +341,7 @@ function logRisk(event, data) {
  * Log error
  */
 function logError(message, data = {}) {
-  const { sessionName, symbol, error, stack } = data;
+  const { sessionId, sessionName, symbol, error, stack } = data;
 
   let fullMessage = message;
   if (error) {
@@ -339,6 +349,7 @@ function logError(message, data = {}) {
   }
 
   return createLogEntry('ERROR', fullMessage, {
+    sessionId,
     sessionName,
     symbol,
     error,
@@ -375,9 +386,7 @@ function getLogs(options = {}) {
   }
 
   if (sessionId) {
-    filtered = filtered.filter(
-      log => log.sessionId === sessionId || log.sessionName
-    );
+    filtered = filtered.filter(log => log.sessionId === sessionId);
   }
 
   if (symbol) {
@@ -445,6 +454,7 @@ function exportLogs(filename = null) {
  */
 function logTradeOutcome(symbol, data) {
   const {
+    sessionId,
     sessionName,
     entryContext,
     exitReason,
@@ -471,6 +481,7 @@ function logTradeOutcome(symbol, data) {
   // Include full entry context for ML correlation
   return createLogEntry('OUTCOME', message, {
     symbol,
+    sessionId,
     sessionName,
     tradingMode,
     // Trade outcome

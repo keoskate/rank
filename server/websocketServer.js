@@ -259,6 +259,8 @@ function sendAIDecision(userId, decision) {
     indicators: decision.indicators,
     pattern: decision.pattern,
     riskLevel: decision.riskLevel,
+    sessionId: decision.sessionId, // Include sessionId for filtering
+    sessionName: decision.sessionName, // Include sessionName for display
     timestamp: new Date().toISOString(),
   });
 }
@@ -304,6 +306,8 @@ function sendAlert(userId, alert) {
     message: alert.message,
     severity: alert.severity, // 'low', 'medium', 'high', 'critical'
     actionRequired: alert.actionRequired || false,
+    sessionId: alert.sessionId, // Include sessionId for filtering
+    sessionName: alert.sessionName, // Include sessionName for display
     timestamp: new Date().toISOString(),
   });
 }
@@ -328,6 +332,7 @@ function sendTradeExecution(userId, trade) {
     totalValue: trade.totalValue,
     pnl: trade.pnl, // Include profit/loss for sell announcements
     status: trade.status,
+    sessionId: trade.sessionId, // Include sessionId for filtering
     sessionName: trade.sessionName,
     timestamp: new Date().toISOString(),
   });
@@ -341,6 +346,29 @@ function sendTradeExecution(userId, trade) {
 function broadcastToAll(event, data) {
   if (!io) return;
   io.emit(event, { ...data, timestamp: new Date().toISOString() });
+}
+
+/**
+ * Send trading log entry to specific user (for verbose AI thinking display)
+ * @param {string} userId - User ID
+ * @param {object} logEntry - Log entry data
+ */
+function sendTradingLog(userId, logEntry) {
+  if (!io) return;
+
+  const socket = userSockets.get(userId);
+  if (!socket) return;
+
+  socket.emit('trading_log', {
+    level: logEntry.level || 'INFO', // INFO, SIGNAL, INDICATOR, CONFIG, RISK, ERROR, EXEC, OUTCOME
+    category: logEntry.category, // Entry analysis, exit analysis, indicators, etc.
+    symbol: logEntry.symbol,
+    message: logEntry.message,
+    data: logEntry.data, // Additional structured data (indicators, reasons, etc.)
+    sessionId: logEntry.sessionId,
+    sessionName: logEntry.sessionName,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 /**
@@ -415,6 +443,7 @@ module.exports = {
   sendPositionUpdate,
   sendAlert,
   sendTradeExecution,
+  sendTradingLog,
   broadcastToAll,
   sendDailySummary,
   getSessionStatus,

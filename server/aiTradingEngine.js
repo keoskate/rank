@@ -43,6 +43,21 @@ const tradeCooldowns = new Map();
 // Cooldown period in minutes - must wait this long after selling before buying same symbol again
 const TRADE_COOLDOWN_MINUTES = 15;
 
+// Error throttling - prevents spam logging of repeated errors
+// Map structure: errorKey -> { lastLogged: timestamp, count: number }
+const errorThrottle = new Map();
+const ERROR_THROTTLE_MINUTES = 5; // Only log same error once per 5 minutes
+
+// PDT (Pattern Day Trader) state cache
+// Cached account info to avoid API spam when checking PDT limits
+let pdtStateCache = {
+  daytradeCount: 0,
+  daytradingBuyingPower: 0,
+  isPDT: false,
+  lastChecked: null,
+  cacheValidMinutes: 1, // Re-check every minute
+};
+
 // Entry context tracking for ML learning - stores entry conditions to correlate with outcomes
 // Map structure: sessionId -> Map(symbol -> entryContext)
 // This enables ML models to learn which entry conditions lead to successful trades
@@ -52,6 +67,32 @@ const entryContexts = new Map();
 // Bullish ETFs profit in up markets, Bearish ETFs profit in down markets
 const BULLISH_ETFS = ['SOXL', 'QBTX', 'PLTU', 'TQQQ', 'SPXL', 'UPRO', 'TECL', 'FNGU'];
 const BEARISH_ETFS = ['SOXS', 'QBTZ', 'SQQQ', 'SPXS', 'TECS', 'FNGD'];
+
+/**
+ * Detect asset type from watchlist symbols
+ * If any symbol in the watchlist is a crypto symbol, return 'crypto'
+ * @param {Array<string>} watchlist - List of symbols
+ * @returns {string} 'crypto' or 'stocks'
+ */
+function detectAssetTypeFromWatchlist(watchlist) {
+  if (!watchlist || watchlist.length === 0) {
+    return assetUtils.ASSET_TYPES.STOCKS;
+  }
+
+  // Check if any symbol is a crypto symbol
+  for (const symbol of watchlist) {
+    const upperSymbol = symbol.toUpperCase();
+    if (
+      assetUtils.CRYPTO_BASE_TO_PAIR[upperSymbol] ||
+      upperSymbol.includes('/USD') ||
+      upperSymbol.startsWith('X:')
+    ) {
+      return assetUtils.ASSET_TYPES.CRYPTO;
+    }
+  }
+
+  return assetUtils.ASSET_TYPES.STOCKS;
+}
 
 /**
  * Determine ETF type for regime-aware trading
@@ -88,6 +129,146 @@ function isRegimeAligned(etfType, marketRegime) {
   if (etfType === 'bearish' && marketRegime === 'bear') return true;
   if (etfType === 'neutral') return true;
   return false;
+}
+
+/**
+ * Check if an error should be throttled (not logged again within window)
+ * @param {string} sessionId - Session ID
+ * @param {string} errorMessage - Error message to check
+ * @returns {boolean} True if error should be throttled (not logged)
+ */
+function shouldThrottleError(sessionId, errorMessage) {
+  const errorKey = `${sessionId}:${errorMessage}`;
+  const now = Date.now();
+  const throttleMs = ERROR_THROTTLE_MINUTES * 60 * 1000;
+
+  const existing = errorThrottle.get(errorKey);
+  if (existing) {
+    if (now - existing.lastLogged < throttleMs) {
+      existing.count++;
+      return true; // Throttle - don't log again yet
+    }
+    // Window expired, reset
+    existing.lastLogged = now;
+    const suppressedCount = existing.count;
+    existing.count = 0;
+    if (suppressedCount > 0) {
+      console.log(
+        `[AI Engine] (${suppressedCount} similar errors suppressed in last ${ERROR_THROTTLE_MINUTES}m)`
+      );
+    }
+    return false;
+  }
+
+  // First occurrence
+  errorThrottle.set(errorKey, { lastLogged: now, count: 0 });
+  return false;
+}
+
+/**
+ * Update PDT state cache from Alpaca account info
+ * @param {string} tradingMode - 'live' or 'paper'
+ * @returns {Promise<object>} PDT state info
+ */
+async function updatePDTStateCache(tradingMode) {
+  const now = Date.now();
+  const cacheValidMs = pdtStateCache.cacheValidMinutes * 60 * 1000;
+
+  // Return cached if still valid
+  if (pdtStateCache.lastChecked && now - pdtStateCache.lastChecked < cacheValidMs) {
+    return pdtStateCache;
+  }
+
+  try {
+    const account = await alpacaClient.getAccount(tradingMode);
+    pdtStateCache = {
+      daytradeCount: parseInt(account.daytrade_count || 0, 10),
+      daytradingBuyingPower: parseFloat(account.daytrading_buying_power || 0),
+      equity: parseFloat(account.equity || 0),
+      isPDT: account.pattern_day_trader === true,
+      lastChecked: now,
+      cacheValidMinutes: 1,
+    };
+
+    // Non-PDT accounts under $25k with 3+ day trades are blocked
+    pdtStateCache.atPDTLimit =
+      !pdtStateCache.isPDT &&
+      pdtStateCache.equity < 25000 &&
+      pdtStateCache.daytradeCount >= 3;
+
+    return pdtStateCache;
+  } catch (err) {
+    console.error('[AI Engine] Failed to check PDT status:', err.message);
+    return pdtStateCache; // Return stale cache on error
+  }
+}
+
+/**
+ * Check if a new day trade is allowed based on PDT rules
+ * @param {string} tradingMode - 'live' or 'paper'
+ * @param {object} sessionConfig - Session config with pdtProtection setting
+ * @returns {Promise<{allowed: boolean, reason: string|null}>}
+ */
+async function canExecuteDayTrade(tradingMode, sessionConfig) {
+  // Paper trading has no PDT restrictions
+  if (tradingMode === 'paper') {
+    return { allowed: true, reason: null };
+  }
+
+  // If PDT protection is disabled in config, allow all trades
+  if (sessionConfig?.pdtProtection === false) {
+    return { allowed: true, reason: null };
+  }
+
+  const pdtState = await updatePDTStateCache(tradingMode);
+
+  // PDT-flagged accounts have unlimited day trades
+  if (pdtState.isPDT) {
+    return { allowed: true, reason: null };
+  }
+
+  // Non-PDT under $25k with 3+ day trades - blocked
+  if (pdtState.atPDTLimit) {
+    return {
+      allowed: false,
+      reason: `PDT limit reached (${pdtState.daytradeCount}/3 day trades, $${pdtState.equity.toFixed(0)} equity)`,
+    };
+  }
+
+  // Check day trading buying power
+  if (pdtState.daytradingBuyingPower <= 0) {
+    return {
+      allowed: false,
+      reason: `No day trading buying power ($0)`,
+    };
+  }
+
+  return { allowed: true, reason: null };
+}
+
+/**
+ * Clear stale position state when Alpaca confirms position doesn't exist
+ * @param {string} sessionId - Session ID
+ * @param {string} symbol - Symbol to clear
+ */
+function clearStalePositionState(sessionId, symbol) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+
+  const hadPosition = session.portfolio.positions.has(symbol);
+  if (hadPosition) {
+    session.portfolio.positions.delete(symbol);
+    saveSessions();
+    console.log(
+      `[AI Engine] Cleared stale position state for ${symbol} in session "${session.name}"`
+    );
+
+    // Also clear entry context
+    const sessionContexts = entryContexts.get(sessionId);
+    if (sessionContexts) {
+      sessionContexts.delete(symbol);
+    }
+  }
 }
 
 /**
@@ -331,6 +512,7 @@ function startSession(userId, config = {}) {
     },
     decisions: [],
     alerts: [],
+    tradingLog: [], // Persistent trade history for session
     circuitBreakerTriggered: false,
   };
 
@@ -344,6 +526,7 @@ function startSession(userId, config = {}) {
 
   // Log session start with config summary
   tradingLogger.logConfig('Session started', {
+    sessionId,
     sessionName: sessionConfig.name,
     config: {
       watchlist:
@@ -509,6 +692,7 @@ async function deleteSession(sessionId, options = {}) {
             quantity: position.quantity,
             price: position.currentPrice,
             orderId: order.id,
+            sessionId,
             sessionName,
             reason: 'Session deleted - panic sell',
             pnl: position.unrealizedPnL,
@@ -643,6 +827,7 @@ async function panicSell(sessionId) {
             quantity: position.quantity,
             price: position.currentPrice,
             orderId: order.id,
+            sessionId,
             sessionName,
             reason: 'Manual panic sell',
             pnl: position.unrealizedPnL,
@@ -739,6 +924,7 @@ function cloneSession(sessionId, options = {}) {
     },
     decisions: [],
     alerts: [],
+    tradingLog: [], // Persistent trade history for session
     circuitBreakerTriggered: false,
     clonedFrom: sessionId, // Track lineage
   };
@@ -850,8 +1036,63 @@ function getSession(sessionId) {
     positions: Array.from(session.portfolio.positions.values()),
     recentDecisions: session.decisions.slice(-50),
     circuitBreakerTriggered: session.circuitBreakerTriggered,
-    alerts: session.alerts.slice(-10),
+    alerts: (session.alerts || []).slice(-100), // Return last 100 alerts
+    tradingLog: (session.tradingLog || []).slice(-100), // Return last 100 trades
   };
+}
+
+/**
+ * Add an alert to a session's persistent alerts array
+ * @param {string} sessionId - Session identifier
+ * @param {object} alert - Alert object { type, title, message, timestamp }
+ */
+function addSessionAlert(sessionId, alert) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+
+  // Ensure alerts array exists
+  if (!session.alerts) session.alerts = [];
+
+  // Add alert with timestamp if not provided
+  session.alerts.push({
+    ...alert,
+    timestamp: alert.timestamp || new Date().toISOString(),
+  });
+
+  // Keep only last 100 alerts to prevent unbounded growth
+  if (session.alerts.length > 100) {
+    session.alerts = session.alerts.slice(-100);
+  }
+
+  // Save session state
+  saveSessions();
+}
+
+/**
+ * Add a trade to a session's persistent trading log
+ * @param {string} sessionId - Session identifier
+ * @param {object} trade - Trade object { symbol, side, quantity, price, pnl, timestamp }
+ */
+function addSessionTrade(sessionId, trade) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+
+  // Ensure tradingLog array exists
+  if (!session.tradingLog) session.tradingLog = [];
+
+  // Add trade with timestamp if not provided
+  session.tradingLog.push({
+    ...trade,
+    timestamp: trade.timestamp || new Date().toISOString(),
+  });
+
+  // Keep only last 100 trades to prevent unbounded growth
+  if (session.tradingLog.length > 100) {
+    session.tradingLog = session.tradingLog.slice(-100);
+  }
+
+  // Save session state
+  saveSessions();
 }
 
 /**
@@ -872,8 +1113,8 @@ async function startTradingLoop(sessionId) {
     );
   }
 
-  // Trading interval (check every 30 seconds)
-  console.log(`[AI Engine] Trading loop started for "${session.name}"`);
+  // Trading interval (check every 10 seconds for faster entry/exit)
+  console.log(`[AI Engine] Trading loop started for "${session.name}" (10s interval)`);
   const interval = setInterval(async () => {
     const currentSession = sessions.get(sessionId);
 
@@ -883,7 +1124,10 @@ async function startTradingLoop(sessionId) {
     }
 
     // Check if market is open (skip for crypto - trades 24/7)
-    const sessionAssetType = currentSession.config?.assetType;
+    // Auto-detect asset type from watchlist if not explicitly set
+    const sessionAssetType = currentSession.config?.assetType ||
+      detectAssetTypeFromWatchlist(currentSession.config?.watchlist || []);
+
     if (assetUtils.marketHoursApply(sessionAssetType) && !isMarketOpen()) {
       // Send status update (only once per hour to avoid spam)
       websocketServer.sendAlert(currentSession.userId, {
@@ -912,7 +1156,7 @@ async function startTradingLoop(sessionId) {
         severity: 'high',
       });
     }
-  }, 30000); // 30-second intervals
+  }, 10000); // 10-second intervals for faster responsiveness
 
   // Store interval reference for cleanup
   session.intervalId = interval;
@@ -1038,8 +1282,23 @@ async function analyzeAndTrade(sessionId) {
 
   // Then, look for entry opportunities if we have capacity
   if (currentPositions.length < maxPositions) {
+    // For crypto sessions, normalize position symbols for comparison
+    // Alpaca returns positions like "BTCUSD" but watchlist may have "BTC"
+    const sessionAssetType = session.config.assetType || 'stocks';
+    const normalizedPositions = assetUtils.isCrypto(sessionAssetType)
+      ? currentPositions.map(pos => assetUtils.getBaseSymbol(pos))
+      : currentPositions;
+
     for (const symbol of watchlist) {
-      if (currentPositions.includes(symbol)) continue;
+      // For crypto, compare base symbols (BTC vs BTC, not BTC vs BTCUSD)
+      const watchlistBase = assetUtils.isCrypto(sessionAssetType)
+        ? assetUtils.getBaseSymbol(symbol)
+        : symbol;
+
+      if (normalizedPositions.includes(watchlistBase)) {
+        // Already own this asset
+        continue;
+      }
 
       const entryDecision = await evaluateEntry(sessionId, symbol);
       if (
@@ -1146,13 +1405,29 @@ async function evaluateEntry(sessionId, symbol) {
     // Strategy-specific signal checks (matching TradingSimulator)
     let strategyMatch = false;
 
+    // Debug logging for every evaluation (helps diagnose why entries aren't triggering)
+    console.log(
+      `[AI Engine] ${symbol}: Evaluating entry - RSI=${indicators.rsi.value.toFixed(1)}, ` +
+      `VWAP=${vwapValue ? vwapValue.toFixed(2) : 'N/A'} (price ${priceVsVwap > 0 ? 'above' : 'below'} by ${Math.abs(priceVsVwap).toFixed(2)}%), ` +
+      `Vol=${volumeRatio.toFixed(2)}x, Trend=${indicators.trend?.shortTerm || 'unknown'}, ` +
+      `MACD=${indicators.macd.bullish ? 'bullish' : 'bearish'}${indicators.macd.crossover ? ' (crossover)' : ''}, ` +
+      `Strategy=${entryStrategy}`
+    );
+
     if (entryStrategy === 'dip' || entryStrategy === 'conservative') {
-      // Buy the dip: RSI oversold + below VWAP
-      if (indicators.rsi.value < rsiOversold && belowVwap) {
+      // Buy the dip: RSI below threshold + below VWAP
+      // For "dip" strategy, use rsiOversold + 15 (e.g., 30 + 15 = 45) for reasonable entries
+      // For "conservative" strategy, use strict rsiOversold threshold
+      const dipThreshold = entryStrategy === 'dip'
+        ? (rsiOversold || 30) + 15  // More lenient: RSI < 45
+        : rsiOversold;              // Strict: RSI < 30
+
+      if (indicators.rsi.value < dipThreshold && belowVwap) {
         strategyMatch = true;
         signalCount++;
+        signalCount++; // Two signals for meeting both conditions
         factors.push(
-          `RSI oversold (${indicators.rsi.value.toFixed(1)}) + below VWAP`
+          `RSI dip (${indicators.rsi.value.toFixed(1)}) + below VWAP`
         );
       }
     }
@@ -1183,6 +1458,20 @@ async function evaluateEntry(sessionId, symbol) {
           `RSI dip (${indicators.rsi.value.toFixed(1)}) + below VWAP`
         );
       }
+
+      // NEW: Momentum bounce - RSI rising from oversold with bullish MACD
+      // This captures the "RSI spike" scenario the user described
+      if (indicators.rsi.value > rsiOversold &&
+          indicators.rsi.value < 55 &&
+          (indicators.macd.bullish || indicators.macd.crossover)) {
+        strategyMatch = true;
+        signalCount++;
+        signalCount++;
+        factors.push(
+          `RSI momentum (${indicators.rsi.value.toFixed(1)}) + bullish MACD`
+        );
+      }
+
       // Balanced also gets signal for moderate RSI (not overbought) - matching backtester
       if (indicators.rsi.value < 60) {
         signalCount++;
@@ -1315,9 +1604,41 @@ async function evaluateEntry(sessionId, symbol) {
       logDecision(sessionId, decision);
     }
 
+    // ALWAYS send verbose trading log to frontend (regardless of shouldEnter)
+    // This gives visibility into what the AI is "thinking"
+    // Broadcast to all connected clients so the Trading Log panel can display it
+    websocketServer.broadcastToAll('trading_log', {
+      id: `${Date.now()}-${symbol}-${Math.random().toString(36).substr(2, 9)}`,
+      level: shouldEnter ? 'SIGNAL' : 'INFO',
+      category: 'ENTRY_ANALYSIS',
+      symbol,
+      message: shouldEnter
+        ? `BUY signal: ${confidence}% confidence, ${signalCount} signals`
+        : `Watching: RSI=${indicators.rsi.value.toFixed(1)}, signals=${signalCount}/${cfg.minSignalCount || 3}, conf=${confidence}%`,
+      sessionId: session.sessionId,
+      sessionName: session.name,
+      data: {
+        shouldEnter,
+        confidence,
+        signalCount,
+        minSignalCount: cfg.minSignalCount || 3,
+        price: currentPrice,
+        indicators: {
+          rsi: indicators.rsi.value.toFixed(1),
+          macd: indicators.macd.histogram.toFixed(3),
+          bbPercentB: (indicators.bollingerBands.percentB * 100).toFixed(1),
+          adx: indicators.adx.value.toFixed(1),
+          volumeRatio: indicators.volume.ratio.toFixed(2),
+        },
+        reasons: factors,
+        regime: marketRegime,
+      },
+    });
+
     // Log to trading logger
     if (shouldEnter) {
       tradingLogger.logSignal('ENTRY', symbol, {
+        sessionId,
         sessionName: session.name,
         confidence,
         reasons: factors,
@@ -1337,7 +1658,7 @@ async function evaluateEntry(sessionId, symbol) {
           volumeRatio: indicators.volume.ratio,
           bbPercentB: indicators.bollingerBands.percentB,
         },
-        session.name
+        { sessionId, sessionName: session.name }
       );
     }
 
@@ -1353,6 +1674,7 @@ async function evaluateEntry(sessionId, symbol) {
   } catch (error) {
     console.error(`[AI Engine] Error evaluating entry for ${symbol}:`, error);
     tradingLogger.logError(`Entry evaluation failed for ${symbol}`, {
+      sessionId,
       sessionName: session?.name,
       symbol,
       error: error.message,
@@ -1600,6 +1922,7 @@ async function evaluateExit(sessionId, symbol) {
     // Log to trading logger
     if (shouldExit) {
       tradingLogger.logSignal('EXIT', symbol, {
+        sessionId,
         sessionName: session.name,
         exitScore,
         reasons: factors,
@@ -1616,10 +1939,27 @@ async function evaluateExit(sessionId, symbol) {
       });
     }
 
+    // ALWAYS log exit evaluation to trading log (verbose mode)
+    // This helps debug why positions aren't selling
+    const pnlSign = pnlPercent >= 0 ? '+' : '';
+    const exitStatus = shouldExit ? 'WILL SELL' : 'HOLDING';
+    const thresholdNote = `score ${exitScore}/50`;
+
+    websocketServer.broadcastToAll('trading_log', {
+      id: `${Date.now()}-exit-${symbol}-${Math.random().toString(36).substr(2, 9)}`,
+      level: shouldExit ? 'SIGNAL' : 'INFO',
+      symbol,
+      sessionId,
+      sessionName: session.name,
+      message: `EXIT EVAL: ${exitStatus} | P/L: ${pnlSign}${pnlPercent?.toFixed(2)}% | ${thresholdNote} | TP:${takeProfitPercent}% SL:${stopLossPercent}%${factors.length > 0 ? ' | ' + factors.slice(0, 2).join(', ') : ''}`,
+      timestamp: new Date().toISOString(),
+    });
+
     return decision;
   } catch (error) {
     console.error(`[AI Engine] Error evaluating exit for ${symbol}:`, error);
     tradingLogger.logError(`Exit evaluation failed for ${symbol}`, {
+      sessionId,
       sessionName: session?.name,
       symbol,
       error: error.message,
@@ -1665,6 +2005,7 @@ async function executeEntry(sessionId, symbol, decision) {
         // If we can't day trade, log risk warning and either block or proceed with caution
         if (!pdtStatus.canDayTrade) {
           tradingLogger.logRisk('PDT LIMIT REACHED', {
+            sessionId,
             sessionName: session.name,
             reason: `Day trade limit reached (${pdtStatus.daytradeCount}/${pdtStatus.daytradeLimit})`,
             value: pdtStatus.daytradeCount,
@@ -1692,6 +2033,7 @@ async function executeEntry(sessionId, symbol, decision) {
         // Warn if we're getting close to PDT limit
         if (pdtStatus.pdtWarning) {
           tradingLogger.logRisk('PDT WARNING', {
+            sessionId,
             sessionName: session.name,
             reason: `Low day trades remaining (${pdtStatus.daytradesRemaining} left)`,
             value: pdtStatus.daytradeCount,
@@ -1750,6 +2092,7 @@ async function executeEntry(sessionId, symbol, decision) {
     // Position size based on ATR/risk (with fallback if stopLoss not set)
     let quantity;
     const currentPrice = parseFloat(decision.currentPrice);
+    const isCrypto = assetUtils.isCrypto(assetType);
 
     if (!currentPrice || currentPrice <= 0) {
       console.log(
@@ -1765,26 +2108,54 @@ async function executeEntry(sessionId, symbol, decision) {
     ) {
       // Risk-based position sizing
       const riskPerShare = currentPrice - decision.stopLoss;
-      const sharesFromRisk = Math.floor(riskAmount / riskPerShare);
-      const sharesFromMaxSize = Math.floor(maxPositionValue / currentPrice);
-      quantity = Math.min(sharesFromRisk, sharesFromMaxSize);
+      if (isCrypto) {
+        // Crypto supports fractional shares - use precise calculation
+        const sharesFromRisk = riskAmount / riskPerShare;
+        const sharesFromMaxSize = maxPositionValue / currentPrice;
+        quantity = Math.min(sharesFromRisk, sharesFromMaxSize);
+      } else {
+        const sharesFromRisk = Math.floor(riskAmount / riskPerShare);
+        const sharesFromMaxSize = Math.floor(maxPositionValue / currentPrice);
+        quantity = Math.min(sharesFromRisk, sharesFromMaxSize);
+      }
     } else {
       // Fallback: simple max position size based sizing
-      quantity = Math.floor(maxPositionValue / currentPrice);
+      if (isCrypto) {
+        // Crypto supports fractional shares
+        quantity = maxPositionValue / currentPrice;
+      } else {
+        quantity = Math.floor(maxPositionValue / currentPrice);
+      }
     }
 
-    // Ensure minimum of 1 share, maximum reasonable amount
-    quantity = Math.max(1, Math.min(quantity, 1000));
+    // For crypto, allow fractional quantities (round to 8 decimal places for precision)
+    // For stocks, ensure minimum of 1 share, maximum reasonable amount
+    if (isCrypto) {
+      // Round to 8 decimal places (standard for crypto)
+      quantity = Math.round(quantity * 100000000) / 100000000;
+      // Ensure we have at least $10 worth of the asset (Alpaca minimum)
+      const minQuantity = 10 / currentPrice;
+      if (quantity < minQuantity) {
+        console.log(
+          `[AI Engine] Position too small for ${symbol}: $${(quantity * currentPrice).toFixed(2)} (min $10)`
+        );
+        return;
+      }
+    } else {
+      quantity = Math.max(1, Math.min(quantity, 1000));
+    }
 
-    if (quantity < 1 || isNaN(quantity)) {
+    if (quantity <= 0 || isNaN(quantity)) {
       console.log(
         `[AI Engine] Invalid position size for ${symbol}: ${quantity}`
       );
       return;
     }
 
+    // Format quantity for logging (crypto shows decimals, stocks show whole numbers)
+    const qtyDisplay = isCrypto ? quantity.toFixed(6) : quantity;
     console.log(
-      `[AI Engine] Calculated position: ${quantity} shares of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)}, mode: ${tradingMode.toUpperCase()})`
+      `[AI Engine] Calculated position: ${qtyDisplay} ${isCrypto ? 'units' : 'shares'} of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)}, mode: ${tradingMode.toUpperCase()})`
     );
 
     // Place order via Alpaca with session-specific trading mode
@@ -1805,11 +2176,32 @@ async function executeEntry(sessionId, symbol, decision) {
       `[AI Engine] Entry order placed: ${quantity} ${symbol} @ market (${tradingMode.toUpperCase()})`
     );
 
-    // Log execution to trading logger
+    // Poll for actual fill price (market orders fill quickly)
+    let filledPrice = decision.currentPrice; // fallback to signal price
+    let filledOrder = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // wait 500ms
+      try {
+        filledOrder = await alpacaClient.getOrderById(order.id, tradingMode);
+        if (filledOrder.status === 'filled' && filledOrder.filledAvgPrice) {
+          filledPrice = filledOrder.filledAvgPrice;
+          console.log(
+            `[AI Engine] Order filled: ${quantity} ${symbol} @ $${filledPrice.toFixed(2)} (signal was $${decision.currentPrice.toFixed(2)})`
+          );
+          break;
+        }
+      } catch (err) {
+        // Order might not be ready yet, continue polling
+      }
+    }
+
+    // Log execution to trading logger with actual fill price
     tradingLogger.logExecution('BUY', symbol, {
       quantity,
-      price: decision.currentPrice,
+      price: filledPrice,
+      signalPrice: decision.currentPrice,
       orderId: order.id,
+      sessionId,
       sessionName: session.name,
       reason: decision.reasons?.slice(0, 2).join(', '),
     });
@@ -1820,7 +2212,8 @@ async function executeEntry(sessionId, symbol, decision) {
     }
     entryContexts.get(sessionId).set(symbol, {
       entryTime: new Date().toISOString(),
-      entryPrice: decision.currentPrice,
+      entryPrice: filledPrice, // Use actual fill price
+      signalPrice: decision.currentPrice,
       quantity,
       confidence: decision.confidence,
       reasons: decision.reasons || [],
@@ -1831,16 +2224,31 @@ async function executeEntry(sessionId, symbol, decision) {
       tradingMode,
     });
 
-    // Send notification
+    // Send notification with actual fill price
     websocketServer.sendTradeExecution(session.userId, {
       tradeId: order.id,
       symbol,
       side: 'buy',
       quantity,
-      price: decision.currentPrice,
-      totalValue: quantity * decision.currentPrice,
-      status: 'submitted',
+      price: filledPrice,
+      totalValue: quantity * filledPrice,
+      status: filledOrder?.status === 'filled' ? 'filled' : 'submitted',
       sessionName: session.name,
+      sessionId: session.sessionId,
+    });
+
+    // Store alert and trade in session for persistence with actual fill price
+    addSessionAlert(session.sessionId, {
+      type: 'success',
+      title: 'Trade BUY',
+      message: `${quantity} ${symbol} @ $${filledPrice.toFixed(2)}`,
+    });
+    addSessionTrade(session.sessionId, {
+      symbol,
+      side: 'buy',
+      quantity,
+      price: filledPrice,
+      totalValue: quantity * filledPrice,
     });
 
     // Update stats
@@ -1849,18 +2257,48 @@ async function executeEntry(sessionId, symbol, decision) {
     // Sync portfolio after trade
     setTimeout(() => syncPortfolio(sessionId), 2000);
   } catch (error) {
-    console.error(`[AI Engine] Failed to execute entry for ${symbol}:`, error);
-    tradingLogger.logError(`BUY order failed for ${symbol}`, {
-      sessionName: session.name,
-      symbol,
-      error: error.message,
-    });
-    websocketServer.sendAlert(session.userId, {
-      type: 'error',
-      title: 'Order Failed',
-      message: `[${session.name}] Failed to buy ${symbol}: ${error.message}`,
-      severity: 'high',
-    });
+    const errorMsg = error.message || '';
+
+    // Identify PDT/buying power errors for throttling
+    const isPDTError = errorMsg.includes('day trading') ||
+                       errorMsg.includes('buying power') ||
+                       errorMsg.includes('insufficient');
+
+    // Throttle repeated PDT errors to avoid log spam
+    if (isPDTError) {
+      if (!shouldThrottleError(sessionId, `pdt_error_${symbol}`)) {
+        console.error(`[AI Engine] PDT/Buying power issue for ${symbol}:`, errorMsg);
+        tradingLogger.logError(`BUY order blocked (PDT) for ${symbol}`, {
+          sessionId,
+          sessionName: session.name,
+          symbol,
+          error: errorMsg,
+        });
+        websocketServer.sendAlert(session.userId, {
+          type: 'warning',
+          title: 'PDT Limit',
+          message: `[${session.name}] Cannot buy ${symbol}: ${errorMsg}`,
+          severity: 'medium',
+        });
+      }
+    } else {
+      // Non-PDT errors always log (but still throttle if repeated)
+      if (!shouldThrottleError(sessionId, errorMsg)) {
+        console.error(`[AI Engine] Failed to execute entry for ${symbol}:`, error);
+        tradingLogger.logError(`BUY order failed for ${symbol}`, {
+          sessionId,
+          sessionName: session.name,
+          symbol,
+          error: errorMsg,
+        });
+        websocketServer.sendAlert(session.userId, {
+          type: 'error',
+          title: 'Order Failed',
+          message: `[${session.name}] Failed to buy ${symbol}: ${errorMsg}`,
+          severity: 'high',
+        });
+      }
+    }
   }
 }
 
@@ -1906,10 +2344,22 @@ async function executeExit(sessionId, symbol, decision) {
         quantity =
           parseFloat(alpacaPosition.qty) || parseFloat(alpacaPosition.quantity);
       } catch (e) {
-        console.error(
-          `[AI Engine] Could not get position for ${normalizedSymbol} (${tradingMode}):`,
-          e.message
-        );
+        // Check if this is a "position not found" error - means local state is stale
+        const errorMsg = e.message || '';
+        if (errorMsg.includes('position') && errorMsg.includes('not found')) {
+          // Clear stale position state to prevent repeated errors
+          clearStalePositionState(sessionId, symbol);
+          if (!shouldThrottleError(sessionId, `no_position_${symbol}`)) {
+            console.log(
+              `[AI Engine] Position ${symbol} not found in Alpaca - cleared stale local state`
+            );
+          }
+        } else if (!shouldThrottleError(sessionId, errorMsg)) {
+          console.error(
+            `[AI Engine] Could not get position for ${normalizedSymbol} (${tradingMode}):`,
+            e.message
+          );
+        }
         return;
       }
     }
@@ -1926,6 +2376,27 @@ async function executeExit(sessionId, symbol, decision) {
       `[AI Engine] Exit order placed for ${symbol} (${quantity} shares, ${tradingMode.toUpperCase()})`
     );
 
+    // Poll for actual fill price (market orders fill quickly)
+    let filledPrice = decision.currentPrice; // fallback to signal price
+    let filledOrder = null;
+    if (result.id) {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 500)); // wait 500ms
+        try {
+          filledOrder = await alpacaClient.getOrderById(result.id, tradingMode);
+          if (filledOrder.status === 'filled' && filledOrder.filledAvgPrice) {
+            filledPrice = filledOrder.filledAvgPrice;
+            console.log(
+              `[AI Engine] Exit filled: ${quantity} ${symbol} @ $${filledPrice.toFixed(2)} (signal was $${decision.currentPrice.toFixed(2)})`
+            );
+            break;
+          }
+        } catch (err) {
+          // Order might not be ready yet, continue polling
+        }
+      }
+    }
+
     // Set cooldown for this symbol to prevent rapid re-entry
     if (!tradeCooldowns.has(sessionId)) {
       tradeCooldowns.set(sessionId, new Map());
@@ -1935,27 +2406,32 @@ async function executeExit(sessionId, symbol, decision) {
       `[AI Engine] ${symbol}: Cooldown started (${TRADE_COOLDOWN_MINUTES} min)`
     );
 
-    // Update stats
-    const pnl = decision.pnl || 0;
+    // Recalculate P&L with actual fill price
+    const entryContext = entryContexts.get(sessionId)?.get(symbol) || null;
+    const entryPrice = entryContext?.entryPrice || decision.entryPrice || 0;
+    const actualPnl = entryPrice > 0 ? (filledPrice - entryPrice) * quantity : (decision.pnl || 0);
+    const pnl = actualPnl;
 
-    // Log execution to trading logger
+    // Log execution to trading logger with actual fill price
     tradingLogger.logExecution('SELL', symbol, {
       quantity,
-      price: decision.currentPrice,
+      price: filledPrice,
+      signalPrice: decision.currentPrice,
       orderId: result.id,
+      sessionId,
       sessionName: session.name,
       reason: decision.exitReason,
       pnl,
-      pnlPercent: decision.pnlPercent,
+      pnlPercent: entryPrice > 0 ? ((filledPrice - entryPrice) / entryPrice * 100) : decision.pnlPercent,
     });
 
     // Log complete trade outcome for ML learning
-    const entryContext = entryContexts.get(sessionId)?.get(symbol) || null;
     const holdingPeriodMinutes = entryContext?.entryTime
       ? differenceInMinutes(new Date(), parseISO(entryContext.entryTime))
       : null;
 
     tradingLogger.logTradeOutcome(symbol, {
+      sessionId,
       sessionName: session.name,
       entryContext,
       exitReason: decision.exitReason,
@@ -1996,17 +2472,34 @@ async function executeExit(sessionId, symbol, decision) {
       triggerCircuitBreaker(sessionId, 'Daily loss limit reached');
     }
 
-    // Send notification
+    // Send notification with actual fill price
     websocketServer.sendTradeExecution(session.userId, {
       tradeId: result.id || uuidv4(),
       symbol,
       side: 'sell',
       quantity: quantity,
-      price: decision.currentPrice,
-      totalValue: quantity * decision.currentPrice,
+      price: filledPrice,
+      totalValue: quantity * filledPrice,
       pnl: pnl,
-      status: 'submitted',
+      status: filledOrder?.status === 'filled' ? 'filled' : 'submitted',
       sessionName: session.name,
+      sessionId: session.sessionId,
+    });
+
+    // Store alert and trade in session for persistence with actual fill price
+    const pnlSign = pnl >= 0 ? '+' : '';
+    addSessionAlert(session.sessionId, {
+      type: 'success',
+      title: 'Trade SELL',
+      message: `${quantity} ${symbol} @ $${filledPrice.toFixed(2)} (${pnlSign}$${pnl.toFixed(2)})`,
+    });
+    addSessionTrade(session.sessionId, {
+      symbol,
+      side: 'sell',
+      quantity,
+      price: filledPrice,
+      totalValue: quantity * filledPrice,
+      pnl,
     });
 
     // Sync portfolio after trade
@@ -2014,6 +2507,7 @@ async function executeExit(sessionId, symbol, decision) {
   } catch (error) {
     console.error(`[AI Engine] Failed to execute exit for ${symbol}:`, error);
     tradingLogger.logError(`SELL order failed for ${symbol}`, {
+      sessionId,
       sessionName: session.name,
       symbol,
       error: error.message,
@@ -2045,6 +2539,7 @@ function triggerCircuitBreaker(sessionId, reason) {
 
   // Log to trading logger
   tradingLogger.logRisk('CIRCUIT BREAKER', {
+    sessionId,
     sessionName: session.name,
     reason,
     action: 'Trading paused',
@@ -2125,10 +2620,11 @@ function updateConfig(sessionId, newConfig) {
   const session = sessions.get(sessionId);
   if (!session) return;
 
-  session.config = { ...session.config, ...newConfig };
-  if (newConfig.name) {
-    session.name = newConfig.name;
-  }
+  // Exclude 'name' from config updates to prevent accidental session name overwrites.
+  // Session names should only be changed explicitly via a dedicated rename endpoint.
+  const { name: _excludedName, ...configWithoutName } = newConfig;
+  session.config = { ...session.config, ...configWithoutName };
+
   console.log(`[AI Engine] Config updated for ${session.name}`);
   saveSessions();
 }
