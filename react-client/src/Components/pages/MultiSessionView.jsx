@@ -50,62 +50,57 @@ const MultiSessionView = () => {
   // Open a session if it's not already in the tabs
   const openSessionIfNotOpen = useCallback(
     async sessionId => {
-      // Use functional update to check current state
-      setOpenSessions(prev => {
-        const exists = prev.some(s => s.sessionId === sessionId);
-        if (exists) return prev;
+      // Check if already exists (read current state via ref pattern)
+      const alreadyExists = openSessions.some(s => s.sessionId === sessionId);
+      if (alreadyExists) return;
 
-        // Fetch session details async (outside the setState)
-        fetch(`/api/ai/session/detail/${sessionId}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.status !== 'not_found') {
-              setOpenSessions(current => {
-                // Double-check it wasn't added while we were fetching
-                if (current.some(s => s.sessionId === sessionId))
-                  return current;
-                return [
-                  ...current,
-                  {
-                    sessionId,
-                    name: data.name || 'Unnamed',
-                    status: data.status,
-                    stats: data.stats || {},
-                  },
-                ];
-              });
-            }
-          })
-          .catch(err => {
-            console.error('Failed to fetch session details:', err);
-            // Still add it with minimal info
-            setOpenSessions(current => {
-              if (current.some(s => s.sessionId === sessionId)) return current;
-              return [
-                ...current,
-                {
-                  sessionId,
-                  name: 'Loading...',
-                  status: 'unknown',
-                  stats: {},
-                },
-              ];
-            });
+      try {
+        const res = await fetch(`/api/ai/session/detail/${sessionId}`);
+        const data = await res.json();
+
+        if (data && data.status !== 'not_found') {
+          setOpenSessions(current => {
+            // Double-check it wasn't added while we were fetching
+            if (current.some(s => s.sessionId === sessionId)) return current;
+            return [
+              ...current,
+              {
+                sessionId,
+                name: data.name || 'Unnamed',
+                status: data.status,
+                stats: data.stats || {},
+              },
+            ];
           });
-
-        // Return unchanged for now - the async fetch will update later
-        return prev;
-      });
+        }
+      } catch (err) {
+        console.error('Failed to fetch session details:', err);
+        // Still add it with minimal info so UI shows something
+        setOpenSessions(current => {
+          if (current.some(s => s.sessionId === sessionId)) return current;
+          return [
+            ...current,
+            {
+              sessionId,
+              name: 'Session',
+              status: 'unknown',
+              stats: {},
+            },
+          ];
+        });
+      }
     },
-    [] // No dependencies - uses functional updates
+    [openSessions]
   );
 
   // Sync URL sessionId with active session
   useEffect(() => {
-    if (urlSessionId && urlSessionId !== activeSessionId) {
-      setActiveSessionId(urlSessionId);
-      // Ensure this session is in open tabs
+    if (urlSessionId) {
+      // Always try to open the session from URL (function handles deduplication)
       openSessionIfNotOpen(urlSessionId);
+      if (urlSessionId !== activeSessionId) {
+        setActiveSessionId(urlSessionId);
+      }
     }
   }, [urlSessionId, activeSessionId, openSessionIfNotOpen]);
 
