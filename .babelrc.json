@@ -15,5 +15,8 @@
         "runtime": "automatic"
       }
     ]
+  ],
+  "plugins": [
+    ["babel-plugin-react-compiler", { "target": "19" }]
   ]
 }

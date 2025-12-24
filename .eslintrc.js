@@ -10,18 +10,13 @@ module.exports = {
     'plugin:react-hooks/recommended',
     'prettier', // Must be last to override other configs
   ],
-  plugins: ['react', 'react-hooks', 'prettier'],
+  plugins: ['react', 'react-hooks', 'react-compiler', 'prettier'],
   parserOptions: {
     ecmaFeatures: {
       jsx: true,
     },
     ecmaVersion: 'latest',
     sourceType: 'module',
-  },
-  settings: {
-    react: {
-      version: 'detect',
-    },
   },
   rules: {
     // React rules
@@ -33,6 +28,9 @@ module.exports = {
     // React Hooks rules
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
+
+    // React Compiler rules
+    'react-compiler/react-compiler': 'error',
 
     // General JavaScript rules
     'no-unused-vars': [
@@ -51,6 +49,30 @@ module.exports = {
 
     // Prettier integration
     'prettier/prettier': 'error',
+  },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+    'import/resolver': {
+      alias: {
+        map: [
+          ['@', './react-client/src'],
+          ['@components', './react-client/src/Components'],
+          ['@common', './react-client/src/Components/common'],
+          ['@pages', './react-client/src/Components/pages'],
+          ['@charts', './react-client/src/Components/charts'],
+          ['@trading', './react-client/src/Components/trading'],
+          ['@simulator', './react-client/src/Components/simulator'],
+          ['@contexts', './react-client/src/contexts'],
+          ['@hooks', './react-client/src/hooks'],
+          ['@utils', './react-client/src/utils'],
+          ['@config', './react-client/src/config'],
+          ['@mvp', './react-client/src/mvp'],
+        ],
+        extensions: ['.js', '.jsx', '.json'],
+      },
+    },
   },
   ignorePatterns: [
     'node_modules/',

@@ -3,6 +3,8 @@ const SRC_DIR = path.join(__dirname, '/react-client/src');
 const DIST_DIR = path.join(__dirname, '/react-client/dist');
 const webpack = require('webpack');
 const dotenv = require('dotenv');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 // Load .env file
 const env = dotenv.config().parsed || {};
@@ -20,40 +22,58 @@ module.exports = {
   entry: `${SRC_DIR}/index.jsx`,
   output: {
     path: DIST_DIR,
-    filename: 'bundle.js',
+    filename: '[name].bundle.js',
     publicPath: '/', // Important for dev server
+    clean: true, // Clean dist folder before build (Webpack 5 feature)
   },
   devtool: 'source-map', // CSP-compliant source maps (no eval)
   devServer: {
-    contentBase: DIST_DIR,
+    static: { directory: DIST_DIR },
     hot: true,
     port: 3000,
     open: true,
     historyApiFallback: true, // For React Router
-    proxy: {
-      '/api': 'http://localhost:8080', // Proxy API calls to Express server
-    },
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:8080',
+      },
+    ],
   },
   resolve: {
     extensions: ['.js', '.jsx', '.json', '.css'],
+    alias: {
+      // Path aliases for cleaner imports
+      // Usage: import { Button } from '@common';
+      '@': path.resolve(__dirname, 'react-client/src'),
+      '@components': path.resolve(__dirname, 'react-client/src/Components'),
+      '@common': path.resolve(__dirname, 'react-client/src/Components/common'),
+      '@pages': path.resolve(__dirname, 'react-client/src/Components/pages'),
+      '@charts': path.resolve(__dirname, 'react-client/src/Components/charts'),
+      '@trading': path.resolve(__dirname, 'react-client/src/Components/trading'),
+      '@simulator': path.resolve(__dirname, 'react-client/src/Components/simulator'),
+      '@contexts': path.resolve(__dirname, 'react-client/src/contexts'),
+      '@hooks': path.resolve(__dirname, 'react-client/src/hooks'),
+      '@utils': path.resolve(__dirname, 'react-client/src/utils'),
+      '@config': path.resolve(__dirname, 'react-client/src/config'),
+      // MVP - High rigor code (requires testing before changes)
+      '@mvp': path.resolve(__dirname, 'react-client/src/mvp'),
+    },
   },
   module: {
     rules: [
       {
         test: /\.css$/,
-        loader: 'style-loader!css-loader',
+        use: ['style-loader', 'css-loader'],
       },
       {
-        test: /\.png$/,
-        loader: 'url-loader?limit=100000&minetype=image/png',
-      },
-      {
-        test: /\.jpg/,
-        loader: 'file-loader',
-      },
-      {
-        test: /\.json$/,
-        loader: 'json-loader',
+        test: /\.(png|jpg|gif|svg)$/,
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 100000, // 100kb - inline if smaller
+          },
+        },
       },
       {
         test: /\.jsx?/,
@@ -84,7 +104,17 @@ module.exports = {
       'process.env.NODE_ENV': JSON.stringify('development'),
       ...envKeys,
     }),
-    new webpack.HotModuleReplacementPlugin(),
+    new HtmlWebpackPlugin({
+      template: path.join(SRC_DIR, 'index.html'),
+      filename: 'index.html',
+      inject: 'body', // Inject scripts at the bottom of body
+    }),
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: path.join(SRC_DIR, 'styles.css'), to: 'styles.css' },
+      ],
+    }),
+    // HotModuleReplacementPlugin is automatic in Webpack 5 with hot: true
   ],
   optimization: {
     // Enable tree shaking and dead code elimination
