@@ -111,9 +111,12 @@ const MultiSessionView = () => {
     }
   }, [activeSessionId, urlSessionId, navigate]);
 
-  // Handle tab selection
+  // Handle tab selection - navigate to force clean page load
   const handleSelectSession = sessionId => {
-    setActiveSessionId(sessionId);
+    if (sessionId !== activeSessionId) {
+      // Navigate to the new session URL - this ensures clean component lifecycle
+      window.location.href = `/live-trading/${sessionId}`;
+    }
   };
 
   // Handle tab close
