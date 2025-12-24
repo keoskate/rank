@@ -66,6 +66,10 @@ coverage/
 # AI session data (may contain trading info)
 data/ai-sessions.json
 
+# CheddarFlow cache and debug files
+data/cheddarflow-*.json
+data/cheddarflow-*.png
+
 # Training data (personal trade history)
 data/training/*.json
 
