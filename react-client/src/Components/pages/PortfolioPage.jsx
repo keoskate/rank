@@ -1,25 +1,30 @@
 /**
  * PortfolioPage - Consolidated portfolio view
  *
- * Shows positions, P&L, trade history, and quick actions
+ * Shows positions, P&L, trade history, quick actions, and analytics.
+ * Analytics tab provides comprehensive trading performance analysis.
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import theme from '../../theme';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import MetricCard from '../common/MetricCard';
 import PortfolioPerformanceChart from '../common/PortfolioPerformanceChart';
+import PerformanceAnalyticsPanel from './PerformanceAnalyticsPanel';
 
 const PortfolioPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [allOrders, setAllOrders] = useState([]); // For debugging - more orders
   const [aiSession, setAiSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Active tab: 'overview' or 'analytics'
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview');
   // Persist trading mode to localStorage
   const [tradingMode, setTradingMode] = useState(() => {
     try {
@@ -29,6 +34,19 @@ const PortfolioPage = () => {
     }
   });
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  // Sync tab with URL
+  useEffect(() => {
+    const tab = searchParams.get('tab') || 'overview';
+    if (tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams(tab === 'overview' ? {} : { tab });
+  };
 
   // Persist tradingMode to localStorage when it changes
   useEffect(() => {
@@ -155,6 +173,51 @@ const PortfolioPage = () => {
           </p>
         </div>
 
+        {/* Tab Navigation */}
+        <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              backgroundColor: theme.colors.gray100,
+              borderRadius: theme.borderRadius.md,
+              padding: '2px',
+              marginRight: theme.spacing.md,
+            }}
+          >
+            <button
+              onClick={() => handleTabChange('overview')}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: activeTab === 'overview' ? theme.typography.fontWeight.bold : theme.typography.fontWeight.medium,
+                backgroundColor: activeTab === 'overview' ? theme.colors.primary : 'transparent',
+                color: activeTab === 'overview' ? '#fff' : theme.colors.gray600,
+                border: 'none',
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => handleTabChange('analytics')}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: activeTab === 'analytics' ? theme.typography.fontWeight.bold : theme.typography.fontWeight.medium,
+                backgroundColor: activeTab === 'analytics' ? theme.colors.primary : 'transparent',
+                color: activeTab === 'analytics' ? '#fff' : theme.colors.gray600,
+                border: 'none',
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Analytics
+            </button>
+          </div>
+
         {/* Account Mode Toggle */}
         <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
           <button
@@ -213,8 +276,17 @@ const PortfolioPage = () => {
             </button>
           </div>
         </div>
+        </div>
       </div>
 
+      {/* Analytics Tab Content */}
+      {activeTab === 'analytics' && (
+        <PerformanceAnalyticsPanel />
+      )}
+
+      {/* Overview Tab Content */}
+      {activeTab === 'overview' && (
+        <>
       {/* Account Summary */}
       <div
         style={{
@@ -929,6 +1001,8 @@ const PortfolioPage = () => {
             </div>
           </div>
         </Card>
+      )}
+        </>
       )}
     </div>
   );
