@@ -96,3 +96,6 @@ data/logs/
 
 # Trading logs
 data/logs/trading.log
+
+# Claude Code config
+.claude/
