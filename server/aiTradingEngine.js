@@ -1260,6 +1260,10 @@ async function analyzeAndTrade(sessionId) {
   const session = sessions.get(sessionId);
   if (!session) return;
 
+  // CRITICAL: Sync portfolio from Alpaca before analyzing
+  // This ensures we know about all positions for stop loss checks
+  await syncPortfolio(sessionId);
+
   const { watchlist, maxPositions, minConfidence } = session.config;
 
   // Log only when there are symbols to analyze
@@ -1269,7 +1273,7 @@ async function analyzeAndTrade(sessionId) {
     );
   }
 
-  // Get current positions
+  // Get current positions (now synced from Alpaca)
   const currentPositions = Array.from(session.portfolio.positions.keys());
 
   // First, check existing positions for exit signals
