@@ -69,6 +69,7 @@ const MultiSessionView = () => {
                 name: data.name || 'Unnamed',
                 status: data.status,
                 stats: data.stats || {},
+                positions: data.positions || [],
               },
             ];
           });
@@ -85,6 +86,7 @@ const MultiSessionView = () => {
               name: 'Session',
               status: 'unknown',
               stats: {},
+              positions: [],
             },
           ];
         });
@@ -175,6 +177,7 @@ const MultiSessionView = () => {
           name: session.name || 'Unnamed',
           status: session.status,
           stats: session.stats || {},
+          positions: session.positions || [],
         },
       ]);
     }

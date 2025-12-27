@@ -56,7 +56,13 @@ const SessionTabBar = ({
     >
       {sessions.map(session => {
         const isActive = session.sessionId === activeSessionId;
-        const pnl = session.stats?.totalPnL;
+        // Show unrealized P&L from open positions (more relevant than realized P&L)
+        const unrealizedPnL = session.positions?.reduce(
+          (sum, pos) => sum + (pos.unrealizedPnL || pos.unrealizedPL || 0),
+          0
+        );
+        // Fall back to realized P&L if no positions
+        const pnl = unrealizedPnL || session.stats?.totalPnL;
 
         return (
           <div
