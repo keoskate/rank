@@ -48,6 +48,11 @@ const TRADE_COOLDOWN_MINUTES = 15;
 const errorThrottle = new Map();
 const ERROR_THROTTLE_MINUTES = 5; // Only log same error once per 5 minutes
 
+// Pending orders tracking - prevents duplicate orders during race conditions
+// Map structure: sessionId -> Map(symbol -> { orderId, timestamp })
+const pendingOrders = new Map();
+const PENDING_ORDER_TIMEOUT_MS = 60000; // Clear stale pending orders after 60s
+
 // PDT (Pattern Day Trader) state cache
 // Cached account info to avoid API spam when checking PDT limits
 let pdtStateCache = {
@@ -1163,6 +1168,58 @@ async function startTradingLoop(sessionId) {
 }
 
 /**
+ * Get US stock market holidays for a given year
+ * @param {number} year - Year to get holidays for
+ * @returns {Set<string>} Set of holiday dates in YYYY-MM-DD format
+ */
+function getMarketHolidays(year) {
+  const holidays = new Set();
+
+  // Fixed holidays (adjusted for weekends by market)
+  holidays.add(`${year}-01-01`); // New Year's Day
+  holidays.add(`${year}-07-04`); // Independence Day
+  holidays.add(`${year}-12-25`); // Christmas Day
+
+  // MLK Day (3rd Monday of January)
+  const mlk = new Date(year, 0, 1);
+  mlk.setDate(1 + ((8 - mlk.getDay()) % 7) + 14);
+  holidays.add(mlk.toISOString().split('T')[0]);
+
+  // Presidents Day (3rd Monday of February)
+  const presidents = new Date(year, 1, 1);
+  presidents.setDate(1 + ((8 - presidents.getDay()) % 7) + 14);
+  holidays.add(presidents.toISOString().split('T')[0]);
+
+  // Good Friday (Friday before Easter - approximate)
+  // Easter calculation is complex, using fixed dates for known years
+  const goodFridays = {
+    2024: '2024-03-29', 2025: '2025-04-18', 2026: '2026-04-03',
+    2027: '2027-03-26', 2028: '2028-04-14', 2029: '2029-03-30'
+  };
+  if (goodFridays[year]) holidays.add(goodFridays[year]);
+
+  // Memorial Day (last Monday of May)
+  const memorial = new Date(year, 4, 31);
+  memorial.setDate(31 - ((memorial.getDay() + 6) % 7));
+  holidays.add(memorial.toISOString().split('T')[0]);
+
+  // Juneteenth (June 19)
+  holidays.add(`${year}-06-19`);
+
+  // Labor Day (1st Monday of September)
+  const labor = new Date(year, 8, 1);
+  labor.setDate(1 + ((8 - labor.getDay()) % 7));
+  holidays.add(labor.toISOString().split('T')[0]);
+
+  // Thanksgiving (4th Thursday of November)
+  const thanksgiving = new Date(year, 10, 1);
+  thanksgiving.setDate(1 + ((11 - thanksgiving.getDay()) % 7) + 21);
+  holidays.add(thanksgiving.toISOString().split('T')[0]);
+
+  return holidays;
+}
+
+/**
  * Check if market is currently open
  * @returns {boolean}
  */
@@ -1172,6 +1229,14 @@ function isMarketOpen() {
 
   // Weekend check
   if (day === 0 || day === 6) return false;
+
+  // Holiday check
+  const dateStr = now.toISOString().split('T')[0];
+  const holidays = getMarketHolidays(now.getFullYear());
+  if (holidays.has(dateStr)) {
+    console.log(`[AI Engine] Market closed for holiday: ${dateStr}`);
+    return false;
+  }
 
   // Convert to Eastern Time (approximate)
   const utcHours = now.getUTCHours();
@@ -2162,19 +2227,49 @@ async function executeEntry(sessionId, symbol, decision) {
       `[AI Engine] Calculated position: ${qtyDisplay} ${isCrypto ? 'units' : 'shares'} of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)}, mode: ${tradingMode.toUpperCase()})`
     );
 
+    // Check for pending order to prevent duplicate buys during race conditions
+    if (!pendingOrders.has(sessionId)) {
+      pendingOrders.set(sessionId, new Map());
+    }
+    const sessionPending = pendingOrders.get(sessionId);
+    const existingPending = sessionPending.get(symbol);
+    if (existingPending) {
+      const elapsed = Date.now() - existingPending.timestamp;
+      if (elapsed < PENDING_ORDER_TIMEOUT_MS) {
+        console.log(
+          `[AI Engine] Skipping duplicate BUY for ${symbol} - order ${existingPending.orderId.slice(0, 8)} pending (${(elapsed / 1000).toFixed(1)}s ago)`
+        );
+        return;
+      }
+      // Clear stale pending order
+      sessionPending.delete(symbol);
+    }
+
+    // Mark order as pending before placing
+    sessionPending.set(symbol, { orderId: 'pending', timestamp: Date.now() });
+
     // Place order via Alpaca with session-specific trading mode
     // Use asset-type-aware helper for crypto/stock routing
-    const order = await placeOrderForAsset(
-      {
-        symbol,
-        qty: quantity,
-        side: 'buy',
-        type: 'market',
-        time_in_force: 'day',
-      },
-      tradingMode,
-      assetType
-    );
+    let order;
+    try {
+      order = await placeOrderForAsset(
+        {
+          symbol,
+          qty: quantity,
+          side: 'buy',
+          type: 'market',
+          time_in_force: 'day',
+        },
+        tradingMode,
+        assetType
+      );
+      // Update pending order with actual order ID
+      sessionPending.set(symbol, { orderId: order.id, timestamp: Date.now() });
+    } catch (orderError) {
+      // Clear pending on failure
+      sessionPending.delete(symbol);
+      throw orderError;
+    }
 
     console.log(
       `[AI Engine] Entry order placed: ${quantity} ${symbol} @ market (${tradingMode.toUpperCase()})`
@@ -2189,6 +2284,8 @@ async function executeEntry(sessionId, symbol, decision) {
         filledOrder = await alpacaClient.getOrderById(order.id, tradingMode);
         if (filledOrder.status === 'filled' && filledOrder.filledAvgPrice) {
           filledPrice = filledOrder.filledAvgPrice;
+          // Clear pending order now that it's filled
+          sessionPending.delete(symbol);
           console.log(
             `[AI Engine] Order filled: ${quantity} ${symbol} @ $${filledPrice.toFixed(2)} (signal was $${decision.currentPrice.toFixed(2)})`
           );
