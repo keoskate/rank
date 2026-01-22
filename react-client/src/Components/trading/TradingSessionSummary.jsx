@@ -165,8 +165,9 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
 
   const formatPnL = (pnl, percent) => {
     if (pnl === null || pnl === undefined) return '-';
-    const sign = pnl >= 0 ? '+' : '';
-    return `${sign}$${pnl.toFixed(2)} (${sign}${percent?.toFixed(2) || 0}%)`;
+    const sign = pnl >= 0 ? '+$' : '-$';
+    const percentSign = percent >= 0 ? '+' : '-';
+    return `${sign}${Math.abs(pnl).toFixed(2)} (${percentSign}${Math.abs(percent || 0).toFixed(2)}%)`;
   };
 
   return (
@@ -267,20 +268,20 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
                   color: realizedPnL >= 0 ? theme.colors.success : theme.colors.error,
                 }}
               >
-                {realizedPnL >= 0 ? '+' : ''}${realizedPnL.toFixed(2)}
+                {realizedPnL >= 0 ? '+$' : '-$'}{Math.abs(realizedPnL).toFixed(2)}
               </div>
               <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
                 Locked in from {completedTrades.length} closed trade{completedTrades.length !== 1 ? 's' : ''}
               </div>
             </div>
 
-            {/* Unrealized P&L */}
+            {/* Unrealized P&L - Yellow/amber for gains, Red/orange for losses */}
             <div
               style={{
                 padding: theme.spacing.md,
-                backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                backgroundColor: unrealizedPnL >= 0 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.1)',
                 borderRadius: theme.borderRadius.md,
-                border: '1px solid #eab308',
+                border: `1px solid ${unrealizedPnL >= 0 ? '#eab308' : theme.colors.error}`,
               }}
             >
               <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginBottom: '4px' }}>
@@ -290,13 +291,13 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
                 style={{
                   fontSize: theme.typography.fontSize.xxl,
                   fontWeight: theme.typography.fontWeight.bold,
-                  color: '#b45309', // Amber/orange for unrealized
+                  color: unrealizedPnL >= 0 ? '#b45309' : theme.colors.error,
                 }}
               >
-                {unrealizedPnL >= 0 ? '+' : ''}${unrealizedPnL.toFixed(2)}
+                {unrealizedPnL >= 0 ? '+$' : '-$'}{Math.abs(unrealizedPnL).toFixed(2)}
               </div>
               <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
-                Paper profit from {openTrades.length} open position{openTrades.length !== 1 ? 's' : ''}
+                {unrealizedPnL >= 0 ? 'Paper profit' : 'Paper loss'} from {openTrades.length} open position{openTrades.length !== 1 ? 's' : ''}
               </div>
             </div>
 
@@ -319,7 +320,7 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
                   color: totalPnL >= 0 ? theme.colors.success : theme.colors.error,
                 }}
               >
-                {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+                {totalPnL >= 0 ? '+$' : '-$'}{Math.abs(totalPnL).toFixed(2)}
               </div>
               <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
                 Realized + Unrealized
