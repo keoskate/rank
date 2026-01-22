@@ -24,6 +24,7 @@ import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import TradingLogPanel from '../common/TradingLogPanel';
 import ErrorBoundary from '../common/ErrorBoundary';
+import { TradingConfigPanel } from '../trading';
 // LiveTradingChart removed - now using TradingViewChart
 import theme from '../../theme';
 import {
@@ -40,6 +41,7 @@ import {
   playBuySound,
   playSellSound,
 } from '../../utils/audioNotifications';
+import { getStockListNames, getStockList } from '../../config/stockLists';
 
 // Socket connection
 let socket = null;
@@ -113,7 +115,7 @@ const LiveTradingDashboard = ({
     lastSaved,
   } = useTradingConfig();
   const [showConfig, setShowConfig] = useState(false);
-  const [configSection, setConfigSection] = useState('capital'); // 'capital', 'risk', 'ai', 'entry', 'exit'
+  const [configSection, setConfigSection] = useState('none'); // Old tabs removed - using TradingConfigPanel now
   const [configLoaded, setConfigLoaded] = useState(false); // Track if we've loaded config from server
   const [savedConfigs, setSavedConfigs] = useState(() => {
     try {
@@ -908,11 +910,19 @@ const LiveTradingDashboard = ({
     contextUpdateConfig({ [key]: value });
 
     // Immediately sync critical settings to backend if we have an active session
+    // These settings affect live trading decisions and should update immediately
     const criticalSettings = [
       'autoTrade',
       'minConfidence',
       'watchlist',
       'maxPositions',
+      // Exit protection settings - critical for preventing premature exits
+      'stopLossPercent',
+      'takeProfitPercent',
+      'trailingStopPercent',
+      'trailingStopMinProfitPercent',
+      'minProfitForExitPercent',
+      'minHoldMinutes',
     ];
     if (urlSessionId && criticalSettings.includes(key)) {
       fetch(`/api/ai/session/${urlSessionId}/config`, {
@@ -1510,352 +1520,13 @@ const LiveTradingDashboard = ({
             </div>
           )}
 
-          {/* Account Mode Toggle - Primary setting that determines capital context */}
-          <div
-            style={{
-              marginBottom: theme.spacing.lg,
-              padding: theme.spacing.md,
-              backgroundColor: config.paperTradeOnly
-                ? `${theme.colors.warning}10`
-                : `${theme.colors.error}08`,
-              borderRadius: theme.borderRadius.md,
-              border: `2px solid ${config.paperTradeOnly ? theme.colors.warning : theme.colors.error}`,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <h4
-                  style={{
-                    margin: 0,
-                    marginBottom: theme.spacing.xs,
-                    color: config.paperTradeOnly
-                      ? theme.colors.warning
-                      : theme.colors.error,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                  }}
-                >
-                  {config.paperTradeOnly ? '📝' : '💰'} Trading Account
-                </h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: theme.typography.fontSize.sm,
-                    color: theme.colors.gray600,
-                  }}
-                >
-                  {config.paperTradeOnly
-                    ? 'Using paper account for simulation - no real money at risk'
-                    : 'Using LIVE account - real trades will be executed!'}
-                </p>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  backgroundColor: theme.colors.gray100,
-                  borderRadius: theme.borderRadius.md,
-                  padding: '3px',
-                }}
-              >
-                <button
-                  onClick={() => updateConfig('paperTradeOnly', true)}
-                  style={{
-                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-                    fontSize: theme.typography.fontSize.md,
-                    fontWeight: config.paperTradeOnly
-                      ? theme.typography.fontWeight.bold
-                      : theme.typography.fontWeight.medium,
-                    backgroundColor: config.paperTradeOnly
-                      ? theme.colors.warning
-                      : 'transparent',
-                    color: config.paperTradeOnly
-                      ? '#fff'
-                      : theme.colors.gray600,
-                    border: 'none',
-                    borderRadius: theme.borderRadius.sm,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  📝 Paper
-                </button>
-                <button
-                  onClick={() => updateConfig('paperTradeOnly', false)}
-                  style={{
-                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-                    fontSize: theme.typography.fontSize.md,
-                    fontWeight: !config.paperTradeOnly
-                      ? theme.typography.fontWeight.bold
-                      : theme.typography.fontWeight.medium,
-                    backgroundColor: !config.paperTradeOnly
-                      ? theme.colors.error
-                      : 'transparent',
-                    color: !config.paperTradeOnly
-                      ? '#fff'
-                      : theme.colors.gray600,
-                    border: 'none',
-                    borderRadius: theme.borderRadius.sm,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  💰 Live
-                </button>
-              </div>
-            </div>
-            {!config.paperTradeOnly && (
-              <div
-                style={{
-                  marginTop: theme.spacing.sm,
-                  padding: theme.spacing.sm,
-                  backgroundColor: `${theme.colors.error}15`,
-                  borderRadius: theme.borderRadius.sm,
-                  fontSize: theme.typography.fontSize.sm,
-                  color: theme.colors.error,
-                  fontWeight: theme.typography.fontWeight.medium,
-                }}
-              >
-                ⚠️ WARNING: Live trading enabled. Real money will be used for
-                trades. Available:{' '}
-                {account?.cash
-                  ? `$${parseFloat(account.cash).toLocaleString()}`
-                  : 'Loading...'}
-              </div>
-            )}
-          </div>
+          {/* Simplified Config Panel */}
+          <TradingConfigPanel
+            config={config}
+            onUpdateConfig={contextUpdateConfig}
+          />
 
-          {/* Asset Type Selector */}
-          <div
-            style={{
-              marginBottom: theme.spacing.lg,
-              padding: theme.spacing.md,
-              backgroundColor: config.assetType === 'crypto'
-                ? `${theme.colors.info}10`
-                : `${theme.colors.gray200}50`,
-              borderRadius: theme.borderRadius.md,
-              border: `2px solid ${config.assetType === 'crypto' ? theme.colors.info : theme.colors.gray300}`,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <h4
-                  style={{
-                    margin: 0,
-                    marginBottom: theme.spacing.xs,
-                    color: config.assetType === 'crypto'
-                      ? theme.colors.info
-                      : theme.colors.gray700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                  }}
-                >
-                  {config.assetType === 'crypto' ? '₿' : '📊'} Asset Type
-                </h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: theme.typography.fontSize.sm,
-                    color: theme.colors.gray600,
-                  }}
-                >
-                  {config.assetType === 'crypto'
-                    ? 'Cryptocurrency - No PDT rules, 24/7 trading'
-                    : 'Stocks & ETFs - Subject to PDT rules, market hours only'}
-                </p>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  backgroundColor: theme.colors.gray100,
-                  borderRadius: theme.borderRadius.md,
-                  padding: '3px',
-                }}
-              >
-                <button
-                  onClick={() => updateConfig('assetType', 'stocks')}
-                  style={{
-                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-                    fontSize: theme.typography.fontSize.md,
-                    fontWeight: config.assetType !== 'crypto'
-                      ? theme.typography.fontWeight.bold
-                      : theme.typography.fontWeight.medium,
-                    backgroundColor: config.assetType !== 'crypto'
-                      ? theme.colors.gray600
-                      : 'transparent',
-                    color: config.assetType !== 'crypto'
-                      ? '#fff'
-                      : theme.colors.gray600,
-                    border: 'none',
-                    borderRadius: theme.borderRadius.sm,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  📊 Stocks
-                </button>
-                <button
-                  onClick={() => updateConfig('assetType', 'crypto')}
-                  style={{
-                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-                    fontSize: theme.typography.fontSize.md,
-                    fontWeight: config.assetType === 'crypto'
-                      ? theme.typography.fontWeight.bold
-                      : theme.typography.fontWeight.medium,
-                    backgroundColor: config.assetType === 'crypto'
-                      ? theme.colors.info
-                      : 'transparent',
-                    color: config.assetType === 'crypto'
-                      ? '#fff'
-                      : theme.colors.gray600,
-                    border: 'none',
-                    borderRadius: theme.borderRadius.sm,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  ₿ Crypto
-                </button>
-              </div>
-            </div>
-            {config.assetType === 'crypto' && (
-              <div
-                style={{
-                  marginTop: theme.spacing.sm,
-                  padding: theme.spacing.md,
-                  backgroundColor: `${theme.colors.info}10`,
-                  borderRadius: theme.borderRadius.sm,
-                  border: `1px solid ${theme.colors.info}30`,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: theme.typography.fontSize.sm,
-                    color: theme.colors.info,
-                    fontWeight: theme.typography.fontWeight.medium,
-                    marginBottom: theme.spacing.sm,
-                  }}
-                >
-                  Crypto Mode: No PDT restrictions, 24/7 trading
-                </div>
-                <div
-                  style={{
-                    fontSize: theme.typography.fontSize.xs,
-                    color: theme.colors.gray600,
-                    marginBottom: theme.spacing.sm,
-                  }}
-                >
-                  Click to add supported crypto symbols to your watchlist:
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: theme.spacing.xs,
-                  }}
-                >
-                  {[
-                    { symbol: 'BTC', name: 'Bitcoin' },
-                    { symbol: 'ETH', name: 'Ethereum' },
-                    { symbol: 'SOL', name: 'Solana' },
-                    { symbol: 'DOGE', name: 'Dogecoin' },
-                    { symbol: 'AVAX', name: 'Avalanche' },
-                    { symbol: 'LINK', name: 'Chainlink' },
-                    { symbol: 'LTC', name: 'Litecoin' },
-                    { symbol: 'DOT', name: 'Polkadot' },
-                    { symbol: 'SHIB', name: 'Shiba Inu' },
-                    { symbol: 'UNI', name: 'Uniswap' },
-                  ].map(crypto => {
-                    const isInWatchlist = config.watchlist.includes(crypto.symbol);
-                    return (
-                      <button
-                        key={crypto.symbol}
-                        onClick={() => {
-                          if (!isInWatchlist) {
-                            updateConfig('watchlist', [...config.watchlist, crypto.symbol]);
-                          }
-                        }}
-                        disabled={isInWatchlist}
-                        title={isInWatchlist ? `${crypto.name} is already in watchlist` : `Add ${crypto.name} to watchlist`}
-                        style={{
-                          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                          fontSize: theme.typography.fontSize.xs,
-                          fontWeight: theme.typography.fontWeight.medium,
-                          backgroundColor: isInWatchlist
-                            ? theme.colors.success
-                            : theme.colors.info,
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: theme.borderRadius.sm,
-                          cursor: isInWatchlist ? 'default' : 'pointer',
-                          opacity: isInWatchlist ? 0.7 : 1,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {isInWatchlist ? '✓' : '+'} {crypto.symbol}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Config Section Tabs */}
-          <div
-            style={{
-              display: 'flex',
-              gap: theme.spacing.xs,
-              marginBottom: theme.spacing.lg,
-              borderBottom: `1px solid ${theme.colors.gray200}`,
-              paddingBottom: theme.spacing.sm,
-            }}
-          >
-            {[
-              { id: 'capital', label: '💰 Capital', icon: '💰' },
-              { id: 'risk', label: '🛡️ Risk', icon: '🛡️' },
-              { id: 'ai', label: '🤖 AI Model', icon: '🤖' },
-              { id: 'entry', label: '📈 Entry', icon: '📈' },
-              { id: 'exit', label: '📉 Exit', icon: '📉' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setConfigSection(tab.id)}
-                style={{
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  border: 'none',
-                  background:
-                    configSection === tab.id
-                      ? theme.colors.primary
-                      : 'transparent',
-                  color:
-                    configSection === tab.id ? '#fff' : theme.colors.gray600,
-                  borderRadius: theme.borderRadius.md,
-                  cursor: 'pointer',
-                  fontWeight: theme.typography.fontWeight.medium,
-                  fontSize: theme.typography.fontSize.sm,
-                  transition: theme.transitions.fast,
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* CAPITAL ALLOCATION SECTION */}
+          {/* CAPITAL ALLOCATION SECTION - REMOVED */}
           {configSection === 'capital' && (
             <div>
               <div
@@ -2274,12 +1945,47 @@ const LiveTradingDashboard = ({
                     fontSize: theme.typography.fontSize.sm,
                   }}
                 >
-                  Watchlist (comma-separated)
+                  Watchlist
                 </label>
+
+                {/* Preset Watchlist Dropdown */}
+                <div style={{ marginBottom: theme.spacing.sm }}>
+                  <select
+                    onChange={e => {
+                      const presetId = e.target.value;
+                      if (presetId) {
+                        const preset = getStockList(presetId);
+                        if (preset && preset.stocks) {
+                          contextUpdateConfig({ watchlist: preset.stocks });
+                        }
+                      }
+                    }}
+                    value=""
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      border: `1px solid ${theme.colors.gray300}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.sm,
+                      backgroundColor: theme.colors.surface,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">Select preset watchlist...</option>
+                    {getStockListNames().map(list => (
+                      <option key={list.id} value={list.id}>
+                        {list.name} ({list.count} stocks)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Manual Edit Input */}
                 <input
                   type="text"
                   defaultValue={config.watchlist.join(', ')}
                   key={isEditingConfig ? 'editing' : config.watchlist.join(',')}
+                  placeholder="Or enter symbols manually: AAPL, TSLA, NVDA..."
                   onFocus={() => {
                     setIsEditingConfig(true);
                     isEditingConfigRef.current = true;
@@ -2999,620 +2705,6 @@ const LiveTradingDashboard = ({
             </div>
           )}
 
-          {/* ENTRY CONDITIONS SECTION */}
-          {configSection === 'entry' && (
-            <div>
-              <div
-                style={{
-                  marginBottom: theme.spacing.lg,
-                  padding: theme.spacing.md,
-                  backgroundColor: `${theme.colors.success}10`,
-                  borderRadius: theme.borderRadius.md,
-                  border: `1px solid ${theme.colors.success}30`,
-                }}
-              >
-                <h4
-                  style={{
-                    margin: 0,
-                    marginBottom: theme.spacing.xs,
-                    color: theme.colors.success,
-                  }}
-                >
-                  Entry Strategy
-                </h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: theme.typography.fontSize.sm,
-                    color: theme.colors.gray600,
-                  }}
-                >
-                  Configure conditions required before AI opens a position
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: theme.spacing.md,
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: theme.spacing.xs,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      fontSize: theme.typography.fontSize.sm,
-                    }}
-                  >
-                    Entry Strategy
-                  </label>
-                  <select
-                    value={config.entryStrategy}
-                    onChange={e =>
-                      updateConfig('entryStrategy', e.target.value)
-                    }
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.gray300}`,
-                      borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.md,
-                    }}
-                  >
-                    <option value="dip">
-                      Buy the Dip (RSI oversold + below VWAP)
-                    </option>
-                    <option value="momentum">
-                      Momentum (RSI breakout + volume)
-                    </option>
-                    <option value="balanced">
-                      Balanced (standard approach)
-                    </option>
-                    <option value="conservative">
-                      Conservative (wait for strong signals)
-                    </option>
-                    <option value="aggressive">
-                      Aggressive (act on early signals)
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: theme.spacing.xs,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      fontSize: theme.typography.fontSize.sm,
-                    }}
-                  >
-                    Min Signals Required
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="5"
-                    value={config.minSignalsRequired}
-                    onChange={e =>
-                      updateConfig(
-                        'minSignalsRequired',
-                        parseInt(e.target.value)
-                      )
-                    }
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.gray300}`,
-                      borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.md,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: theme.typography.fontSize.xs,
-                      color: theme.colors.gray500,
-                    }}
-                  >
-                    Number of confirming signals
-                  </span>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: theme.spacing.xs,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      fontSize: theme.typography.fontSize.sm,
-                    }}
-                  >
-                    Preferred Timeframe
-                  </label>
-                  <select
-                    value={config.preferredTimeframe}
-                    onChange={e =>
-                      updateConfig('preferredTimeframe', e.target.value)
-                    }
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.gray300}`,
-                      borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.md,
-                    }}
-                  >
-                    <option value="1min">1 Minute (Scalping)</option>
-                    <option value="5min">5 Minutes (Day Trading)</option>
-                    <option value="15min">15 Minutes</option>
-                    <option value="1hour">1 Hour (Swing)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: theme.spacing.md,
-                  marginTop: theme.spacing.lg,
-                }}
-              >
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                    cursor: 'pointer',
-                    padding: theme.spacing.sm,
-                    backgroundColor: config.requireVolumeSpike
-                      ? `${theme.colors.success}10`
-                      : 'transparent',
-                    borderRadius: theme.borderRadius.sm,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.requireVolumeSpike}
-                    onChange={e =>
-                      updateConfig('requireVolumeSpike', e.target.checked)
-                    }
-                  />
-                  <div>
-                    <span
-                      style={{ fontWeight: theme.typography.fontWeight.medium }}
-                    >
-                      Require Volume Spike
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray500,
-                      }}
-                    >
-                      Volume must exceed average
-                    </div>
-                  </div>
-                </label>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                    cursor: 'pointer',
-                    padding: theme.spacing.sm,
-                    backgroundColor: config.requireTrendAlignment
-                      ? `${theme.colors.success}10`
-                      : 'transparent',
-                    borderRadius: theme.borderRadius.sm,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.requireTrendAlignment}
-                    onChange={e =>
-                      updateConfig('requireTrendAlignment', e.target.checked)
-                    }
-                  />
-                  <div>
-                    <span
-                      style={{ fontWeight: theme.typography.fontWeight.medium }}
-                    >
-                      Require Trend Alignment
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray500,
-                      }}
-                    >
-                      Price vs VWAP confirmation
-                    </div>
-                  </div>
-                </label>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                    cursor: 'pointer',
-                    padding: theme.spacing.sm,
-                    backgroundColor: config.requireRsiSignal
-                      ? `${theme.colors.success}10`
-                      : 'transparent',
-                    borderRadius: theme.borderRadius.sm,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.requireRsiSignal}
-                    onChange={e =>
-                      updateConfig('requireRsiSignal', e.target.checked)
-                    }
-                  />
-                  <div>
-                    <span
-                      style={{ fontWeight: theme.typography.fontWeight.medium }}
-                    >
-                      Require RSI Signal
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray500,
-                      }}
-                    >
-                      RSI must be oversold/overbought
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* EXIT CONDITIONS SECTION */}
-          {configSection === 'exit' && (
-            <div>
-              <div
-                style={{
-                  marginBottom: theme.spacing.lg,
-                  padding: theme.spacing.md,
-                  backgroundColor: `${theme.colors.error}10`,
-                  borderRadius: theme.borderRadius.md,
-                  border: `1px solid ${theme.colors.error}30`,
-                }}
-              >
-                <h4
-                  style={{
-                    margin: 0,
-                    marginBottom: theme.spacing.xs,
-                    color: theme.colors.error,
-                  }}
-                >
-                  Exit Strategy
-                </h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: theme.typography.fontSize.sm,
-                    color: theme.colors.gray600,
-                  }}
-                >
-                  Risk/Reward: {config.takeProfitPercent}% profit /{' '}
-                  {config.stopLossPercent}% loss ={' '}
-                  {(config.takeProfitPercent / config.stopLossPercent).toFixed(
-                    1
-                  )}
-                  :1 ratio
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: theme.spacing.md,
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: theme.spacing.xs,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      fontSize: theme.typography.fontSize.sm,
-                    }}
-                  >
-                    Take Profit %
-                  </label>
-                  <input
-                    type="number"
-                    min="0.5"
-                    max="10"
-                    step="0.5"
-                    value={config.takeProfitPercent}
-                    onChange={e =>
-                      updateConfig(
-                        'takeProfitPercent',
-                        parseFloat(e.target.value)
-                      )
-                    }
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.gray300}`,
-                      borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.md,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: theme.typography.fontSize.xs,
-                      color: theme.colors.success,
-                    }}
-                  >
-                    Exit at +{config.takeProfitPercent}% profit
-                  </span>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: theme.spacing.xs,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      fontSize: theme.typography.fontSize.sm,
-                    }}
-                  >
-                    Stop Loss %
-                  </label>
-                  <input
-                    type="number"
-                    min="0.5"
-                    max="5"
-                    step="0.5"
-                    value={config.stopLossPercent}
-                    onChange={e =>
-                      updateConfig(
-                        'stopLossPercent',
-                        parseFloat(e.target.value)
-                      )
-                    }
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.gray300}`,
-                      borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.md,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: theme.typography.fontSize.xs,
-                      color: theme.colors.error,
-                    }}
-                  >
-                    Exit at -{config.stopLossPercent}% loss
-                  </span>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: theme.spacing.xs,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      fontSize: theme.typography.fontSize.sm,
-                    }}
-                  >
-                    Exit Before Close (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="60"
-                    value={config.exitBeforeCloseMinutes}
-                    onChange={e =>
-                      updateConfig(
-                        'exitBeforeCloseMinutes',
-                        parseInt(e.target.value)
-                      )
-                    }
-                    style={{
-                      width: '100%',
-                      padding: theme.spacing.sm,
-                      border: `1px solid ${theme.colors.gray300}`,
-                      borderRadius: theme.borderRadius.sm,
-                      fontSize: theme.typography.fontSize.md,
-                    }}
-                    disabled={!config.exitBeforeClose}
-                  />
-                  <span
-                    style={{
-                      fontSize: theme.typography.fontSize.xs,
-                      color: theme.colors.gray500,
-                    }}
-                  >
-                    Close day trades before market close
-                  </span>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: theme.spacing.md,
-                  marginTop: theme.spacing.lg,
-                }}
-              >
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                    cursor: 'pointer',
-                    padding: theme.spacing.sm,
-                    backgroundColor: config.useAdaptiveTargets
-                      ? `${theme.colors.info}10`
-                      : 'transparent',
-                    borderRadius: theme.borderRadius.sm,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.useAdaptiveTargets}
-                    onChange={e =>
-                      updateConfig('useAdaptiveTargets', e.target.checked)
-                    }
-                  />
-                  <div>
-                    <span
-                      style={{ fontWeight: theme.typography.fontWeight.medium }}
-                    >
-                      Adaptive Targets (ATR)
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray500,
-                      }}
-                    >
-                      AI adjusts based on volatility
-                    </div>
-                  </div>
-                </label>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                    cursor: 'pointer',
-                    padding: theme.spacing.sm,
-                    backgroundColor: config.exitOnRsiExtreme
-                      ? `${theme.colors.info}10`
-                      : 'transparent',
-                    borderRadius: theme.borderRadius.sm,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.exitOnRsiExtreme}
-                    onChange={e =>
-                      updateConfig('exitOnRsiExtreme', e.target.checked)
-                    }
-                  />
-                  <div>
-                    <span
-                      style={{ fontWeight: theme.typography.fontWeight.medium }}
-                    >
-                      Exit on RSI Extreme
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray500,
-                      }}
-                    >
-                      Close when RSI hits extreme
-                    </div>
-                  </div>
-                </label>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.sm,
-                    cursor: 'pointer',
-                    padding: theme.spacing.sm,
-                    backgroundColor: config.exitBeforeClose
-                      ? `${theme.colors.info}10`
-                      : 'transparent',
-                    borderRadius: theme.borderRadius.sm,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.exitBeforeClose}
-                    onChange={e =>
-                      updateConfig('exitBeforeClose', e.target.checked)
-                    }
-                  />
-                  <div>
-                    <span
-                      style={{ fontWeight: theme.typography.fontWeight.medium }}
-                    >
-                      Exit Before Market Close
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.xs,
-                        color: theme.colors.gray500,
-                      }}
-                    >
-                      No overnight positions
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              {/* Auto-Trade Toggle */}
-              <div
-                style={{
-                  marginTop: theme.spacing.xl,
-                  padding: theme.spacing.md,
-                  backgroundColor: config.autoTrade
-                    ? `${theme.colors.warning}20`
-                    : theme.colors.gray50,
-                  borderRadius: theme.borderRadius.md,
-                  border: `2px solid ${config.autoTrade ? theme.colors.warning : theme.colors.gray200}`,
-                }}
-              >
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: theme.spacing.md,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={config.autoTrade}
-                    onChange={e => updateConfig('autoTrade', e.target.checked)}
-                    style={{ width: 20, height: 20 }}
-                  />
-                  <div>
-                    <span
-                      style={{
-                        fontWeight: theme.typography.fontWeight.bold,
-                        fontSize: theme.typography.fontSize.md,
-                      }}
-                    >
-                      Enable Auto-Trading
-                    </span>
-                    <div
-                      style={{
-                        fontSize: theme.typography.fontSize.sm,
-                        color: theme.colors.gray600,
-                        marginTop: '4px',
-                      }}
-                    >
-                      {config.autoTrade
-                        ? '⚠️ AI will automatically execute trades on your account'
-                        : 'AI will only suggest trades, no automatic execution'}
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
         </Card>
       )}
 

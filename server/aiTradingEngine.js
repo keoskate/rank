@@ -1265,6 +1265,8 @@ async function syncPortfolio(sessionId) {
     const assetType = session.config.assetType || 'stocks';
     const account = await alpacaClient.getAccount(tradingMode);
     const positions = await getPositionsForAsset(tradingMode, assetType);
+    // DEBUG: Log positions from Alpaca with session name
+    console.log(`[AI Engine] "${session.name}" synced: ${positions.length} positions (${assetType}, ${tradingMode})`);
 
     session.portfolio.cash = parseFloat(account.cash);
     session.portfolio.initialValue = parseFloat(account.portfolio_value);
@@ -1791,9 +1793,11 @@ async function evaluateExit(sessionId, symbol) {
     }
     const isPositionCounterTrend = isCounterTrend(etfType, marketRegime);
 
-    // Minimum hold time - reduced for counter-trend positions
-    // Normal: 10 min, Counter-trend: 5 min (need to exit faster)
-    const MIN_HOLD_MINUTES = isPositionCounterTrend ? 5 : 10;
+    // Minimum hold time - use session config (default: 10 min normal, 5 min counter-trend)
+    // Use || to ensure 0 falls back to default (0 min hold is dangerous)
+    const configMinHold = session.config.minHoldMinutes || 10;
+    const configCounterTrendHold = session.config.counterTrendMinHoldMinutes || 5;
+    const MIN_HOLD_MINUTES = isPositionCounterTrend ? configCounterTrendHold : configMinHold;
     const entryTime = position.entryTime || position.createdAt;
     if (entryTime) {
       const holdDuration = Date.now() - new Date(entryTime).getTime();
@@ -1827,12 +1831,15 @@ async function evaluateExit(sessionId, symbol) {
     // - RSI overbought: 20 pts (same)
     // - EOD: 50 pts (same as simulator)
 
-    // Profit target hit (using percentage config) - reduced points, needs confirmation
+    // Profit target hit (using percentage config)
+    // If TP is very low (< 0.5%), treat it as aggressive scalping - immediate exit
+    // Otherwise needs confirmation from other signals
     if (pnlPercent >= takeProfitPercent) {
-      exitScore += 30;
+      const isAggressiveScalp = takeProfitPercent < 0.5;
+      exitScore += isAggressiveScalp ? 100 : 30;  // Immediate exit for scalp mode
       exitReason = 'Profit target reached';
       factors.push(
-        `Profit target +${takeProfitPercent}% reached (at +${pnlPercent.toFixed(2)}%)`
+        `Profit target +${takeProfitPercent}% reached (at +${pnlPercent.toFixed(2)}%)${isAggressiveScalp ? ' [SCALP]' : ''}`
       );
     }
 
@@ -1848,13 +1855,20 @@ async function evaluateExit(sessionId, symbol) {
 
     // Trailing stop - now a % of gains to lock in (e.g., 50 means lock in 50% of gains)
     // 0 = disabled, values 0-100 represent % of gains to protect
+    // IMPORTANT: Only activates after minimum profit threshold to prevent premature exits
     const trailingStopOfTP = cfg.trailingStopPercent || 0;
+    const trailingStopMinProfitPercent = cfg.trailingStopMinProfitPercent || 2; // Default 2% min before trailing activates
     const entryPrice = position.averageCost;
+    const highWaterMarkPnlPercent = position.highWaterMark
+      ? ((position.highWaterMark - entryPrice) / entryPrice) * 100
+      : 0;
+
     if (
       trailingStopOfTP > 0 &&
       position.highWaterMark &&
       position.highWaterMark > entryPrice &&
-      pnlPercent > 0
+      pnlPercent > 0 &&
+      highWaterMarkPnlPercent >= trailingStopMinProfitPercent // Only activate after meaningful gain
     ) {
       const gainFromEntry = position.highWaterMark - entryPrice;
       const allowedDropFromHigh =
@@ -1867,9 +1881,12 @@ async function evaluateExit(sessionId, symbol) {
         exitScore += 35;
         exitReason = 'Trailing stop triggered';
         factors.push(
-          `Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${(((position.highWaterMark - entryPrice) / entryPrice) * 100).toFixed(2)}% gain)`
+          `Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${highWaterMarkPnlPercent.toFixed(2)}% gain)`
         );
       }
+    } else if (trailingStopOfTP > 0 && pnlPercent > 0 && highWaterMarkPnlPercent < trailingStopMinProfitPercent) {
+      // Log that trailing stop is waiting for minimum profit
+      factors.push(`Trailing stop waiting (need ${trailingStopMinProfitPercent}% gain, have ${highWaterMarkPnlPercent.toFixed(2)}%)`);
     }
 
     // RSI overbought (configurable)
@@ -1959,9 +1976,20 @@ async function evaluateExit(sessionId, symbol) {
       }
     }
 
+    // MINIMUM PROFIT PROTECTION: Don't exit with tiny profits due to weak signals
+    // If profit is positive but under minimum threshold, require MUCH higher exit score
+    // (Stop loss at 100 pts still works, but technical signals alone won't trigger exit)
+    const minProfitForExit = cfg.minProfitForExitPercent || 1.5; // Default 1.5% minimum
+    const isProfitTooSmall = pnlPercent > 0 && pnlPercent < minProfitForExit;
+    const effectiveExitThreshold = isProfitTooSmall ? 80 : 50; // Higher threshold for small profits
+
+    if (isProfitTooSmall && exitScore >= 50 && exitScore < 80) {
+      factors.push(`⏳ Holding - profit ${pnlPercent.toFixed(2)}% too small (need ${minProfitForExit}% or strong exit signal)`);
+    }
+
     // Exit threshold aligned with simulator (was 40, now 50 to match simulator logic)
     // This prevents premature exits from weak signals
-    const shouldExit = exitScore >= 50;
+    const shouldExit = exitScore >= effectiveExitThreshold;
 
     const decision = {
       shouldExit,
@@ -2223,9 +2251,40 @@ async function executeEntry(sessionId, symbol, decision) {
 
     // Format quantity for logging (crypto shows decimals, stocks show whole numbers)
     const qtyDisplay = isCrypto ? quantity.toFixed(6) : quantity;
+    const orderValue = quantity * currentPrice;
     console.log(
       `[AI Engine] Calculated position: ${qtyDisplay} ${isCrypto ? 'units' : 'shares'} of ${symbol} @ $${currentPrice.toFixed(2)} (max value: $${maxPositionValue.toFixed(2)}, mode: ${tradingMode.toUpperCase()})`
     );
+
+    // Pre-check buying power to avoid Alpaca rejection
+    // Paper mode: use regular buying_power (not daytrading_buying_power which may be $0)
+    // Live mode: use daytrading_buying_power for intraday trades
+    try {
+      const account = await alpacaClient.getAccount(tradingMode);
+      const availableBuyingPower = tradingMode === 'paper'
+        ? parseFloat(account.buying_power) || 0
+        : parseFloat(account.daytrading_buying_power) || parseFloat(account.buying_power) || 0;
+
+      if (orderValue > availableBuyingPower) {
+        console.log(
+          `[AI Engine] Insufficient buying power for ${symbol}: need $${orderValue.toFixed(2)}, have $${availableBuyingPower.toFixed(2)} (${tradingMode})`
+        );
+        // Reduce quantity to fit available buying power
+        const maxAffordableQty = isCrypto
+          ? availableBuyingPower / currentPrice
+          : Math.floor(availableBuyingPower / currentPrice);
+
+        if (maxAffordableQty < 1 || (isCrypto && maxAffordableQty * currentPrice < 10)) {
+          console.log(`[AI Engine] Cannot afford minimum position for ${symbol}, skipping`);
+          return;
+        }
+
+        quantity = maxAffordableQty;
+        console.log(`[AI Engine] Reduced position to ${quantity} ${isCrypto ? 'units' : 'shares'} to fit buying power`);
+      }
+    } catch (bpError) {
+      console.warn(`[AI Engine] Buying power check failed: ${bpError.message}, proceeding anyway`);
+    }
 
     // Check for pending order to prevent duplicate buys during race conditions
     if (!pendingOrders.has(sessionId)) {

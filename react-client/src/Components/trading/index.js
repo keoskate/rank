@@ -8,3 +8,4 @@
 export { default as StandardOrderForm } from './StandardOrderForm';
 export { default as StockInsightsPanel } from './StockInsightsPanel';
 export { default as StockQuoteHeader } from './StockQuoteHeader';
+export { default as TradingConfigPanel } from './TradingConfigPanel';
