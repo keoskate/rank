@@ -13,11 +13,22 @@ import theme from '../../theme';
 const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sessionName }) => {
   if (!isOpen) return null;
 
-  // Create a map of current prices from positions
+  // Create maps of current prices and unrealized P&L from positions (using Alpaca's data)
   const currentPrices = {};
+  const positionUnrealizedPnL = {};
   (positions || []).forEach(pos => {
-    currentPrices[pos.symbol] = pos.currentPrice || pos.current_price || pos.marketValue / pos.qty || 0;
+    const currentPrice = pos.currentPrice || pos.current_price ||
+      (pos.market_value && pos.qty ? pos.market_value / pos.qty : null) ||
+      (pos.marketValue && pos.qty ? pos.marketValue / pos.qty : null);
+    currentPrices[pos.symbol] = currentPrice;
+    // Use Alpaca's pre-calculated unrealized P&L (more accurate)
+    positionUnrealizedPnL[pos.symbol] = parseFloat(pos.unrealizedPL || pos.unrealized_pl || 0);
   });
+
+  // Calculate total unrealized P&L directly from positions (most accurate)
+  const totalUnrealizedFromPositions = (positions || []).reduce((sum, pos) => {
+    return sum + parseFloat(pos.unrealizedPL || pos.unrealized_pl || 0);
+  }, 0);
 
   // Group trades by symbol to pair buys with sells
   const tradesBySymbol = {};
@@ -70,6 +81,7 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
     // Add any unmatched buys as open positions
     buysCopy.forEach(buy => {
       const currentPrice = currentPrices[symbol] || 0;
+      // Calculate unrealized P&L for this specific buy
       const unrealizedPnl = currentPrice > 0 ? (currentPrice - buy.price) * buy.quantity : null;
       const unrealizedPnlPercent = currentPrice > 0 && buy.price > 0
         ? ((currentPrice - buy.price) / buy.price) * 100
@@ -91,6 +103,19 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
     });
   });
 
+  // Update open trade P&L values from positions if available (more accurate)
+  // This handles cases where multiple buys exist for same symbol
+  roundTrips.forEach(trade => {
+    if (trade.isOpen && positionUnrealizedPnL[trade.symbol] !== undefined) {
+      // If we have position data but couldn't calculate from trade, use position data
+      if (trade.pnl === null && currentPrices[trade.symbol]) {
+        trade.currentPrice = currentPrices[trade.symbol];
+        trade.pnl = (trade.currentPrice - trade.buyPrice) * trade.quantity;
+        trade.pnlPercent = ((trade.currentPrice - trade.buyPrice) / trade.buyPrice) * 100;
+      }
+    }
+  });
+
   // Sort by time (most recent first)
   roundTrips.sort((a, b) => {
     const timeA = new Date(a.sellTime || a.buyTime);
@@ -107,8 +132,9 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
   // Realized P&L = completed trades only
   const realizedPnL = completedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
 
-  // Unrealized P&L = open positions with current prices
-  const unrealizedPnL = openTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+  // Unrealized P&L = use Alpaca's pre-calculated values (most accurate)
+  // This is more reliable than calculating from trades because Alpaca has real-time prices
+  const unrealizedPnL = totalUnrealizedFromPositions;
 
   // Total P&L
   const totalPnL = realizedPnL + unrealizedPnL;
