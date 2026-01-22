@@ -3,14 +3,21 @@
  *
  * Modal showing a complete summary of all trades for the current session.
  * Displays:
- * - High-level stats (total P&L, win rate, trade count)
+ * - Realized P&L (locked in profits from closed trades) - GREEN
+ * - Unrealized P&L (paper profits from open positions) - YELLOW
  * - Detailed list of every trade with entry/exit info
  */
 
 import theme from '../../theme';
 
-const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) => {
+const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sessionName }) => {
   if (!isOpen) return null;
+
+  // Create a map of current prices from positions
+  const currentPrices = {};
+  (positions || []).forEach(pos => {
+    currentPrices[pos.symbol] = pos.currentPrice || pos.current_price || pos.marketValue / pos.qty || 0;
+  });
 
   // Group trades by symbol to pair buys with sells
   const tradesBySymbol = {};
@@ -37,8 +44,6 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
     sells.forEach(sell => {
       const matchingBuy = buysCopy.shift();
       if (matchingBuy) {
-        const buyPrice = sell.price || 0;
-        const sellPrice = matchingBuy.price || 0;
         const quantity = sell.quantity || matchingBuy.quantity || 0;
         const pnl = (sell.price - matchingBuy.price) * quantity;
         const pnlPercent = matchingBuy.price > 0
@@ -64,13 +69,20 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
 
     // Add any unmatched buys as open positions
     buysCopy.forEach(buy => {
+      const currentPrice = currentPrices[symbol] || 0;
+      const unrealizedPnl = currentPrice > 0 ? (currentPrice - buy.price) * buy.quantity : null;
+      const unrealizedPnlPercent = currentPrice > 0 && buy.price > 0
+        ? ((currentPrice - buy.price) / buy.price) * 100
+        : null;
+
       roundTrips.push({
         symbol,
         buyPrice: buy.price,
+        currentPrice: currentPrice || null,
         sellPrice: null,
         quantity: buy.quantity,
-        pnl: null,
-        pnlPercent: null,
+        pnl: unrealizedPnl,
+        pnlPercent: unrealizedPnlPercent,
         holdMinutes: null,
         buyTime: buy.time || buy.createdAt,
         sellTime: null,
@@ -88,9 +100,19 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
 
   // Calculate summary stats
   const completedTrades = roundTrips.filter(t => !t.isOpen);
+  const openTrades = roundTrips.filter(t => t.isOpen);
   const wins = completedTrades.filter(t => t.pnl > 0);
   const losses = completedTrades.filter(t => t.pnl <= 0);
-  const totalPnL = completedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+  // Realized P&L = completed trades only
+  const realizedPnL = completedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+  // Unrealized P&L = open positions with current prices
+  const unrealizedPnL = openTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+  // Total P&L
+  const totalPnL = realizedPnL + unrealizedPnL;
+
   const winRate = completedTrades.length > 0
     ? Math.round((wins.length / completedTrades.length) * 100)
     : 0;
@@ -142,7 +164,7 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
           backgroundColor: theme.colors.surface,
           borderRadius: theme.borderRadius.lg,
           width: '90%',
-          maxWidth: '800px',
+          maxWidth: '900px',
           maxHeight: '85vh',
           overflow: 'hidden',
           display: 'flex',
@@ -184,23 +206,84 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
           </button>
         </div>
 
-        {/* Summary Stats */}
+        {/* P&L Summary - Realized vs Unrealized */}
         <div
           style={{
             padding: theme.spacing.lg,
-            backgroundColor: theme.colors.infoLight,
+            backgroundColor: theme.colors.gray50,
             borderBottom: `1px solid ${theme.colors.gray200}`,
           }}
         >
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
+              gridTemplateColumns: '1fr 1fr 1fr',
               gap: theme.spacing.lg,
+              marginBottom: theme.spacing.md,
             }}
           >
-            <div>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+            {/* Realized P&L */}
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor: realizedPnL >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                borderRadius: theme.borderRadius.md,
+                border: `1px solid ${realizedPnL >= 0 ? theme.colors.success : theme.colors.error}`,
+              }}
+            >
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginBottom: '4px' }}>
+                Realized P&L
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xxl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color: realizedPnL >= 0 ? theme.colors.success : theme.colors.error,
+                }}
+              >
+                {realizedPnL >= 0 ? '+' : ''}${realizedPnL.toFixed(2)}
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Locked in from {completedTrades.length} closed trade{completedTrades.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            {/* Unrealized P&L */}
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                borderRadius: theme.borderRadius.md,
+                border: '1px solid #eab308',
+              }}
+            >
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginBottom: '4px' }}>
+                Unrealized P&L
+              </div>
+              <div
+                style={{
+                  fontSize: theme.typography.fontSize.xxl,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color: '#b45309', // Amber/orange for unrealized
+                }}
+              >
+                {unrealizedPnL >= 0 ? '+' : ''}${unrealizedPnL.toFixed(2)}
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Paper profit from {openTrades.length} open position{openTrades.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            {/* Total P&L */}
+            <div
+              style={{
+                padding: theme.spacing.md,
+                backgroundColor: theme.colors.infoLight,
+                borderRadius: theme.borderRadius.md,
+                border: `1px solid ${theme.colors.infoBorder}`,
+              }}
+            >
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600, marginBottom: '4px' }}>
                 Total P&L
               </div>
               <div
@@ -212,27 +295,34 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
               >
                 {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
               </div>
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                Realized + Unrealized
+              </div>
             </div>
+          </div>
+
+          {/* Stats Row */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: theme.spacing.md,
+              paddingTop: theme.spacing.md,
+              borderTop: `1px solid ${theme.colors.gray200}`,
+            }}
+          >
             <div>
               <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
                 Win Rate
               </div>
               <div
                 style={{
-                  fontSize: theme.typography.fontSize.xxl,
+                  fontSize: theme.typography.fontSize.xl,
                   fontWeight: theme.typography.fontWeight.bold,
                   color: winRate >= 50 ? theme.colors.success : theme.colors.warning,
                 }}
               >
                 {winRate}%
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-                Trades
-              </div>
-              <div style={{ fontSize: theme.typography.fontSize.xxl, fontWeight: theme.typography.fontWeight.bold }}>
-                {completedTrades.length}
               </div>
               <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
                 {wins.length}W / {losses.length}L
@@ -240,9 +330,17 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
             </div>
             <div>
               <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
-                Avg Hold
+                Closed Trades
               </div>
-              <div style={{ fontSize: theme.typography.fontSize.xxl, fontWeight: theme.typography.fontWeight.bold }}>
+              <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>
+                {completedTrades.length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+                Avg Hold Time
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold }}>
                 {avgHoldTime}m
               </div>
             </div>
@@ -286,7 +384,7 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
                   <th style={{ textAlign: 'left', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Symbol</th>
                   <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Qty</th>
                   <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Buy</th>
-                  <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Sell</th>
+                  <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Sell / Current</th>
                   <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>P&L</th>
                   <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Hold</th>
                   <th style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray600 }}>Time</th>
@@ -299,7 +397,7 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
                     style={{
                       borderBottom: `1px solid ${theme.colors.gray100}`,
                       backgroundColor: trade.isOpen
-                        ? theme.colors.warningLight
+                        ? 'rgba(234, 179, 8, 0.1)'  // Yellow for open/unrealized
                         : trade.isWin
                           ? 'rgba(34, 197, 94, 0.05)'
                           : 'rgba(239, 68, 68, 0.05)',
@@ -312,7 +410,7 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
                           style={{
                             marginLeft: theme.spacing.xs,
                             padding: '2px 6px',
-                            backgroundColor: theme.colors.warning,
+                            backgroundColor: '#eab308',
                             color: 'white',
                             borderRadius: theme.borderRadius.sm,
                             fontSize: theme.typography.fontSize.xs,
@@ -329,17 +427,29 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, sessionName }) 
                       {formatPrice(trade.buyPrice)}
                     </td>
                     <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                      {formatPrice(trade.sellPrice)}
+                      {trade.isOpen ? (
+                        <span style={{ color: '#b45309' }}>
+                          {formatPrice(trade.currentPrice)}
+                        </span>
+                      ) : (
+                        formatPrice(trade.sellPrice)
+                      )}
                     </td>
                     <td
                       style={{
                         textAlign: 'right',
                         padding: theme.spacing.sm,
                         fontWeight: theme.typography.fontWeight.medium,
-                        color: trade.pnl > 0 ? theme.colors.success : trade.pnl < 0 ? theme.colors.error : theme.colors.gray600,
+                        color: trade.isOpen
+                          ? '#b45309'  // Amber for unrealized
+                          : trade.pnl > 0
+                            ? theme.colors.success
+                            : trade.pnl < 0
+                              ? theme.colors.error
+                              : theme.colors.gray600,
                       }}
                     >
-                      {trade.isOpen ? '-' : formatPnL(trade.pnl, trade.pnlPercent)}
+                      {formatPnL(trade.pnl, trade.pnlPercent)}
                     </td>
                     <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
                       {trade.holdMinutes !== null ? `${trade.holdMinutes}m` : '-'}

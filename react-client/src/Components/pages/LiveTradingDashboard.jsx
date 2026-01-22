@@ -3695,6 +3695,7 @@ const LiveTradingDashboard = ({
         onClose={() => setShowSummary(false)}
         stats={stats}
         trades={recentTrades}
+        positions={positions}
         sessionName={sessionName}
       />
     </div>
