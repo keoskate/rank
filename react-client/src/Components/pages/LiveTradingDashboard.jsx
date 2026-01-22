@@ -24,7 +24,7 @@ import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import TradingLogPanel from '../common/TradingLogPanel';
 import ErrorBoundary from '../common/ErrorBoundary';
-import { TradingConfigPanel } from '../trading';
+import { TradingConfigPanel, TradingSessionSummary } from '../trading';
 // LiveTradingChart removed - now using TradingViewChart
 import theme from '../../theme';
 import {
@@ -115,6 +115,7 @@ const LiveTradingDashboard = ({
     lastSaved,
   } = useTradingConfig();
   const [showConfig, setShowConfig] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [configSection, setConfigSection] = useState('none'); // Old tabs removed - using TradingConfigPanel now
   const [configLoaded, setConfigLoaded] = useState(false); // Track if we've loaded config from server
   const [savedConfigs, setSavedConfigs] = useState(() => {
@@ -1287,6 +1288,13 @@ const LiveTradingDashboard = ({
               </Button>
             </>
           )}
+          <Button
+            variant="ghost"
+            onClick={() => setShowSummary(true)}
+            title="View session summary"
+          >
+            Summary
+          </Button>
           <Button variant="ghost" onClick={() => setShowConfig(!showConfig)}>
             Config
           </Button>
@@ -3680,6 +3688,15 @@ const LiveTradingDashboard = ({
           100% { opacity: 1; }
         }
       `}</style>
+
+      {/* Session Summary Modal */}
+      <TradingSessionSummary
+        isOpen={showSummary}
+        onClose={() => setShowSummary(false)}
+        stats={stats}
+        trades={recentTrades}
+        sessionName={sessionName}
+      />
     </div>
   );
 };
