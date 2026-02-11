@@ -115,6 +115,27 @@ export const STOCK_LISTS = {
     stocks: ['AAPL', 'TSLA', 'DIS', 'SHOP', 'NVDA', 'PENN', 'ENPH', 'NKE'],
     color: '#1abc9c', // Teal
   },
+
+  ROBOTICS_AI: {
+    name: 'Robotics & AI',
+    description: 'Robotics and AI companies',
+    stocks: ['RR', 'NVDA', 'PATH', 'IONQ', 'RGTI', 'QBTS', 'PLTR'],
+    color: '#e91e63', // Pink
+  },
+
+  SEMICONDUCTOR_LEVERAGED: {
+    name: 'Semiconductor Leveraged ETFs',
+    description: 'SOXL/SOXS momentum trading with SOXX reference',
+    stocks: ['SOXX', 'SOXL', 'SOXS'],
+    color: '#9c27b0', // Purple
+  },
+
+  SEMICONDUCTOR_FULL: {
+    name: 'Full Semiconductor Suite',
+    description: 'Leveraged ETFs plus major semiconductor stocks',
+    stocks: ['SOXX', 'SOXL', 'SOXS', 'NVDA', 'AMD', 'INTC', 'TSM', 'AVGO', 'QCOM', 'MU', 'ASML'],
+    color: '#673ab7', // Deep Purple
+  },
 };
 
 // Default stock list (can be changed)

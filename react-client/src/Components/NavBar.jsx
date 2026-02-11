@@ -19,6 +19,7 @@ const NavBar = () => {
   ];
 
   const toolsNav = [
+    { path: '/semiconductor', label: 'Semiconductor' },
     { path: '/strategy-lab', label: 'Strategy Lab' },
     { path: '/charlie-strategy', label: 'Charlie Strategy' },
     { path: '/overnight', label: 'Overnight Optimizer' },
