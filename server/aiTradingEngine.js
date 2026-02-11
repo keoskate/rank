@@ -20,6 +20,8 @@ const polygonClient = require('./polygonClient');
 const websocketServer = require('./websocketServer');
 const tradingLogger = require('./tradingLogger');
 const assetUtils = require('./assetUtils');
+const { sentimentEngine, phaseTracker } = require('./semiconductorSentiment');
+const { aiAnalyst } = require('./aiSemiconductorAnalyst');
 
 // Session persistence file
 const SESSION_FILE = path.join(__dirname, '../data/ai-sessions.json');
@@ -382,7 +384,8 @@ const DEFAULT_CONFIG = {
   maxConsecutiveLosses: 3, // Renamed from consecutiveLossLimit to match frontend
   minConfidence: 70, // Match frontend default
   watchlist: [],
-  autoTrade: false, // Match frontend default - require explicit opt-in
+  autoTrade: true, // Default ON - the whole point is automated trading
+  manageAllPositions: false, // Only manage positions in watchlist (prevents session conflicts)
   // Entry settings
   entryStrategy: 'balanced',
   requireVolumeSpike: true,
@@ -398,7 +401,212 @@ const DEFAULT_CONFIG = {
   trailingStopPercent: 0,
   useAdaptiveTargets: true,
   exitOnRsiExtreme: true,
+  // Risk management - stop losses execute even when autoTrade is off
+  allowStopLossExit: true,  // CRITICAL: Allow stop loss to execute regardless of autoTrade
+  // Semiconductor Strategy Settings
+  semiconductorMode: false,          // Enable semiconductor-specific logic (SOXX-based sentiment)
+  marketGate: null,                  // null | 'bullish' | 'bearish' | 'any' - direction gate for entry
+  marketGateMinConfidence: 60,       // Minimum sentiment confidence to pass gate
+  aiSentimentEnabled: false,         // Use Claude for sentiment analysis boost
+  maxSoxsHoldMinutes: 120,           // Max hold time for SOXS positions (decay protection)
+  allowDirectionSwitch: true,        // Allow switching direction mid-day if confidence is high
 };
+
+// ============================================================
+// SEMICONDUCTOR STRATEGY PRESETS
+// ============================================================
+// Pre-configured strategies for SOXL/SOXS semiconductor momentum trading
+
+const STRATEGY_PRESETS = {
+  SOXL_MOMENTUM: {
+    name: 'SOXL Bullish Momentum',
+    description: 'Trades SOXL on bullish semiconductor days. Uses AI sentiment analysis.',
+    watchlist: ['SOXL'],
+    semiconductorMode: true,
+    marketGate: 'bullish',
+    marketGateMinConfidence: 65,
+    entryStrategy: 'momentum',
+    takeProfitPercent: 3.0,      // Wider target for 3x leverage
+    stopLossPercent: 1.5,        // Tighter stop for leverage
+    minSignalsRequired: 2,
+    maxPositions: 1,
+    maxPositionSizePercent: 30,
+    aiSentimentEnabled: true,
+    autoTrade: false,            // Require explicit opt-in
+  },
+
+  SOXS_HEDGE: {
+    name: 'SOXS Bearish Hedge',
+    description: 'Trades SOXS as a hedge on bearish semiconductor days. Auto-exits to avoid decay.',
+    watchlist: ['SOXS'],
+    semiconductorMode: true,
+    marketGate: 'bearish',
+    marketGateMinConfidence: 70, // Higher confidence for inverse ETF
+    entryStrategy: 'conservative',
+    takeProfitPercent: 2.0,      // Quicker profit taking (decay)
+    stopLossPercent: 1.0,        // Tight stop
+    minSignalsRequired: 2,
+    maxSoxsHoldMinutes: 120,     // Max 2 hour hold
+    maxPositions: 1,
+    maxPositionSizePercent: 20,  // Smaller size for hedge
+    aiSentimentEnabled: true,
+    autoTrade: false,
+  },
+
+  SOXL_SOXS_COMBO: {
+    name: 'SOXL/SOXS Dynamic',
+    description: 'Dynamically trades SOXL or SOXS based on semiconductor sentiment. AI-powered direction.',
+    watchlist: ['SOXL', 'SOXS'],
+    semiconductorMode: true,
+    marketGate: 'any',           // Trades both directions
+    marketGateMinConfidence: 60,
+    entryStrategy: 'balanced',
+    takeProfitPercent: 2.5,
+    stopLossPercent: 1.2,
+    minSignalsRequired: 2,
+    maxSoxsHoldMinutes: 90,      // Shorter hold for SOXS
+    maxPositions: 1,             // One at a time
+    maxPositionSizePercent: 25,
+    aiSentimentEnabled: true,
+    allowDirectionSwitch: true,
+    autoTrade: false,
+  },
+};
+
+/**
+ * Get a strategy preset by name
+ * @param {string} presetName - Name of the preset (e.g., 'SOXL_MOMENTUM')
+ * @returns {Object|null} Preset configuration or null if not found
+ */
+function getStrategyPreset(presetName) {
+  return STRATEGY_PRESETS[presetName] || null;
+}
+
+/**
+ * List all available strategy presets
+ * @returns {Array} Array of preset summaries
+ */
+function listStrategyPresets() {
+  return Object.entries(STRATEGY_PRESETS).map(([key, preset]) => ({
+    id: key,
+    name: preset.name,
+    description: preset.description,
+    watchlist: preset.watchlist,
+    marketGate: preset.marketGate,
+    aiEnabled: preset.aiSentimentEnabled,
+  }));
+}
+
+// ============================================================
+// SEMICONDUCTOR SENTIMENT HELPERS
+// ============================================================
+
+/**
+ * Check if market gate condition is met for a session
+ * @param {Object} session - Trading session
+ * @param {Object} sentiment - Current semiconductor sentiment from sentimentEngine
+ * @returns {Object} { allowed: boolean, reason: string|null }
+ */
+async function checkMarketGate(session, sentiment) {
+  const { marketGate, marketGateMinConfidence } = session.config;
+
+  // No gate configured = always allow
+  if (!marketGate || marketGate === 'any') {
+    // For 'any' gate, still check that we have sufficient confidence
+    if (sentiment && sentiment.confidence < marketGateMinConfidence) {
+      return {
+        allowed: false,
+        reason: `Low confidence (${sentiment.confidence}% < ${marketGateMinConfidence}% required)`,
+      };
+    }
+    return { allowed: true, reason: null };
+  }
+
+  if (!sentiment) {
+    return { allowed: false, reason: 'No sentiment data available' };
+  }
+
+  // Check direction match
+  if (marketGate === 'bullish' && sentiment.direction !== 'bullish') {
+    return {
+      allowed: false,
+      reason: `Gate requires bullish sentiment, current: ${sentiment.direction} (${sentiment.confidence}%)`,
+    };
+  }
+
+  if (marketGate === 'bearish' && sentiment.direction !== 'bearish') {
+    return {
+      allowed: false,
+      reason: `Gate requires bearish sentiment, current: ${sentiment.direction} (${sentiment.confidence}%)`,
+    };
+  }
+
+  // Check confidence threshold
+  if (sentiment.confidence < marketGateMinConfidence) {
+    return {
+      allowed: false,
+      reason: `Confidence ${sentiment.confidence}% < required ${marketGateMinConfidence}%`,
+    };
+  }
+
+  return { allowed: true, reason: null };
+}
+
+/**
+ * Check if a symbol should be filtered based on sentiment direction
+ * For semiconductor mode, only trade symbols that align with current sentiment
+ * @param {string} symbol - Symbol to check
+ * @param {Object} sentiment - Current sentiment
+ * @returns {Object} { allowed: boolean, reason: string|null }
+ */
+function checkSymbolSentimentAlignment(symbol, sentiment) {
+  if (!sentiment || sentiment.direction === 'neutral') {
+    return { allowed: false, reason: 'Sentiment is neutral - waiting for direction' };
+  }
+
+  const etfType = getEtfType(symbol);
+
+  // SOXL should only trade when bullish
+  if (etfType === 'bullish' && sentiment.direction !== 'bullish') {
+    return {
+      allowed: false,
+      reason: `${symbol} requires bullish sentiment, current: ${sentiment.direction}`,
+    };
+  }
+
+  // SOXS should only trade when bearish
+  if (etfType === 'bearish' && sentiment.direction !== 'bearish') {
+    return {
+      allowed: false,
+      reason: `${symbol} requires bearish sentiment, current: ${sentiment.direction}`,
+    };
+  }
+
+  return { allowed: true, reason: null };
+}
+
+/**
+ * Check if SOXS position has exceeded max hold time
+ * @param {Object} position - Position data
+ * @param {number} maxHoldMinutes - Maximum hold time in minutes
+ * @returns {Object} { shouldExit: boolean, reason: string|null }
+ */
+function checkSoxsHoldTime(position, maxHoldMinutes) {
+  if (!position || !position.entryTime || !maxHoldMinutes) {
+    return { shouldExit: false, reason: null };
+  }
+
+  const holdMinutes = differenceInMinutes(new Date(), new Date(position.entryTime));
+
+  if (holdMinutes >= maxHoldMinutes) {
+    return {
+      shouldExit: true,
+      reason: `SOXS max hold time exceeded (${holdMinutes} min >= ${maxHoldMinutes} min limit)`,
+    };
+  }
+
+  return { shouldExit: false, reason: null };
+}
 
 // ============================================================
 // ASSET TYPE-AWARE API ROUTING
@@ -1150,6 +1358,35 @@ async function startTradingLoop(sessionId) {
     }
 
     try {
+      // END-OF-DAY EXIT: Close all positions before market close
+      // This prevents overnight exposure for day trading strategies
+      const exitBeforeClose = currentSession.config.exitBeforeClose !== false; // Default true
+      const exitBeforeCloseMinutes = currentSession.config.exitBeforeCloseMinutes || 15;
+      const minutesUntilClose = getMinutesUntilClose();
+
+      if (exitBeforeClose && minutesUntilClose > 0 && minutesUntilClose <= exitBeforeCloseMinutes) {
+        const positions = Array.from(currentSession.portfolio.positions.keys());
+        if (positions.length > 0) {
+          console.log(
+            `[AI Engine] ${currentSession.name}: EOD EXIT - ${minutesUntilClose.toFixed(0)} min until close, closing ${positions.length} position(s)`
+          );
+
+          for (const symbol of positions) {
+            const position = currentSession.portfolio.positions.get(symbol);
+            await executeExit(sessionId, symbol, {
+              shouldExit: true,
+              exitReason: `End-of-day exit (${minutesUntilClose.toFixed(0)} min until close)`,
+              reason: `End-of-day exit`,
+              currentPrice: position?.currentPrice || 0,
+              pnlPercent: position?.unrealizedPnLPercent || 0,
+              pnl: position?.unrealizedPnL || 0,
+              quantity: position?.quantity || 0,
+            });
+          }
+          return; // Skip normal analysis during EOD exit
+        }
+      }
+
       // Analyze watchlist and make decisions
       await analyzeAndTrade(sessionId);
     } catch (error) {
@@ -1220,6 +1457,67 @@ function getMarketHolidays(year) {
 }
 
 /**
+ * Get current Eastern Time offset accounting for DST
+ * EST = UTC-5 (Nov-Mar), EDT = UTC-4 (Mar-Nov)
+ * @returns {number} UTC offset in hours (-5 for EST, -4 for EDT)
+ */
+function getEasternOffset() {
+  // Use Intl to determine if DST is active in US Eastern timezone
+  const now = new Date();
+  const jan = new Date(now.getFullYear(), 0, 1);
+  const jul = new Date(now.getFullYear(), 6, 1);
+  const janOffset = jan.getTimezoneOffset();
+  const julOffset = jul.getTimezoneOffset();
+
+  // If the system is in the US Eastern timezone, use its offset directly
+  // Otherwise, calculate based on DST rules
+  // DST in US: 2nd Sunday in March to 1st Sunday in November
+  const month = now.getMonth(); // 0-indexed
+  const dayOfMonth = now.getDate();
+  const dayOfWeek = now.getDay(); // 0=Sunday
+
+  // March: DST starts 2nd Sunday
+  if (month === 2) {
+    const secondSunday = 14 - new Date(now.getFullYear(), 2, 1).getDay();
+    if (dayOfMonth >= secondSunday) return -4; // EDT
+    return -5; // EST
+  }
+  // November: DST ends 1st Sunday
+  if (month === 10) {
+    const firstSunday = 7 - new Date(now.getFullYear(), 10, 1).getDay();
+    if (firstSunday === 0) firstSunday === 7;
+    if (dayOfMonth < firstSunday) return -4; // EDT
+    return -5; // EST
+  }
+  // Apr-Oct: EDT
+  if (month >= 3 && month <= 9) return -4;
+  // Nov-Feb: EST
+  return -5;
+}
+
+/**
+ * Get current time in Eastern Time as total minutes since midnight
+ * @returns {number} Minutes since midnight ET
+ */
+function getEasternMinutes() {
+  const now = new Date();
+  const utcHours = now.getUTCHours();
+  const etOffset = getEasternOffset();
+  const etHours = (utcHours + etOffset + 24) % 24;
+  const minutes = now.getUTCMinutes();
+  return etHours * 60 + minutes;
+}
+
+/**
+ * Get minutes until market close
+ * @returns {number} Minutes until close (negative if market is closed)
+ */
+function getMinutesUntilClose() {
+  const marketCloseMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
+  return marketCloseMinutes - getEasternMinutes();
+}
+
+/**
  * Check if market is currently open
  * @returns {boolean}
  */
@@ -1234,17 +1532,10 @@ function isMarketOpen() {
   const dateStr = now.toISOString().split('T')[0];
   const holidays = getMarketHolidays(now.getFullYear());
   if (holidays.has(dateStr)) {
-    console.log(`[AI Engine] Market closed for holiday: ${dateStr}`);
     return false;
   }
 
-  // Convert to Eastern Time (approximate)
-  const utcHours = now.getUTCHours();
-  const etOffset = -5; // EST (adjust for DST as needed)
-  const etHours = (utcHours + etOffset + 24) % 24;
-  const minutes = now.getMinutes();
-  const totalMinutes = etHours * 60 + minutes;
-
+  const totalMinutes = getEasternMinutes();
   const marketOpenMinutes = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE;
   const marketCloseMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
 
@@ -1340,11 +1631,165 @@ async function analyzeAndTrade(sessionId) {
     );
   }
 
+  // ============================================================
+  // SEMICONDUCTOR MODE: Get sentiment and check market gates
+  // ============================================================
+  let sentiment = null;
+  let aiAnalysis = null;
+
+  if (session.config.semiconductorMode) {
+    // Get current semiconductor sentiment
+    sentiment = await sentimentEngine.getSentiment();
+
+    // Check if AI analysis should be triggered (phase transitions, direction changes)
+    const aiTrigger = sentimentEngine.shouldTriggerAIAnalysis(sentiment);
+    if (aiTrigger.shouldTrigger && session.config.aiSentimentEnabled) {
+      console.log(`[AI Engine] ${session.name}: AI analysis triggered - ${aiTrigger.reason}`);
+      aiAnalysis = await aiAnalyst.analyze(sentiment, aiTrigger.trigger);
+
+      // Apply AI confidence adjustment
+      if (aiAnalysis && aiAnalysis.confidenceAdjustment) {
+        const originalConfidence = sentiment.confidence;
+        sentiment.confidence = Math.max(0, Math.min(100,
+          sentiment.confidence + aiAnalysis.confidenceAdjustment
+        ));
+        sentiment.aiEnhanced = true;
+        sentiment.aiAnalysis = aiAnalysis;
+        console.log(
+          `[AI Engine] ${session.name}: AI adjusted confidence ${originalConfidence}% -> ${sentiment.confidence}% (${aiAnalysis.confidenceAdjustment > 0 ? '+' : ''}${aiAnalysis.confidenceAdjustment})`
+        );
+      }
+    }
+
+    // Check market gate before proceeding
+    const gateCheck = await checkMarketGate(session, sentiment);
+    if (!gateCheck.allowed) {
+      console.log(`[AI Engine] ${session.name}: Market gate blocked - ${gateCheck.reason}`);
+
+      // Broadcast gate status to frontend
+      websocketServer.broadcastToAll('trading_log', {
+        id: `${Date.now()}-gate-${session.sessionId}`,
+        level: 'INFO',
+        category: 'MARKET_GATE',
+        message: `Market gate: ${gateCheck.reason}`,
+        sessionId: session.sessionId,
+        sessionName: session.name,
+        sentiment: sentiment ? {
+          direction: sentiment.direction,
+          confidence: sentiment.confidence,
+        } : null,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Still check existing positions for exit signals even when gate is blocked
+      // Filter to watchlist positions only (unless manageAllPositions is set)
+      const gateBlockedPositions = Array.from(session.portfolio.positions.keys());
+      const watchlistUpperCaseGate = watchlist.map(s => s.toUpperCase());
+      const positionsToCheck = session.config.manageAllPositions === true
+        ? gateBlockedPositions
+        : gateBlockedPositions.filter(symbol => watchlistUpperCaseGate.includes(symbol.toUpperCase()));
+
+      for (const symbol of positionsToCheck) {
+        // Check for SOXS hold time limit
+        if (symbol.toUpperCase() === 'SOXS' && session.config.maxSoxsHoldMinutes) {
+          const position = session.portfolio.positions.get(symbol);
+          const holdCheck = checkSoxsHoldTime(position, session.config.maxSoxsHoldMinutes);
+          if (holdCheck.shouldExit) {
+            console.log(`[AI Engine] ${session.name}: ${holdCheck.reason}`);
+            await executeExit(sessionId, symbol, { shouldExit: true, reason: holdCheck.reason });
+            continue;
+          }
+        }
+
+        // Check market phase for force exit
+        const forceExitCheck = sentimentEngine.shouldForceExit(symbol);
+        if (forceExitCheck.shouldExit) {
+          console.log(`[AI Engine] ${session.name}: ${forceExitCheck.reason}`);
+          await executeExit(sessionId, symbol, { shouldExit: true, reason: forceExitCheck.reason });
+          continue;
+        }
+
+        // Regular exit evaluation
+        const exitDecision = await evaluateExit(sessionId, symbol);
+        if (exitDecision.shouldExit) {
+          await executeExit(sessionId, symbol, exitDecision);
+        }
+      }
+
+      return; // Skip entry analysis when gate is blocked
+    }
+
+    // Check market phase for entry permission
+    const phase = sentimentEngine.getMarketPhase();
+    if (!phase.tradingAllowed) {
+      console.log(`[AI Engine] ${session.name}: Phase ${phase.phase} - no new entries allowed`);
+      return;
+    }
+
+    // Broadcast sentiment status to frontend
+    websocketServer.broadcastToAll('semiconductor_sentiment', {
+      sessionId: session.sessionId,
+      sessionName: session.name,
+      sentiment: {
+        direction: sentiment.direction,
+        confidence: sentiment.confidence,
+        intradayChange: sentiment.intradayChange,
+        phase: sentiment.phase,
+        thresholds: sentiment.thresholds,
+        signals: sentiment.signals,
+        aiEnhanced: sentiment.aiEnhanced,
+      },
+      aiAnalysis: aiAnalysis ? {
+        direction: aiAnalysis.direction,
+        confidenceAdjustment: aiAnalysis.confidenceAdjustment,
+        reasoning: aiAnalysis.reasoning,
+        riskLevel: aiAnalysis.riskLevel,
+      } : null,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   // Get current positions (now synced from Alpaca)
   const currentPositions = Array.from(session.portfolio.positions.keys());
 
+  // Filter positions to only those in this session's watchlist (unless manageAllPositions is true)
+  // This prevents multiple sessions from trying to manage the same positions
+  const manageAllPositions = session.config.manageAllPositions === true;
+  const watchlistUpperCase = watchlist.map(s => s.toUpperCase());
+  const positionsToManage = manageAllPositions
+    ? currentPositions
+    : currentPositions.filter(symbol => watchlistUpperCase.includes(symbol.toUpperCase()));
+
+  if (currentPositions.length > 0 && positionsToManage.length === 0 && !manageAllPositions) {
+    // Log once per session when we're skipping all positions (they're outside our watchlist)
+    if (Math.random() < 0.01) { // Log rarely to avoid spam
+      console.log(`[AI Engine] ${session.name}: Skipping ${currentPositions.length} positions (none in watchlist: ${watchlist.join(', ')})`);
+    }
+  }
+
   // First, check existing positions for exit signals
-  for (const symbol of currentPositions) {
+  for (const symbol of positionsToManage) {
+    // SEMICONDUCTOR MODE: Check SOXS hold time limit
+    if (session.config.semiconductorMode && symbol.toUpperCase() === 'SOXS' && session.config.maxSoxsHoldMinutes) {
+      const position = session.portfolio.positions.get(symbol);
+      const holdCheck = checkSoxsHoldTime(position, session.config.maxSoxsHoldMinutes);
+      if (holdCheck.shouldExit) {
+        console.log(`[AI Engine] ${session.name}: ${holdCheck.reason}`);
+        await executeExit(sessionId, symbol, { shouldExit: true, reason: holdCheck.reason });
+        continue;
+      }
+    }
+
+    // SEMICONDUCTOR MODE: Check market phase for force exit
+    if (session.config.semiconductorMode) {
+      const forceExitCheck = sentimentEngine.shouldForceExit(symbol);
+      if (forceExitCheck.shouldExit) {
+        console.log(`[AI Engine] ${session.name}: ${forceExitCheck.reason}`);
+        await executeExit(sessionId, symbol, { shouldExit: true, reason: forceExitCheck.reason });
+        continue;
+      }
+    }
+
     const exitDecision = await evaluateExit(sessionId, symbol);
     if (exitDecision.shouldExit) {
       await executeExit(sessionId, symbol, exitDecision);
@@ -1369,6 +1814,25 @@ async function analyzeAndTrade(sessionId) {
       if (normalizedPositions.includes(watchlistBase)) {
         // Already own this asset
         continue;
+      }
+
+      // SEMICONDUCTOR MODE: Check if symbol aligns with current sentiment direction
+      if (session.config.semiconductorMode && sentiment) {
+        const alignmentCheck = checkSymbolSentimentAlignment(symbol, sentiment);
+        if (!alignmentCheck.allowed) {
+          // Log but don't spam - only log occasionally
+          if (Math.random() < 0.1) { // Log ~10% of the time
+            console.log(`[AI Engine] ${session.name}: Skipping ${symbol} - ${alignmentCheck.reason}`);
+          }
+          continue;
+        }
+
+        // Check market phase entry permission for this specific symbol
+        const entryCheck = sentimentEngine.canEnterPosition(symbol);
+        if (!entryCheck.allowed) {
+          console.log(`[AI Engine] ${session.name}: Cannot enter ${symbol} - ${entryCheck.reason}`);
+          continue;
+        }
       }
 
       const entryDecision = await evaluateEntry(sessionId, symbol);
@@ -1916,14 +2380,20 @@ async function evaluateExit(sessionId, symbol) {
       factors.push('Price significantly below VWAP');
     }
 
-    // End of day exit (for day trading)
-    const now = new Date();
-    const etHour = (now.getUTCHours() - 5 + 24) % 24;
-    if (etHour >= 15 && now.getMinutes() >= 55) {
-      if (session.config.timeframes.includes('dayTrading') && pnlPercent > 0) {
-        exitScore += 30;
-        factors.push('End of day profit taking');
-      }
+    // End of day exit - uses proper timezone calculation
+    const minutesUntilClose = getMinutesUntilClose();
+    const exitBeforeCloseMinutes = cfg.exitBeforeCloseMinutes || 15;
+    const exitBeforeClose = cfg.exitBeforeClose !== false; // Default true
+
+    if (exitBeforeClose && minutesUntilClose > 0 && minutesUntilClose <= exitBeforeCloseMinutes) {
+      // Force exit regardless of P&L when approaching market close
+      exitScore += 100; // Guaranteed exit - don't hold overnight
+      exitReason = `End-of-day exit (${minutesUntilClose.toFixed(0)} min until close)`;
+      factors.push(`EOD EXIT: ${minutesUntilClose.toFixed(0)} min until close`);
+    } else if (exitBeforeClose && minutesUntilClose > 0 && minutesUntilClose <= 30) {
+      // Strong signal to exit within 30 min of close
+      exitScore += 50;
+      factors.push(`Approaching market close (${minutesUntilClose.toFixed(0)} min)`);
     }
 
     // Volume declining while price rising (distribution)
@@ -1981,10 +2451,10 @@ async function evaluateExit(sessionId, symbol) {
     // (Stop loss at 100 pts still works, but technical signals alone won't trigger exit)
     const minProfitForExit = cfg.minProfitForExitPercent || 1.5; // Default 1.5% minimum
     const isProfitTooSmall = pnlPercent > 0 && pnlPercent < minProfitForExit;
-    const effectiveExitThreshold = isProfitTooSmall ? 80 : 50; // Higher threshold for small profits
+    const effectiveExitThreshold = isProfitTooSmall ? 95 : 50; // 95 threshold for small profits (only stop loss triggers)
 
-    if (isProfitTooSmall && exitScore >= 50 && exitScore < 80) {
-      factors.push(`⏳ Holding - profit ${pnlPercent.toFixed(2)}% too small (need ${minProfitForExit}% or strong exit signal)`);
+    if (isProfitTooSmall && exitScore >= 50 && exitScore < 95) {
+      factors.push(`⏳ Holding - profit ${pnlPercent.toFixed(2)}% too small (need ${minProfitForExit}% or stop loss)`);
     }
 
     // Exit threshold aligned with simulator (was 40, now 50 to match simulator logic)
@@ -2472,16 +2942,41 @@ async function executeExit(sessionId, symbol, decision) {
   const session = sessions.get(sessionId);
   if (!session) return;
 
-  // Check if auto-trade is enabled
-  if (!session.config.autoTrade) {
+  // Determine if this is a stop loss exit (critical risk management)
+  const isStopLoss = decision.exitReason?.toLowerCase().includes('stop loss') ||
+                     decision.reason?.toLowerCase().includes('stop loss') ||
+                     (decision.reasons && decision.reasons.some(f => f.toLowerCase().includes('stop loss')));
+
+  // Determine if this is an end-of-day exit
+  const isEodExit = decision.exitReason?.toLowerCase().includes('end-of-day') ||
+                    decision.reason?.toLowerCase().includes('end-of-day');
+
+  // Check if auto-trade is enabled (or if stop loss/EOD override is allowed)
+  const allowStopLossExit = session.config.allowStopLossExit !== false; // Default true
+  const allowEodExit = session.config.exitBeforeClose !== false; // Default true
+  const isEmergencyExit = (isStopLoss && allowStopLossExit) || (isEodExit && allowEodExit);
+  if (!session.config.autoTrade && !isEmergencyExit) {
     websocketServer.sendAlert(session.userId, {
       type: 'warning',
       title: 'Exit Signal',
-      message: `SELL signal for ${symbol}: ${decision.exitReason}. Enable auto-trade to execute.`,
+      message: `SELL signal for ${symbol}: ${decision.exitReason || decision.reason}. Enable auto-trade to execute.`,
       severity: 'medium',
       actionRequired: true,
     });
     return;
+  }
+
+  // If executing emergency exit with autoTrade off, send critical alert
+  if (isEmergencyExit && !session.config.autoTrade) {
+    const exitType = isStopLoss ? 'STOP LOSS' : 'END-OF-DAY';
+    console.log(`[AI Engine] EMERGENCY ${exitType} executing for ${symbol} (autoTrade is off)`);
+    websocketServer.sendAlert(session.userId, {
+      type: 'error',
+      title: `EMERGENCY ${exitType}`,
+      message: `Executing ${exitType.toLowerCase()} for ${symbol}: ${decision.exitReason || decision.reason}`,
+      severity: 'critical',
+      actionRequired: false,
+    });
   }
 
   try {
@@ -2623,7 +3118,13 @@ async function executeExit(sessionId, symbol, decision) {
         triggerCircuitBreaker(sessionId, 'Consecutive loss limit reached');
       }
     }
+    session.stats.totalTrades = session.stats.wins + session.stats.losses;
     session.stats.totalPnL += pnl;
+
+    // Recalculate win rate
+    session.stats.winRate = session.stats.totalTrades > 0
+      ? parseFloat(((session.stats.wins / session.stats.totalTrades) * 100).toFixed(1))
+      : 0;
 
     // Check daily loss limit
     const dailyPnLPercent =
@@ -2888,5 +3389,10 @@ module.exports = {
   getDailySummary,
   getDecisionHistory,
   isMarketOpen,
+  getMinutesUntilClose,
   syncPortfolio,
+  // Semiconductor strategy exports
+  getStrategyPreset,
+  listStrategyPresets,
+  STRATEGY_PRESETS,
 };
