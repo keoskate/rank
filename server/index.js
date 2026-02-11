@@ -27,6 +27,9 @@ const alpacaClient = require('./alpacaClient');
 const polygonClient = require('./polygonClient');
 const tradingModeManager = require('./tradingModeManager');
 const aiTradingEngine = require('./aiTradingEngine');
+const { sentimentEngine, phaseTracker } = require('./semiconductorSentiment');
+const { aiAnalyst } = require('./aiSemiconductorAnalyst');
+const { SemiconductorAutoTrader } = require('./semiconductorAutoTrader');
 const technicalIndicatorsService = require('./technicalIndicatorsService');
 const patternRecognitionService = require('./patternRecognitionService');
 const schwabImportService = require('./schwabImportService');
@@ -3669,6 +3672,188 @@ app.post('/api/ai/patterns/analyze', async (req, res) => {
 });
 
 // ================================
+// SEMICONDUCTOR SENTIMENT ENDPOINTS
+// ================================
+
+// Initialize the semiconductor auto-trader
+const semiconductorAutoTrader = new SemiconductorAutoTrader(aiTradingEngine, {
+  autoTrade: false, // Safety: manual execution by default
+});
+
+// Get current semiconductor sentiment (SOXX-based)
+app.get('/api/semiconductor/sentiment', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true';
+    const sentiment = await sentimentEngine.getSentiment(forceRefresh);
+    res.json(sentiment);
+  } catch (error) {
+    console.error('Error getting semiconductor sentiment:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get current market phase
+app.get('/api/semiconductor/phase', (req, res) => {
+  try {
+    const phase = phaseTracker.getCurrentPhase();
+    res.json(phase);
+  } catch (error) {
+    console.error('Error getting market phase:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Trigger AI analysis (force refresh)
+app.post('/api/semiconductor/analyze', async (req, res) => {
+  try {
+    const { trigger = 'manual' } = req.body;
+
+    // First get current sentiment
+    const sentiment = await sentimentEngine.getSentiment(true); // Force refresh
+
+    // Then run AI analysis
+    const analysis = await aiAnalyst.forceRefresh(sentiment, trigger);
+
+    res.json({
+      success: true,
+      sentiment,
+      analysis,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error in semiconductor AI analysis:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get cached AI analysis (without triggering new analysis)
+app.get('/api/semiconductor/ai-analysis', (req, res) => {
+  try {
+    const analysis = aiAnalyst.getCached();
+    res.json({
+      available: !!analysis,
+      analysis: analysis || null,
+      aiEnabled: aiAnalyst.isAvailable(),
+    });
+  } catch (error) {
+    console.error('Error getting AI analysis:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get available strategy presets
+app.get('/api/ai/presets', (req, res) => {
+  try {
+    const presets = aiTradingEngine.listStrategyPresets();
+    res.json({
+      success: true,
+      presets,
+    });
+  } catch (error) {
+    console.error('Error getting strategy presets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific strategy preset
+app.get('/api/ai/presets/:presetName', (req, res) => {
+  try {
+    const { presetName } = req.params;
+    const preset = aiTradingEngine.getStrategyPreset(presetName);
+
+    if (!preset) {
+      return res.status(404).json({ error: `Preset '${presetName}' not found` });
+    }
+
+    res.json({
+      success: true,
+      id: presetName,
+      preset,
+    });
+  } catch (error) {
+    console.error('Error getting strategy preset:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start a session from a preset
+app.post('/api/ai/session/from-preset', async (req, res) => {
+  try {
+    const { userId = 'default_user', presetName, overrides = {} } = req.body;
+
+    // Get the preset
+    const preset = aiTradingEngine.getStrategyPreset(presetName);
+    if (!preset) {
+      return res.status(400).json({ error: `Unknown preset: ${presetName}` });
+    }
+
+    // Merge preset with overrides (overrides take precedence)
+    const config = { ...preset, ...overrides };
+
+    // Start the session
+    const session = aiTradingEngine.startSession(userId, config);
+
+    res.json({
+      success: true,
+      ...session,
+      preset: presetName,
+      message: `Started session from preset '${presetName}'`,
+    });
+  } catch (error) {
+    console.error('Error starting preset session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
+// SEMICONDUCTOR AUTO-TRADER ENDPOINTS
+// ================================
+
+// Get auto-trader status
+app.get('/api/semiconductor/auto-trader/status', (req, res) => {
+  try {
+    const status = semiconductorAutoTrader.getStatus();
+    res.json(status);
+  } catch (error) {
+    console.error('Error getting auto-trader status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start the auto-trader
+app.post('/api/semiconductor/auto-trader/start', (req, res) => {
+  try {
+    const result = semiconductorAutoTrader.start();
+    res.json(result);
+  } catch (error) {
+    console.error('Error starting auto-trader:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stop the auto-trader
+app.post('/api/semiconductor/auto-trader/stop', (req, res) => {
+  try {
+    const result = semiconductorAutoTrader.stop();
+    res.json(result);
+  } catch (error) {
+    console.error('Error stopping auto-trader:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update auto-trader configuration
+app.patch('/api/semiconductor/auto-trader/config', (req, res) => {
+  try {
+    const config = semiconductorAutoTrader.updateConfig(req.body);
+    res.json({ success: true, config });
+  } catch (error) {
+    console.error('Error updating auto-trader config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================================
 // TRADING LOG ENDPOINTS
 // ================================
 
@@ -4920,6 +5105,106 @@ app.get('/api/polygon/quote/:symbol', async (req, res) => {
     res.json(quote);
   } catch (error) {
     console.error('Error fetching quote:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get real-time price for a symbol (combines multiple sources)
+app.get('/api/realtime/price/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+
+    // Try Alpaca latest trade first (most real-time)
+    let price = null;
+    let source = 'unknown';
+
+    try {
+      const trade = await alpacaClient.getLatestTrade(symbol);
+      if (trade && trade.price) {
+        price = trade.price;
+        source = 'alpaca_trade';
+      }
+    } catch (e) {
+      console.log(`Alpaca latest trade unavailable for ${symbol}`);
+    }
+
+    // Fallback to Polygon quote
+    if (!price) {
+      try {
+        const quote = await polygonClient.getLatestQuote(symbol);
+        if (quote && quote.price) {
+          price = quote.price;
+          source = 'polygon_quote';
+        }
+      } catch (e) {
+        console.log(`Polygon quote unavailable for ${symbol}`);
+      }
+    }
+
+    // Get previous close for change calculation
+    let prevClose = null;
+    try {
+      const prev = await polygonClient.getPreviousClose(symbol);
+      if (prev && prev.close) {
+        prevClose = prev.close;
+      }
+    } catch (e) {
+      console.log(`Previous close unavailable for ${symbol}`);
+    }
+
+    if (!price) {
+      return res.status(404).json({ error: 'Price not available' });
+    }
+
+    const change = prevClose ? ((price - prevClose) / prevClose) * 100 : null;
+
+    res.json({
+      symbol,
+      price,
+      prevClose,
+      change,
+      source,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error fetching real-time price:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get aggregates (OHLCV bars) for a symbol
+app.get('/api/polygon/aggregates/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { multiplier = 5, timespan = 'minute', limit = 78 } = req.query;
+
+    // Calculate date range based on timespan
+    const now = new Date();
+    const from = new Date(now);
+
+    if (timespan === 'day') {
+      // For daily bars, go back enough days to get the requested limit
+      from.setDate(from.getDate() - parseInt(limit) - 5); // Extra buffer for weekends
+    } else {
+      // For intraday, use today
+      from.setHours(0, 0, 0, 0);
+    }
+
+    const aggregates = await polygonClient.getAggregates(
+      symbol,
+      parseInt(multiplier),
+      timespan,
+      { from, to: now, limit: parseInt(limit) }
+    );
+
+    res.json({
+      success: true,
+      symbol,
+      results: aggregates || [],
+      count: aggregates?.length || 0,
+    });
+  } catch (error) {
+    console.error('Error fetching aggregates:', error);
     res.status(500).json({ error: error.message });
   }
 });
