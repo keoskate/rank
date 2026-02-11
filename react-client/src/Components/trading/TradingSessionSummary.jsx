@@ -6,12 +6,36 @@
  * - Realized P&L (locked in profits from closed trades) - GREEN
  * - Unrealized P&L (paper profits from open positions) - YELLOW
  * - Detailed list of every trade with entry/exit info
+ * - Click to expand any trade row to see entry/exit reasoning
  */
 
+import React, { useState } from 'react';
 import theme from '../../theme';
 
-const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sessionName }) => {
+const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sessionName, decisions = [] }) => {
+  const [expandedRows, setExpandedRows] = useState({});
+
   if (!isOpen) return null;
+
+  // Toggle expanded state for a row
+  const toggleRow = (idx) => {
+    setExpandedRows(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  // Find matching decisions for a trade (buy and sell decisions)
+  const findDecisionsForTrade = (trade) => {
+    const buyDecision = decisions.find(d =>
+      d.symbol === trade.symbol &&
+      d.action === 'BUY' &&
+      d.shouldEnter
+    );
+    const sellDecision = decisions.find(d =>
+      d.symbol === trade.symbol &&
+      d.action === 'SELL' &&
+      d.shouldExit
+    );
+    return { buyDecision, sellDecision };
+  };
 
   // Create maps of current prices and unrealized P&L from positions (using Alpaca's data)
   const currentPrices = {};
@@ -30,10 +54,13 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
     return sum + parseFloat(pos.unrealizedPL || pos.unrealized_pl || 0);
   }, 0);
 
+  // Helper to get trade timestamp (API uses various field names)
+  const getTradeTime = (trade) => trade.timestamp || trade.time || trade.createdAt || trade.filled_at;
+
   // Group trades by symbol to pair buys with sells
   const tradesBySymbol = {};
   const sortedTrades = [...(trades || [])].sort(
-    (a, b) => new Date(a.time || a.createdAt) - new Date(b.time || b.createdAt)
+    (a, b) => new Date(getTradeTime(a)) - new Date(getTradeTime(b))
   );
 
   sortedTrades.forEach(trade => {
@@ -60,7 +87,9 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
         const pnlPercent = matchingBuy.price > 0
           ? ((sell.price - matchingBuy.price) / matchingBuy.price) * 100
           : 0;
-        const holdTime = new Date(sell.time || sell.createdAt) - new Date(matchingBuy.time || matchingBuy.createdAt);
+        const buyTimeStr = getTradeTime(matchingBuy);
+        const sellTimeStr = getTradeTime(sell);
+        const holdTime = new Date(sellTimeStr) - new Date(buyTimeStr);
         const holdMinutes = Math.round(holdTime / 60000);
 
         roundTrips.push({
@@ -70,9 +99,9 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
           quantity,
           pnl,
           pnlPercent,
-          holdMinutes,
-          buyTime: matchingBuy.time || matchingBuy.createdAt,
-          sellTime: sell.time || sell.createdAt,
+          holdMinutes: isNaN(holdMinutes) ? null : holdMinutes,
+          buyTime: buyTimeStr,
+          sellTime: sellTimeStr,
           isWin: pnl > 0,
         });
       }
@@ -87,6 +116,11 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
         ? ((currentPrice - buy.price) / buy.price) * 100
         : null;
 
+      // Calculate hold time for open positions (from buy time to now)
+      const buyTimeStr = getTradeTime(buy);
+      const holdTime = buyTimeStr ? (new Date() - new Date(buyTimeStr)) : null;
+      const holdMinutes = holdTime ? Math.round(holdTime / 60000) : null;
+
       roundTrips.push({
         symbol,
         buyPrice: buy.price,
@@ -95,8 +129,8 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
         quantity: buy.quantity,
         pnl: unrealizedPnl,
         pnlPercent: unrealizedPnlPercent,
-        holdMinutes: null,
-        buyTime: buy.time || buy.createdAt,
+        holdMinutes: (holdMinutes !== null && !isNaN(holdMinutes)) ? holdMinutes : null,
+        buyTime: buyTimeStr,
         sellTime: null,
         isOpen: true,
       });
@@ -155,7 +189,11 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
   const formatTime = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Los_Angeles'
+    });
   };
 
   const formatPrice = (price) => {
@@ -418,75 +456,160 @@ const TradingSessionSummary = ({ isOpen, onClose, stats, trades, positions, sess
                 </tr>
               </thead>
               <tbody>
-                {roundTrips.map((trade, idx) => (
-                  <tr
-                    key={idx}
-                    style={{
-                      borderBottom: `1px solid ${theme.colors.gray100}`,
-                      backgroundColor: trade.isOpen
-                        ? 'rgba(234, 179, 8, 0.1)'  // Yellow for open/unrealized
-                        : trade.isWin
-                          ? 'rgba(34, 197, 94, 0.05)'
-                          : 'rgba(239, 68, 68, 0.05)',
-                    }}
-                  >
-                    <td style={{ padding: theme.spacing.sm, fontWeight: theme.typography.fontWeight.medium }}>
-                      {trade.symbol}
-                      {trade.isOpen && (
-                        <span
+                {roundTrips.map((trade, idx) => {
+                  const { buyDecision, sellDecision } = findDecisionsForTrade(trade);
+                  const isExpanded = expandedRows[idx];
+                  const hasDecisionData = buyDecision || sellDecision;
+
+                  return (
+                    <React.Fragment key={idx}>
+                      <tr
+                        onClick={() => toggleRow(idx)}
+                        style={{
+                          borderBottom: isExpanded ? 'none' : `1px solid ${theme.colors.gray100}`,
+                          backgroundColor: trade.isOpen
+                            ? 'rgba(139, 92, 246, 0.08)'
+                            : trade.isWin
+                              ? 'rgba(34, 197, 94, 0.05)'
+                              : 'rgba(239, 68, 68, 0.05)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <td style={{ padding: theme.spacing.sm, fontWeight: theme.typography.fontWeight.medium }}>
+                          <span style={{ marginRight: theme.spacing.xs, color: theme.colors.gray400 }}>
+                            {isExpanded ? '▼' : '▶'}
+                          </span>
+                          {trade.symbol}
+                          {trade.isOpen && (
+                            <span
+                              style={{
+                                marginLeft: theme.spacing.xs,
+                                padding: '2px 6px',
+                                backgroundColor: '#8b5cf6',
+                                color: 'white',
+                                borderRadius: theme.borderRadius.sm,
+                                fontSize: theme.typography.fontSize.xs,
+                              }}
+                            >
+                              OPEN
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          {trade.quantity}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          {formatPrice(trade.buyPrice)}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          {trade.isOpen ? (
+                            <span style={{ color: trade.pnl >= 0 ? theme.colors.success : theme.colors.error }}>
+                              {formatPrice(trade.currentPrice)}
+                            </span>
+                          ) : (
+                            formatPrice(trade.sellPrice)
+                          )}
+                        </td>
+                        <td
                           style={{
-                            marginLeft: theme.spacing.xs,
-                            padding: '2px 6px',
-                            backgroundColor: '#eab308',
-                            color: 'white',
-                            borderRadius: theme.borderRadius.sm,
-                            fontSize: theme.typography.fontSize.xs,
+                            textAlign: 'right',
+                            padding: theme.spacing.sm,
+                            fontWeight: theme.typography.fontWeight.medium,
+                            color: trade.pnl > 0
+                              ? theme.colors.success
+                              : trade.pnl < 0
+                                ? theme.colors.error
+                                : theme.colors.gray600,
                           }}
                         >
-                          OPEN
-                        </span>
+                          {formatPnL(trade.pnl, trade.pnlPercent)}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
+                          {trade.holdMinutes !== null && !isNaN(trade.holdMinutes) ? `${trade.holdMinutes}m` : '-'}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray500 }}>
+                          {formatTime(trade.buyTime)}
+                          {trade.sellTime && ` → ${formatTime(trade.sellTime)}`}
+                        </td>
+                      </tr>
+
+                      {/* Expanded Details Row */}
+                      {isExpanded && (
+                        <tr key={`${idx}-details`} style={{ backgroundColor: theme.colors.gray50 }}>
+                          <td colSpan={7} style={{ padding: theme.spacing.md }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.lg }}>
+                              {/* Entry Details */}
+                              <div>
+                                <h4 style={{ margin: 0, marginBottom: theme.spacing.sm, color: theme.colors.success, fontSize: theme.typography.fontSize.sm }}>
+                                  Entry Reason
+                                </h4>
+                                {buyDecision ? (
+                                  <div style={{ fontSize: theme.typography.fontSize.sm }}>
+                                    <div style={{ marginBottom: theme.spacing.xs }}>
+                                      <strong>Confidence:</strong> {buyDecision.confidence}%
+                                    </div>
+                                    <div style={{ marginBottom: theme.spacing.xs }}>
+                                      <strong>Signals:</strong>
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: theme.spacing.md, color: theme.colors.gray600 }}>
+                                      {(buyDecision.reasons || []).slice(0, 5).map((reason, i) => (
+                                        <li key={i} style={{ marginBottom: '2px' }}>{reason}</li>
+                                      ))}
+                                    </ul>
+                                    {buyDecision.indicators && (
+                                      <div style={{ marginTop: theme.spacing.sm, color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                                        RSI: {buyDecision.indicators.rsi?.toFixed(1)} |
+                                        MACD: {buyDecision.indicators.macd?.toFixed(3)} |
+                                        VWAP: {buyDecision.indicators.vwapDeviation?.toFixed(2)}%
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                                    No entry decision data available
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Exit Details */}
+                              <div>
+                                <h4 style={{ margin: 0, marginBottom: theme.spacing.sm, color: trade.isOpen ? theme.colors.gray500 : theme.colors.error, fontSize: theme.typography.fontSize.sm }}>
+                                  {trade.isOpen ? 'Still Holding' : 'Exit Reason'}
+                                </h4>
+                                {trade.isOpen ? (
+                                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                                    Position is still open. No exit triggered yet.
+                                  </div>
+                                ) : sellDecision ? (
+                                  <div style={{ fontSize: theme.typography.fontSize.sm }}>
+                                    <div style={{ marginBottom: theme.spacing.xs, color: theme.colors.error, fontWeight: theme.typography.fontWeight.medium }}>
+                                      {sellDecision.exitReason || 'Exit signal triggered'}
+                                    </div>
+                                    <div style={{ marginBottom: theme.spacing.xs }}>
+                                      <strong>Exit Score:</strong> {sellDecision.exitScore}
+                                    </div>
+                                    <div style={{ marginBottom: theme.spacing.xs }}>
+                                      <strong>Factors:</strong>
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: theme.spacing.md, color: theme.colors.gray600 }}>
+                                      {(sellDecision.reasons || []).slice(0, 5).map((reason, i) => (
+                                        <li key={i} style={{ marginBottom: '2px' }}>{reason}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : (
+                                  <div style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+                                    No exit decision data available (may have been a quick trade or manual exit)
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                      {trade.quantity}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                      {formatPrice(trade.buyPrice)}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                      {trade.isOpen ? (
-                        <span style={{ color: '#b45309' }}>
-                          {formatPrice(trade.currentPrice)}
-                        </span>
-                      ) : (
-                        formatPrice(trade.sellPrice)
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        textAlign: 'right',
-                        padding: theme.spacing.sm,
-                        fontWeight: theme.typography.fontWeight.medium,
-                        color: trade.isOpen
-                          ? '#b45309'  // Amber for unrealized
-                          : trade.pnl > 0
-                            ? theme.colors.success
-                            : trade.pnl < 0
-                              ? theme.colors.error
-                              : theme.colors.gray600,
-                      }}
-                    >
-                      {formatPnL(trade.pnl, trade.pnlPercent)}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm }}>
-                      {trade.holdMinutes !== null ? `${trade.holdMinutes}m` : '-'}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: theme.spacing.sm, color: theme.colors.gray500 }}>
-                      {formatTime(trade.buyTime)}
-                      {trade.sellTime && ` → ${formatTime(trade.sellTime)}`}
-                    </td>
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           )}

@@ -3697,6 +3697,7 @@ const LiveTradingDashboard = ({
         trades={recentTrades}
         positions={positions}
         sessionName={sessionName}
+        decisions={decisions}
       />
     </div>
   );
