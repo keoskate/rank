@@ -56,6 +56,34 @@ This is a full-stack React application for ranking and scoring investments with 
 - Ranking data in `rank-data.js`
 - Static data in `Components/data.json`
 
+## AI Trading System
+
+**See `AI_TRADING_GUIDE.md` for complete documentation.**
+
+The app includes an automated trading system that trades leveraged ETFs via Alpaca Paper Trading API.
+
+### Key Files
+- `server/aiTradingEngine.js` - Core trading logic (entry/exit decisions, order execution)
+- `server/semiconductorSentiment.js` - SOXX-based sentiment for SOXL/SOXS
+- `data/ai-sessions.json` - Session configs and state (stop server before editing)
+
+### Current Strategies
+- **SOXL/SOXS** - Semiconductor 3x ETFs using SOXX sentiment + technicals
+- **QBTX/QBTZ** - Quantum computing 3x ETFs using pure technicals
+
+### Quick Commands
+```bash
+# Check running sessions
+curl -s "http://localhost:8080/api/ai/sessions/default_user" | jq '.sessions[] | select(.status == "running") | .name'
+
+# Check logs
+tail -f server.log | grep -E "(AI Engine|BUY|SELL|EXIT)"
+
+# Utility scripts in scripts/
+node scripts/enableAutoTrade.js
+node scripts/fixDuplicateSessions.js
+```
+
 ## Development Notes
 
 - Uses legacy Node.js OpenSSL provider for compatibility (`NODE_OPTIONS=--openssl-legacy-provider`)
