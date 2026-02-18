@@ -41,6 +41,7 @@ const TradingViewChart = ({
   trades = [],
   currentPosition = null,
   dayOpen = 0,
+  prevClose = null,
   symbol = '',
   height = 400,
   showRSI = true, // Show RSI panel by default
@@ -810,7 +811,7 @@ const TradingViewChart = ({
     const currentCandle = candles[currentCandleIndex];
     const c = currentCandle?.c !== undefined ? currentCandle : currentCandle;
     const currentPrice = c?.c || c?.close || 0;
-    const openPrice = dayOpen || (candles[0]?.o || candles[0]?.open || currentPrice);
+    const openPrice = prevClose || dayOpen || (candles[0]?.o || candles[0]?.open || currentPrice);
     const change = currentPrice - openPrice;
     const changePercent = openPrice ? (change / openPrice) * 100 : 0;
 

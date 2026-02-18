@@ -36,6 +36,8 @@ const WatchlistCharts = ({
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1]); // Default 5m
   // Track last update time for each symbol
   const [lastUpdated, setLastUpdated] = useState({});
+  // Store prevClose keyed by symbol (not timeframe - it's always the same)
+  const [prevCloseBySymbol, setPrevCloseBySymbol] = useState({});
   // Timer to force re-render for relative time display
   const [, setTick] = useState(0);
 
@@ -60,6 +62,13 @@ const WatchlistCharts = ({
           ...prev,
           [cacheKey]: data.candles,
         }));
+        // Store prevClose keyed by symbol (same across all timeframes)
+        if (data.prevClose != null) {
+          setPrevCloseBySymbol(prev => ({
+            ...prev,
+            [symbol]: data.prevClose,
+          }));
+        }
         // Track when this symbol was last updated
         setLastUpdated(prev => ({
           ...prev,
@@ -357,6 +366,7 @@ const WatchlistCharts = ({
                 trades={symbolTrades}
                 currentPosition={position}
                 dayOpen={candles[0]?.open || 0}
+                prevClose={prevCloseBySymbol[symbol]}
                 height={chartHeight}
                 showRSI={isExpanded}
               />

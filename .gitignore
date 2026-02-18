@@ -97,5 +97,7 @@ data/logs/
 # Trading logs
 data/logs/trading.log
 
-# Claude Code config
-.claude/
+# Claude Code config (keep agents/ and commands/ tracked for team sharing)
+.claude/*
+!.claude/agents/
+!.claude/commands/

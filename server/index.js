@@ -3315,9 +3315,7 @@ app.post('/api/ai/research', async (req, res) => {
     // Initialize Anthropic client
     const Anthropic = require('@anthropic-ai/sdk');
     const anthropic = new Anthropic({
-      apiKey:
-        process.env.ANTHROPIC_API_KEY ||
-        'REMOVED',
+      apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
     // Get current trading mode and real account data
@@ -3927,27 +3925,27 @@ app.get('/api/indicators/:symbol', async (req, res) => {
     if (unit === 'minute') {
       const tf = parseInt(timeframe);
       if (tf <= 1) {
-        daysBack = 1; // 1 minute: just today
-        maxCandles = 30; // ~30 minutes of 1-min candles (most zoomed in)
+        daysBack = 1; // 1 minute: today's full session
+        maxCandles = 500;
       } else if (tf <= 5) {
-        daysBack = 1; // 5 minute: just today
-        maxCandles = 40; // ~3 hours of 5-min candles
-      } else if (tf <= 15) {
-        daysBack = 2; // 15 minute: 2 days
-        maxCandles = 60; // ~15 hours of 15-min candles
-      } else if (tf <= 30) {
-        daysBack = 3; // 30 minute: 3 days
-        maxCandles = 60; // ~30 hours of 30-min candles
-      } else {
-        daysBack = 7; // 1 hour+: 7 days
+        daysBack = 1; // 5 minute: today's full session
         maxCandles = 100;
+      } else if (tf <= 15) {
+        daysBack = 5; // 15 minute: ~5 trading days
+        maxCandles = 130;
+      } else if (tf <= 30) {
+        daysBack = 10; // 30 minute: ~2 weeks
+        maxCandles = 130;
+      } else {
+        daysBack = 20; // 1 hour+: ~1 month
+        maxCandles = 140;
       }
     } else if (unit === 'hour') {
-      daysBack = 14; // Hourly: 2 weeks
-      maxCandles = 150;
+      daysBack = 20; // Hourly: ~1 month
+      maxCandles = 140;
     } else {
-      daysBack = 60; // Daily: ~2 months
-      maxCandles = 60;
+      daysBack = 180; // Daily: ~6 months
+      maxCandles = 120;
     }
 
     const fromDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
@@ -3958,40 +3956,56 @@ app.get('/api/indicators/:symbol', async (req, res) => {
                            upperSymbol.includes('/USD') ||
                            upperSymbol.startsWith('X:');
 
-    let candles;
-    if (isCryptoSymbol) {
-      console.log(`🪙 Indicators: Routing ${symbol} to crypto aggregates API`);
-      candles = await polygonClient.getCryptoAggregates(
-        symbol,
-        parseInt(timeframe),
-        unit,
-        {
+    // Fetch candles and previous close in parallel
+    const candlePromise = isCryptoSymbol
+      ? (console.log(`🪙 Indicators: Routing ${symbol} to crypto aggregates API`),
+         polygonClient.getCryptoAggregates(symbol, parseInt(timeframe), unit, {
+           from: fromDate.toISOString().split('T')[0],
+           to: toDate.toISOString().split('T')[0],
+         }))
+      : polygonClient.getAggregates(symbol, parseInt(timeframe), unit, {
           from: fromDate.toISOString().split('T')[0],
           to: toDate.toISOString().split('T')[0],
-        }
-      );
-    } else {
-      candles = await polygonClient.getAggregates(
-        symbol,
-        parseInt(timeframe),
-        unit,
-        {
-          from: fromDate.toISOString().split('T')[0],
-          to: toDate.toISOString().split('T')[0],
-        }
-      );
-    }
+        });
+
+    const prevClosePromise = isCryptoSymbol
+      ? Promise.resolve(null)
+      : polygonClient.getPreviousClose(symbol);
+
+    const [candles, prevCloseData] = await Promise.all([candlePromise, prevClosePromise]);
 
     if (!candles || candles.length < 20) {
       return res.status(400).json({ error: 'Insufficient data' });
     }
 
+    // Compute indicators on full unfiltered data (needs 50+ bars for accuracy)
     const indicators = technicalIndicatorsService.getAllIndicators(candles);
+
+    // Filter out extended hours for minute-level intervals (avoid visual gaps)
+    let filteredCandles = candles;
+    if (unit === 'minute') {
+      filteredCandles = candles.filter(c => {
+        const ts = c.t || c.timestamp;
+        if (!ts) return true;
+        const etTime = new Date(ts).toLocaleString('en-US', { timeZone: 'America/New_York' });
+        const etDate = new Date(etTime);
+        const hours = etDate.getHours();
+        const minutes = etDate.getMinutes();
+        const timeInMinutes = hours * 60 + minutes;
+        // Regular trading hours: 9:30 AM (570 min) to 4:00 PM (960 min)
+        return timeInMinutes >= 570 && timeInMinutes <= 960;
+      });
+      // Fall back to unfiltered if filtering removes too much data
+      if (filteredCandles.length < 10) {
+        filteredCandles = candles;
+      }
+    }
 
     res.json({
       symbol,
-      candles: candles.slice(-maxCandles),
+      candles: filteredCandles.slice(-maxCandles),
       indicators,
+      prevClose: prevCloseData?.close || null,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

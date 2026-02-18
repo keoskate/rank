@@ -55,6 +55,11 @@ const ERROR_THROTTLE_MINUTES = 5; // Only log same error once per 5 minutes
 const pendingOrders = new Map();
 const PENDING_ORDER_TIMEOUT_MS = 60000; // Clear stale pending orders after 60s
 
+// Sentiment-based session switch throttle - prevents log spam from 10s loop
+// Map structure: sessionId -> timestamp of last switch action
+const lastSentimentSwitch = new Map();
+const SENTIMENT_SWITCH_COOLDOWN_MS = 60000; // 60 second cooldown
+
 // PDT (Pattern Day Trader) state cache
 // Cached account info to avoid API spam when checking PDT limits
 let pdtStateCache = {
@@ -550,6 +555,79 @@ async function checkMarketGate(session, sentiment) {
   }
 
   return { allowed: true, reason: null };
+}
+
+/**
+ * Auto-switch semiconductor sessions based on sentiment direction.
+ * When a session is gate-blocked, find complementary sessions (same semiconductorMode,
+ * opposite gate direction) and resume the one matching current sentiment.
+ * Auto-pauses the blocked session if it has no open positions.
+ * @param {Object} blockedSession - The session that was gate-blocked
+ * @param {Object} sentiment - Current sentiment { direction, confidence }
+ */
+function handleSentimentSessionSwitch(blockedSession, sentiment) {
+  if (!sentiment || !sentiment.direction || sentiment.direction === 'neutral') return;
+  if (!blockedSession.config.semiconductorMode) return;
+
+  // Throttle: skip if we switched for this session recently
+  const lastSwitch = lastSentimentSwitch.get(blockedSession.sessionId);
+  if (lastSwitch && Date.now() - lastSwitch < SENTIMENT_SWITCH_COOLDOWN_MS) return;
+
+  const blockedGate = blockedSession.config.marketGate;
+  if (!blockedGate || blockedGate === 'any') return; // Only switch directional sessions
+
+  let didSwitch = false;
+
+  // Scan all sessions for complementary semiconductor sessions
+  for (const [sid, session] of sessions) {
+    if (sid === blockedSession.sessionId) continue;
+    if (!session.config.semiconductorMode) continue;
+    if (session.status === 'stopped') continue;
+
+    const gate = session.config.marketGate;
+    if (!gate || gate === 'any') continue;
+
+    // Resume paused sessions whose gate matches current sentiment
+    if (session.status === 'paused' && gate === sentiment.direction) {
+      console.log(
+        `[AI Engine] Auto-resuming "${session.name}" - sentiment is ${sentiment.direction} (${sentiment.confidence}%)`
+      );
+      resumeSession(sid);
+      didSwitch = true;
+
+      websocketServer.broadcastToAll('trading_alert', {
+        id: `${Date.now()}-autoswitch-resume-${sid}`,
+        level: 'INFO',
+        category: 'SENTIMENT_SWITCH',
+        message: `Auto-resumed "${session.name}" — ${sentiment.direction} sentiment (${sentiment.confidence}%)`,
+        sessionId: sid,
+        sessionName: session.name,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Auto-pause the blocked session if it has no open positions
+  if (didSwitch && blockedSession.status === 'running' && blockedSession.portfolio.positions.size === 0) {
+    console.log(
+      `[AI Engine] Auto-pausing "${blockedSession.name}" - no positions, sentiment favors ${sentiment.direction}`
+    );
+    pauseSession(blockedSession.sessionId);
+
+    websocketServer.broadcastToAll('trading_alert', {
+      id: `${Date.now()}-autoswitch-pause-${blockedSession.sessionId}`,
+      level: 'INFO',
+      category: 'SENTIMENT_SWITCH',
+      message: `Auto-paused "${blockedSession.name}" — no positions, sentiment is ${sentiment.direction}`,
+      sessionId: blockedSession.sessionId,
+      sessionName: blockedSession.name,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (didSwitch) {
+    lastSentimentSwitch.set(blockedSession.sessionId, Date.now());
+  }
 }
 
 /**
@@ -1715,6 +1793,9 @@ async function analyzeAndTrade(sessionId) {
           await executeExit(sessionId, symbol, exitDecision);
         }
       }
+
+      // Auto-switch: resume complementary sessions, pause this one if empty
+      handleSentimentSessionSwitch(session, sentiment);
 
       return; // Skip entry analysis when gate is blocked
     }
