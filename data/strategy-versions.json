@@ -1,0 +1,76 @@
+{
+  "_meta": {
+    "description": "Strategy version history for A/B testing and rollback",
+    "lastUpdated": "2025-12-09T08:33:55.746Z",
+    "version": "1.0"
+  },
+  "versions": {
+    "QBTX": {
+      "symbol": "QBTX",
+      "versions": [
+        {
+          "id": "e367d394-6e25-4bdd-ac51-01bc949bc424",
+          "versionNumber": 1,
+          "versionString": "QBTX-v1",
+          "config": {
+            "watchlist": [],
+            "allocatedCapital": 25000,
+            "maxLeverage": 1,
+            "reserveCashPercent": 5,
+            "maxPositions": 5,
+            "maxPositionSizePercent": 10,
+            "minPositionSize": 100,
+            "maxPositionSize": 25000,
+            "riskPerTradePercent": 2,
+            "dailyLossLimitPercent": 5,
+            "weeklyLossLimitPercent": 10,
+            "maxConsecutiveLosses": 3,
+            "trailingStopPercent": 0,
+            "minConfidence": 70,
+            "rsiOversold": 30,
+            "rsiOverbought": 70,
+            "vwapDeviationPercent": 0.5,
+            "volumeMultiplier": 1.5,
+            "adxMinStrength": 20,
+            "macdSensitivity": "normal",
+            "patternRecognition": true,
+            "entryStrategy": "balanced",
+            "requireVolumeSpike": true,
+            "requireTrendAlignment": true,
+            "requireRsiSignal": true,
+            "minSignalsRequired": 3,
+            "takeProfitPercent": 2,
+            "stopLossPercent": 1,
+            "useAdaptiveTargets": true,
+            "exitOnRsiExtreme": true,
+            "exitBeforeClose": true,
+            "exitBeforeCloseMinutes": 15,
+            "timeframes": [
+              "scalping",
+              "dayTrading",
+              "swing"
+            ],
+            "preferredTimeframe": "5min",
+            "autoTrade": false,
+            "paperTradeOnly": true,
+            "consecutiveLossLimit": 3,
+            "profitTargetMultiplier": 2,
+            "stopLossMultiplier": 1.5,
+            "name": "Strategy 3",
+            "simulationMode": true
+          },
+          "description": "Keo 1",
+          "tag": "testing",
+          "createdAt": "2025-12-09T08:33:55.746Z",
+          "createdBy": "system",
+          "metrics": null,
+          "walkForwardResults": null,
+          "parentVersion": null,
+          "status": "active"
+        }
+      ],
+      "activeVersion": "e367d394-6e25-4bdd-ac51-01bc949bc424",
+      "productionVersion": null
+    }
+  }
+}

@@ -1,43 +1,88 @@
-# Rank
+# Keo Stonks - Investment Ranking & Trading Platform
 
+A comprehensive stock ranking and paper trading platform with AI-powered analysis, technical indicators, and real-time market data.
 
-## Setting up the basic environment
+## Features
 
-1. Install Node Package Manager: `sudo npm install -g`
-2. Start new web app: `npm init`
+- **Stock Ranking System** - Rank stocks using customizable weighted metrics
+- **Paper Trading** - Practice trading with Alpaca's paper trading API
+- **AI Trading Simulation** - Simulate AI-driven trading strategies
+- **Technical Analysis** - RSI, EMA, Bollinger Bands, VWAP and more
+- **Backtesting** - Test strategies against historical data
+- **Real-time Charts** - TradingView-powered candlestick charts
+- **Portfolio Tracking** - Monitor positions and P&L
 
-3. Setup package.json with all dependencies 
+## Quick Start
 
-4. Install nodemon: `sudo npm install -g nodemon`
+### 1. Clone and Install
 
-### Install Express.js for our server  
-* `npm install express --save`
-* `npm install body-parser --save`
+```bash
+git clone https://github.com/yourusername/rank.git
+cd rank
+npm install
+```
 
+### 2. Configure Environment
 
-## Installing the React framework
+Copy the example environment file and add your API keys:
 
-* `npm install react --save`
-* `npm install react-dom --save`
+```bash
+cp .env.example .env
+```
 
-### React Router is a very useful navigational tool for React applications:
-* `npm install react-router-dom --save`
-* `npm install react-router --save`
+Edit `.env` with your credentials:
 
+- **Polygon.io** (Required) - Get free key at [polygon.io](https://polygon.io/dashboard/signup)
+- **Alpaca** (Required for trading) - Get keys at [alpaca.markets](https://app.alpaca.markets/paper/dashboard/overview)
+- **Anthropic** (Optional) - For AI research features
 
-## Creating a webpack
-Webpack is a tool that combines our separate code files into one called a “bundle” file which the browser can then interpret.
+### 3. Run the Application
 
-* `npm install webpack --save`
+```bash
+# Terminal 1: Start the server
+npm run server-dev
 
-Add the following webpack and node scripts to your package.json file:
+# Terminal 2: Start the React client
+npm run react-dev
+```
+
+Visit `http://localhost:8080/`
+
+## Project Structure
 
 ```
-"scripts": {
-  "dev": "webpack -d --watch",
-  "start": "node ./server/index.js",
-  "build": "webpack -p",
-  "react-dev": "webpack -d --watch",
-  "server-dev": "nodemon server/index.js"
-},
+rank/
+├── server/           # Express.js backend
+│   ├── index.js      # Main server
+│   ├── alpacaClient.js
+│   ├── polygonClient.js
+│   └── ...
+├── react-client/     # React frontend
+│   └── src/
+│       ├── Components/
+│       ├── hooks/
+│       ├── utils/
+│       └── config/
+└── data/            # Local data storage
 ```
+
+## API Keys Required
+
+| Service | Purpose | Required |
+|---------|---------|----------|
+| Polygon.io | Market data, quotes, historical | Yes |
+| Alpaca | Paper/live trading | For trading features |
+| Anthropic | AI research assistant | Optional |
+
+## Development
+
+```bash
+npm run server-dev    # Start server with hot reload
+npm run react-dev     # Start React with webpack watch
+npm run build         # Production build
+npm run format        # Format code with Prettier
+```
+
+## License
+
+MIT

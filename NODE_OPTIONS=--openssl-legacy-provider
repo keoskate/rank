@@ -1,0 +1,41 @@
+✅ Build completed successfully!
+Hash: [1m2fe48e9045a85831aa5a[39m[22m
+Version: webpack [1m4.47.0[39m[22m
+Time: [1m1113[39m[22mms
+Built at: 07/01/2025 [1m6:38:02 PM[39m[22m
+            [1mAsset[39m[22m      [1mSize[39m[22m   [1mChunks[39m[22m  [1m[39m[22m           [1m[39m[22m       [1mChunk Names[39m[22m
+        [1m[32mbundle.js[39m[22m   925 KiB     [1mmain[39m[22m  [1m[32m[emitted][39m[22m         main
+[1m[33mvendors.bundle.js[39m[22m  [1m[33m1.57 MiB[39m[22m  [1mvendors[39m[22m  [1m[32m[emitted][39m[22m  [1m[33m[big][39m[22m  vendors
+Entrypoint [1mmain[39m[22m [1m[33m[big][39m[22m = [1m[32mvendors.bundle.js[39m[22m [1m[32mbundle.js[39m[22m
+[[1m./node_modules/@remix-run/router/dist/router.js[39m[22m] 193 KiB {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react-dom/cjs/react-dom.production.min.js[39m[22m] 129 KiB {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react-dom/client.js[39m[22m] 619 bytes {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react-dom/index.js[39m[22m] 1.33 KiB {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react-router-dom/dist/index.js[39m[22m] 55.4 KiB {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react/cjs/react-jsx-runtime.production.min.js[39m[22m] 859 bytes {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react/cjs/react.production.min.js[39m[22m] 6.77 KiB {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react/index.js[39m[22m] 190 bytes {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./node_modules/react/jsx-runtime.js[39m[22m] 214 bytes {[1m[33mvendors[39m[22m}[1m[32m [built][39m[22m
+[[1m./react-client/src/Components/App.jsx[39m[22m] 1.32 KiB {[1m[33mmain[39m[22m}[1m[32m [built][39m[22m
+[[1m./react-client/src/Components/HomePage.jsx[39m[22m] 5.96 KiB {[1m[33mmain[39m[22m}[1m[32m [built][39m[22m
+[[1m./react-client/src/Components/NavBar.jsx[39m[22m] 1.84 KiB {[1m[33mmain[39m[22m}[1m[32m [built][39m[22m
+[[1m./react-client/src/Components/StockDataProvider.jsx[39m[22m] 8.53 KiB {[1m[33mmain[39m[22m}[1m[32m [built][39m[22m
+[[1m./react-client/src/Components/StockDetailPage.jsx[39m[22m] 35.7 KiB {[1m[33mmain[39m[22m}[1m[32m [built][39m[22m
+[[1m./react-client/src/index.jsx[39m[22m] 666 bytes {[1m[33mmain[39m[22m}[1m[32m [built][39m[22m
+    + 28 hidden modules
+
+[1m[33mWARNING in asset size limit: The following asset(s) exceed the recommended size limit (977 KiB).
+This can impact web performance.
+Assets: 
+  vendors.bundle.js (1.57 MiB)[39m[22m
+
+[1m[33mWARNING in entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (977 KiB). This can impact web performance.
+Entrypoints:
+  main (2.48 MiB)
+      vendors.bundle.js
+      bundle.js
+[39m[22m
+
+[1m[33mWARNING in webpack performance recommendations: 
+You can limit the size of your bundles by using import() or require.ensure to lazy load some parts of your application.
+For more info visit https://webpack.js.org/guides/code-splitting/[39m[22m

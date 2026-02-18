@@ -1,10 +1,103 @@
 # Logs
 logs
 *.Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Compiled directory and file
 build/
+dist/
 bundle.js
+*.bundle.js
+*.chunk.js
+*.map
+*.min.js
+
+# All bundle and build files
+**/*.bundle.js
+**/*.chunk.js
+**/*.bundle.map
+**/*.chunk.map
+
+# Build outputs
+react-client/dist/
+react-client/build/
+
 # Dependency directories
 node_modules/
 
-yarn-error.log*
+# Environment variables (contains API keys - NEVER commit!)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test.local
+.env.production
+.env.production.local
+
+# Linting and formatting cache
+.eslintcache
+.prettierrc.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# AI session data (may contain trading info)
+data/ai-sessions.json
+
+# CheddarFlow cache and debug files
+data/cheddarflow-*.json
+data/cheddarflow-*.png
+
+# Training data (personal trade history)
+data/training/*.json
+
+# Legacy/internal documentation (not needed for public repo)
+docs/internal/
+*.local.md
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# E2E test screenshots (generated, can be large)
+tests/screenshots/
+
+# Server backup files
+server/*.bak
+
+# Log files
+*.log
+server.log
+react-client/*.log
+data/logs/
+
+# Trading logs
+data/logs/trading.log
+
+# Claude Code config (keep agents/ and commands/ tracked for team sharing)
+.claude/*
+!.claude/agents/
+!.claude/commands/

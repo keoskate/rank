@@ -1,0 +1,143 @@
+{
+  "date": "2025-10-01",
+  "timestamp": "2025-10-01T00:00:00.000Z",
+  "generatedAt": "2025-12-04T01:44:37.757Z",
+  "stockListName": "Real Data",
+  "rankings": [
+    {
+      "symbol": "NVDA",
+      "rank": 1,
+      "score": 60,
+      "price": 187.24,
+      "rsi": 63.11,
+      "volume": 173844901,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "MSFT",
+      "rank": 2,
+      "score": 60,
+      "price": 519.71,
+      "rsi": 66.09,
+      "volume": 22632336,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "GOOGL",
+      "rank": 3,
+      "score": 60,
+      "price": 244.9,
+      "rsi": 56.78,
+      "volume": 31658234,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "NFLX",
+      "rank": 4,
+      "score": 60,
+      "price": 117.09,
+      "rsi": 40.34,
+      "volume": 41102210,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "AAPL",
+      "rank": 5,
+      "score": 45,
+      "price": 255.45,
+      "rsi": 81.73,
+      "volume": 48713940,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "AMZN",
+      "rank": 6,
+      "score": 45,
+      "price": 220.63,
+      "rsi": 35.34,
+      "volume": 43933834,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "META",
+      "rank": 7,
+      "score": 45,
+      "price": 717.34,
+      "rsi": 34.65,
+      "volume": 20419633,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "TSLA",
+      "rank": 8,
+      "score": 45,
+      "price": 459.46,
+      "rsi": 77.61,
+      "volume": 98122285,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "AMD",
+      "rank": 9,
+      "score": 45,
+      "price": 164.01,
+      "rsi": 71.34,
+      "volume": 39895177,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    },
+    {
+      "symbol": "CRM",
+      "rank": 10,
+      "score": 45,
+      "price": 235.69,
+      "rsi": 37.49,
+      "volume": 10016630,
+      "lastQuarterUpdate": "2025-11-01",
+      "dataQuality": {
+        "overallConfidence": 0.8,
+        "status": "estimated"
+      }
+    }
+  ],
+  "metadata": {
+    "totalStocks": 10,
+    "dataSource": "polygon",
+    "version": "1.0"
+  }
+}

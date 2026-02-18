@@ -1,0 +1,41 @@
+{
+  "jobId": "6edba523-2416-4b42-9cae-8bb748aab188",
+  "startedAt": "2025-12-09T08:05:58.276Z",
+  "completedAt": "2025-12-09T08:05:58.279Z",
+  "config": {
+    "symbols": [
+      "SOXL",
+      "TQQQ"
+    ],
+    "startDate": "2025-06-09",
+    "endDate": "2025-12-09",
+    "method": "random",
+    "maxIterations": 50,
+    "minWinRate": 0.45,
+    "minProfitFactor": 1.2,
+    "minExpectancy": 0.5,
+    "maxDrawdown": 20,
+    "walkForward": true,
+    "trainDays": 60,
+    "testDays": 20,
+    "optimizeByRegime": true,
+    "randomValidationDays": 10,
+    "parameterRanges": null
+  },
+  "strategies": [],
+  "symbolResults": {},
+  "regimeStrategies": {},
+  "summary": {
+    "totalSymbols": 0,
+    "totalStrategiesFound": 0,
+    "bestStrategy": null,
+    "regimeRecommendations": {},
+    "readyForTomorrow": null,
+    "recommendations": [
+      {
+        "type": "warning",
+        "message": "No strategies met the minimum thresholds. Consider relaxing parameters or adding more data."
+      }
+    ]
+  }
+}
