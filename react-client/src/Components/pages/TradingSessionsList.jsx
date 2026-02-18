@@ -772,8 +772,8 @@ const SessionCard = ({
             </p>
           )}
 
-          {/* Recent Decisions */}
-          {session.recentDecisions && session.recentDecisions.length > 0 && (
+          {/* Recent Trades (from tradingLog - actual executions) */}
+          {session.recentTrades && session.recentTrades.length > 0 && (
             <div
               style={{
                 margin: '8px 0 0',
@@ -784,24 +784,71 @@ const SessionCard = ({
               }}
             >
               <strong style={{ color: theme.colors.gray700 }}>
-                Recent Activity:
+                Recent Trades:
               </strong>
-              {session.recentDecisions.map((decision, idx) => (
+              {session.recentTrades.map((trade, idx) => (
                 <div
                   key={idx}
                   style={{
                     marginTop: '4px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     color:
-                      decision.action === 'BUY'
+                      trade.side === 'buy'
                         ? theme.colors.success
-                        : decision.action === 'SELL'
-                          ? theme.colors.error
-                          : theme.colors.gray600,
+                        : theme.colors.error,
                   }}
                 >
-                  {decision.action} {decision.symbol} -{' '}
-                  {decision.reason?.substring(0, 40)}
-                  {decision.reason?.length > 40 ? '...' : ''}
+                  <span>
+                    {trade.side.toUpperCase()} {trade.quantity} {trade.symbol} @ ${trade.price?.toFixed(2)}
+                  </span>
+                  {trade.side === 'sell' && trade.pnl != null && (
+                    <span style={{
+                      color: trade.pnl >= 0 ? theme.colors.success : theme.colors.error,
+                      fontWeight: theme.typography.fontWeight.medium,
+                    }}>
+                      {trade.pnl >= 0 ? '+' : ''}{formatCurrency(trade.pnl)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Open Positions */}
+          {session.openPositions && session.openPositions.length > 0 && (
+            <div
+              style={{
+                margin: '8px 0 0',
+                padding: theme.spacing.sm,
+                backgroundColor: '#fffbeb',
+                borderRadius: theme.borderRadius.sm,
+                border: '1px solid #fbbf2440',
+                fontSize: theme.typography.fontSize.xs,
+              }}
+            >
+              <strong style={{ color: theme.colors.gray700 }}>
+                Open Positions:
+              </strong>
+              {session.openPositions.map((pos, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    marginTop: '4px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ color: theme.colors.gray700 }}>
+                    {pos.quantity} {pos.symbol} @ ${pos.averageCost?.toFixed(2)}
+                  </span>
+                  <span style={{
+                    color: (pos.unrealizedPnL || 0) >= 0 ? theme.colors.success : theme.colors.error,
+                    fontWeight: theme.typography.fontWeight.medium,
+                  }}>
+                    {(pos.unrealizedPnL || 0) >= 0 ? '+' : ''}{formatCurrency(pos.unrealizedPnL || 0)}
+                    {pos.unrealizedPnLPercent ? ` (${pos.unrealizedPnLPercent >= 0 ? '+' : ''}${pos.unrealizedPnLPercent.toFixed(1)}%)` : ''}
+                  </span>
                 </div>
               ))}
             </div>
@@ -814,36 +861,59 @@ const SessionCard = ({
               gap: theme.spacing.lg,
               marginTop: theme.spacing.sm,
               fontSize: theme.typography.fontSize.sm,
+              flexWrap: 'wrap',
             }}
           >
             {session.stats && (
               <>
                 <span style={{ color: theme.colors.gray600 }}>
-                  Trades: <strong>{session.stats.totalTrades || 0}</strong>
-                </span>
-                <span style={{ color: theme.colors.gray600 }}>
-                  Win Rate:{' '}
-                  <strong
-                    style={{
-                      color:
-                        (session.stats.winRate || 0) >= 50
-                          ? theme.colors.success
-                          : theme.colors.gray700,
-                    }}
-                  >
-                    {session.stats.winRate || 0}%
+                  Trades:{' '}
+                  <strong>
+                    {session.stats.wins || 0}W / {session.stats.losses || 0}L
                   </strong>
+                  {(session.positionCount || 0) > 0 && (
+                    <span style={{ color: '#d97706' }}>
+                      {' '}({session.positionCount} open)
+                    </span>
+                  )}
                 </span>
+                {session.stats.totalTrades > 0 && (
+                  <span style={{ color: theme.colors.gray600 }}>
+                    Win Rate:{' '}
+                    <strong
+                      style={{
+                        color:
+                          (session.stats.winRate || 0) >= 50
+                            ? theme.colors.success
+                            : (session.stats.winRate || 0) > 0
+                              ? theme.colors.error
+                              : theme.colors.gray700,
+                      }}
+                    >
+                      {session.stats.winRate || 0}%
+                    </strong>
+                  </span>
+                )}
                 <span
                   style={{
                     color:
-                      (session.stats.totalPnL || 0) >= 0
+                      (session.stats.totalPnLWithUnrealized || session.stats.totalPnL || 0) >= 0
                         ? theme.colors.success
                         : theme.colors.error,
                   }}
                 >
                   P&L:{' '}
-                  <strong>{formatCurrency(session.stats.totalPnL || 0)}</strong>
+                  <strong>
+                    {formatCurrency(session.stats.totalPnL || 0)}
+                  </strong>
+                  {(session.stats.unrealizedPnL || 0) !== 0 && (
+                    <span style={{
+                      color: (session.stats.unrealizedPnL || 0) >= 0 ? theme.colors.success : theme.colors.error,
+                      fontSize: theme.typography.fontSize.xs,
+                    }}>
+                      {' '}({(session.stats.unrealizedPnL || 0) >= 0 ? '+' : ''}{formatCurrency(session.stats.unrealizedPnL || 0)} unrealized)
+                    </span>
+                  )}
                 </span>
               </>
             )}

@@ -333,6 +333,17 @@ function loadSessions() {
           cleanedDecisions += before - session.decisions.length;
         }
 
+        // Recalculate derived stats from source-of-truth fields (wins/losses)
+        // This fixes winRate=0 bug from older versions that didn't persist winRate
+        if (session.stats) {
+          const wins = session.stats.wins || 0;
+          const losses = session.stats.losses || 0;
+          session.stats.totalTrades = wins + losses;
+          session.stats.winRate = session.stats.totalTrades > 0
+            ? parseFloat(((wins / session.stats.totalTrades) * 100).toFixed(1))
+            : 0;
+        }
+
         sessions.set(sessionId, session);
 
         // Restart trading loop if session was running
@@ -857,12 +868,45 @@ function getAllUserSessions(userId) {
   const userSessions = [];
   sessions.forEach((session, sessionId) => {
     if (session.userId === userId) {
-      // Get recent decisions (last 3) for preview
+      // Get recent decisions (last 3) for preview - include price/pnl data
       const recentDecisions = (session.decisions || []).slice(-3).map(d => ({
         action: d.action,
         symbol: d.symbol,
-        reason: d.reason,
+        reason: d.exitReason || (d.reasons && d.reasons[0]) || d.reason || null,
+        reasons: d.reasons || [],
+        currentPrice: d.currentPrice,
+        confidence: d.confidence,
+        pnl: d.pnl,
+        pnlPercent: d.pnlPercent,
+        quantity: d.quantity,
         timestamp: d.timestamp,
+      }));
+
+      // Calculate unrealized P&L from open positions
+      let unrealizedPnL = 0;
+      const openPositions = [];
+      if (session.portfolio?.positions) {
+        session.portfolio.positions.forEach((pos) => {
+          unrealizedPnL += pos.unrealizedPnL || 0;
+          openPositions.push({
+            symbol: pos.symbol,
+            quantity: pos.quantity,
+            averageCost: pos.averageCost,
+            currentPrice: pos.currentPrice,
+            unrealizedPnL: pos.unrealizedPnL || 0,
+            unrealizedPnLPercent: pos.unrealizedPnLPercent || 0,
+          });
+        });
+      }
+
+      // Get recent trades from tradingLog for richer display
+      const recentTrades = (session.tradingLog || []).slice(-5).map(t => ({
+        symbol: t.symbol,
+        side: t.side,
+        quantity: t.quantity,
+        price: t.price,
+        pnl: t.pnl,
+        timestamp: t.timestamp,
       }));
 
       userSessions.push({
@@ -873,13 +917,24 @@ function getAllUserSessions(userId) {
         endTime: session.endTime,
         lastActivity:
           session.lastActivity || session.endTime || session.startTime,
-        stats: session.stats,
+        stats: {
+          ...session.stats,
+          // Always recalculate winRate from source-of-truth (wins/losses)
+          winRate: (session.stats?.wins + session.stats?.losses) > 0
+            ? parseFloat(((session.stats.wins / (session.stats.wins + session.stats.losses)) * 100).toFixed(1))
+            : 0,
+          totalTrades: (session.stats?.wins || 0) + (session.stats?.losses || 0),
+          unrealizedPnL,
+          totalPnLWithUnrealized: (session.stats?.totalPnL || 0) + unrealizedPnL,
+        },
         config: session.config,
         watchlist: session.config?.watchlist || [],
         watchlistCount: session.config?.watchlist?.length || 0,
         positionCount: session.portfolio?.positions?.size || 0,
+        openPositions,
         totalDecisions: (session.decisions || []).length,
         recentDecisions,
+        recentTrades,
       });
     }
   });
