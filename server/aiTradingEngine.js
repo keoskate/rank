@@ -2788,9 +2788,9 @@ async function executeEntry(sessionId, symbol, decision) {
     }
 
     const maxPositionValue =
-      effectivePortfolioValue * (session.config.maxPositionSizePercent / 100);
+      effectivePortfolioValue * ((session.config.maxPositionSizePercent || 10) / 100);
     const riskAmount =
-      effectivePortfolioValue * (session.config.riskPerTradePercent / 100);
+      effectivePortfolioValue * ((session.config.riskPerTradePercent || 2) / 100);
 
     // Position size based on ATR/risk (with fallback if stopLoss not set)
     let quantity;
