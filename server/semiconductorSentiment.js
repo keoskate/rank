@@ -213,10 +213,10 @@ class MarketPhaseTracker {
  */
 class SemiconductorSentimentEngine {
   constructor(options = {}) {
-    // Reference symbols
-    this.referenceSymbol = 'SOXX'; // iShares Semiconductor ETF
-    this.bullSymbol = 'SOXL';      // 3x Bull
-    this.bearSymbol = 'SOXS';      // 3x Bear
+    // Reference symbols (parameterized for reuse with other sectors)
+    this.referenceSymbol = options.referenceSymbol || 'SOXX';
+    this.bullSymbol = options.bullSymbol || 'SOXL';
+    this.bearSymbol = options.bearSymbol || 'SOXS';
 
     // Cache for sentiment data
     this.sentimentCache = null;
@@ -427,13 +427,15 @@ class SemiconductorSentimentEngine {
     const now = new Date();
 
     try {
-      // Fetch SOXX data (5-min candles for last 24h)
+      // Fetch SOXX data (5-min candles for last 72h)
+      // 72h lookback ensures Monday morning has Friday's data available
+      // instead of waiting ~100 min for 20 fresh candles to accumulate
       const candles = await polygonClient.getAggregates(
         this.referenceSymbol,
         5,
         'minute',
         {
-          from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          from: new Date(Date.now() - 72 * 60 * 60 * 1000),
           to: now,
         }
       );

@@ -60,6 +60,21 @@ const PENDING_ORDER_TIMEOUT_MS = 60000; // Clear stale pending orders after 60s
 const lastSentimentSwitch = new Map();
 const SENTIMENT_SWITCH_COOLDOWN_MS = 60000; // 60 second cooldown
 
+// Regime engine registry - reusable sentiment engines keyed by reference symbol
+// Allows non-semiconductor sessions to use regime gating (e.g., QQQ for QBTX/QBTZ)
+const regimeEngines = new Map();
+function getOrCreateRegimeEngine(referenceSymbol) {
+  const key = referenceSymbol.toUpperCase();
+  if (!regimeEngines.has(key)) {
+    const { SemiconductorSentimentEngine } = require('./semiconductorSentiment');
+    regimeEngines.set(key, new SemiconductorSentimentEngine({ referenceSymbol: key }));
+    console.log(`[AI Engine] Created regime engine for ${key}`);
+  }
+  return regimeEngines.get(key);
+}
+// Pre-populate with the existing SOXX singleton
+regimeEngines.set('SOXX', sentimentEngine);
+
 // PDT (Pattern Day Trader) state cache
 // Cached account info to avoid API spam when checking PDT limits
 let pdtStateCache = {
@@ -79,6 +94,35 @@ const entryContexts = new Map();
 // Bullish ETFs profit in up markets, Bearish ETFs profit in down markets
 const BULLISH_ETFS = ['SOXL', 'QBTX', 'PLTU', 'TQQQ', 'SPXL', 'UPRO', 'TECL', 'FNGU'];
 const BEARISH_ETFS = ['SOXS', 'QBTZ', 'SQQQ', 'SPXS', 'TECS', 'FNGD'];
+
+// Leverage multiplier for leveraged ETFs - used to scale stop-losses appropriately
+// A 1% stop on a 3x ETF triggers from a 0.33% underlying move (noise), so we scale by leverage
+const ETF_LEVERAGE = {
+  'SOXL': 3, 'SOXS': 3, 'QBTX': 3, 'QBTZ': 3,
+  'TQQQ': 3, 'SQQQ': 3, 'SPXL': 3, 'SPXS': 3,
+  'TECL': 3, 'TECS': 3, 'FNGU': 3, 'FNGD': 3,
+  'PLTU': 2, 'PLTZ': 2,
+};
+function getEtfLeverage(symbol) {
+  return ETF_LEVERAGE[symbol.toUpperCase()] || 1;
+}
+
+// Bull/Bear ETF pair mapping - used for cross-session conflict detection
+const ETF_PAIRS = {
+  'SOXL': 'SOXS', 'SOXS': 'SOXL',
+  'QBTX': 'QBTZ', 'QBTZ': 'QBTX',
+  'TQQQ': 'SQQQ', 'SQQQ': 'TQQQ',
+  'SPXL': 'SPXS', 'SPXS': 'SPXL',
+  'TECL': 'TECS', 'TECS': 'TECL',
+  'FNGU': 'FNGD', 'FNGD': 'FNGU',
+};
+function getOppositeEtf(symbol) {
+  return ETF_PAIRS[symbol.toUpperCase()] || null;
+}
+
+// Global position size limits - prevents any single position from dominating portfolio
+const GLOBAL_MAX_POSITION_PERCENT = 10;     // No single position > 10% of portfolio
+const GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT = 40; // Total across all sessions < 40% of portfolio
 
 /**
  * Detect asset type from watchlist symbols
@@ -426,6 +470,9 @@ const DEFAULT_CONFIG = {
   aiSentimentEnabled: false,         // Use Claude for sentiment analysis boost
   maxSoxsHoldMinutes: 120,           // Max hold time for SOXS positions (decay protection)
   allowDirectionSwitch: true,        // Allow switching direction mid-day if confidence is high
+  // Regime Gate Settings (for non-semiconductor sessions)
+  regimeGateEnabled: false,            // Enable macro regime gating via a reference symbol
+  regimeReferenceSymbol: null,         // Reference symbol for regime engine (e.g., 'QQQ', 'SPY')
 };
 
 // ============================================================
@@ -484,6 +531,25 @@ const STRATEGY_PRESETS = {
     maxPositions: 1,             // One at a time
     maxPositionSizePercent: 25,
     aiSentimentEnabled: true,
+    allowDirectionSwitch: true,
+    autoTrade: false,
+  },
+
+  QBTX_QBTZ_COMBO: {
+    name: 'QBTX/QBTZ Dynamic',
+    description: 'Dynamically trades QBTX or QBTZ based on QQQ regime sentiment. Macro-aware direction.',
+    watchlist: ['QBTX', 'QBTZ'],
+    semiconductorMode: false,
+    regimeGateEnabled: true,
+    regimeReferenceSymbol: 'QQQ',
+    marketGate: 'any',
+    marketGateMinConfidence: 60,
+    entryStrategy: 'balanced',
+    takeProfitPercent: 2.5,
+    stopLossPercent: 1.0,        // Auto-scaled to 3% by leverage-aware stops
+    minSignalsRequired: 2,
+    maxPositions: 1,
+    maxPositionSizePercent: 10,
     allowDirectionSwitch: true,
     autoTrade: false,
   },
@@ -639,6 +705,137 @@ function handleSentimentSessionSwitch(blockedSession, sentiment) {
   if (didSwitch) {
     lastSentimentSwitch.set(blockedSession.sessionId, Date.now());
   }
+}
+
+/**
+ * Auto-switch regime-gated sessions based on sentiment direction.
+ * Same pattern as handleSentimentSessionSwitch but matches on regimeReferenceSymbol.
+ * @param {Object} blockedSession - The session that was regime-gate-blocked
+ * @param {Object} sentiment - Current sentiment { direction, confidence }
+ */
+function handleRegimeSessionSwitch(blockedSession, sentiment) {
+  if (!sentiment || !sentiment.direction || sentiment.direction === 'neutral') return;
+  if (!blockedSession.config.regimeGateEnabled) return;
+
+  const lastSwitch = lastSentimentSwitch.get(blockedSession.sessionId);
+  if (lastSwitch && Date.now() - lastSwitch < SENTIMENT_SWITCH_COOLDOWN_MS) return;
+
+  const blockedGate = blockedSession.config.marketGate;
+  if (!blockedGate || blockedGate === 'any') return;
+
+  const refSymbol = blockedSession.config.regimeReferenceSymbol;
+  let didSwitch = false;
+
+  for (const [sid, session] of sessions) {
+    if (sid === blockedSession.sessionId) continue;
+    if (!session.config.regimeGateEnabled) continue;
+    if (session.config.regimeReferenceSymbol !== refSymbol) continue;
+    if (session.status === 'stopped') continue;
+
+    const gate = session.config.marketGate;
+    if (!gate || gate === 'any') continue;
+
+    if (session.status === 'paused' && gate === sentiment.direction) {
+      console.log(`[AI Engine] Regime auto-resuming "${session.name}" - ${refSymbol} sentiment is ${sentiment.direction} (${sentiment.confidence}%)`);
+      resumeSession(sid);
+      didSwitch = true;
+
+      websocketServer.broadcastToAll('trading_alert', {
+        id: `${Date.now()}-regime-resume-${sid}`,
+        level: 'INFO',
+        category: 'REGIME_SWITCH',
+        message: `Regime auto-resumed "${session.name}" — ${refSymbol} ${sentiment.direction} (${sentiment.confidence}%)`,
+        sessionId: sid,
+        sessionName: session.name,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  if (didSwitch && blockedSession.status === 'running' && blockedSession.portfolio.positions.size === 0) {
+    console.log(`[AI Engine] Regime auto-pausing "${blockedSession.name}" - no positions, ${refSymbol} favors ${sentiment.direction}`);
+    pauseSession(blockedSession.sessionId);
+
+    websocketServer.broadcastToAll('trading_alert', {
+      id: `${Date.now()}-regime-pause-${blockedSession.sessionId}`,
+      level: 'INFO',
+      category: 'REGIME_SWITCH',
+      message: `Regime auto-paused "${blockedSession.name}" — no positions, ${refSymbol} is ${sentiment.direction}`,
+      sessionId: blockedSession.sessionId,
+      sessionName: blockedSession.name,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (didSwitch) {
+    lastSentimentSwitch.set(blockedSession.sessionId, Date.now());
+  }
+}
+
+// ============================================================
+// CROSS-SESSION POSITION AWARENESS
+// ============================================================
+
+/**
+ * Scan all running/paused sessions for their current positions.
+ * Returns a map of symbols to the sessions holding them with market value.
+ * @returns {{ heldSymbols: Set<string>, positionsBySymbol: Map<string, Array> }}
+ */
+function getGlobalPositionExposure() {
+  const heldSymbols = new Set();
+  const positionsBySymbol = new Map();
+
+  for (const [sid, session] of sessions) {
+    if (session.status !== 'running' && session.status !== 'paused') continue;
+    for (const [symbol, position] of session.portfolio.positions) {
+      const upper = symbol.toUpperCase();
+      heldSymbols.add(upper);
+      if (!positionsBySymbol.has(upper)) positionsBySymbol.set(upper, []);
+      positionsBySymbol.get(upper).push({
+        sessionId: sid,
+        sessionName: session.name,
+        quantity: position.quantity || 0,
+        marketValue: position.marketValue || (position.quantity * (position.currentPrice || 0)),
+      });
+    }
+  }
+  return { heldSymbols, positionsBySymbol };
+}
+
+/**
+ * Check if a new entry is allowed globally (cross-session awareness).
+ * Blocks: (a) same symbol already held by another session, (b) opposing ETF held.
+ * @param {string} sessionId - Session requesting entry
+ * @param {string} symbol - Symbol to enter
+ * @returns {{ allowed: boolean, reason: string|null }}
+ */
+function canEnterGlobally(sessionId, symbol) {
+  const { heldSymbols, positionsBySymbol } = getGlobalPositionExposure();
+  const upper = symbol.toUpperCase();
+
+  // Check if another session already holds this symbol
+  const holders = positionsBySymbol.get(upper);
+  if (holders) {
+    const otherSessionHolders = holders.filter(h => h.sessionId !== sessionId);
+    if (otherSessionHolders.length > 0) {
+      return {
+        allowed: false,
+        reason: `Cross-session block: ${symbol} already held by "${otherSessionHolders[0].sessionName}"`,
+      };
+    }
+  }
+
+  // Check if any session holds the opposing ETF
+  const opposite = getOppositeEtf(symbol);
+  if (opposite && heldSymbols.has(opposite.toUpperCase())) {
+    const oppositeHolders = positionsBySymbol.get(opposite.toUpperCase()) || [];
+    return {
+      allowed: false,
+      reason: `Cross-session block: opposing ETF ${opposite} held by "${oppositeHolders[0]?.sessionName || 'unknown'}"`,
+    };
+  }
+
+  return { allowed: true, reason: null };
 }
 
 /**
@@ -1885,6 +2082,48 @@ async function analyzeAndTrade(sessionId) {
     });
   }
 
+  // ============================================================
+  // REGIME GATE: For non-semiconductor sessions with regime gating
+  // ============================================================
+  if (!session.config.semiconductorMode && session.config.regimeGateEnabled && session.config.regimeReferenceSymbol) {
+    const regimeEngine = getOrCreateRegimeEngine(session.config.regimeReferenceSymbol);
+    sentiment = await regimeEngine.getSentiment();
+    const gateCheck = await checkMarketGate(session, sentiment);
+    if (!gateCheck.allowed) {
+      console.log(`[AI Engine] ${session.name}: Regime gate blocked (${session.config.regimeReferenceSymbol}) - ${gateCheck.reason}`);
+
+      websocketServer.broadcastToAll('trading_log', {
+        id: `${Date.now()}-regime-gate-${session.sessionId}`,
+        level: 'INFO',
+        category: 'REGIME_GATE',
+        message: `Regime gate (${session.config.regimeReferenceSymbol}): ${gateCheck.reason}`,
+        sessionId: session.sessionId,
+        sessionName: session.name,
+        sentiment: sentiment ? { direction: sentiment.direction, confidence: sentiment.confidence } : null,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Still evaluate exits for held positions (same pattern as semiconductor block)
+      const positions = Array.from(session.portfolio.positions.keys());
+      const wlUpper = watchlist.map(s => s.toUpperCase());
+      const toCheck = session.config.manageAllPositions
+        ? positions : positions.filter(s => wlUpper.includes(s.toUpperCase()));
+      for (const sym of toCheck) {
+        const exitDecision = await evaluateExit(sessionId, sym);
+        if (exitDecision.shouldExit) await executeExit(sessionId, sym, exitDecision);
+      }
+      handleRegimeSessionSwitch(session, sentiment);
+      return;
+    }
+
+    // Check market phase for entry permission
+    const regimePhase = regimeEngine.getMarketPhase();
+    if (!regimePhase.tradingAllowed) {
+      console.log(`[AI Engine] ${session.name}: Regime phase ${regimePhase.phase} - no new entries allowed`);
+      return;
+    }
+  }
+
   // Get current positions (now synced from Alpaca)
   const currentPositions = Array.from(session.portfolio.positions.keys());
 
@@ -1952,6 +2191,12 @@ async function analyzeAndTrade(sessionId) {
         continue;
       }
 
+      // PAIR GUARD: Don't enter if we already hold the opposing ETF in this session
+      const opposite = getOppositeEtf(symbol);
+      if (opposite && normalizedPositions.map(s => s.toUpperCase()).includes(opposite.toUpperCase())) {
+        continue;
+      }
+
       // SEMICONDUCTOR MODE: Check if symbol aligns with current sentiment direction
       if (session.config.semiconductorMode && sentiment) {
         const alignmentCheck = checkSymbolSentimentAlignment(symbol, sentiment);
@@ -1969,6 +2214,26 @@ async function analyzeAndTrade(sessionId) {
           console.log(`[AI Engine] ${session.name}: Cannot enter ${symbol} - ${entryCheck.reason}`);
           continue;
         }
+      }
+
+      // REGIME GATE: Check symbol alignment for regime-gated sessions
+      if (!session.config.semiconductorMode && session.config.regimeGateEnabled && sentiment) {
+        const alignmentCheck = checkSymbolSentimentAlignment(symbol, sentiment);
+        if (!alignmentCheck.allowed) {
+          if (Math.random() < 0.1) {
+            console.log(`[AI Engine] ${session.name}: Regime skipping ${symbol} - ${alignmentCheck.reason}`);
+          }
+          continue;
+        }
+      }
+
+      // CROSS-SESSION: Block if another session holds this symbol or its opposing ETF
+      const globalCheck = canEnterGlobally(sessionId, symbol);
+      if (!globalCheck.allowed) {
+        if (Math.random() < 0.05) {
+          console.log(`[AI Engine] ${session.name}: ${globalCheck.reason}`);
+        }
+        continue;
       }
 
       const entryDecision = await evaluateEntry(sessionId, symbol);
@@ -2233,8 +2498,12 @@ async function evaluateEntry(sessionId, symbol) {
 
     // Calculate position size and targets using config percentages
     const atr = indicators.atr?.value || currentPrice * 0.02;
-    const takeProfitPercent = cfg.takeProfitPercent || 2;
-    const stopLossPercent = cfg.stopLossPercent || 1;
+    // Scale stop/target for leveraged ETFs: a 1% stop on 3x ETF = 0.33% underlying move (noise)
+    const leverage = getEtfLeverage(symbol);
+    const rawTakeProfit = cfg.takeProfitPercent || 2;
+    const rawStopLoss = cfg.stopLossPercent || 1;
+    const takeProfitPercent = leverage > 1 ? Math.max(rawTakeProfit, rawTakeProfit * leverage) : rawTakeProfit;
+    const stopLossPercent = leverage > 1 ? Math.max(rawStopLoss, rawStopLoss * leverage) : rawStopLoss;
 
     // Use percentage-based targets (matching simulator)
     const profitTarget = currentPrice * (1 + takeProfitPercent / 100);
@@ -2417,10 +2686,13 @@ async function evaluateExit(sessionId, symbol) {
     let exitScore = 0;
     let exitReason = '';
 
-    // Get config with defaults
+    // Get config with defaults - scale for leveraged ETFs
     const cfg = session.config;
-    const takeProfitPercent = cfg.takeProfitPercent || 2;
-    const stopLossPercent = cfg.stopLossPercent || 1;
+    const leverage = getEtfLeverage(symbol);
+    const rawTakeProfit = cfg.takeProfitPercent || 2;
+    const rawStopLoss = cfg.stopLossPercent || 1;
+    const takeProfitPercent = leverage > 1 ? Math.max(rawTakeProfit, rawTakeProfit * leverage) : rawTakeProfit;
+    const stopLossPercent = leverage > 1 ? Math.max(rawStopLoss, rawStopLoss * leverage) : rawStopLoss;
     const exitOnRsiExtreme = cfg.exitOnRsiExtreme !== false;
     const rsiOverbought = cfg.rsiOverbought || 70;
 
@@ -2787,8 +3059,30 @@ async function executeEntry(sessionId, symbol, decision) {
       }
     }
 
-    const maxPositionValue =
-      effectivePortfolioValue * ((session.config.maxPositionSizePercent || 10) / 100);
+    // Cap per-position size at the global maximum
+    const sessionMaxPercent = session.config.maxPositionSizePercent || 10;
+    const effectiveMaxPercent = Math.min(sessionMaxPercent, GLOBAL_MAX_POSITION_PERCENT);
+    let maxPositionValue = effectivePortfolioValue * (effectiveMaxPercent / 100);
+
+    if (sessionMaxPercent > GLOBAL_MAX_POSITION_PERCENT) {
+      console.log(`[AI Engine] Position size capped: ${sessionMaxPercent}% -> ${effectiveMaxPercent}% for ${symbol}`);
+    }
+
+    // Check total exposure across all sessions
+    const { positionsBySymbol } = getGlobalPositionExposure();
+    let totalExposure = 0;
+    for (const [, holders] of positionsBySymbol) {
+      for (const h of holders) totalExposure += h.marketValue;
+    }
+    const totalExposurePercent = (totalExposure / effectivePortfolioValue) * 100;
+    if (totalExposurePercent >= GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT) {
+      console.log(`[AI Engine] Total exposure ${totalExposurePercent.toFixed(1)}% >= ${GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT}% cap - blocking ${symbol} entry`);
+      return;
+    }
+    // Reduce max position value if approaching total exposure limit
+    const remainingCapacity = (GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT - totalExposurePercent) / 100 * effectivePortfolioValue;
+    maxPositionValue = Math.min(maxPositionValue, remainingCapacity);
+
     const riskAmount =
       effectivePortfolioValue * ((session.config.riskPerTradePercent || 2) / 100);
 
