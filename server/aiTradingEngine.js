@@ -1906,9 +1906,14 @@ async function syncPortfolio(sessionId) {
 
     // Update positions (preserve entryTime and highWaterMark from existing positions if available)
     // Note: alpacaClient.getPositions() returns camelCase fields (quantity, avgEntryPrice, etc.)
+    // Filter to watchlist symbols only (unless manageAllPositions) to prevent cross-session contamination
+    const watchlistUpper = (session.config.watchlist || []).map(s => s.toUpperCase());
+    const filteredPositions = session.config.manageAllPositions
+      ? positions
+      : positions.filter(pos => watchlistUpper.includes((pos.symbol || '').toUpperCase()));
     const existingPositions = new Map(session.portfolio.positions);
     session.portfolio.positions.clear();
-    positions.forEach(pos => {
+    filteredPositions.forEach(pos => {
       const existing = existingPositions.get(pos.symbol);
       const currentPrice =
         pos.currentPrice || parseFloat(pos.current_price) || 0;
