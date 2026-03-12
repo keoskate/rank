@@ -593,14 +593,7 @@ async function checkMarketGate(session, sentiment) {
   const { marketGate, marketGateMinConfidence } = session.config;
 
   // No gate configured = always allow
-  if (!marketGate || marketGate === 'any') {
-    // For 'any' gate, still check that we have sufficient confidence
-    if (sentiment && sentiment.confidence < marketGateMinConfidence) {
-      return {
-        allowed: false,
-        reason: `Low confidence (${sentiment.confidence}% < ${marketGateMinConfidence}% required)`,
-      };
-    }
+  if (!marketGate) {
     return { allowed: true, reason: null };
   }
 
@@ -608,7 +601,22 @@ async function checkMarketGate(session, sentiment) {
     return { allowed: false, reason: 'No sentiment data available' };
   }
 
-  // Check direction match
+  // For 'any' gate: allow trading in EITHER direction, just need sufficient confidence.
+  // Symbol alignment filtering (bull vs bear) happens later via checkSymbolSentimentAlignment.
+  // Use a lower confidence floor (45%) to prevent dead zones where both directions are blocked.
+  if (marketGate === 'any') {
+    const minConf = marketGateMinConfidence || 60;
+    const floorConf = Math.min(minConf, 45); // Never require more than 45% for 'any' gate
+    if (sentiment.confidence < floorConf) {
+      return {
+        allowed: false,
+        reason: `Low confidence (${sentiment.confidence}% < ${floorConf}% floor)`,
+      };
+    }
+    return { allowed: true, reason: null };
+  }
+
+  // Directional gates: check direction match
   if (marketGate === 'bullish' && sentiment.direction !== 'bullish') {
     return {
       allowed: false,
@@ -624,7 +632,7 @@ async function checkMarketGate(session, sentiment) {
   }
 
   // Check confidence threshold
-  if (sentiment.confidence < marketGateMinConfidence) {
+  if (sentiment.confidence < (marketGateMinConfidence || 60)) {
     return {
       allowed: false,
       reason: `Confidence ${sentiment.confidence}% < required ${marketGateMinConfidence}%`,
@@ -3031,13 +3039,12 @@ async function executeEntry(sessionId, symbol, decision) {
       }
     }
 
-    // Calculate position size
-    const portfolioValue =
-      session.portfolio.cash +
-      Array.from(session.portfolio.positions.values()).reduce(
-        (sum, p) => sum + p.marketValue,
-        0
-      );
+    // Calculate position size (guard against NaN from corrupted position data)
+    const positionsMarketValue = Array.from(session.portfolio.positions.values()).reduce(
+      (sum, p) => sum + (parseFloat(p.marketValue) || 0),
+      0
+    );
+    const portfolioValue = (parseFloat(session.portfolio.cash) || 0) + positionsMarketValue;
 
     // Ensure we have valid portfolio value (fetch from Alpaca if needed)
     let effectivePortfolioValue = portfolioValue;
@@ -3072,16 +3079,29 @@ async function executeEntry(sessionId, symbol, decision) {
     const { positionsBySymbol } = getGlobalPositionExposure();
     let totalExposure = 0;
     for (const [, holders] of positionsBySymbol) {
-      for (const h of holders) totalExposure += h.marketValue;
+      for (const h of holders) {
+        const mv = h.marketValue || 0;
+        if (!isNaN(mv)) totalExposure += mv;
+      }
     }
-    const totalExposurePercent = (totalExposure / effectivePortfolioValue) * 100;
+    const totalExposurePercent = effectivePortfolioValue > 0
+      ? (totalExposure / effectivePortfolioValue) * 100
+      : 0;
     if (totalExposurePercent >= GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT) {
       console.log(`[AI Engine] Total exposure ${totalExposurePercent.toFixed(1)}% >= ${GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT}% cap - blocking ${symbol} entry`);
       return;
     }
     // Reduce max position value if approaching total exposure limit
     const remainingCapacity = (GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT - totalExposurePercent) / 100 * effectivePortfolioValue;
-    maxPositionValue = Math.min(maxPositionValue, remainingCapacity);
+    if (remainingCapacity > 0) {
+      maxPositionValue = Math.min(maxPositionValue, remainingCapacity);
+    }
+
+    // Guard: ensure maxPositionValue is a valid positive number
+    if (!maxPositionValue || isNaN(maxPositionValue) || maxPositionValue <= 0) {
+      console.log(`[AI Engine] Invalid maxPositionValue ($${maxPositionValue}) for ${symbol} - portfolioValue=$${effectivePortfolioValue.toFixed(2)}, exposure=${totalExposurePercent.toFixed(1)}%`);
+      return;
+    }
 
     const riskAmount =
       effectivePortfolioValue * ((session.config.riskPerTradePercent || 2) / 100);
