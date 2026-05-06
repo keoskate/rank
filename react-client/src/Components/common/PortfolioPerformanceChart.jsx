@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Chart, registerables } from 'chart.js';
 import theme from '../../theme';
 import Card from './Card';
@@ -38,6 +38,7 @@ const PortfolioPerformanceChart = ({
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showTrades, setShowTrades] = useState(false);
 
   // Fetch portfolio history when period or mode changes
   useEffect(() => {
@@ -178,14 +179,25 @@ const PortfolioPerformanceChart = ({
 
     const isPositive = stats && stats.totalChange >= 0;
     const lineColor = isPositive ? theme.colors.success : theme.colors.error;
-    const fillColor = isPositive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+
+    // Create gradient fill
+    const gradient = ctx.createLinearGradient(0, 0, 0, chartRef.current.height);
+    if (isPositive) {
+      gradient.addColorStop(0, 'rgba(40, 167, 69, 0.25)');
+      gradient.addColorStop(1, 'rgba(40, 167, 69, 0.02)');
+    } else {
+      gradient.addColorStop(0, 'rgba(220, 53, 69, 0.25)');
+      gradient.addColorStop(1, 'rgba(220, 53, 69, 0.02)');
+    }
+
+    const startEquityValue = stats?.startEquity;
 
     const datasets = [
       {
         label: 'Portfolio Value',
         data: dataPoints,
         borderColor: lineColor,
-        backgroundColor: fillColor,
+        backgroundColor: gradient,
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 5,
@@ -194,8 +206,26 @@ const PortfolioPerformanceChart = ({
       },
     ];
 
-    // Add buy markers
-    if (tradeMarkers.buys.length > 0) {
+    // Starting balance reference line
+    if (startEquityValue && dataPoints.length >= 2) {
+      datasets.push({
+        label: 'Period Start',
+        data: [
+          { x: dataPoints[0].x, y: startEquityValue },
+          { x: dataPoints[dataPoints.length - 1].x, y: startEquityValue },
+        ],
+        borderColor: theme.colors.gray300,
+        borderWidth: 1,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false,
+        tension: 0,
+      });
+    }
+
+    // Add trade markers only when toggled on
+    if (showTrades && tradeMarkers.buys.length > 0) {
       datasets.push({
         label: 'Buy',
         data: tradeMarkers.buys,
@@ -208,8 +238,7 @@ const PortfolioPerformanceChart = ({
       });
     }
 
-    // Add sell markers
-    if (tradeMarkers.sells.length > 0) {
+    if (showTrades && tradeMarkers.sells.length > 0) {
       datasets.push({
         label: 'Sell',
         data: tradeMarkers.sells,
@@ -235,13 +264,7 @@ const PortfolioPerformanceChart = ({
         },
         plugins: {
           legend: {
-            display: tradeMarkers.buys.length > 0 || tradeMarkers.sells.length > 0,
-            position: 'top',
-            labels: {
-              color: theme.colors.gray600,
-              usePointStyle: true,
-              font: { size: 11 },
-            },
+            display: false,
           },
           tooltip: {
             callbacks: {
@@ -310,7 +333,7 @@ const PortfolioPerformanceChart = ({
         chartInstance.current.destroy();
       }
     };
-  }, [historyData, tradeMarkers, stats]);
+  }, [historyData, tradeMarkers, stats, showTrades]);
 
   const formatCurrency = value => {
     if (!value && value !== 0) return '--';
@@ -322,45 +345,93 @@ const PortfolioPerformanceChart = ({
 
   return (
     <Card style={{ marginBottom: theme.spacing.lg }}>
-      {/* Header */}
+      {/* Balance Header */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           marginBottom: theme.spacing.md,
           flexWrap: 'wrap',
           gap: theme.spacing.sm,
         }}
       >
         <div>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: theme.typography.fontSize.lg,
-              fontWeight: theme.typography.fontWeight.bold,
-            }}
-          >
-            Performance
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: theme.spacing.sm }}>
+            <span
+              style={{
+                fontSize: '28px',
+                fontWeight: theme.typography.fontWeight.bold,
+                color: theme.colors.gray900,
+                letterSpacing: '-0.5px',
+              }}
+            >
+              {stats ? formatCurrency(stats.endEquity) : '--'}
+            </span>
+            {stats && (
+              <span
+                style={{
+                  fontSize: theme.typography.fontSize.base,
+                  fontWeight: theme.typography.fontWeight.medium,
+                  color: stats.totalChange >= 0 ? theme.colors.success : theme.colors.error,
+                }}
+              >
+                {stats.totalChange >= 0 ? '+' : ''}
+                {formatCurrency(stats.totalChange)} ({stats.totalChangePercent >= 0 ? '+' : ''}
+                {stats.totalChangePercent.toFixed(2)}%)
+              </span>
+            )}
+          </div>
           {stats && (
             <div
               style={{
-                fontSize: theme.typography.fontSize.sm,
-                color: stats.totalChange >= 0 ? theme.colors.success : theme.colors.error,
-                fontWeight: theme.typography.fontWeight.medium,
-                marginTop: '2px',
+                display: 'flex',
+                gap: theme.spacing.md,
+                marginTop: theme.spacing.xs,
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray500,
               }}
             >
-              {stats.totalChange >= 0 ? '+' : ''}
-              {formatCurrency(stats.totalChange)} ({stats.totalChangePercent >= 0 ? '+' : ''}
-              {stats.totalChangePercent.toFixed(2)}%)
+              <span>
+                Return: <span style={{
+                  color: stats.totalChange >= 0 ? theme.colors.success : theme.colors.error,
+                  fontWeight: theme.typography.fontWeight.medium,
+                }}>
+                  {stats.totalChangePercent >= 0 ? '+' : ''}{stats.totalChangePercent.toFixed(2)}%
+                </span>
+              </span>
+              <span>
+                Max DD: <span style={{
+                  color: theme.colors.error,
+                  fontWeight: theme.typography.fontWeight.medium,
+                }}>
+                  -{stats.maxDrawdown.toFixed(2)}%
+                </span>
+              </span>
             </div>
           )}
         </div>
 
         {/* Period Selector */}
-        <div style={{ display: 'flex', gap: '2px' }}>
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+          {(tradeMarkers.buys.length > 0 || tradeMarkers.sells.length > 0) && (
+            <button
+              onClick={() => setShowTrades(prev => !prev)}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                border: showTrades ? `1px solid ${theme.colors.gray400}` : '1px solid transparent',
+                backgroundColor: showTrades ? theme.colors.gray100 : 'transparent',
+                color: theme.colors.gray600,
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: theme.typography.fontWeight.medium,
+                marginRight: theme.spacing.sm,
+              }}
+            >
+              Trades {showTrades ? 'ON' : 'OFF'}
+            </button>
+          )}
           {PERIOD_OPTIONS.map(period => (
             <button
               key={period.label}
@@ -393,60 +464,6 @@ const PortfolioPerformanceChart = ({
           ))}
         </div>
       </div>
-
-      {/* Stats Row */}
-      {stats && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: theme.spacing.sm,
-            marginBottom: theme.spacing.md,
-            padding: theme.spacing.sm,
-            backgroundColor: theme.colors.gray50,
-            borderRadius: theme.borderRadius.md,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
-              Start
-            </div>
-            <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.medium }}>
-              {formatCurrency(stats.startEquity)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
-              Current
-            </div>
-            <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.medium }}>
-              {formatCurrency(stats.endEquity)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
-              High
-            </div>
-            <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.medium }}>
-              {formatCurrency(stats.maxEquity)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
-              Max Drawdown
-            </div>
-            <div
-              style={{
-                fontSize: theme.typography.fontSize.sm,
-                fontWeight: theme.typography.fontWeight.medium,
-                color: theme.colors.error,
-              }}
-            >
-              -{stats.maxDrawdown.toFixed(2)}%
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Chart */}
       <div style={{ position: 'relative', height }}>
@@ -494,8 +511,8 @@ const PortfolioPerformanceChart = ({
         <canvas ref={chartRef} />
       </div>
 
-      {/* Trade Legend */}
-      {(tradeMarkers.buys.length > 0 || tradeMarkers.sells.length > 0) && (
+      {/* Trade Legend - only when trades are shown */}
+      {showTrades && (tradeMarkers.buys.length > 0 || tradeMarkers.sells.length > 0) && (
         <div
           style={{
             marginTop: theme.spacing.sm,

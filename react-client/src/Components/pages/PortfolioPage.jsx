@@ -13,6 +13,7 @@ import Button from '../common/Button';
 import MetricCard from '../common/MetricCard';
 import PortfolioPerformanceChart from '../common/PortfolioPerformanceChart';
 import PerformanceAnalyticsPanel from './PerformanceAnalyticsPanel';
+import IntraDayCommandCenter from './IntraDayCommandCenter';
 
 const PortfolioPage = () => {
   const navigate = useNavigate();
@@ -216,6 +217,22 @@ const PortfolioPage = () => {
             >
               Analytics
             </button>
+            <button
+              onClick={() => handleTabChange('command')}
+              style={{
+                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: activeTab === 'command' ? theme.typography.fontWeight.bold : theme.typography.fontWeight.medium,
+                backgroundColor: activeTab === 'command' ? theme.colors.primary : 'transparent',
+                color: activeTab === 'command' ? '#fff' : theme.colors.gray600,
+                border: 'none',
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Command Center
+            </button>
           </div>
 
         {/* Account Mode Toggle */}
@@ -282,6 +299,11 @@ const PortfolioPage = () => {
       {/* Analytics Tab Content */}
       {activeTab === 'analytics' && (
         <PerformanceAnalyticsPanel />
+      )}
+
+      {/* Command Center Tab Content */}
+      {activeTab === 'command' && (
+        <IntraDayCommandCenter tradingMode={tradingMode} />
       )}
 
       {/* Overview Tab Content */}
