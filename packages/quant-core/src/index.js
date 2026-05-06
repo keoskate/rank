@@ -10,6 +10,7 @@ const tradingCalculations = require('./tradingCalculations');
 const LeveragedEtfStrategy = require('./leveragedEtfStrategy');
 const LeveragedEtfRules = require('./leveragedEtfRules');
 const technicalIndicators = require('./technicalIndicatorsService');
+const RegimeDetector = require('./regimeDetector');
 
 module.exports = {
   // Re-exported for `const { getEtfLeverage, isMarketOpen, calculateRSI } = require('@keo/quant-core')`
@@ -18,6 +19,7 @@ module.exports = {
   // Class exports
   LeveragedEtfStrategy,
   LeveragedEtfRules,
+  RegimeDetector,
 
   // Indicator namespace — keeps the surface organized so individual
   // function names don't clash with anything else at the top level.

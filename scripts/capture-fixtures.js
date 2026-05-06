@@ -208,6 +208,48 @@ function generateCandles(count, opts = {}) {
   return bars;
 }
 
+// ─────────────────────────────────────────────────────────────────
+// regimeDetector.js  (class)
+// ─────────────────────────────────────────────────────────────────
+function captureRegimeDetector() {
+  const RegimeDetector = require('../server/regimeDetector');
+  const detector = new RegimeDetector();
+
+  // Three deterministic candle scenarios to exercise each regime branch
+  const uptrend = generateCandles(100, { drift: 0.15, noiseAmp: 0.3 });
+  const downtrend = generateCandles(100, { drift: -0.15, noiseAmp: 0.3 });
+  const sideways = generateCandles(100, { drift: 0.0, noiseAmp: 0.5 });
+  const insufficient = generateCandles(20);
+
+  return {
+    candleScenarios: { uptrend_first3: uptrend.slice(0, 3), downtrend_first3: downtrend.slice(0, 3), sideways_first3: sideways.slice(0, 3) },
+    detectRegime: {
+      uptrend: detector.detectRegime(uptrend),
+      downtrend: detector.detectRegime(downtrend),
+      sideways: detector.detectRegime(sideways),
+      insufficient: detector.detectRegime(insufficient),
+      uptrend_with_options: detector.detectRegime(uptrend, { maPeriod: 20, adxPeriod: 7 }),
+    },
+    getRegimeTimeline_uptrend: detector.getRegimeTimeline(uptrend),
+    analyzeRegimes_uptrend: detector.analyzeRegimes(detector.getRegimeTimeline(uptrend)),
+    analyzeRegimes_empty: detector.analyzeRegimes([]),
+    getLeveragedETFRecommendation: {
+      bull_high: detector.getLeveragedETFRecommendation('bull', 'strong', 90),
+      bull_medium: detector.getLeveragedETFRecommendation('bull', 'medium', 60),
+      bear_high: detector.getLeveragedETFRecommendation('bear', 'strong', 90),
+      bear_medium: detector.getLeveragedETFRecommendation('bear', 'medium', 60),
+      sideways: detector.getLeveragedETFRecommendation('sideways', 'weak', 40),
+      unknown: detector.getLeveragedETFRecommendation('unknown', 'weak', 0),
+    },
+    getDefaultConfigForRegime: {
+      bull: detector.getDefaultConfigForRegime('bull'),
+      bear: detector.getDefaultConfigForRegime('bear'),
+      sideways: detector.getDefaultConfigForRegime('sideways'),
+      unknown: detector.getDefaultConfigForRegime('unknown'),
+    },
+  };
+}
+
 function captureTechnicalIndicators() {
   const ti = require('../server/technicalIndicatorsService');
   const candles = generateCandles(100);
@@ -239,6 +281,7 @@ const CAPTURES = [
   ['leveragedEtfStrategy', captureLeveragedEtfStrategy],
   ['leveragedEtfRules', captureLeveragedEtfRules],
   ['technicalIndicatorsService', captureTechnicalIndicators],
+  ['regimeDetector', captureRegimeDetector],
 ];
 
 console.log(`Capturing golden fixtures → ${path.relative(process.cwd(), FIXTURES_DIR)}/`);

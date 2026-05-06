@@ -174,6 +174,80 @@ describe('golden fixtures: technicalIndicatorsService', () => {
   });
 });
 
+describe('golden fixtures: regimeDetector', () => {
+  const fixture = loadFixture('regimeDetector');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RegimeDetector = require('../regimeDetector.js');
+  const detector = new RegimeDetector();
+
+  // Same deterministic generator the capture script uses, inlined here so
+  // the test reproduces the exact candle scenarios that produced fixture.
+  function generateCandles(count, opts = {}) {
+    const { startPrice = 100, drift = 0.05, noiseAmp = 0.5 } = opts;
+    const bars = [];
+    let prevClose = startPrice;
+    for (let i = 0; i < count; i++) {
+      const noise = Math.sin(i * 0.3) * noiseAmp + Math.cos(i * 0.7) * (noiseAmp * 0.6);
+      const close = startPrice + i * drift + noise;
+      const open = i === 0 ? close : prevClose;
+      const high = Math.max(open, close) + Math.abs(noise) * 0.4;
+      const low = Math.min(open, close) - Math.abs(noise) * 0.4;
+      const volume = Math.round(10000 + Math.abs(noise) * 5000 + (i % 7) * 500);
+      bars.push({
+        timestamp: 1700000000000 + i * 5 * 60 * 1000,
+        open: +open.toFixed(4),
+        high: +high.toFixed(4),
+        low: +low.toFixed(4),
+        close: +close.toFixed(4),
+        volume,
+      });
+      prevClose = close;
+    }
+    return bars;
+  }
+
+  const uptrend = generateCandles(100, { drift: 0.15, noiseAmp: 0.3 });
+  const downtrend = generateCandles(100, { drift: -0.15, noiseAmp: 0.3 });
+  const sideways = generateCandles(100, { drift: 0.0, noiseAmp: 0.5 });
+  const insufficient = generateCandles(20);
+
+  it('detectRegime classifies all four scenarios identically to fixture', () => {
+    expect(n(detector.detectRegime(uptrend))).toEqual(fixture.detectRegime.uptrend);
+    expect(n(detector.detectRegime(downtrend))).toEqual(fixture.detectRegime.downtrend);
+    expect(n(detector.detectRegime(sideways))).toEqual(fixture.detectRegime.sideways);
+    expect(n(detector.detectRegime(insufficient))).toEqual(fixture.detectRegime.insufficient);
+  });
+
+  it('detectRegime with custom options matches', () => {
+    expect(n(detector.detectRegime(uptrend, { maPeriod: 20, adxPeriod: 7 }))).toEqual(
+      fixture.detectRegime.uptrend_with_options
+    );
+  });
+
+  it('getRegimeTimeline + analyzeRegimes match for uptrend', () => {
+    const timeline = detector.getRegimeTimeline(uptrend);
+    expect(n(timeline)).toEqual(fixture.getRegimeTimeline_uptrend);
+    expect(n(detector.analyzeRegimes(timeline))).toEqual(fixture.analyzeRegimes_uptrend);
+    expect(n(detector.analyzeRegimes([]))).toEqual(fixture.analyzeRegimes_empty);
+  });
+
+  it('getLeveragedETFRecommendation matches across regime/strength/confidence combos', () => {
+    expect(n(detector.getLeveragedETFRecommendation('bull', 'strong', 90))).toEqual(fixture.getLeveragedETFRecommendation.bull_high);
+    expect(n(detector.getLeveragedETFRecommendation('bull', 'medium', 60))).toEqual(fixture.getLeveragedETFRecommendation.bull_medium);
+    expect(n(detector.getLeveragedETFRecommendation('bear', 'strong', 90))).toEqual(fixture.getLeveragedETFRecommendation.bear_high);
+    expect(n(detector.getLeveragedETFRecommendation('bear', 'medium', 60))).toEqual(fixture.getLeveragedETFRecommendation.bear_medium);
+    expect(n(detector.getLeveragedETFRecommendation('sideways', 'weak', 40))).toEqual(fixture.getLeveragedETFRecommendation.sideways);
+    expect(n(detector.getLeveragedETFRecommendation('unknown', 'weak', 0))).toEqual(fixture.getLeveragedETFRecommendation.unknown);
+  });
+
+  it('getDefaultConfigForRegime matches for all four regime values', () => {
+    expect(n(detector.getDefaultConfigForRegime('bull'))).toEqual(fixture.getDefaultConfigForRegime.bull);
+    expect(n(detector.getDefaultConfigForRegime('bear'))).toEqual(fixture.getDefaultConfigForRegime.bear);
+    expect(n(detector.getDefaultConfigForRegime('sideways'))).toEqual(fixture.getDefaultConfigForRegime.sideways);
+    expect(n(detector.getDefaultConfigForRegime('unknown'))).toEqual(fixture.getDefaultConfigForRegime.unknown);
+  });
+});
+
 describe('golden fixtures: leveragedEtfRules', () => {
   const fixture = loadFixture('leveragedEtfRules');
   // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -33,6 +33,13 @@ describe('@keo/quant-core: public surface', () => {
     expect(new quantCore.LeveragedEtfRules().isLeveraged('AAPL')).toBe(false);
   });
 
+  it('exposes RegimeDetector', () => {
+    expect(typeof quantCore.RegimeDetector).toBe('function');
+    const d = new quantCore.RegimeDetector();
+    expect(typeof d.detectRegime).toBe('function');
+    expect(typeof d.getDefaultConfigForRegime).toBe('function');
+  });
+
   it('exposes indicators namespace', () => {
     expect(quantCore.indicators).toBeDefined();
     expect(typeof quantCore.indicators.calculateRSI).toBe('function');

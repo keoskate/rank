@@ -1,0 +1,822 @@
+{
+  "analyzeRegimes_empty": null,
+  "analyzeRegimes_uptrend": {
+    "currentRegime": "bull",
+    "currentStreakLength": 50,
+    "distribution": {
+      "bear": {
+        "count": 0,
+        "percent": "0.0%"
+      },
+      "bull": {
+        "count": 50,
+        "percent": "100.0%"
+      },
+      "sideways": {
+        "count": 0,
+        "percent": "0.0%"
+      }
+    },
+    "dominantRegime": "bull",
+    "maxStreaks": {
+      "bear": 0,
+      "bull": 50,
+      "sideways": 0
+    },
+    "totalDays": 50,
+    "totalTransitions": 0,
+    "transitions": {
+      "bear_to_bull": 0,
+      "bear_to_sideways": 0,
+      "bull_to_bear": 0,
+      "bull_to_sideways": 0,
+      "sideways_to_bear": 0,
+      "sideways_to_bull": 0
+    }
+  },
+  "candleScenarios": {
+    "downtrend_first3": [
+      {
+        "close": 100.18,
+        "high": 100.252,
+        "low": 100.108,
+        "open": 100.18,
+        "volume": 10900
+      },
+      {
+        "close": 100.0763,
+        "high": 100.2705,
+        "low": 99.9858,
+        "open": 100.18,
+        "volume": 11632
+      },
+      {
+        "close": 99.9,
+        "high": 100.1563,
+        "low": 99.82,
+        "open": 100.0763,
+        "volume": 12000
+      }
+    ],
+    "sideways_first3": [
+      {
+        "close": 100.3,
+        "high": 100.42,
+        "low": 100.18,
+        "open": 100.3,
+        "volume": 11500
+      },
+      {
+        "close": 100.3772,
+        "high": 100.5281,
+        "low": 100.1491,
+        "open": 100.3,
+        "volume": 12386
+      },
+      {
+        "close": 100.3333,
+        "high": 100.5105,
+        "low": 100.2,
+        "open": 100.3772,
+        "volume": 12667
+      }
+    ],
+    "uptrend_first3": [
+      {
+        "close": 100.18,
+        "high": 100.252,
+        "low": 100.108,
+        "open": 100.18,
+        "volume": 10900
+      },
+      {
+        "close": 100.3763,
+        "high": 100.4669,
+        "low": 100.0895,
+        "open": 100.18,
+        "volume": 11632
+      },
+      {
+        "close": 100.5,
+        "high": 100.58,
+        "low": 100.2963,
+        "open": 100.3763,
+        "volume": 12000
+      }
+    ]
+  },
+  "detectRegime": {
+    "downtrend": {
+      "confidence": 75,
+      "description": "Bearish: -4.3% vs MA, -0.6% 5d momentum",
+      "indicators": {
+        "adx": "95.52",
+        "fiveDayReturn": "-0.58%",
+        "ma": 88.81493200000001,
+        "price": 85.0301,
+        "priceToMA": "-4.26%",
+        "priceVs50MA": -4.261481616627267,
+        "signals": {
+          "bearish": 3,
+          "bullish": 0,
+          "sideways": 2
+        },
+        "tenDayReturn": "-2.22%",
+        "volatility": "0.12%"
+      },
+      "leveragedRecommendation": {
+        "direction": "short",
+        "leverage": "2x",
+        "name": "T-Rex 2X Inverse MSTR Daily Target ETF",
+        "reason": "Bearish regime detected (74.84281646526622% confidence). Use inverse ETF to profit from decline.",
+        "riskLevel": "moderate",
+        "symbol": "QBTZ",
+        "tips": [
+          "Best for strong downtrend days",
+          "Consider hedging with small QBTX position",
+          "Full position OK"
+        ]
+      },
+      "recommendedStrategy": {
+        "approach": "Counter-trend / Defensive",
+        "confidenceThreshold": 80,
+        "description": "Quick profits, tight risk management",
+        "positionSizeMultiplier": 0.7,
+        "stopLossMultiplier": 0.75,
+        "takeProfitMultiplier": 0.8,
+        "tips": [
+          "Take profits quickly",
+          "Use tighter stops",
+          "Consider inverse ETFs",
+          "Reduce overall exposure"
+        ]
+      },
+      "regime": "bear",
+      "trendStrength": "strong"
+    },
+    "insufficient": {
+      "confidence": 0,
+      "reason": "Insufficient data: need 50 candles, have 20",
+      "regime": "unknown"
+    },
+    "sideways": {
+      "confidence": 90,
+      "description": "Sideways: Mixed signals (ADX: 17.2, 5d: +0.2%)",
+      "indicators": {
+        "adx": "17.19",
+        "fiveDayReturn": "0.17%",
+        "ma": 99.98322400000005,
+        "price": 99.8001,
+        "priceToMA": "-0.18%",
+        "priceVs50MA": -0.18315472603688898,
+        "signals": {
+          "bearish": 0,
+          "bullish": 0,
+          "sideways": 5
+        },
+        "tenDayReturn": "-0.97%",
+        "volatility": "0.17%"
+      },
+      "leveragedRecommendation": {
+        "direction": "neutral",
+        "leverage": "none",
+        "name": "Stay in Cash",
+        "reason": "Sideways/choppy regime (90% confidence). Leveraged ETFs lose value in chop due to decay.",
+        "riskLevel": "low",
+        "symbol": "CASH",
+        "tips": [
+          "Avoid leveraged ETFs in sideways markets",
+          "If must trade, use base stock (QBTS/MSTR) with tight stops",
+          "Wait for clearer trend signal"
+        ]
+      },
+      "recommendedStrategy": {
+        "approach": "Mean reversion / Range trading",
+        "confidenceThreshold": 90,
+        "description": "Very selective, quick in and out",
+        "positionSizeMultiplier": 0.5,
+        "stopLossMultiplier": 0.5,
+        "takeProfitMultiplier": 0.6,
+        "tips": [
+          "Trade only at range extremes",
+          "Very tight profit targets",
+          "Be very selective - most setups fail in chop",
+          "Consider sitting out"
+        ]
+      },
+      "regime": "sideways",
+      "trendStrength": "weak"
+    },
+    "uptrend": {
+      "confidence": 74,
+      "description": "Bullish: +3.2% vs MA, +0.6% 5d momentum",
+      "indicators": {
+        "adx": "91.72",
+        "fiveDayReturn": "0.62%",
+        "ma": 111.16493199999995,
+        "price": 114.7301,
+        "priceToMA": "3.21%",
+        "priceVs50MA": 3.207097720349475,
+        "signals": {
+          "bearish": 0,
+          "bullish": 3,
+          "sideways": 2
+        },
+        "tenDayReturn": "0.67%",
+        "volatility": "0.09%"
+      },
+      "leveragedRecommendation": {
+        "direction": "long",
+        "leverage": "2x",
+        "name": "T-Rex 2X Long MSTR Daily Target ETF",
+        "reason": "Bullish regime detected (73.82344135033983% confidence). Use leveraged bull ETF to maximize gains.",
+        "riskLevel": "moderate",
+        "symbol": "QBTX",
+        "tips": [
+          "Best for strong uptrend days",
+          "Consider position sizing based on confidence",
+          "Full position OK"
+        ]
+      },
+      "recommendedStrategy": {
+        "approach": "Trend-following / Momentum",
+        "confidenceThreshold": 60,
+        "description": "Go with the trend, let winners run",
+        "positionSizeMultiplier": 1,
+        "stopLossMultiplier": 1,
+        "takeProfitMultiplier": 1.5,
+        "tips": [
+          "Buy dips to moving average",
+          "Use wider profit targets",
+          "Trail stops to lock in gains"
+        ]
+      },
+      "regime": "bull",
+      "trendStrength": "strong"
+    },
+    "uptrend_with_options": {
+      "confidence": 70,
+      "description": "Sideways: Mixed signals (ADX: 91.5, 5d: +0.6%)",
+      "indicators": {
+        "adx": "91.53",
+        "fiveDayReturn": "0.62%",
+        "ma": 113.45596999999998,
+        "price": 114.7301,
+        "priceToMA": "1.12%",
+        "priceVs50MA": 1.1230171492959022,
+        "signals": {
+          "bearish": 0,
+          "bullish": 2,
+          "sideways": 3
+        },
+        "tenDayReturn": "0.67%",
+        "volatility": "0.09%"
+      },
+      "leveragedRecommendation": {
+        "direction": "neutral",
+        "leverage": "none",
+        "name": "Stay in Cash",
+        "reason": "Sideways/choppy regime (70% confidence). Leveraged ETFs lose value in chop due to decay.",
+        "riskLevel": "low",
+        "symbol": "CASH",
+        "tips": [
+          "Avoid leveraged ETFs in sideways markets",
+          "If must trade, use base stock (QBTS/MSTR) with tight stops",
+          "Wait for clearer trend signal"
+        ]
+      },
+      "recommendedStrategy": {
+        "approach": "Mean reversion / Range trading",
+        "confidenceThreshold": 90,
+        "description": "Very selective, quick in and out",
+        "positionSizeMultiplier": 0.5,
+        "stopLossMultiplier": 0.5,
+        "takeProfitMultiplier": 0.6,
+        "tips": [
+          "Trade only at range extremes",
+          "Very tight profit targets",
+          "Be very selective - most setups fail in chop",
+          "Consider sitting out"
+        ]
+      },
+      "regime": "sideways",
+      "trendStrength": "strong"
+    }
+  },
+  "getDefaultConfigForRegime": {
+    "bear": {
+      "description": "Bear regime: Counter-trend, tight risk, selective entries",
+      "maxPositions": 2,
+      "minConfidence": 75,
+      "positionSizePercent": 30,
+      "stopLossPercent": 0.75,
+      "takeProfitPercent": 1.5
+    },
+    "bull": {
+      "description": "Bull regime: Momentum, wider targets, buy dips",
+      "maxPositions": 3,
+      "minConfidence": 65,
+      "positionSizePercent": 40,
+      "stopLossPercent": 1,
+      "takeProfitPercent": 2.5
+    },
+    "sideways": {
+      "description": "Sideways: Mean reversion only, very selective, small size",
+      "maxPositions": 1,
+      "minConfidence": 85,
+      "positionSizePercent": 20,
+      "stopLossPercent": 0.5,
+      "takeProfitPercent": 1
+    },
+    "unknown": {
+      "description": "Sideways: Mean reversion only, very selective, small size",
+      "maxPositions": 1,
+      "minConfidence": 85,
+      "positionSizePercent": 20,
+      "stopLossPercent": 0.5,
+      "takeProfitPercent": 1
+    }
+  },
+  "getLeveragedETFRecommendation": {
+    "bear_high": {
+      "direction": "short",
+      "leverage": "2x",
+      "name": "T-Rex 2X Inverse MSTR Daily Target ETF",
+      "reason": "Bearish regime detected (90% confidence). Use inverse ETF to profit from decline.",
+      "riskLevel": "moderate",
+      "symbol": "QBTZ",
+      "tips": [
+        "Best for strong downtrend days",
+        "Consider hedging with small QBTX position",
+        "Full position OK"
+      ]
+    },
+    "bear_medium": {
+      "direction": "short",
+      "leverage": "2x",
+      "name": "T-Rex 2X Inverse MSTR Daily Target ETF",
+      "reason": "Bearish regime detected (60% confidence). Use inverse ETF to profit from decline.",
+      "riskLevel": "high",
+      "symbol": "QBTZ",
+      "tips": [
+        "Best for strong downtrend days",
+        "Consider hedging with small QBTX position",
+        "Reduce position size due to weaker trend"
+      ]
+    },
+    "bull_high": {
+      "direction": "long",
+      "leverage": "2x",
+      "name": "T-Rex 2X Long MSTR Daily Target ETF",
+      "reason": "Bullish regime detected (90% confidence). Use leveraged bull ETF to maximize gains.",
+      "riskLevel": "moderate",
+      "symbol": "QBTX",
+      "tips": [
+        "Best for strong uptrend days",
+        "Consider position sizing based on confidence",
+        "Full position OK"
+      ]
+    },
+    "bull_medium": {
+      "direction": "long",
+      "leverage": "2x",
+      "name": "T-Rex 2X Long MSTR Daily Target ETF",
+      "reason": "Bullish regime detected (60% confidence). Use leveraged bull ETF to maximize gains.",
+      "riskLevel": "high",
+      "symbol": "QBTX",
+      "tips": [
+        "Best for strong uptrend days",
+        "Consider position sizing based on confidence",
+        "Reduce position size due to weaker trend"
+      ]
+    },
+    "sideways": {
+      "direction": "neutral",
+      "leverage": "none",
+      "name": "Stay in Cash",
+      "reason": "Sideways/choppy regime (40% confidence). Leveraged ETFs lose value in chop due to decay.",
+      "riskLevel": "low",
+      "symbol": "CASH",
+      "tips": [
+        "Avoid leveraged ETFs in sideways markets",
+        "If must trade, use base stock (QBTS/MSTR) with tight stops",
+        "Wait for clearer trend signal"
+      ]
+    },
+    "unknown": {
+      "direction": "neutral",
+      "leverage": "none",
+      "name": "Stay in Cash",
+      "reason": "Sideways/choppy regime (0% confidence). Leveraged ETFs lose value in chop due to decay.",
+      "riskLevel": "low",
+      "symbol": "CASH",
+      "tips": [
+        "Avoid leveraged ETFs in sideways markets",
+        "If must trade, use base stock (QBTS/MSTR) with tight stops",
+        "Wait for clearer trend signal"
+      ]
+    }
+  },
+  "getRegimeTimeline_uptrend": [
+    {
+      "adx": "93.98",
+      "confidence": 74,
+      "date": 1700015000000,
+      "price": 107.5324,
+      "priceToMA": "3.54%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.24",
+      "confidence": 74,
+      "date": 1700015300000,
+      "price": 107.6943,
+      "priceToMA": "3.55%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.49",
+      "confidence": 74,
+      "date": 1700015600000,
+      "price": 107.8806,
+      "priceToMA": "3.58%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.74",
+      "confidence": 74,
+      "date": 1700015900000,
+      "price": 108.0414,
+      "priceToMA": "3.59%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.98",
+      "confidence": 74,
+      "date": 1700016200000,
+      "price": 108.1374,
+      "priceToMA": "3.53%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.20",
+      "confidence": 74,
+      "date": 1700016500000,
+      "price": 108.1618,
+      "priceToMA": "3.41%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.41",
+      "confidence": 74,
+      "date": 1700016800000,
+      "price": 108.1463,
+      "priceToMA": "3.26%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.15",
+      "confidence": 73,
+      "date": 1700017100000,
+      "price": 108.1487,
+      "priceToMA": "3.13%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.95",
+      "confidence": 73,
+      "date": 1700017400000,
+      "price": 108.2274,
+      "priceToMA": "3.07%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.81",
+      "confidence": 73,
+      "date": 1700017700000,
+      "price": 108.4149,
+      "priceToMA": "3.12%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.74",
+      "confidence": 74,
+      "date": 1700018000000,
+      "price": 108.7027,
+      "priceToMA": "3.25%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.73",
+      "confidence": 74,
+      "date": 1700018300000,
+      "price": 109.0445,
+      "priceToMA": "3.43%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.77",
+      "confidence": 75,
+      "date": 1700018600000,
+      "price": 109.3762,
+      "priceToMA": "3.59%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.86",
+      "confidence": 75,
+      "date": 1700018900000,
+      "price": 109.6439,
+      "priceToMA": "3.69%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.96",
+      "confidence": 75,
+      "date": 1700019200000,
+      "price": 109.8261,
+      "priceToMA": "3.70%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.07",
+      "confidence": 74,
+      "date": 1700019500000,
+      "price": 109.9412,
+      "priceToMA": "3.65%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.18",
+      "confidence": 74,
+      "date": 1700019800000,
+      "price": 110.0356,
+      "priceToMA": "3.58%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.29",
+      "confidence": 74,
+      "date": 1700020100000,
+      "price": 110.1592,
+      "priceToMA": "3.55%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.42",
+      "confidence": 74,
+      "date": 1700020400000,
+      "price": 110.34,
+      "priceToMA": "3.57%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.56",
+      "confidence": 74,
+      "date": 1700020700000,
+      "price": 110.5691,
+      "priceToMA": "3.63%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.71",
+      "confidence": 74,
+      "date": 1700021000000,
+      "price": 110.8051,
+      "priceToMA": "3.70%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.86",
+      "confidence": 74,
+      "date": 1700021300000,
+      "price": 110.9932,
+      "priceToMA": "3.72%",
+      "regime": "bull"
+    },
+    {
+      "adx": "96.01",
+      "confidence": 74,
+      "date": 1700021600000,
+      "price": 111.0927,
+      "priceToMA": "3.67%",
+      "regime": "bull"
+    },
+    {
+      "adx": "96.14",
+      "confidence": 74,
+      "date": 1700021900000,
+      "price": 111.0982,
+      "priceToMA": "3.52%",
+      "regime": "bull"
+    },
+    {
+      "adx": "96.19",
+      "confidence": 74,
+      "date": 1700022200000,
+      "price": 111.0443,
+      "priceToMA": "3.33%",
+      "regime": "bull"
+    },
+    {
+      "adx": "95.33",
+      "confidence": 73,
+      "date": 1700022500000,
+      "price": 110.993,
+      "priceToMA": "3.15%",
+      "regime": "bull"
+    },
+    {
+      "adx": "94.16",
+      "confidence": 73,
+      "date": 1700022800000,
+      "price": 111.0068,
+      "priceToMA": "3.04%",
+      "regime": "bull"
+    },
+    {
+      "adx": "93.18",
+      "confidence": 73,
+      "date": 1700023100000,
+      "price": 111.1229,
+      "priceToMA": "3.02%",
+      "regime": "bull"
+    },
+    {
+      "adx": "92.40",
+      "confidence": 73,
+      "date": 1700023400000,
+      "price": 111.3375,
+      "priceToMA": "3.09%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.81",
+      "confidence": 74,
+      "date": 1700023700000,
+      "price": 111.6098,
+      "priceToMA": "3.21%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.38",
+      "confidence": 74,
+      "date": 1700024000000,
+      "price": 111.8819,
+      "priceToMA": "3.32%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.08",
+      "confidence": 74,
+      "date": 1700024300000,
+      "price": 112.106,
+      "priceToMA": "3.38%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.86",
+      "confidence": 74,
+      "date": 1700024600000,
+      "price": 112.2662,
+      "priceToMA": "3.38%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.70",
+      "confidence": 74,
+      "date": 1700024900000,
+      "price": 112.3843,
+      "priceToMA": "3.34%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.61",
+      "confidence": 74,
+      "date": 1700025200000,
+      "price": 112.5069,
+      "priceToMA": "3.31%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.58",
+      "confidence": 74,
+      "date": 1700025500000,
+      "price": 112.681,
+      "priceToMA": "3.33%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.63",
+      "confidence": 74,
+      "date": 1700025800000,
+      "price": 112.9285,
+      "priceToMA": "3.41%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.77",
+      "confidence": 74,
+      "date": 1700026100000,
+      "price": 113.2334,
+      "priceToMA": "3.54%",
+      "regime": "bull"
+    },
+    {
+      "adx": "90.97",
+      "confidence": 75,
+      "date": 1700026400000,
+      "price": 113.5461,
+      "priceToMA": "3.67%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.21",
+      "confidence": 75,
+      "date": 1700026700000,
+      "price": 113.8051,
+      "priceToMA": "3.75%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.46",
+      "confidence": 75,
+      "date": 1700027000000,
+      "price": 113.9644,
+      "priceToMA": "3.74%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.69",
+      "confidence": 74,
+      "date": 1700027300000,
+      "price": 114.0145,
+      "priceToMA": "3.63%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.90",
+      "confidence": 74,
+      "date": 1700027600000,
+      "price": 113.9878,
+      "priceToMA": "3.46%",
+      "regime": "bull"
+    },
+    {
+      "adx": "92.10",
+      "confidence": 73,
+      "date": 1700027900000,
+      "price": 113.9441,
+      "priceToMA": "3.29%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.89",
+      "confidence": 73,
+      "date": 1700028200000,
+      "price": 113.945,
+      "priceToMA": "3.16%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.73",
+      "confidence": 73,
+      "date": 1700028500000,
+      "price": 114.0273,
+      "priceToMA": "3.10%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.65",
+      "confidence": 73,
+      "date": 1700028800000,
+      "price": 114.1887,
+      "priceToMA": "3.12%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.62",
+      "confidence": 74,
+      "date": 1700029100000,
+      "price": 114.3922,
+      "priceToMA": "3.17%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.65",
+      "confidence": 74,
+      "date": 1700029400000,
+      "price": 114.5859,
+      "priceToMA": "3.21%",
+      "regime": "bull"
+    },
+    {
+      "adx": "91.72",
+      "confidence": 74,
+      "date": 1700029700000,
+      "price": 114.7301,
+      "priceToMA": "3.21%",
+      "regime": "bull"
+    }
+  ]
+}
