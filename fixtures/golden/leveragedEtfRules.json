@@ -1,0 +1,1072 @@
+{
+  "applyConstraints": [
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": null,
+        "sym": "SOXL",
+        "time": "2026-04-15T14:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXL"
+        },
+        "sym": "SOXL",
+        "time": "2026-04-15T14:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [
+          {
+            "message": "WARNING: SOXL position held overnight! Expected decay: -0.041% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "positionMultiplier": 0.5,
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": null,
+        "sym": "SOXL",
+        "time": "2026-04-15T17:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXL"
+        },
+        "sym": "SOXL",
+        "time": "2026-04-15T17:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [
+          {
+            "message": "WARNING: SOXL position held overnight! Expected decay: -0.041% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "positionMultiplier": 0.5,
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": null,
+        "sym": "SOXL",
+        "time": "2026-04-15T18:30:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXL"
+        },
+        "sym": "SOXL",
+        "time": "2026-04-15T18:30:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [
+          {
+            "message": "WARNING: SOXL position held overnight! Expected decay: -0.041% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "positionMultiplier": 0.5,
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": null,
+        "sym": "SOXL",
+        "time": "2026-04-15T19:55:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "HOLD",
+        "confidence": 75,
+        "constraintApplied": "NO_LATE_ENTRY",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXL positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "reason": "Too close to market close for leveraged ETF entry (after 3:30 PM)",
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXL"
+        },
+        "sym": "SOXL",
+        "time": "2026-04-15T19:55:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "HOLD",
+        "confidence": 75,
+        "constraintApplied": "NO_LATE_ENTRY",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXL positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          },
+          {
+            "message": "WARNING: SOXL position held overnight! Expected decay: -0.041% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "positionMultiplier": 0.5,
+        "reason": "Too close to market close for leveraged ETF entry (after 3:30 PM)",
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": null,
+        "sym": "SOXL",
+        "time": "2026-04-15T20:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "HOLD",
+        "confidence": 75,
+        "constraintApplied": "NO_LATE_ENTRY",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXL positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "reason": "Too close to market close for leveraged ETF entry (after 3:30 PM)",
+        "symbol": "SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXL"
+        },
+        "sym": "SOXL",
+        "time": "2026-04-15T20:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "SELL",
+        "confidence": 100,
+        "constraintApplied": "FORCED_EXIT",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXL positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          },
+          {
+            "message": "Forced SELL: Must exit SOXL before market close to avoid decay",
+            "rule": "FORCED_EXIT",
+            "urgency": "CRITICAL"
+          },
+          {
+            "message": "WARNING: SOXL position held overnight! Expected decay: -0.041% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "forced": true,
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.1029,
+          "description": "3x Semiconductor Bull",
+          "direction": "bull",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "positionMultiplier": 0.5,
+        "reason": "Mandatory end-of-day exit for leveraged ETF SOXL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": null,
+        "sym": "SOXS",
+        "time": "2026-04-15T14:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXS"
+        },
+        "sym": "SOXS",
+        "time": "2026-04-15T14:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [
+          {
+            "message": "WARNING: SOXS position held overnight! Expected decay: -0.114% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "positionMultiplier": 0.5,
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": null,
+        "sym": "SOXS",
+        "time": "2026-04-15T17:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXS"
+        },
+        "sym": "SOXS",
+        "time": "2026-04-15T17:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [
+          {
+            "message": "WARNING: SOXS position held overnight! Expected decay: -0.114% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "positionMultiplier": 0.5,
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": null,
+        "sym": "SOXS",
+        "time": "2026-04-15T18:30:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXS"
+        },
+        "sym": "SOXS",
+        "time": "2026-04-15T18:30:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "constraints": [
+          {
+            "message": "WARNING: SOXS position held overnight! Expected decay: -0.114% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "positionMultiplier": 0.5,
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": null,
+        "sym": "SOXS",
+        "time": "2026-04-15T19:55:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "HOLD",
+        "confidence": 75,
+        "constraintApplied": "NO_LATE_ENTRY",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXS positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "reason": "Too close to market close for leveraged ETF entry (after 3:30 PM)",
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXS"
+        },
+        "sym": "SOXS",
+        "time": "2026-04-15T19:55:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "HOLD",
+        "confidence": 75,
+        "constraintApplied": "NO_LATE_ENTRY",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXS positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          },
+          {
+            "message": "WARNING: SOXS position held overnight! Expected decay: -0.114% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "positionMultiplier": 0.5,
+        "reason": "Too close to market close for leveraged ETF entry (after 3:30 PM)",
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": null,
+        "sym": "SOXS",
+        "time": "2026-04-15T20:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "HOLD",
+        "confidence": 75,
+        "constraintApplied": "NO_LATE_ENTRY",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXS positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          }
+        ],
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "reason": "Too close to market close for leveraged ETF entry (after 3:30 PM)",
+        "symbol": "SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "SOXS"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "SOXS"
+        },
+        "sym": "SOXS",
+        "time": "2026-04-15T20:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "SELL",
+        "confidence": 100,
+        "constraintApplied": "FORCED_EXIT",
+        "constraints": [
+          {
+            "message": "Blocked BUY: No new SOXS positions after 3:30 PM",
+            "rule": "NO_LATE_ENTRY"
+          },
+          {
+            "message": "Forced SELL: Must exit SOXS before market close to avoid decay",
+            "rule": "FORCED_EXIT",
+            "urgency": "CRITICAL"
+          },
+          {
+            "message": "WARNING: SOXS position held overnight! Expected decay: -0.114% per day",
+            "rule": "OVERNIGHT_WARNING",
+            "urgency": "HIGH"
+          },
+          {
+            "message": "High volatility (VIX=35): Position size reduced to 50%",
+            "rule": "VOLATILITY_ADJUSTMENT"
+          }
+        ],
+        "forced": true,
+        "isLeveraged": true,
+        "leverageInfo": {
+          "annualDecayRate": -0.2877,
+          "description": "3x Semiconductor Bear",
+          "direction": "bear",
+          "leverage": 3,
+          "underlying": "SOXX"
+        },
+        "originalAction": "BUY",
+        "positionMultiplier": 0.5,
+        "reason": "Mandatory end-of-day exit for leveraged ETF SOXS"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": null,
+        "sym": "AAPL",
+        "time": "2026-04-15T14:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "AAPL"
+        },
+        "sym": "AAPL",
+        "time": "2026-04-15T14:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": null,
+        "sym": "AAPL",
+        "time": "2026-04-15T17:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "AAPL"
+        },
+        "sym": "AAPL",
+        "time": "2026-04-15T17:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": null,
+        "sym": "AAPL",
+        "time": "2026-04-15T18:30:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "AAPL"
+        },
+        "sym": "AAPL",
+        "time": "2026-04-15T18:30:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": null,
+        "sym": "AAPL",
+        "time": "2026-04-15T19:55:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "AAPL"
+        },
+        "sym": "AAPL",
+        "time": "2026-04-15T19:55:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": null,
+        "sym": "AAPL",
+        "time": "2026-04-15T20:00:00.000Z",
+        "vix": null
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    },
+    {
+      "in": {
+        "decision": {
+          "action": "BUY",
+          "confidence": 75,
+          "symbol": "AAPL"
+        },
+        "position": {
+          "entryTime": "2026-04-14T18:00:00.000Z",
+          "symbol": "AAPL"
+        },
+        "sym": "AAPL",
+        "time": "2026-04-15T20:00:00.000Z",
+        "vix": 35
+      },
+      "out": {
+        "action": "BUY",
+        "confidence": 75,
+        "symbol": "AAPL"
+      }
+    }
+  ],
+  "calculateExpectedDecay": {
+    "AAPL_1d": null,
+    "SOXL_1d": {
+      "annualDecayPercent": "-10.29",
+      "dailyDecayPercent": "-0.0408",
+      "direction": "bull",
+      "leverage": 3,
+      "message": "Holding SOXL for 1 day(s) expects -0.0408% decay from volatility drag",
+      "recommendation": "OK for day trading only",
+      "symbol": "SOXL",
+      "totalDecayPercent": "-0.0408"
+    },
+    "SOXL_30d": {
+      "annualDecayPercent": "-10.29",
+      "dailyDecayPercent": "-0.0408",
+      "direction": "bull",
+      "leverage": 3,
+      "message": "Holding SOXL for 30 day(s) expects -1.2250% decay from volatility drag",
+      "recommendation": "AVOID: Do not hold leveraged ETFs overnight",
+      "symbol": "SOXL",
+      "totalDecayPercent": "-1.2250"
+    },
+    "SOXL_5d": {
+      "annualDecayPercent": "-10.29",
+      "dailyDecayPercent": "-0.0408",
+      "direction": "bull",
+      "leverage": 3,
+      "message": "Holding SOXL for 5 day(s) expects -0.2042% decay from volatility drag",
+      "recommendation": "AVOID: Do not hold leveraged ETFs overnight",
+      "symbol": "SOXL",
+      "totalDecayPercent": "-0.2042"
+    }
+  },
+  "getBacktestProxy": {
+    "AAPL": {
+      "proxySymbol": "AAPL",
+      "useProxy": false
+    },
+    "QBTX": {
+      "direction": "bull",
+      "launchDate": "2025-04-01",
+      "message": "QBTX is new (launched 2025-04-01). Using QBTS with 2x simulated leverage.",
+      "proxySymbol": "QBTS",
+      "simulateLeverage": 2,
+      "useProxy": true
+    },
+    "SOXL": {
+      "proxySymbol": "SOXL",
+      "useProxy": false
+    },
+    "SOXS": {
+      "proxySymbol": "SOXS",
+      "useProxy": false
+    },
+    "TQQQ": {
+      "proxySymbol": "TQQQ",
+      "useProxy": false
+    },
+    "unknown": {
+      "proxySymbol": "unknown",
+      "useProxy": false
+    }
+  },
+  "getInfo": {
+    "AAPL": null,
+    "QBTX": {
+      "annualDecayRate": -0.05,
+      "description": "2x Quantum Computing Bull",
+      "direction": "bull",
+      "isNew": true,
+      "launchDate": "2025-04-01",
+      "leverage": 2,
+      "underlying": "QBTS"
+    },
+    "SOXL": {
+      "annualDecayRate": -0.1029,
+      "description": "3x Semiconductor Bull",
+      "direction": "bull",
+      "leverage": 3,
+      "underlying": "SOXX"
+    },
+    "SOXS": {
+      "annualDecayRate": -0.2877,
+      "description": "3x Semiconductor Bear",
+      "direction": "bear",
+      "leverage": 3,
+      "underlying": "SOXX"
+    },
+    "TQQQ": {
+      "annualDecayRate": -0.08,
+      "description": "3x NASDAQ-100 Bull",
+      "direction": "bull",
+      "leverage": 3,
+      "underlying": "QQQ"
+    },
+    "unknown": null
+  },
+  "getLeverage": {
+    "AAPL": 1,
+    "QBTX": 2,
+    "SOXL": 3,
+    "SOXS": 3,
+    "TQQQ": 3,
+    "unknown": 1
+  },
+  "isLeveraged": {
+    "AAPL": false,
+    "QBTX": true,
+    "SOXL": true,
+    "SOXS": true,
+    "TQQQ": true,
+    "unknown": false
+  },
+  "isOvernight": {
+    "next_day": true,
+    "null_entry": false,
+    "same_day": false
+  },
+  "timeToDecimal": {
+    "close": 16,
+    "morning": 9.5,
+    "noon": 12
+  }
+}

@@ -1,0 +1,386 @@
+{
+  "analyzeFlowSentiment": [
+    {
+      "in": null,
+      "out": {
+        "confidence": 0,
+        "reason": "No flow data available",
+        "sentiment": "neutral"
+      }
+    },
+    {
+      "in": {
+        "putCallRatio": 0.5
+      },
+      "out": {
+        "confidence": 50,
+        "rawData": {
+          "putCallRatio": 0.5
+        },
+        "reasons": [
+          "Put/Call ratio 0.50 is neutral"
+        ],
+        "sentiment": "neutral"
+      }
+    },
+    {
+      "in": {
+        "putCallRatio": 1.5
+      },
+      "out": {
+        "confidence": 70,
+        "rawData": {
+          "putCallRatio": 1.5
+        },
+        "reasons": [
+          "Put/Call ratio 1.50 indicates bearish flow"
+        ],
+        "sentiment": "bearish"
+      }
+    },
+    {
+      "in": {
+        "callFlowPercent": 90,
+        "putFlowPercent": 10
+      },
+      "out": {
+        "confidence": 65,
+        "rawData": {
+          "callFlowPercent": 90,
+          "putFlowPercent": 10
+        },
+        "reasons": [
+          "90.0% call flow is extremely bullish"
+        ],
+        "sentiment": "bullish"
+      }
+    },
+    {
+      "in": {
+        "callFlowPercent": 10,
+        "putFlowPercent": 90
+      },
+      "out": {
+        "confidence": 65,
+        "rawData": {
+          "callFlowPercent": 10,
+          "putFlowPercent": 90
+        },
+        "reasons": [
+          "90.0% put flow is bearish"
+        ],
+        "sentiment": "bearish"
+      }
+    },
+    {
+      "in": {
+        "sentimentText": "strongly bullish"
+      },
+      "out": {
+        "confidence": 60,
+        "rawData": {
+          "sentimentText": "strongly bullish"
+        },
+        "reasons": [
+          "CheddarFlow sentiment: strongly bullish"
+        ],
+        "sentiment": "bullish"
+      }
+    },
+    {
+      "in": {
+        "sentimentText": "bearish reversal"
+      },
+      "out": {
+        "confidence": 60,
+        "rawData": {
+          "sentimentText": "bearish reversal"
+        },
+        "reasons": [
+          "CheddarFlow sentiment: bearish reversal"
+        ],
+        "sentiment": "bearish"
+      }
+    }
+  ],
+  "getFamily": {
+    "AAPL": null,
+    "PLTU": {
+      "base": "PLTR",
+      "baseSymbol": "PLTR",
+      "bear": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Inverse Palantir Daily Target ETF",
+        "symbol": "PLTZ"
+      },
+      "bull": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Long Palantir Daily Target ETF",
+        "symbol": "PLTU"
+      },
+      "name": "Palantir Technologies"
+    },
+    "QBTX": {
+      "base": "QBTS",
+      "baseSymbol": "QBTS",
+      "bear": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Inverse MSTR Daily Target ETF",
+        "symbol": "QBTZ"
+      },
+      "bull": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Long MSTR Daily Target ETF",
+        "symbol": "QBTX"
+      },
+      "name": "Defiance Quantum ETF"
+    },
+    "QBTZ": {
+      "base": "QBTS",
+      "baseSymbol": "QBTS",
+      "bear": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Inverse MSTR Daily Target ETF",
+        "symbol": "QBTZ"
+      },
+      "bull": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Long MSTR Daily Target ETF",
+        "symbol": "QBTX"
+      },
+      "name": "Defiance Quantum ETF"
+    },
+    "SOXL": {
+      "base": "SOXX",
+      "baseSymbol": "SOXX",
+      "bear": {
+        "leverage": "3x",
+        "name": "Direxion Daily Semiconductor Bear 3X",
+        "symbol": "SOXS"
+      },
+      "bull": {
+        "leverage": "3x",
+        "name": "Direxion Daily Semiconductor Bull 3X",
+        "symbol": "SOXL"
+      },
+      "name": "iShares Semiconductor ETF"
+    },
+    "SOXS": {
+      "base": "SOXX",
+      "baseSymbol": "SOXX",
+      "bear": {
+        "leverage": "3x",
+        "name": "Direxion Daily Semiconductor Bear 3X",
+        "symbol": "SOXS"
+      },
+      "bull": {
+        "leverage": "3x",
+        "name": "Direxion Daily Semiconductor Bull 3X",
+        "symbol": "SOXL"
+      },
+      "name": "iShares Semiconductor ETF"
+    },
+    "TQQQ": null,
+    "unknown": null
+  },
+  "getSupportedFamilies": [
+    {
+      "base": "QBTS",
+      "baseSymbol": "QBTS",
+      "bear": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Inverse MSTR Daily Target ETF",
+        "symbol": "QBTZ"
+      },
+      "bull": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Long MSTR Daily Target ETF",
+        "symbol": "QBTX"
+      },
+      "name": "Defiance Quantum ETF"
+    },
+    {
+      "base": "SOXX",
+      "baseSymbol": "SOXX",
+      "bear": {
+        "leverage": "3x",
+        "name": "Direxion Daily Semiconductor Bear 3X",
+        "symbol": "SOXS"
+      },
+      "bull": {
+        "leverage": "3x",
+        "name": "Direxion Daily Semiconductor Bull 3X",
+        "symbol": "SOXL"
+      },
+      "name": "iShares Semiconductor ETF"
+    },
+    {
+      "base": "PLTR",
+      "baseSymbol": "PLTR",
+      "bear": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Inverse Palantir Daily Target ETF",
+        "symbol": "PLTZ"
+      },
+      "bull": {
+        "leverage": "2x",
+        "name": "T-Rex 2X Long Palantir Daily Target ETF",
+        "symbol": "PLTU"
+      },
+      "name": "Palantir Technologies"
+    }
+  ],
+  "isSupported": {
+    "AAPL": false,
+    "PLTU": true,
+    "QBTX": true,
+    "QBTZ": true,
+    "SOXL": true,
+    "SOXS": true,
+    "TQQQ": false,
+    "unknown": false
+  },
+  "makeDecision": [
+    {
+      "in": [
+        "bullish",
+        {
+          "confidence": 80,
+          "sentiment": "bullish"
+        },
+        "semiconductor"
+      ],
+      "out": {
+        "action": "STAY_CASH",
+        "breakdown": {
+          "flow": {
+            "confidence": 80,
+            "score": 1,
+            "sentiment": "bullish",
+            "weight": 0.4
+          },
+          "technical": {
+            "score": 0,
+            "weight": 0.4
+          }
+        },
+        "combinedConfidence": null,
+        "combinedScore": 0.4,
+        "direction": "neutral",
+        "family": "semiconductor",
+        "leverage": "none",
+        "reasons": [
+          "Low confidence (NaN%)"
+        ],
+        "signalsConflict": false,
+        "symbol": "CASH"
+      }
+    },
+    {
+      "in": [
+        "bearish",
+        {
+          "confidence": 75,
+          "sentiment": "bearish"
+        },
+        "semiconductor"
+      ],
+      "out": {
+        "action": "STAY_CASH",
+        "breakdown": {
+          "flow": {
+            "confidence": 75,
+            "score": -1,
+            "sentiment": "bearish",
+            "weight": 0.4
+          },
+          "technical": {
+            "score": 0,
+            "weight": 0.4
+          }
+        },
+        "combinedConfidence": null,
+        "combinedScore": -0.4,
+        "direction": "neutral",
+        "family": "semiconductor",
+        "leverage": "none",
+        "reasons": [
+          "Low confidence (NaN%)"
+        ],
+        "signalsConflict": false,
+        "symbol": "CASH"
+      }
+    },
+    {
+      "in": [
+        "neutral",
+        {
+          "confidence": 50,
+          "sentiment": "neutral"
+        },
+        "semiconductor"
+      ],
+      "out": {
+        "action": "STAY_CASH",
+        "breakdown": {
+          "flow": {
+            "confidence": 50,
+            "score": 0,
+            "sentiment": "neutral",
+            "weight": 0.4
+          },
+          "technical": {
+            "score": 0,
+            "weight": 0.4
+          }
+        },
+        "combinedConfidence": null,
+        "combinedScore": 0,
+        "direction": "neutral",
+        "family": "semiconductor",
+        "leverage": "none",
+        "reasons": [
+          "Mixed signals - stay in cash",
+          "Technical: undefined, Flow: neutral"
+        ],
+        "signalsConflict": false,
+        "symbol": "CASH"
+      }
+    },
+    {
+      "in": [
+        "bullish",
+        {
+          "confidence": 70,
+          "sentiment": "bearish"
+        },
+        "semiconductor"
+      ],
+      "out": {
+        "action": "STAY_CASH",
+        "breakdown": {
+          "flow": {
+            "confidence": 70,
+            "score": -1,
+            "sentiment": "bearish",
+            "weight": 0.4
+          },
+          "technical": {
+            "score": 0,
+            "weight": 0.4
+          }
+        },
+        "combinedConfidence": null,
+        "combinedScore": -0.4,
+        "direction": "neutral",
+        "family": "semiconductor",
+        "leverage": "none",
+        "reasons": [
+          "Low confidence (NaN%)"
+        ],
+        "signalsConflict": false,
+        "symbol": "CASH"
+      }
+    }
+  ]
+}
