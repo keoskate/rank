@@ -115,10 +115,21 @@ function checkMvpFiles() {
     process.exit(0);
   }
 
+  // Env var override: MVP_ACK=1 acknowledges the warning and proceeds.
+  // Useful for non-interactive callers (subagents, scripts) that have
+  // already validated the change but cannot answer the y/N prompt.
+  if (process.env.MVP_ACK === '1' || process.env.MVP_ACK === 'true') {
+    console.log('\x1b[33mMVP_ACK=1 set, proceeding with commit.\x1b[0m\n');
+    process.exit(0);
+  }
+
   // Check if running in a TTY (interactive terminal)
   if (!process.stdin.isTTY) {
-    console.log('\x1b[33mNon-interactive mode. Use --force to bypass.\x1b[0m');
-    console.log('Commit blocked. Run: git commit --no-verify to bypass.\n');
+    console.log('\x1b[33mNon-interactive mode.\x1b[0m');
+    console.log('Bypass options:');
+    console.log('  - Set MVP_ACK=1 in the environment (preferred)');
+    console.log('  - Pass --force to scripts/check-mvp.js');
+    console.log('  - Run: git commit --no-verify (skips all hooks)\n');
     process.exit(1);
   }
 
