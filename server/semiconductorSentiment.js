@@ -549,6 +549,25 @@ class SemiconductorSentimentEngine {
       return this.sentimentCache;
     } catch (error) {
       console.error('[Semiconductor Sentiment] Error fetching sentiment:', error.message);
+
+      // Stale-while-error: a transient Polygon DNS hiccup should not slam the
+      // market gate shut. If we have a recent cached sentiment, return it
+      // marked as stale rather than degrading to confidence: 0. Only fall
+      // through to the hard-fail response if no usable cache exists.
+      const STALE_TOLERANCE_MS = 30 * 60 * 1000; // 30 min
+      if (
+        this.sentimentCache &&
+        this.lastUpdate &&
+        Date.now() - this.lastUpdate < STALE_TOLERANCE_MS
+      ) {
+        return {
+          ...this.sentimentCache,
+          stale: true,
+          staleReason: error.message,
+          timestamp: now.toISOString(),
+        };
+      }
+
       return {
         error: error.message,
         direction: 'neutral',
