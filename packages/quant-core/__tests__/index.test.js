@@ -2,13 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const requireCjs = createRequire(import.meta.url);
-const quantCore = requireCjs('../src/index.js');
-
-// This test proves the package barrel export exposes the expected surface
-// from the package's own perspective (no server/ shim involvement). When
-// we eventually publish or workspace-link, the same imports work via
-// `require('@kpe/quant-core')`.
-describe('@kpe/quant-core: public surface', () => {
+// Import via the workspace alias, NOT a relative path — this exercises
+// the npm workspace resolution end-to-end. If `@keo/quant-core` ever
+// fails to resolve (broken symlink, removed workspace), this test fails.
+const quantCore = requireCjs('@keo/quant-core');
+describe('@keo/quant-core: public surface', () => {
   it('re-exports tradingCalculations utilities', () => {
     expect(typeof quantCore.getEtfLeverage).toBe('function');
     expect(typeof quantCore.getOppositeEtf).toBe('function');

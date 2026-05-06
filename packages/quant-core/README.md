@@ -1,4 +1,4 @@
-# @kpe/quant-core
+# @keo/quant-core
 
 Pure quant primitives. No I/O, no side effects, no vendor coupling.
 
@@ -18,7 +18,7 @@ math.
 ## Usage
 
 ```js
-const { getEtfLeverage, isMarketOpen, LeveragedEtfStrategy } = require('@kpe/quant-core');
+const { getEtfLeverage, isMarketOpen, LeveragedEtfStrategy } = require('@keo/quant-core');
 
 getEtfLeverage('SOXL');                    // 3
 isMarketOpen(new Date());                  // true | false

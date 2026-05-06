@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Investments have a score and are ranked in a table",
   "main": "index.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "node build.js --watch",
     "start": "node ./server/index.js",
