@@ -32,4 +32,14 @@ describe('@keo/quant-core: public surface', () => {
     expect(new quantCore.LeveragedEtfRules().isLeveraged('SOXL')).toBe(true);
     expect(new quantCore.LeveragedEtfRules().isLeveraged('AAPL')).toBe(false);
   });
+
+  it('exposes indicators namespace', () => {
+    expect(quantCore.indicators).toBeDefined();
+    expect(typeof quantCore.indicators.calculateRSI).toBe('function');
+    expect(typeof quantCore.indicators.calculateMACD).toBe('function');
+    expect(typeof quantCore.indicators.calculateBollingerBands).toBe('function');
+    expect(typeof quantCore.indicators.calculateATR).toBe('function');
+    expect(typeof quantCore.indicators.calculateADX).toBe('function');
+    expect(typeof quantCore.indicators.getAllIndicators).toBe('function');
+  });
 });

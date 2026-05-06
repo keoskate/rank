@@ -177,10 +177,68 @@ function captureLeveragedEtfRules() {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// technicalIndicatorsService.js
+// ─────────────────────────────────────────────────────────────────
+//
+// Deterministic 100-bar candle sample driving all indicator captures.
+// Same sequence of math → same candles → same indicator outputs.
+// If you need to extend coverage (different volatility regime, gap,
+// volume spike), add another generator here and capture against both.
+function generateCandles(count, opts = {}) {
+  const { startPrice = 100, drift = 0.05, noiseAmp = 0.5 } = opts;
+  const bars = [];
+  let prevClose = startPrice;
+  for (let i = 0; i < count; i++) {
+    const noise = Math.sin(i * 0.3) * noiseAmp + Math.cos(i * 0.7) * (noiseAmp * 0.6);
+    const close = startPrice + i * drift + noise;
+    const open = i === 0 ? close : prevClose;
+    const high = Math.max(open, close) + Math.abs(noise) * 0.4;
+    const low = Math.min(open, close) - Math.abs(noise) * 0.4;
+    const volume = Math.round(10000 + Math.abs(noise) * 5000 + (i % 7) * 500);
+    bars.push({
+      timestamp: 1700000000000 + i * 5 * 60 * 1000,
+      open: +open.toFixed(4),
+      high: +high.toFixed(4),
+      low: +low.toFixed(4),
+      close: +close.toFixed(4),
+      volume,
+    });
+    prevClose = close;
+  }
+  return bars;
+}
+
+function captureTechnicalIndicators() {
+  const ti = require('../server/technicalIndicatorsService');
+  const candles = generateCandles(100);
+  const closes = candles.map(c => c.close);
+
+  return {
+    candles_sample: candles,
+    calculateRSI: { default: ti.calculateRSI(closes), period_7: ti.calculateRSI(closes, 7), period_21: ti.calculateRSI(closes, 21) },
+    calculateMACD: ti.calculateMACD(closes),
+    calculateBollingerBands: { default: ti.calculateBollingerBands(closes), tight: ti.calculateBollingerBands(closes, { period: 20, stdDev: 1 }) },
+    calculateATR: { default: ti.calculateATR(candles), period_7: ti.calculateATR(candles, 7) },
+    calculateEMA: { period_9: ti.calculateEMA(closes, 9), period_20: ti.calculateEMA(closes, 20) },
+    calculateSMA: { period_9: ti.calculateSMA(closes, 9), period_20: ti.calculateSMA(closes, 20) },
+    calculateVWAP: ti.calculateVWAP(candles),
+    calculateStochastic: ti.calculateStochastic(candles),
+    calculateADX: ti.calculateADX(candles),
+    calculateOBV: ti.calculateOBV(candles),
+    calculateVolumeProfile: ti.calculateVolumeProfile(candles, 10),
+    getAllIndicators: ti.getAllIndicators(candles),
+    // Note: generateSignals is consumed internally by getAllIndicators and
+    // surfaced via the .signals field. Calling it standalone requires a
+    // different input shape than getAllIndicators emits, so we capture the
+    // composed result instead.
+  };
+}
+
 const CAPTURES = [
   ['tradingCalculations', captureTradingCalculations],
   ['leveragedEtfStrategy', captureLeveragedEtfStrategy],
   ['leveragedEtfRules', captureLeveragedEtfRules],
+  ['technicalIndicatorsService', captureTechnicalIndicators],
 ];
 
 console.log(`Capturing golden fixtures → ${path.relative(process.cwd(), FIXTURES_DIR)}/`);

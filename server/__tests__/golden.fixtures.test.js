@@ -130,6 +130,50 @@ describe('golden fixtures: leveragedEtfStrategy', () => {
   });
 });
 
+describe('golden fixtures: technicalIndicatorsService', () => {
+  const fixture = loadFixture('technicalIndicatorsService');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ti = require('../technicalIndicatorsService.js');
+  const candles = fixture.candles_sample;
+  const closes = candles.map(c => c.close);
+
+  it('calculateRSI matches across periods', () => {
+    expect(n(ti.calculateRSI(closes))).toEqual(fixture.calculateRSI.default);
+    expect(n(ti.calculateRSI(closes, 7))).toEqual(fixture.calculateRSI.period_7);
+    expect(n(ti.calculateRSI(closes, 21))).toEqual(fixture.calculateRSI.period_21);
+  });
+
+  it('calculateMACD matches', () => {
+    expect(n(ti.calculateMACD(closes))).toEqual(fixture.calculateMACD);
+  });
+
+  it('calculateBollingerBands matches default and tight params', () => {
+    expect(n(ti.calculateBollingerBands(closes))).toEqual(fixture.calculateBollingerBands.default);
+    expect(n(ti.calculateBollingerBands(closes, { period: 20, stdDev: 1 }))).toEqual(fixture.calculateBollingerBands.tight);
+  });
+
+  it('calculateATR / EMA / SMA match', () => {
+    expect(n(ti.calculateATR(candles))).toEqual(fixture.calculateATR.default);
+    expect(n(ti.calculateATR(candles, 7))).toEqual(fixture.calculateATR.period_7);
+    expect(n(ti.calculateEMA(closes, 9))).toEqual(fixture.calculateEMA.period_9);
+    expect(n(ti.calculateEMA(closes, 20))).toEqual(fixture.calculateEMA.period_20);
+    expect(n(ti.calculateSMA(closes, 9))).toEqual(fixture.calculateSMA.period_9);
+    expect(n(ti.calculateSMA(closes, 20))).toEqual(fixture.calculateSMA.period_20);
+  });
+
+  it('VWAP / Stochastic / ADX / OBV / VolumeProfile match', () => {
+    expect(n(ti.calculateVWAP(candles))).toEqual(fixture.calculateVWAP);
+    expect(n(ti.calculateStochastic(candles))).toEqual(fixture.calculateStochastic);
+    expect(n(ti.calculateADX(candles))).toEqual(fixture.calculateADX);
+    expect(n(ti.calculateOBV(candles))).toEqual(fixture.calculateOBV);
+    expect(n(ti.calculateVolumeProfile(candles, 10))).toEqual(fixture.calculateVolumeProfile);
+  });
+
+  it('getAllIndicators composite output matches', () => {
+    expect(n(ti.getAllIndicators(candles))).toEqual(fixture.getAllIndicators);
+  });
+});
+
 describe('golden fixtures: leveragedEtfRules', () => {
   const fixture = loadFixture('leveragedEtfRules');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
