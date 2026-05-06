@@ -439,54 +439,62 @@ async function getAggregates(
       return d.toISOString().split('T')[0];
     })();
 
-  try {
-    const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${startDate}/${endDate}`;
+  const maxRetries = 2;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${startDate}/${endDate}`;
 
-    const response = await axios.get(url, {
-      params: {
-        adjusted: 'true',
-        sort: 'asc',
-        limit: options.limit || 50000,
-        apiKey: POLYGON_API_KEY,
-      },
-      timeout: 30000,
-    });
+      const response = await axios.get(url, {
+        params: {
+          adjusted: 'true',
+          sort: 'asc',
+          limit: options.limit || 50000,
+          apiKey: POLYGON_API_KEY,
+        },
+        timeout: attempt === 1 ? 30000 : 15000,
+      });
 
-    if (response.data.status === 'ERROR') {
-      throw new Error(response.data.error || 'Polygon API error');
+      if (response.data.status === 'ERROR') {
+        throw new Error(response.data.error || 'Polygon API error');
+      }
+
+      if (!response.data.results || response.data.results.length === 0) {
+        console.warn(`⚠️ No aggregate data found for ${symbol}`);
+        return [];
+      }
+
+      // Transform Polygon format to our format
+      const bars = response.data.results.map(bar => ({
+        date: new Date(bar.t).toISOString().split('T')[0],
+        time: Math.floor(bar.t / 1000), // Unix timestamp for lightweight-charts
+        timestamp: bar.t,
+        open: bar.o,
+        high: bar.h,
+        low: bar.l,
+        close: bar.c,
+        volume: bar.v,
+        vwap: bar.vw,
+        transactions: bar.n,
+      }));
+
+      console.log(
+        `✅ Fetched ${bars.length} ${multiplier}${timespan} bars for ${symbol}`
+      );
+      return bars;
+    } catch (error) {
+      if (error.response?.status === 429) {
+        console.error(`❌ Rate limit exceeded for ${symbol}`);
+        throw new Error('Rate limit exceeded - please wait before retrying');
+      }
+
+      if (attempt < maxRetries && (error.code === 'ECONNABORTED' || error.message?.includes('timeout'))) {
+        console.warn(`⚠️ Polygon timeout for ${symbol} (attempt ${attempt}/${maxRetries}), retrying...`);
+        continue;
+      }
+
+      console.error(`❌ Error fetching aggregates for ${symbol}:`, error.message);
+      throw error;
     }
-
-    if (!response.data.results || response.data.results.length === 0) {
-      console.warn(`⚠️ No aggregate data found for ${symbol}`);
-      return [];
-    }
-
-    // Transform Polygon format to our format
-    const bars = response.data.results.map(bar => ({
-      date: new Date(bar.t).toISOString().split('T')[0],
-      time: Math.floor(bar.t / 1000), // Unix timestamp for lightweight-charts
-      timestamp: bar.t,
-      open: bar.o,
-      high: bar.h,
-      low: bar.l,
-      close: bar.c,
-      volume: bar.v,
-      vwap: bar.vw,
-      transactions: bar.n,
-    }));
-
-    console.log(
-      `✅ Fetched ${bars.length} ${multiplier}${timespan} bars for ${symbol}`
-    );
-    return bars;
-  } catch (error) {
-    if (error.response?.status === 429) {
-      console.error(`❌ Rate limit exceeded for ${symbol}`);
-      throw new Error('Rate limit exceeded - please wait before retrying');
-    }
-
-    console.error(`❌ Error fetching aggregates for ${symbol}:`, error.message);
-    throw error;
   }
 }
 

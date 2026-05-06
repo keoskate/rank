@@ -482,12 +482,23 @@ class SemiconductorSentimentEngine {
       const totalRange = ((dayHigh - dayLow) / openPrice) * 100;       // Total intraday range
 
       // Calculate rolling momentum (last 15 bars = ~75 minutes of 5-min candles)
+      // Uses EMA-smoothed prices to reduce jitter from 2-point calculation
       const recentBars = candles.slice(-15);
       let rollingMomentum = 0;
       if (recentBars.length >= 5) {
-        const recentStart = recentBars[0].close || recentBars[0].c;
-        const recentEnd = recentBars[recentBars.length - 1].close || recentBars[recentBars.length - 1].c;
-        rollingMomentum = ((recentEnd - recentStart) / recentStart) * 100;
+        // EMA smoothing: k = 2/(N+1) where N = bar count
+        const k = 2 / (recentBars.length + 1);
+        let ema = recentBars[0].close || recentBars[0].c;
+        const emaValues = [ema];
+        for (let i = 1; i < recentBars.length; i++) {
+          const price = recentBars[i].close || recentBars[i].c;
+          ema = price * k + ema * (1 - k);
+          emaValues.push(ema);
+        }
+        // Momentum from smoothed start to smoothed end
+        const emaStart = emaValues[0];
+        const emaEnd = emaValues[emaValues.length - 1];
+        rollingMomentum = ((emaEnd - emaStart) / emaStart) * 100;
       }
 
       // Calculate volatility

@@ -15,6 +15,10 @@
 
 const { getAggregates } = require('./polygonClient');
 const { getAllIndicators } = require('./technicalIndicatorsService');
+const TransactionCostModel = require('./transactionCostModel');
+
+// Shared cost model for realistic per-symbol slippage
+const costModel = new TransactionCostModel();
 
 // ============================================
 // GENETIC ALGORITHM CONFIG
@@ -127,12 +131,27 @@ class StrategyChromosome {
 class Backtester {
   constructor(candles, config = {}) {
     this.candles = candles;
+    this.symbol = config.symbol || null;
     this.config = {
       initialCapital: config.initialCapital || 10000,
       commissionPercent: config.commissionPercent || 0,
-      slippage: config.slippage || 0.001, // 0.1% slippage
+      // Use per-symbol cost model instead of flat slippage
+      slippage: config.slippage || 0.001, // Fallback only if no symbol
       ...config,
     };
+  }
+
+  /**
+   * Get realistic execution price using TransactionCostModel when symbol is available
+   */
+  getExecPrice(price, side) {
+    if (this.symbol) {
+      return costModel.getExecutionPrice(this.symbol, price, side);
+    }
+    // Fallback to flat slippage
+    return side === 'BUY' || side === 'buy'
+      ? price * (1 + this.config.slippage)
+      : price * (1 - this.config.slippage);
   }
 
   /**
@@ -300,7 +319,7 @@ class Backtester {
 
         // Take profit
         if (pnlPercent >= params.takeProfitPercent) {
-          const exitPrice = candle.close * (1 - this.config.slippage);
+          const exitPrice = this.getExecPrice(candle.close, 'SELL');
           const pnl = position.shares * (exitPrice - position.entryPrice);
           capital += position.shares * exitPrice;
 
@@ -322,7 +341,7 @@ class Backtester {
 
         // Stop loss
         if (pnlPercent <= -params.stopLossPercent) {
-          const exitPrice = candle.close * (1 - this.config.slippage);
+          const exitPrice = this.getExecPrice(candle.close, 'SELL');
           const pnl = position.shares * (exitPrice - position.entryPrice);
           capital += position.shares * exitPrice;
 
@@ -344,7 +363,7 @@ class Backtester {
 
         // Max holding period
         if (i - position.entryBar >= params.holdingPeriodBars) {
-          const exitPrice = candle.close * (1 - this.config.slippage);
+          const exitPrice = this.getExecPrice(candle.close, 'SELL');
           const pnl = position.shares * (exitPrice - position.entryPrice);
           capital += position.shares * exitPrice;
 
@@ -370,7 +389,7 @@ class Backtester {
         const entrySignal = this.checkEntrySignal(candle, ind, params);
 
         if (entrySignal) {
-          const entryPrice = candle.close * (1 + this.config.slippage);
+          const entryPrice = this.getExecPrice(candle.close, 'BUY');
           const positionValue = capital * (params.positionSizePercent / 100);
           const shares = Math.floor(positionValue / entryPrice);
 
@@ -919,6 +938,7 @@ async function runOptimization(symbol, startDate, endDate, options = {}) {
 
     // Run genetic optimization
     const optimizer = new GeneticOptimizer(candles, {
+      symbol,
       initialCapital: options.initialCapital || 10000,
       populationSize: options.populationSize || 50,
       generations: options.generations || 30,

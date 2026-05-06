@@ -8,6 +8,10 @@
 const polygonClient = require('./polygonClient');
 const technicalIndicators = require('./technicalIndicatorsService');
 const assetUtils = require('./assetUtils');
+const TransactionCostModel = require('./transactionCostModel');
+
+// Shared cost model instance for realistic backtest execution pricing
+const costModel = new TransactionCostModel();
 
 /**
  * Helper to get aggregates with automatic crypto detection
@@ -59,6 +63,7 @@ async function runEnhancedBacktest(params) {
 
   // Run base backtest
   const baseResults = await runBacktest({
+    symbol,
     candles,
     initialCapital,
     positionSizePercent,
@@ -94,6 +99,7 @@ async function runEnhancedBacktest(params) {
  */
 async function runBacktest(params) {
   const {
+    symbol,
     candles,
     initialCapital,
     positionSizePercent,
@@ -128,32 +134,40 @@ async function runBacktest(params) {
 
       // Check profit target
       if (pnlPercent >= profitTarget) {
-        const pnl = (currentPrice - position.entryPrice) * position.quantity;
+        const exitPrice = symbol
+          ? costModel.getExecutionPrice(symbol, currentPrice, 'SELL')
+          : currentPrice;
+        const pnl = (exitPrice - position.entryPrice) * position.quantity;
+        const adjPnlPercent = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
         trades.push({
           ...position,
           exitDate: candle.date,
-          exitPrice: currentPrice,
+          exitPrice,
           pnl,
-          pnlPercent,
+          pnlPercent: adjPnlPercent,
           exitReason: 'profit_target',
           holdingBars: i - position.entryIndex,
         });
-        capital += position.quantity * currentPrice;
+        capital += position.quantity * exitPrice;
         position = null;
       }
       // Check stop loss
       else if (pnlPercent <= -stopLoss) {
-        const pnl = (currentPrice - position.entryPrice) * position.quantity;
+        const exitPrice = symbol
+          ? costModel.getExecutionPrice(symbol, currentPrice, 'SELL')
+          : currentPrice;
+        const pnl = (exitPrice - position.entryPrice) * position.quantity;
+        const adjPnlPercent = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
         trades.push({
           ...position,
           exitDate: candle.date,
-          exitPrice: currentPrice,
+          exitPrice,
           pnl,
-          pnlPercent,
+          pnlPercent: adjPnlPercent,
           exitReason: 'stop_loss',
           holdingBars: i - position.entryIndex,
         });
-        capital += position.quantity * currentPrice;
+        capital += position.quantity * exitPrice;
         position = null;
       }
     }
@@ -168,19 +182,23 @@ async function runBacktest(params) {
       });
 
       if (shouldEnter) {
+        // Apply transaction cost model for realistic entry price
+        const entryPrice = symbol
+          ? costModel.getExecutionPrice(symbol, currentPrice, 'BUY')
+          : currentPrice;
         const positionSize = capital * (positionSizePercent / 100);
-        const quantity = Math.floor(positionSize / currentPrice);
+        const quantity = Math.floor(positionSize / entryPrice);
 
         if (quantity > 0) {
           position = {
             entryDate: candle.date,
-            entryPrice: currentPrice,
+            entryPrice,
             quantity,
             entryIndex: i,
             entryRsi: rsi,
             entryMacd: macd,
           };
-          capital -= quantity * currentPrice;
+          capital -= quantity * entryPrice;
         }
       }
     }
@@ -194,20 +212,23 @@ async function runBacktest(params) {
   // Close any remaining position
   if (position) {
     const lastCandle = candles[candles.length - 1];
-    const pnl = (lastCandle.close - position.entryPrice) * position.quantity;
+    const exitPrice = symbol
+      ? costModel.getExecutionPrice(symbol, lastCandle.close, 'SELL')
+      : lastCandle.close;
+    const pnl = (exitPrice - position.entryPrice) * position.quantity;
     const pnlPercent =
-      ((lastCandle.close - position.entryPrice) / position.entryPrice) * 100;
+      ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
 
     trades.push({
       ...position,
       exitDate: lastCandle.date,
-      exitPrice: lastCandle.close,
+      exitPrice,
       pnl,
       pnlPercent,
       exitReason: 'end_of_period',
       holdingBars: candles.length - 1 - position.entryIndex,
     });
-    capital += position.quantity * lastCandle.close;
+    capital += position.quantity * exitPrice;
   }
 
   // Calculate statistics
