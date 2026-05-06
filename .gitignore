@@ -66,6 +66,12 @@ coverage/
 # AI session data (may contain trading info)
 data/ai-sessions.json
 
+# Session/improvement data backups (regenerated, can be large)
+data/*.bak
+data/*.bak[0-9]*
+data/ai-sessions.json.backup.*
+data/improvement-log.json
+
 # CheddarFlow cache and debug files
 data/cheddarflow-*.json
 data/cheddarflow-*.png
