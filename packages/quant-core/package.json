@@ -1,0 +1,16 @@
+{
+  "name": "@kpe/quant-core",
+  "version": "0.1.0",
+  "description": "Pure quant primitives: ETF rules, market hours, regime detection, technical indicators. No I/O, no side effects, no vendor coupling.",
+  "private": true,
+  "main": "src/index.js",
+  "files": [
+    "src/"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

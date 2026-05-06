@@ -1,0 +1,37 @@
+import { describe, it, expect } from 'vitest';
+import { createRequire } from 'node:module';
+
+const requireCjs = createRequire(import.meta.url);
+const quantCore = requireCjs('../src/index.js');
+
+// This test proves the package barrel export exposes the expected surface
+// from the package's own perspective (no server/ shim involvement). When
+// we eventually publish or workspace-link, the same imports work via
+// `require('@kpe/quant-core')`.
+describe('@kpe/quant-core: public surface', () => {
+  it('re-exports tradingCalculations utilities', () => {
+    expect(typeof quantCore.getEtfLeverage).toBe('function');
+    expect(typeof quantCore.getOppositeEtf).toBe('function');
+    expect(typeof quantCore.isMarketOpen).toBe('function');
+    expect(typeof quantCore.calculateQuantity).toBe('function');
+    expect(Array.isArray(quantCore.BULLISH_ETFS)).toBe(true);
+    expect(Array.isArray(quantCore.BEARISH_ETFS)).toBe(true);
+  });
+
+  it('exposes ETF strategy and rules classes', () => {
+    expect(typeof quantCore.LeveragedEtfStrategy).toBe('function');
+    expect(typeof quantCore.LeveragedEtfRules).toBe('function');
+
+    const strategy = new quantCore.LeveragedEtfStrategy();
+    const rules = new quantCore.LeveragedEtfRules();
+    expect(typeof strategy.getFamily).toBe('function');
+    expect(typeof rules.applyConstraints).toBe('function');
+  });
+
+  it('basic facts hold via the package surface', () => {
+    expect(quantCore.getEtfLeverage('SOXL')).toBe(3);
+    expect(quantCore.getOppositeEtf('SOXL')).toBe('SOXS');
+    expect(new quantCore.LeveragedEtfRules().isLeveraged('SOXL')).toBe(true);
+    expect(new quantCore.LeveragedEtfRules().isLeveraged('AAPL')).toBe(false);
+  });
+});
