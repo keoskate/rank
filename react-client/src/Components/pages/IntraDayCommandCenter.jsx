@@ -4,6 +4,9 @@ import theme from '../../theme';
 import SystemHealthBar from './SystemHealthBar';
 import SessionCardGrid from './SessionCardGrid';
 import CommandCenterLogFeed from './CommandCenterLogFeed';
+import AccountSummaryPanel from './AccountSummaryPanel';
+import OpenPositionsTable from './OpenPositionsTable';
+import TodaysTradeLedger from './TodaysTradeLedger';
 
 const MAX_LOGS = 30;
 const POLL_INTERVAL = 15000;
@@ -11,6 +14,12 @@ const POLL_INTERVAL = 15000;
 const IntraDayCommandCenter = ({ tradingMode }) => {
   const [sessions, setSessions] = useState([]);
   const [sentiment, setSentiment] = useState(null);
+  const [account, setAccount] = useState(null);
+  const [positions, setPositions] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [accountError, setAccountError] = useState(null);
+  const [positionsError, setPositionsError] = useState(null);
+  const [ordersError, setOrdersError] = useState(null);
   const [health, setHealth] = useState({
     server: 'unknown',
     alpaca: 'unknown',
@@ -24,22 +33,32 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const socketRef = useRef(null);
 
   const addLog = useCallback((level, message, session) => {
-    setLogs((prev) => {
-      const next = [...prev, { level, message, session, timestamp: new Date().toISOString() }];
+    setLogs(prev => {
+      const next = [
+        ...prev,
+        { level, message, session, timestamp: new Date().toISOString() },
+      ];
       return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
     });
   }, []);
 
   // REST polling
   const fetchData = useCallback(async () => {
-    const newHealth = { server: 'unknown', alpaca: 'unknown', sentiment: 'unknown' };
+    const newHealth = {
+      server: 'unknown',
+      alpaca: 'unknown',
+      sentiment: 'unknown',
+    };
 
     try {
-      const [sessionsRes, sentimentRes, accountRes] = await Promise.all([
-        fetch('/api/ai/sessions/default_user'),
-        fetch('/api/semiconductor/sentiment'),
-        fetch(`/api/alpaca/account?mode=${tradingMode}`),
-      ]);
+      const [sessionsRes, sentimentRes, accountRes, positionsRes, ordersRes] =
+        await Promise.all([
+          fetch('/api/ai/sessions/default_user'),
+          fetch('/api/semiconductor/sentiment'),
+          fetch(`/api/alpaca/account?mode=${tradingMode}`),
+          fetch(`/api/alpaca/positions?mode=${tradingMode}`),
+          fetch(`/api/alpaca/orders?mode=${tradingMode}&status=all&limit=100`),
+        ]);
 
       // Server is reachable if any request succeeded
       newHealth.server = sessionsRes.ok ? 'ok' : 'degraded';
@@ -59,13 +78,37 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
       if (accountRes.ok) {
         newHealth.alpaca = 'ok';
+        const data = await accountRes.json();
+        // The route wraps the body as { success: true, account: {...} }
+        setAccount(data.account || data);
+        setAccountError(null);
       } else {
         newHealth.alpaca = 'degraded';
+        setAccountError(`HTTP ${accountRes.status}`);
       }
-    } catch {
+
+      if (positionsRes.ok) {
+        const data = await positionsRes.json();
+        setPositions(Array.isArray(data.positions) ? data.positions : []);
+        setPositionsError(null);
+      } else {
+        setPositionsError(`HTTP ${positionsRes.status}`);
+      }
+
+      if (ordersRes.ok) {
+        const data = await ordersRes.json();
+        setOrders(Array.isArray(data.orders) ? data.orders : []);
+        setOrdersError(null);
+      } else {
+        setOrdersError(`HTTP ${ordersRes.status}`);
+      }
+    } catch (err) {
       newHealth.server = 'down';
       newHealth.alpaca = 'down';
       newHealth.sentiment = 'down';
+      setAccountError(err?.message || 'fetch failed');
+      setPositionsError(err?.message || 'fetch failed');
+      setOrdersError(err?.message || 'fetch failed');
     }
 
     setHealth(newHealth);
@@ -97,19 +140,21 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       addLog('ERROR', 'WebSocket disconnected');
     });
 
-    socket.on('ai_decision', (decision) => {
+    socket.on('ai_decision', decision => {
       const action = decision.action || 'HOLD';
       const confidence = decision.confidence
         ? ` (${(decision.confidence * 100).toFixed(0)}%)`
         : '';
       addLog(
-        action === 'BUY' || action === 'SELL' || action === 'EXIT' ? 'SIGNAL' : 'DECISION',
+        action === 'BUY' || action === 'SELL' || action === 'EXIT'
+          ? 'SIGNAL'
+          : 'DECISION',
         `${action} ${decision.symbol}${confidence}${decision.reasons?.[0] ? ' - ' + decision.reasons[0] : ''}`,
         decision.sessionName || decision.sessionId
       );
     });
 
-    socket.on('trade_executed', (trade) => {
+    socket.on('trade_executed', trade => {
       addLog(
         'EXEC',
         `${trade.side?.toUpperCase()} ${trade.quantity} ${trade.symbol} @ ${trade.price ? '$' + parseFloat(trade.price).toFixed(2) : 'market'}${trade.pnl ? ' P&L: $' + parseFloat(trade.pnl).toFixed(2) : ''}`,
@@ -118,9 +163,9 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
       // Flash the session card
       if (trade.sessionId) {
-        setFlashTrades((prev) => new Set(prev).add(trade.sessionId));
+        setFlashTrades(prev => new Set(prev).add(trade.sessionId));
         setTimeout(() => {
-          setFlashTrades((prev) => {
+          setFlashTrades(prev => {
             const next = new Set(prev);
             next.delete(trade.sessionId);
             return next;
@@ -132,15 +177,17 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       setTimeout(fetchData, 1000);
     });
 
-    socket.on('alert', (alert) => {
+    socket.on('alert', alert => {
       addLog(
-        alert.severity === 'critical' || alert.severity === 'high' ? 'ALERT' : 'INFO',
+        alert.severity === 'critical' || alert.severity === 'high'
+          ? 'ALERT'
+          : 'INFO',
         `${alert.title || 'Alert'}: ${alert.message}`,
         alert.sessionName || alert.sessionId
       );
     });
 
-    socket.on('position_update', (pos) => {
+    socket.on('position_update', pos => {
       addLog(
         'INFO',
         `Position update: ${pos.symbol} qty=${pos.quantity} unrealized=${pos.unrealizedPnL ? '$' + parseFloat(pos.unrealizedPnL).toFixed(2) : 'N/A'}`,
@@ -153,7 +200,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     };
   }, [addLog, fetchData]);
 
-  const runningSessions = sessions.filter((s) => s.status === 'running').length;
+  const runningSessions = sessions.filter(s => s.status === 'running').length;
 
   return (
     <div>
@@ -162,6 +209,24 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         runningSessions={runningSessions}
         lastRefresh={lastRefresh}
         wsConnected={wsConnected}
+      />
+
+      <AccountSummaryPanel
+        account={account}
+        loading={!account && !accountError}
+        error={accountError}
+      />
+
+      <OpenPositionsTable
+        positions={positions}
+        loading={positions.length === 0 && !positionsError}
+        error={positionsError}
+      />
+
+      <TodaysTradeLedger
+        orders={orders}
+        loading={orders.length === 0 && !ordersError}
+        error={ordersError}
       />
 
       <SessionCardGrid sessions={sessions} flashTrades={flashTrades} />
