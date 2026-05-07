@@ -28,6 +28,7 @@ import StrategyLabPage from './pages/StrategyLabPage';
 import OvernightOptimizationPage from './pages/OvernightOptimizationPage';
 import CharlieStrategyPage from './pages/CharlieStrategyPage';
 import SemiconductorDemoPage from './pages/SemiconductorDemoPage';
+import IntraDayCommandCenter from './pages/IntraDayCommandCenter';
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -71,6 +72,7 @@ function App() {
                 <Route path="/overnight" element={<OvernightOptimizationPage />} />
                 <Route path="/charlie-strategy" element={<CharlieStrategyPage />} />
                 <Route path="/semiconductor" element={<SemiconductorDemoPage />} />
+                <Route path="/command-center" element={<IntraDayCommandCenter tradingMode="paper" />} />
 
                 {/* Legacy routes (keep accessible) */}
                 <Route path="/invest" element={<InvestTab />} />
