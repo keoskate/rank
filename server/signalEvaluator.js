@@ -311,11 +311,34 @@ async function evaluateEntry(sessionId, symbol) {
       }
     }
 
+    // Hard filters: counter-trend + weak volume OR counter-trend + sub-80 confidence
+    // blocks the 70-79 zone the existing -20 penalty alone still permits. Empirically lossy.
+    const blockedByF1 = isTradeCounterTrend && volumeRatio < 1.5;
+    const blockedByF2 = isTradeCounterTrend && confidence < 80;
+
+    if (blockedByF1) factors.push('BLOCKED-F1: counter-trend + weak volume');
+    if (blockedByF2) factors.push('BLOCKED-F2: counter-trend + confidence < 80');
+
     // Entry requirements: strategy match + minimum signals + confidence threshold
     const meetsSignalRequirement = signalCount >= minSignalsRequired;
     const meetsConfidenceRequirement = confidence >= cfg.minConfidence;
-    const shouldEnter =
+    const wouldOtherwiseEnter =
       strategyMatch && meetsSignalRequirement && meetsConfidenceRequirement;
+
+    if (wouldOtherwiseEnter && (blockedByF1 || blockedByF2)) {
+      tradingLogger.logRisk('Hard filter blocked entry', {
+        sessionId,
+        sessionName: session.name,
+        symbol,
+        reason: [blockedByF1 && 'F1', blockedByF2 && 'F2']
+          .filter(Boolean)
+          .join('+'),
+        value: confidence,
+        threshold: 80,
+      });
+    }
+
+    const shouldEnter = wouldOtherwiseEnter && !blockedByF1 && !blockedByF2;
 
     // Only log when there's a potential trade signal
     if (strategyMatch) {
