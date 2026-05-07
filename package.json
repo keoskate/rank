@@ -15,6 +15,7 @@
     "server-dev": "nodemon --ignore data/ server/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "validate-live": "node scripts/validate-live.js",
     "lint": "eslint . --ext .js,.jsx",
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write .",
