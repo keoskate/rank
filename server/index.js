@@ -995,30 +995,21 @@ async function gracefulShutdown(signal) {
   console.log(`\n[Server] ${signal} received — initiating graceful shutdown...`);
 
   try {
-    // 1. Save current session state immediately
+    // Save current session state immediately. We deliberately preserve
+    // each session's status (running/paused) on disk so that on the next
+    // boot, loadSessions() can call startTradingLoop() for the ones the
+    // user had running. A previous version of this handler force-paused
+    // every running session before exit, which meant nodemon restarts
+    // (or any other restart) silently turned all sessions off — costing
+    // hours of trading time per dev session and surprising the user.
+    //
+    // Trading loop setIntervals are cleaned up automatically when the
+    // process exits, so there's no leak from skipping the pause.
     console.log('[Server] Saving trading sessions...');
     aiTradingEngine.saveSessions();
+    console.log('[Server] Sessions saved (running status preserved).');
 
-    // 2. Pause all running sessions (preserves positions, stops trading loops)
-    const allSessions = aiTradingEngine.getAllUserSessions('default_user');
-    if (allSessions && allSessions.sessions) {
-      for (const session of allSessions.sessions) {
-        if (session.status === 'running') {
-          console.log(`[Server] Pausing session "${session.name}"...`);
-          try {
-            await aiTradingEngine.pauseSession(session.sessionId);
-          } catch (e) {
-            console.error(`[Server] Failed to pause "${session.name}":`, e.message);
-          }
-        }
-      }
-    }
-
-    // 3. Save again after pausing (captures paused state)
-    aiTradingEngine.saveSessions();
-    console.log('[Server] Sessions saved and paused.');
-
-    // 4. Disconnect Alpaca price stream
+    // Disconnect Alpaca price stream
     alpacaStream.disconnect();
     console.log('[Server] Alpaca stream disconnected.');
 
