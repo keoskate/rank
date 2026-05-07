@@ -1776,30 +1776,28 @@ module.exports = function (deps) {
       const { symbol } = req.params;
       const { timeframe = '1D', bars = 100 } = req.query;
 
-      // Fetch historical data for indicator calculation
+      // Fetch historical data for indicator calculation.
+      // Note: a previous version of this route called polygonClient.getDailyBars(),
+      // which doesn't exist on the client — every signal request silently
+      // threw, caught nothing, and returned "Insufficient data" forever.
+      // Use getHistoricalAggregates (the same call /api/regime/:symbol uses)
+      // which returns a normalized candle array directly.
       let candles = [];
       try {
-        // Try to get intraday data from Polygon or cached data
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - Math.ceil(bars / 7)); // Rough estimate for trading days
+        // Need >= 50 bars after fetching — fetch enough trading days
+        // (calendar days * 5/7 ≈ trading days) plus a buffer.
+        const requestedDays = Math.max(Math.ceil((Number(bars) || 100) * 1.6), 90);
+        startDate.setDate(startDate.getDate() - requestedDays);
 
-        const data = await polygonClient.getDailyBars(
+        candles = await polygonClient.getHistoricalAggregates(
           symbol,
           startDate.toISOString().split('T')[0],
-          endDate.toISOString().split('T')[0]
+          endDate.toISOString().split('T')[0],
+          'day'
         );
-
-        if (data && data.results) {
-          candles = data.results.map(bar => ({
-            open: bar.o,
-            high: bar.h,
-            low: bar.l,
-            close: bar.c,
-            volume: bar.v,
-            timestamp: bar.t,
-          }));
-        }
+        if (!Array.isArray(candles)) candles = [];
       } catch (dataError) {
         console.warn(`Could not fetch data for ${symbol}:`, dataError.message);
       }

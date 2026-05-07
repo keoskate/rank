@@ -229,7 +229,10 @@ module.exports = function (deps) {
         });
       }
 
-      const regime = regimeDetector.detectRegime(candles);
+      // Pass symbol through so the leveragedRecommendation resolves to
+      // the symbol's own family (SOXL → SOXL/SOXS, etc.) instead of the
+      // generic QBTS default.
+      const regime = regimeDetector.detectRegime(candles, { symbol });
       regime.defaultConfig = regimeDetector.getDefaultConfigForRegime(
         regime.regime
       );

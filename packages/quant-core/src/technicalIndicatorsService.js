@@ -301,13 +301,33 @@ function detectRSIDivergence(closes, rsiValues, lookback = 10) {
   const currentPrice = recentPrices[recentPrices.length - 1];
   const currentRSI = recentRSI[recentRSI.length - 1];
 
-  // Bullish divergence: price makes lower low, RSI makes higher low
-  const bullishDivergence =
-    currentPrice <= priceLow * 1.01 && currentRSI > rsiLow * 1.05;
+  // Divergence is only meaningful in a price range wide enough that
+  // "near the low" and "near the high" mean different things. In a
+  // tight intraday range (< 1% wide), price can be within 1% of BOTH
+  // extremes — and the prior implementation flagged both bullish AND
+  // bearish divergence simultaneously, which is logically incoherent.
+  const rangePercent = priceLow > 0 ? ((priceHigh - priceLow) / priceLow) * 100 : 0;
+  const RANGE_FLOOR = 1.0; // require >=1% range
 
-  // Bearish divergence: price makes higher high, RSI makes lower high
-  const bearishDivergence =
-    currentPrice >= priceHigh * 0.99 && currentRSI < rsiHigh * 0.95;
+  // Bullish divergence: price near recent low, RSI made higher low
+  // Bearish divergence: price near recent high, RSI made lower high
+  // Mutually exclusive: pick whichever extreme the current price is
+  // closer to, so we never claim both at once.
+  const distFromLow = currentPrice - priceLow;
+  const distFromHigh = priceHigh - currentPrice;
+
+  let bullishDivergence = false;
+  let bearishDivergence = false;
+
+  if (rangePercent >= RANGE_FLOOR) {
+    if (distFromLow <= distFromHigh) {
+      bullishDivergence =
+        currentPrice <= priceLow * 1.01 && currentRSI > rsiLow * 1.05;
+    } else {
+      bearishDivergence =
+        currentPrice >= priceHigh * 0.99 && currentRSI < rsiHigh * 0.95;
+    }
+  }
 
   return {
     bullish: bullishDivergence,

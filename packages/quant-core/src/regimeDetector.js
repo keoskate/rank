@@ -135,7 +135,16 @@ class RegimeDetector {
     }
 
     // Generate leveraged ETF recommendation for QBTS family
-    const leveragedRecommendation = this.getLeveragedETFRecommendation(regime, trendStrength, confidence);
+    // Pass symbol through (when caller knows it) so the recommendation
+    // resolves to the correct leveraged-ETF family. Without a symbol, the
+    // function falls back to its historical QBTS-family default to keep
+    // fixture-locked behavior stable for existing callers.
+    const leveragedRecommendation = this.getLeveragedETFRecommendation(
+      regime,
+      trendStrength,
+      confidence,
+      config.symbol
+    );
 
     return {
       regime,
@@ -160,16 +169,54 @@ class RegimeDetector {
   }
 
   /**
-   * Get leveraged ETF recommendation based on regime
-   * For QBTS family: QBTS (base), QBTX (2x bull), QBTZ (2x bear)
+   * Get leveraged ETF recommendation based on regime.
+   *
+   * If `symbol` is provided, the recommendation resolves to that symbol's
+   * own family (e.g., SOXL → SOXL/SOXS pair, PLTR → PLTU/PLTZ pair) by
+   * doing a small inline family lookup. The lookup mirrors the families
+   * defined in LeveragedEtfStrategy; we keep it inline rather than import
+   * to avoid creating a hard dependency between these two modules.
+   *
+   * If `symbol` is omitted, the function returns the historical QBTS/QBTX
+   * defaults so existing callers (and golden fixtures captured before this
+   * parameter existed) keep producing identical output.
+   *
+   * @param {'bull'|'bear'|'sideways'|'unknown'} regime
+   * @param {string} trendStrength
+   * @param {number} confidence
+   * @param {string} [symbol] - The symbol whose regime was detected; lets
+   *   us return the correct family's bull/bear pair instead of a generic
+   *   default.
    */
-  getLeveragedETFRecommendation(regime, trendStrength, confidence) {
+  getLeveragedETFRecommendation(regime, trendStrength, confidence, symbol) {
+    // Inline family resolution. Source of truth for these triples is
+    // packages/quant-core/src/leveragedEtfStrategy.js — keep these in sync.
+    const FAMILIES = {
+      QBTS: { bull: { symbol: 'QBTX', leverage: '2x', name: 'T-Rex 2X Long MSTR Daily Target ETF' }, bear: { symbol: 'QBTZ', leverage: '2x', name: 'T-Rex 2X Inverse MSTR Daily Target ETF' } },
+      SOXX: { bull: { symbol: 'SOXL', leverage: '3x', name: 'Direxion Daily Semiconductor Bull 3X' }, bear: { symbol: 'SOXS', leverage: '3x', name: 'Direxion Daily Semiconductor Bear 3X' } },
+      PLTR: { bull: { symbol: 'PLTU', leverage: '2x', name: 'T-Rex 2X Long Palantir Daily Target ETF' }, bear: { symbol: 'PLTZ', leverage: '2x', name: 'T-Rex 2X Inverse Palantir Daily Target ETF' } },
+    };
+    function resolveFamily(sym) {
+      if (!sym) return null;
+      const upper = String(sym).toUpperCase();
+      for (const [base, fam] of Object.entries(FAMILIES)) {
+        if (upper === base || upper === fam.bull.symbol || upper === fam.bear.symbol) {
+          return fam;
+        }
+      }
+      return null;
+    }
+    const family = resolveFamily(symbol);
+    // Backward-compat default: when no symbol given, use QBTS family.
+    const fallback = FAMILIES.QBTS;
+    const resolved = family || fallback;
+
     if (regime === 'bull') {
       return {
-        symbol: 'QBTX',
-        name: 'T-Rex 2X Long MSTR Daily Target ETF',
+        symbol: resolved.bull.symbol,
+        name: resolved.bull.name,
         direction: 'long',
-        leverage: '2x',
+        leverage: resolved.bull.leverage,
         reason: `Bullish regime detected (${confidence}% confidence). Use leveraged bull ETF to maximize gains.`,
         riskLevel: trendStrength === 'strong' ? 'moderate' : 'high',
         tips: [
@@ -180,15 +227,15 @@ class RegimeDetector {
       };
     } else if (regime === 'bear') {
       return {
-        symbol: 'QBTZ',
-        name: 'T-Rex 2X Inverse MSTR Daily Target ETF',
+        symbol: resolved.bear.symbol,
+        name: resolved.bear.name,
         direction: 'short',
-        leverage: '2x',
+        leverage: resolved.bear.leverage,
         reason: `Bearish regime detected (${confidence}% confidence). Use inverse ETF to profit from decline.`,
         riskLevel: trendStrength === 'strong' ? 'moderate' : 'high',
         tips: [
           'Best for strong downtrend days',
-          'Consider hedging with small QBTX position',
+          `Consider hedging with small ${resolved.bull.symbol} position`,
           trendStrength === 'strong' ? 'Full position OK' : 'Reduce position size due to weaker trend',
         ],
       };

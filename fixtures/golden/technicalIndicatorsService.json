@@ -5148,8 +5148,8 @@
     "price": 104.7501,
     "rsi": {
       "divergence": {
-        "bearish": true,
-        "bullish": true,
+        "bearish": false,
+        "bullish": false,
         "currentRSI": 62.02,
         "rsiTrend": "falling"
       },
@@ -5210,17 +5210,15 @@
       "value": 62.02
     },
     "signals": {
-      "bearishScore": 6,
-      "bullishScore": 8,
-      "confidence": 14,
+      "bearishScore": 3,
+      "bullishScore": 5,
+      "confidence": 25,
       "netScore": 2,
       "reasons": [
         "MACD bearish momentum",
         "Strong bullish trend (ADX)",
         "Aligned bullish trend",
-        "Price above VWAP",
-        "Bullish RSI divergence",
-        "Bearish RSI divergence"
+        "Price above VWAP"
       ],
       "signal": "HOLD"
     },
