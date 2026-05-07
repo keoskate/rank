@@ -29,6 +29,7 @@ import OvernightOptimizationPage from './pages/OvernightOptimizationPage';
 import CharlieStrategyPage from './pages/CharlieStrategyPage';
 import SemiconductorDemoPage from './pages/SemiconductorDemoPage';
 import IntraDayCommandCenter from './pages/IntraDayCommandCenter';
+import DataExplorer from './pages/DataExplorer';
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -45,49 +46,71 @@ function App() {
       <TradingConfigProvider>
         <StockDataProvider>
           <Router>
-          <div style={{ margin: 0, padding: 0 }}>
-            {/* Navigation bar - appears on all pages */}
-            <NavBar />
-            {/* Main routes - using React Router v6 syntax */}
-            <ErrorBoundary message="This page encountered an error. Try navigating to a different page.">
-              <Routes>
-                {/* MVP Primary Routes */}
-                <Route path="/" element={<RankingsPage />} />
-                <Route path="/portfolio" element={<PortfolioPage />} />
-                <Route path="/stock/:ticker" element={<StockDetailPage />} />
+            <div style={{ margin: 0, padding: 0 }}>
+              {/* Navigation bar - appears on all pages */}
+              <NavBar />
+              {/* Main routes - using React Router v6 syntax */}
+              <ErrorBoundary message="This page encountered an error. Try navigating to a different page.">
+                <Routes>
+                  {/* MVP Primary Routes */}
+                  <Route path="/" element={<RankingsPage />} />
+                  <Route path="/portfolio" element={<PortfolioPage />} />
+                  <Route path="/stock/:ticker" element={<StockDetailPage />} />
 
-                {/* Tools */}
-                <Route path="/backtest" element={<BacktestPage />} />
-                <Route path="/day-trading" element={<IntradayAnalyzerPage />} />
-                <Route path="/live-trading" element={<TradingSessionsList />} />
-                <Route
-                  path="/live-trading/:sessionId"
-                  element={<MultiSessionView />}
-                />
-                <Route path="/import-trades" element={<TradeImportPage />} />
-                {/* Analytics is now accessible via /portfolio?tab=analytics */}
-                <Route path="/ab-testing" element={<ABTestPage />} />
-                <Route path="/walk-forward" element={<WalkForwardPage />} />
-                <Route path="/strategy-lab" element={<StrategyLabPage />} />
-                <Route path="/overnight" element={<OvernightOptimizationPage />} />
-                <Route path="/charlie-strategy" element={<CharlieStrategyPage />} />
-                <Route path="/semiconductor" element={<SemiconductorDemoPage />} />
-                <Route path="/command-center" element={<IntraDayCommandCenter tradingMode="paper" />} />
+                  {/* Tools */}
+                  <Route path="/backtest" element={<BacktestPage />} />
+                  <Route
+                    path="/day-trading"
+                    element={<IntradayAnalyzerPage />}
+                  />
+                  <Route
+                    path="/live-trading"
+                    element={<TradingSessionsList />}
+                  />
+                  <Route
+                    path="/live-trading/:sessionId"
+                    element={<MultiSessionView />}
+                  />
+                  <Route path="/import-trades" element={<TradeImportPage />} />
+                  {/* Analytics is now accessible via /portfolio?tab=analytics */}
+                  <Route path="/ab-testing" element={<ABTestPage />} />
+                  <Route path="/walk-forward" element={<WalkForwardPage />} />
+                  <Route path="/strategy-lab" element={<StrategyLabPage />} />
+                  <Route
+                    path="/overnight"
+                    element={<OvernightOptimizationPage />}
+                  />
+                  <Route
+                    path="/charlie-strategy"
+                    element={<CharlieStrategyPage />}
+                  />
+                  <Route
+                    path="/semiconductor"
+                    element={<SemiconductorDemoPage />}
+                  />
+                  <Route
+                    path="/command-center"
+                    element={<IntraDayCommandCenter tradingMode="paper" />}
+                  />
+                  <Route path="/data-explorer" element={<DataExplorer />} />
 
-                {/* Legacy routes (keep accessible) */}
-                <Route path="/invest" element={<InvestTab />} />
-                <Route path="/paper-trading" element={<PaperTradingPage />} />
-                <Route path="/ai-research" element={<AIResearchPage />} />
-                <Route
-                  path="/test-validation"
-                  element={<DataValidationTest />}
-                />
+                  {/* Legacy routes (keep accessible) */}
+                  <Route path="/invest" element={<InvestTab />} />
+                  <Route path="/paper-trading" element={<PaperTradingPage />} />
+                  <Route path="/ai-research" element={<AIResearchPage />} />
+                  <Route
+                    path="/test-validation"
+                    element={<DataValidationTest />}
+                  />
 
-                {/* Developer Tools */}
-                <Route path="/dev/components" element={<ComponentCatalog />} />
-              </Routes>
-            </ErrorBoundary>
-          </div>
+                  {/* Developer Tools */}
+                  <Route
+                    path="/dev/components"
+                    element={<ComponentCatalog />}
+                  />
+                </Routes>
+              </ErrorBoundary>
+            </div>
           </Router>
         </StockDataProvider>
       </TradingConfigProvider>
