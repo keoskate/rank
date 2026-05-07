@@ -30,6 +30,7 @@ import CharlieStrategyPage from './pages/CharlieStrategyPage';
 import SemiconductorDemoPage from './pages/SemiconductorDemoPage';
 import IntraDayCommandCenter from './pages/IntraDayCommandCenter';
 import DataExplorer from './pages/DataExplorer';
+import SymbolInspector from './pages/SymbolInspector';
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -93,6 +94,7 @@ function App() {
                     element={<IntraDayCommandCenter tradingMode="paper" />}
                   />
                   <Route path="/data-explorer" element={<DataExplorer />} />
+                  <Route path="/inspect" element={<SymbolInspector />} />
 
                   {/* Legacy routes (keep accessible) */}
                   <Route path="/invest" element={<InvestTab />} />
