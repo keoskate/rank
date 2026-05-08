@@ -13,6 +13,7 @@ const tradingLogger = require('./tradingLogger');
 const websocketServer = require('./websocketServer');
 const alpacaStream = require('./alpacaStreamClient');
 const LeveragedEtfStrategy = require('./leveragedEtfStrategy');
+const openingRange = require('./openingRange');
 
 const leveragedEtfStrategy = new LeveragedEtfStrategy();
 
@@ -158,6 +159,34 @@ async function evaluateEntry(sessionId, symbol) {
         signalCount++;
         signalScore += SIGNAL_WEIGHTS.strategyMatch;
         factors.push(`RSI momentum zone (${indicators.rsi.value.toFixed(1)}) [+${SIGNAL_WEIGHTS.strategyMatch}w]`);
+      }
+    }
+
+    let orbContext = null; // captured for TP/SL override below
+    if (entryStrategy === 'orb') {
+      if (!openingRange.isInEntryWindow()) {
+        factors.push('ORB: outside 9:45-11:30 ET entry window');
+      } else {
+        const range = openingRange.computeOpeningRange(candles);
+        if (!range.finalized) {
+          factors.push(`ORB: range not finalized (${range.barCount} bars)`);
+        } else {
+          const lastBar = candles[candles.length - 1];
+          const breakAbove = lastBar.close > range.high;
+          const breakBelow = lastBar.close < range.low;
+          if ((breakAbove || breakBelow) && hasVolumeSpike) {
+            strategyMatch = true;
+            signalCount += 2;
+            signalScore += SIGNAL_WEIGHTS.strategyMatch;
+            const direction = breakAbove ? 'long' : 'short';
+            orbContext = { range, direction };
+            factors.push(
+              `ORB ${direction} break ${breakAbove ? 'above' : 'below'} $${(breakAbove ? range.high : range.low).toFixed(2)} (range $${range.height.toFixed(2)}) on ${volumeRatio.toFixed(2)}x volume [+${SIGNAL_WEIGHTS.strategyMatch}w]`
+            );
+          } else if (breakAbove || breakBelow) {
+            factors.push(`ORB break with weak volume ${volumeRatio.toFixed(2)}x — needs ≥${volumeMultiplier}x`);
+          }
+        }
       }
     }
 
@@ -370,6 +399,24 @@ async function evaluateEntry(sessionId, symbol) {
     const adaptiveProfitTarget =
       currentPrice * (1 + (takeProfitPercent * volatilityMultiplier) / 100);
 
+    // ORB strategy: replace standard %-based targets with range-derived ones
+    let finalProfitTarget = adaptiveProfitTarget;
+    let finalStopLoss = stopLoss;
+    if (orbContext && strategyMatch) {
+      const orbTargets = openingRange.getStrategyTargets({
+        currentPrice,
+        range: orbContext.range,
+        direction: orbContext.direction,
+        fixedStopPct: cfg.orbStopPct ?? 1.5,
+        fixedTpPct: cfg.orbTpPct ?? 3.0,
+      });
+      finalProfitTarget = orbTargets.profitTarget;
+      finalStopLoss = orbTargets.stopLoss;
+      factors.push(
+        `ORB targets: SL $${finalStopLoss.toFixed(2)} / TP $${finalProfitTarget.toFixed(2)}`
+      );
+    }
+
     const decision = {
       shouldEnter,
       symbol,
@@ -377,8 +424,8 @@ async function evaluateEntry(sessionId, symbol) {
       action: 'BUY',
       reasons: factors,
       currentPrice,
-      profitTarget: adaptiveProfitTarget,
-      stopLoss,
+      profitTarget: finalProfitTarget,
+      stopLoss: finalStopLoss,
       atr,
       indicators: {
         rsi: indicators.rsi.value,
@@ -435,8 +482,8 @@ async function evaluateEntry(sessionId, symbol) {
         confidence,
         reasons: factors,
         currentPrice,
-        profitTarget: adaptiveProfitTarget,
-        stopLoss,
+        profitTarget: finalProfitTarget,
+        stopLoss: finalStopLoss,
         shouldEnter,
       });
 
