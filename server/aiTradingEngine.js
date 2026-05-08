@@ -2371,6 +2371,34 @@ function canSessionTradeNow(session) {
 }
 
 /**
+ * Determine which symbols this session currently owns, based on its own
+ * tradingLog. Used for attribution when allowDuplicatePositions=true so
+ * sibling sessions don't double-claim the same broker position.
+ *
+ * Uses "most recent action wins" — if a symbol's most recent entry in the
+ * tradingLog is a BUY, the session owns it; otherwise it doesn't. Net-quantity
+ * approaches are unreliable because the log is capped at 100 entries and old
+ * matching sells get truncated, leaving phantom open quantities.
+ *
+ * Known edge case: partial exits (BUY → SELL of < full qty) will report the
+ * session as not owning the symbol, even though residual qty remains. Fine
+ * for now since current strategies don't partial-exit; revisit if that changes.
+ */
+function getSessionOwnedSymbols(session) {
+  const log = session.tradingLog || [];
+  const lastAction = new Map();
+  for (const entry of log) {
+    if (!entry.symbol || !entry.side) continue;
+    lastAction.set(entry.symbol, entry.side);
+  }
+  const owned = new Set();
+  for (const [symbol, side] of lastAction) {
+    if (side === 'buy') owned.add(symbol);
+  }
+  return owned;
+}
+
+/**
  * Sync portfolio with Alpaca account
  * @param {string} sessionId - Session identifier
  */
@@ -2399,15 +2427,24 @@ async function syncPortfolio(sessionId) {
     // Filter to watchlist symbols only (unless manageAllPositions) to prevent cross-session contamination
     const watchlistUpper = (session.config.watchlist || []).map(s => s.toUpperCase());
     const sessionAssetType = session.config.assetType || detectAssetTypeFromWatchlist(session.config.watchlist || []);
+    // For sessions that allow duplicate positions across siblings, additionally
+    // attribute by tradingLog: a session only claims a broker position if its
+    // own tradingLog has a net long in that symbol. Otherwise multiple sessions
+    // double-claim the same broker position. Other sessions keep watchlist-only
+    // filtering for backward compat.
+    const sessionOwned = session.config.allowDuplicatePositions
+      ? getSessionOwnedSymbols(session)
+      : null;
     const filteredPositions = session.config.manageAllPositions
       ? positions
       : positions.filter(pos => {
           const posSymbol = (pos.symbol || '').toUpperCase();
-          // For crypto, normalize AAVEUSD -> AAVE for watchlist comparison
           const normalizedSymbol = assetUtils.isCrypto(sessionAssetType)
             ? assetUtils.getBaseSymbol(posSymbol)
             : posSymbol;
-          return watchlistUpper.includes(normalizedSymbol);
+          if (!watchlistUpper.includes(normalizedSymbol)) return false;
+          if (sessionOwned && !sessionOwned.has(pos.symbol)) return false;
+          return true;
         });
     // Atomic swap: build into temp Map, then replace — prevents partial state if forEach fails
     const existingPositions = new Map(session.portfolio.positions);
@@ -2433,12 +2470,9 @@ async function syncPortfolio(sessionId) {
         unrealizedPnLPercent:
           pos.unrealizedPLPercent || parseFloat(pos.unrealized_plpc) * 100 || 0,
         side: pos.side,
-        // Preserve entry time from previous sync, or use created_at from Alpaca
         entryTime:
           existing?.entryTime || pos.created_at || new Date().toISOString(),
-        // Track highest price for trailing stop
         highWaterMark: highWaterMark,
-        // Preserve partial exit state across syncs
         partialExitDone: existing?.partialExitDone || false,
         partialExitPrice: existing?.partialExitPrice || null,
       });
