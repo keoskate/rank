@@ -7,9 +7,20 @@ import CommandCenterLogFeed from './CommandCenterLogFeed';
 import AccountSummaryPanel from './AccountSummaryPanel';
 import OpenPositionsTable from './OpenPositionsTable';
 import TodaysTradeLedger from './TodaysTradeLedger';
+import LivePriceTickers from './LivePriceTickers';
+import SignalActivityPanel from './SignalActivityPanel';
+import GatesAndIndicatorsPanel from './GatesAndIndicatorsPanel';
+import MarketStrip from './MarketStrip';
+import SoxxMovers from './SoxxMovers';
+import MultiTimeframeTechnicals from './MultiTimeframeTechnicals';
+import SoxlChart from './SoxlChart';
+import SemiconductorSentimentPanel from '../trading/SemiconductorSentimentPanel';
+import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
+import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
 
-const MAX_LOGS = 30;
-const POLL_INTERVAL = 15000;
+const MAX_LOGS = 200;
+const POLL_INTERVAL = 5000;
+const TRACKED_SYMBOLS = ['SOXL', 'SOXS'];
 
 const IntraDayCommandCenter = ({ tradingMode }) => {
   const [sessions, setSessions] = useState([]);
@@ -29,6 +40,8 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const [wsConnected, setWsConnected] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [flashTrades, setFlashTrades] = useState(new Set());
+  const [liveIndicators, setLiveIndicators] = useState({});
+  const [socket, setSocket] = useState(null);
 
   const socketRef = useRef(null);
 
@@ -124,23 +137,45 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
   // WebSocket connection
   useEffect(() => {
-    const socket = io(window.location.origin, {
+    const sock = io(window.location.origin, {
       transports: ['websocket', 'polling'],
     });
-    socketRef.current = socket;
+    socketRef.current = sock;
+    setSocket(sock);
 
-    socket.on('connect', () => {
+    sock.on('connect', () => {
       setWsConnected(true);
-      socket.emit('authenticate', { userId: 'default_user' });
+      sock.emit('authenticate', { userId: 'default_user' });
       addLog('INFO', 'WebSocket connected');
     });
 
-    socket.on('disconnect', () => {
+    sock.on('disconnect', () => {
       setWsConnected(false);
       addLog('ERROR', 'WebSocket disconnected');
     });
 
-    socket.on('ai_decision', decision => {
+    sock.on('trading_log', log => {
+      if (log.symbol && log.data?.indicators) {
+        const ind = log.data.indicators;
+        setLiveIndicators(prev => ({
+          ...prev,
+          [log.symbol]: {
+            rsi: parseFloat(ind.rsi),
+            macd: parseFloat(ind.macd),
+            volumeRatio: parseFloat(ind.volumeRatio),
+            adx: parseFloat(ind.adx),
+            bbPercentB: ind.bbPercentB != null ? parseFloat(ind.bbPercentB) / 100 : null,
+            regime: log.data.regime,
+            updatedAt: log.timestamp || new Date().toISOString(),
+          },
+        }));
+      }
+      if (log.message) {
+        addLog(log.level || 'INFO', log.message, log.sessionName || log.sessionId);
+      }
+    });
+
+    sock.on('ai_decision', decision => {
       const action = decision.action || 'HOLD';
       const confidence = decision.confidence
         ? ` (${(decision.confidence * 100).toFixed(0)}%)`
@@ -154,7 +189,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       );
     });
 
-    socket.on('trade_executed', trade => {
+    sock.on('trade_executed', trade => {
       addLog(
         'EXEC',
         `${trade.side?.toUpperCase()} ${trade.quantity} ${trade.symbol} @ ${trade.price ? '$' + parseFloat(trade.price).toFixed(2) : 'market'}${trade.pnl ? ' P&L: $' + parseFloat(trade.pnl).toFixed(2) : ''}`,
@@ -177,7 +212,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       setTimeout(fetchData, 1000);
     });
 
-    socket.on('alert', alert => {
+    sock.on('alert', alert => {
       addLog(
         alert.severity === 'critical' || alert.severity === 'high'
           ? 'ALERT'
@@ -187,7 +222,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       );
     });
 
-    socket.on('position_update', pos => {
+    sock.on('position_update', pos => {
       addLog(
         'INFO',
         `Position update: ${pos.symbol} qty=${pos.quantity} unrealized=${pos.unrealizedPnL ? '$' + parseFloat(pos.unrealizedPnL).toFixed(2) : 'N/A'}`,
@@ -196,14 +231,17 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     });
 
     return () => {
-      socket.disconnect();
+      sock.disconnect();
+      setSocket(null);
     };
   }, [addLog, fetchData]);
 
   const runningSessions = sessions.filter(s => s.status === 'running').length;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+      <MarketStrip />
+
       <SystemHealthBar
         health={health}
         runningSessions={runningSessions}
@@ -211,33 +249,82 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         wsConnected={wsConnected}
       />
 
-      <AccountSummaryPanel
-        account={account}
-        loading={!account && !accountError}
-        error={accountError}
-      />
+      <LivePriceTickers socket={socket} symbols={TRACKED_SYMBOLS} positions={positions} />
 
-      <OpenPositionsTable
-        positions={positions}
-        loading={positions.length === 0 && !positionsError}
-        error={positionsError}
-      />
+      <SoxlChart symbol="SOXL" />
 
-      <TodaysTradeLedger
-        orders={orders}
-        loading={orders.length === 0 && !ordersError}
-        error={ordersError}
-      />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+          gap: theme.spacing.md,
+        }}
+      >
+        <AccountSummaryPanel
+          account={account}
+          loading={!account && !accountError}
+          error={accountError}
+        />
+        <GatesAndIndicatorsPanel
+          logs={logs}
+          indicators={liveIndicators}
+          sentiment={sentiment}
+        />
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+          gap: theme.spacing.md,
+        }}
+      >
+        <SoxxMovers />
+        <MultiTimeframeTechnicals symbol="SOXL" />
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+          gap: theme.spacing.md,
+        }}
+      >
+        <OpenPositionsTable
+          positions={positions}
+          loading={positions.length === 0 && !positionsError}
+          error={positionsError}
+        />
+        <SignalActivityPanel logs={logs} />
+      </div>
 
       <SessionCardGrid sessions={sessions} flashTrades={flashTrades} />
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
           gap: theme.spacing.md,
         }}
       >
+        <SemiconductorSentimentPanel />
+        <TechnicalRegimeCard symbol="SOXL" />
+      </div>
+
+      <LeveragedEtfPanel enabled={true} />
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+          gap: theme.spacing.md,
+        }}
+      >
+        <TodaysTradeLedger
+          orders={orders}
+          loading={orders.length === 0 && !ordersError}
+          error={ordersError}
+        />
         <CommandCenterLogFeed logs={logs} sentiment={sentiment} />
       </div>
     </div>
