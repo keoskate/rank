@@ -2302,6 +2302,24 @@ module.exports = function (deps) {
     }
   });
 
+  // Get historical OHLCV bars from Polygon — chart-ready format
+  router.get('/api/polygon/bars/:symbol/:multiplier/:timespan', async (req, res) => {
+    try {
+      const { symbol, multiplier, timespan } = req.params;
+      const { from, to, limit } = req.query;
+      const mult = parseInt(multiplier, 10) || 5;
+      const bars = await polygonClient.getAggregates(symbol.toUpperCase(), mult, timespan || 'minute', {
+        from: from || undefined,
+        to: to || undefined,
+        limit: limit ? parseInt(limit, 10) : 5000,
+      });
+      res.json({ symbol: symbol.toUpperCase(), multiplier: mult, timespan, count: bars.length, bars });
+    } catch (error) {
+      console.error('Error fetching Polygon bars:', error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get real-time price for a symbol (combines multiple sources)
   router.get('/api/realtime/price/:symbol', async (req, res) => {
     try {

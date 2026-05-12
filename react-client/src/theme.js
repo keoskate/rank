@@ -59,6 +59,20 @@ export const theme = {
     navAI: '#6f42c1',
     navDay: '#fd7e14',
     navInvest: '#27ae60',
+
+    // Retro/analog palette — warm parchment + charcoal + muted accents.
+    // Additive tokens for the command center aesthetic refresh.
+    // Use the muted variants for steady-state UI; reserve the bright
+    // semantic colors (success/error/etc) for moments that need to pop
+    // (price-tick flashes, urgent alerts).
+    parchment: '#faf8f1',      // warm off-white page background
+    paper: '#fafaf5',          // slightly cooler off-white for cards
+    charcoal: '#1a1a1a',       // primary text
+    ink: '#2a2825',            // secondary text
+    ruler: '#d8d4c8',          // subtle warm border line
+    successMuted: '#5a7a4f',   // forest green
+    errorMuted: '#a85546',     // terracotta red
+    warningMuted: '#b08a3e',   // amber
   },
 
   // Spacing Scale (8px base unit)
@@ -75,6 +89,8 @@ export const theme = {
   typography: {
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamilyMono:
+      '"SF Mono", "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas, monospace',
     fontSize: {
       xs: '11px',
       sm: '12px',
@@ -93,6 +109,7 @@ export const theme = {
 
   // Border Radius
   borderRadius: {
+    xs: '2px',  // retro-analog feel
     sm: '4px',
     md: '6px',
     lg: '8px',

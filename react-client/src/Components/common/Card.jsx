@@ -22,24 +22,24 @@ const Card = ({
   const getVariantStyle = () => {
     const variants = {
       default: {
-        backgroundColor: theme.colors.surface,
-        border: `1px solid ${theme.colors.gray300}`,
+        backgroundColor: theme.colors.paper || theme.colors.surface,
+        border: `1px solid ${theme.colors.ruler || theme.colors.gray300}`,
       },
       success: {
         backgroundColor: theme.colors.successLight,
-        border: `2px solid ${theme.colors.success}`,
+        border: `1px solid ${theme.colors.success}`,
       },
       error: {
         backgroundColor: theme.colors.errorLight,
-        border: `2px solid ${theme.colors.error}`,
+        border: `1px solid ${theme.colors.error}`,
       },
       warning: {
         backgroundColor: theme.colors.warningLight,
-        border: `2px solid ${theme.colors.warning}`,
+        border: `1px solid ${theme.colors.warning}`,
       },
       info: {
         backgroundColor: theme.colors.infoLight,
-        border: `2px solid ${theme.colors.info}`,
+        border: `1px solid ${theme.colors.info}`,
       },
     };
     return variants[variant] || variants.default;
@@ -58,8 +58,7 @@ const Card = ({
   const cardStyle = {
     ...getVariantStyle(),
     padding: getPaddingStyle(),
-    borderRadius: theme.borderRadius.md,
-    boxShadow: theme.shadows.sm,
+    borderRadius: theme.borderRadius.xs || theme.borderRadius.sm,
     ...style,
   };
 

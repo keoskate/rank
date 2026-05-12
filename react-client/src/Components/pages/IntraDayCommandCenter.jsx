@@ -238,6 +238,54 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
   const runningSessions = sessions.filter(s => s.status === 'running').length;
 
+  const SectionHeader = ({ index, label }) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: theme.spacing.md,
+        marginTop: theme.spacing.lg,
+        marginBottom: 4,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: theme.typography.fontFamilyMono,
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          color: theme.colors.gray400,
+          letterSpacing: '0.08em',
+        }}
+      >
+        {String(index).padStart(2, '0')}
+      </span>
+      <span
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          letterSpacing: '0.22em',
+          color: theme.colors.charcoal,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </span>
+      <div style={{ flex: 1, height: 1, background: theme.colors.ruler }} />
+    </div>
+  );
+
+  const TwoCol = ({ children }) => (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+        gap: theme.spacing.md,
+      }}
+    >
+      {children}
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
       <MarketStrip />
@@ -249,84 +297,51 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         wsConnected={wsConnected}
       />
 
+      <SectionHeader index={1} label="At a glance" />
+      <AccountSummaryPanel
+        account={account}
+        loading={!account && !accountError}
+        error={accountError}
+      />
+
+      <SectionHeader index={2} label="Active trading" />
       <LivePriceTickers socket={socket} symbols={TRACKED_SYMBOLS} positions={positions} />
-
       <SoxlChart symbol="SOXL" />
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-          gap: theme.spacing.md,
-        }}
-      >
-        <AccountSummaryPanel
-          account={account}
-          loading={!account && !accountError}
-          error={accountError}
+      <TwoCol>
+        <OpenPositionsTable
+          positions={positions}
+          loading={positions.length === 0 && !positionsError}
+          error={positionsError}
         />
         <GatesAndIndicatorsPanel
           logs={logs}
           indicators={liveIndicators}
           sentiment={sentiment}
         />
-      </div>
+      </TwoCol>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-          gap: theme.spacing.md,
-        }}
-      >
+      <SectionHeader index={3} label="Market context" />
+      <TwoCol>
         <SoxxMovers />
         <MultiTimeframeTechnicals symbol="SOXL" />
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-          gap: theme.spacing.md,
-        }}
-      >
-        <OpenPositionsTable
-          positions={positions}
-          loading={positions.length === 0 && !positionsError}
-          error={positionsError}
-        />
-        <SignalActivityPanel logs={logs} />
-      </div>
-
-      <SessionCardGrid sessions={sessions} flashTrades={flashTrades} />
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-          gap: theme.spacing.md,
-        }}
-      >
+      </TwoCol>
+      <TwoCol>
         <SemiconductorSentimentPanel />
         <TechnicalRegimeCard symbol="SOXL" />
-      </div>
-
+      </TwoCol>
       <LeveragedEtfPanel enabled={true} />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-          gap: theme.spacing.md,
-        }}
-      >
+      <SectionHeader index={4} label="Activity" />
+      <SessionCardGrid sessions={sessions} flashTrades={flashTrades} />
+      <TwoCol>
+        <SignalActivityPanel logs={logs} />
         <TodaysTradeLedger
           orders={orders}
           loading={orders.length === 0 && !ordersError}
           error={ordersError}
         />
-        <CommandCenterLogFeed logs={logs} sentiment={sentiment} />
-      </div>
+      </TwoCol>
+      <CommandCenterLogFeed logs={logs} sentiment={sentiment} />
     </div>
   );
 };

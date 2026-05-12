@@ -4,10 +4,10 @@ import theme from '../../theme';
 import Card from '../common/Card';
 
 const TIMEFRAMES = [
-  { label: '5m',  param: '5',   limit: 78 },
-  { label: '15m', param: '15',  limit: 130 },
-  { label: '1H',  param: '60',  limit: 140 },
-  { label: '1D',  param: 'day', limit: 90 },
+  { label: '5m',  multiplier: 5,  timespan: 'minute', limit: 78,  lookbackDays: 3 },
+  { label: '15m', multiplier: 15, timespan: 'minute', limit: 130, lookbackDays: 5 },
+  { label: '1H',  multiplier: 1,  timespan: 'hour',   limit: 140, lookbackDays: 14 },
+  { label: '1D',  multiplier: 1,  timespan: 'day',    limit: 90,  lookbackDays: 180 },
 ];
 
 const REFRESH_MS = 60000;
@@ -84,25 +84,26 @@ const SoxlChart = ({ symbol = 'SOXL' }) => {
       setErrorMsg(null);
       try {
         const now = new Date();
-        const lookbackDays = tf.param === 'day' ? 180 : tf.param === '60' ? 14 : 3;
-        const from = new Date(now.getTime() - lookbackDays * 86400000);
-        const url = `/api/alpaca/bars/${symbol}/${tf.param}?from=${from.toISOString()}&to=${now.toISOString()}&limit=${tf.limit * 2}`;
+        const from = new Date(now.getTime() - tf.lookbackDays * 86400000);
+        const fromStr = from.toISOString().slice(0, 10);
+        const toStr = now.toISOString().slice(0, 10);
+        const url = `/api/polygon/bars/${symbol}/${tf.multiplier}/${tf.timespan}?from=${fromStr}&to=${toStr}&limit=${tf.limit * 2}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const bars = (json.bars || json.results || []).slice(-tf.limit);
+        const bars = (json.bars || []).slice(-tf.limit);
         if (cancelled || !seriesRef.current || !volumeRef.current) return;
         const candleData = bars.map(b => ({
-          time: Math.floor((b.t || b.timestamp) / 1000),
-          open: b.o ?? b.open,
-          high: b.h ?? b.high,
-          low: b.l ?? b.low,
-          close: b.c ?? b.close,
+          time: Math.floor(b.timestamp / 1000),
+          open: b.open,
+          high: b.high,
+          low: b.low,
+          close: b.close,
         })).filter(b => Number.isFinite(b.open));
         const volumeData = bars.map(b => ({
-          time: Math.floor((b.t || b.timestamp) / 1000),
-          value: b.v ?? b.volume ?? 0,
-          color: (b.c ?? b.close) >= (b.o ?? b.open) ? theme.colors.successLight : theme.colors.errorLight,
+          time: Math.floor(b.timestamp / 1000),
+          value: b.volume ?? 0,
+          color: b.close >= b.open ? theme.colors.successLight : theme.colors.errorLight,
         })).filter(b => b.value > 0);
         seriesRef.current.setData(candleData);
         volumeRef.current.setData(volumeData);
@@ -144,24 +145,27 @@ const SoxlChart = ({ symbol = 'SOXL' }) => {
           )}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          {TIMEFRAMES.map(t => (
-            <button
-              key={t.param}
-              onClick={() => setTf(t)}
-              style={{
-                padding: '4px 10px',
-                fontSize: theme.typography.fontSize.xs,
-                fontWeight: tf.param === t.param ? 700 : 500,
-                color: tf.param === t.param ? '#fff' : theme.colors.gray700,
-                background: tf.param === t.param ? theme.colors.primary : theme.colors.gray100,
-                border: 'none',
-                borderRadius: 12,
-                cursor: 'pointer',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+          {TIMEFRAMES.map(t => {
+            const active = tf.label === t.label;
+            return (
+              <button
+                key={t.label}
+                onClick={() => setTf(t)}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: theme.typography.fontSize.xs,
+                  fontWeight: active ? 700 : 500,
+                  color: active ? '#fff' : theme.colors.gray700,
+                  background: active ? theme.colors.primary : theme.colors.gray100,
+                  border: 'none',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div ref={containerRef} style={{ width: '100%', height: 320 }} />

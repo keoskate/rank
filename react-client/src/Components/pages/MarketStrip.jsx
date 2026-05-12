@@ -4,8 +4,8 @@ import theme from '../../theme';
 const SYMBOLS = [
   { sym: 'SPY',  label: 'S&P' },
   { sym: 'QQQ',  label: 'NDX' },
-  { sym: 'IWM',  label: 'Russ' },
-  { sym: 'DIA',  label: 'Dow' },
+  { sym: 'IWM',  label: 'RUT' },
+  { sym: 'DIA',  label: 'DJI' },
   { sym: 'VIX',  label: 'VIX',  polygonOverride: 'I:VIX' },
   { sym: 'SOXX', label: 'SOXX' },
 ];
@@ -23,16 +23,49 @@ const pctChange = quote => {
 const Cell = memo(({ label, quote, loading }) => {
   const last = quote?.last ?? quote?.close;
   const pct = pctChange(quote);
-  const color = pct == null ? theme.colors.gray500 : pct >= 0 ? theme.colors.success : theme.colors.error;
+  const color = pct == null
+    ? theme.colors.gray500
+    : pct >= 0 ? theme.colors.successMuted : theme.colors.errorMuted;
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, paddingRight: theme.spacing.md, borderRight: `1px solid ${theme.colors.gray200}` }}>
-      <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray600, fontWeight: 600, letterSpacing: '0.05em' }}>
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'baseline',
+        gap: 8,
+        padding: '0 16px',
+        position: 'relative',
+      }}
+    >
+      <span
+        style={{
+          fontSize: '0.7rem',
+          color: theme.colors.gray500,
+          fontWeight: 700,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+        }}
+      >
         {label}
       </span>
-      <span style={{ fontSize: theme.typography.fontSize.sm, fontFamily: 'monospace', fontWeight: 600 }}>
+      <span
+        style={{
+          fontFamily: theme.typography.fontFamilyMono,
+          fontWeight: 600,
+          color: theme.colors.charcoal,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {loading || last == null ? '—' : Number(last).toFixed(2)}
       </span>
-      <span style={{ fontSize: theme.typography.fontSize.xs, fontFamily: 'monospace', color, fontWeight: 600 }}>
+      <span
+        style={{
+          fontFamily: theme.typography.fontFamilyMono,
+          fontSize: '0.85rem',
+          color,
+          fontWeight: 600,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {pct == null ? '' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
       </span>
     </div>
@@ -76,15 +109,20 @@ const MarketStrip = () => {
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: theme.spacing.md,
-        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-        background: theme.colors.gray100,
-        borderRadius: 4,
-        border: `1px solid ${theme.colors.gray200}`,
+        alignItems: 'baseline',
+        padding: '10px 0',
+        borderTop: `1px solid ${theme.colors.ruler}`,
+        borderBottom: `1px solid ${theme.colors.ruler}`,
+        gap: 0,
       }}
     >
-      {SYMBOLS.map(({ sym, label }) => (
-        <Cell key={sym} label={label} quote={quotes[sym]} loading={loading} />
+      {SYMBOLS.map(({ sym, label }, idx) => (
+        <span key={sym} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+          <Cell label={label} quote={quotes[sym]} loading={loading} />
+          {idx < SYMBOLS.length - 1 && (
+            <span style={{ color: theme.colors.ruler, fontFamily: theme.typography.fontFamilyMono }}>│</span>
+          )}
+        </span>
       ))}
     </div>
   );
