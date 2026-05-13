@@ -34,7 +34,13 @@ const SignalActivityPanel = ({ logs }) => {
   }, [logs, active]);
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (!el) return;
+    // Only auto-scroll to bottom if the user is already there (within
+    // 60px of the end). Avoids the annoyance of getting yanked back to
+    // the bottom every 5s when they've scrolled up to read older entries.
+    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    if (isAtBottom) el.scrollTop = el.scrollHeight;
   }, [filtered]);
 
   const tally = useMemo(() => {
