@@ -379,7 +379,7 @@ const DataExplorer = () => {
             borderRadius: theme.borderRadius.sm,
             cursor: 'pointer',
             fontSize: theme.typography.fontSize.sm,
-            backgroundColor: theme.colors.white || '#fff',
+            backgroundColor: theme.colors.surface,
           }}
         >
           Refresh now
@@ -450,7 +450,7 @@ const DataExplorer = () => {
                     marginBottom: theme.spacing.xs,
                     border: `1px solid ${theme.colors.gray200}`,
                     borderRadius: theme.borderRadius.sm,
-                    backgroundColor: theme.colors.white || '#fff',
+                    backgroundColor: theme.colors.surface,
                   }}
                 >
                   <summary

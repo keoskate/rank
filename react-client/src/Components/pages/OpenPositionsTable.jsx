@@ -63,7 +63,7 @@ const OpenPositionsTable = ({ positions, loading, error }) => {
     <div
       style={{
         marginBottom: theme.spacing.md,
-        backgroundColor: theme.colors.white || '#fff',
+        backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.gray200}`,
         borderRadius: theme.borderRadius.md,
         overflow: 'hidden',

@@ -26,7 +26,7 @@ const SoxlChart = ({ symbol = 'SOXL' }) => {
     if (!containerRef.current) return;
     const chart = createChart(containerRef.current, {
       layout: {
-        backgroundColor: theme.colors.white || '#ffffff',
+        backgroundColor: theme.colors.surface,
         textColor: theme.colors.gray700,
       },
       grid: {

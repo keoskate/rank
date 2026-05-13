@@ -105,7 +105,7 @@ const Section = ({ title, source, children, defaultOpen = true }) => (
       marginBottom: theme.spacing.md,
       border: `1px solid ${theme.colors.gray200}`,
       borderRadius: theme.borderRadius.md,
-      backgroundColor: theme.colors.white || '#fff',
+      backgroundColor: theme.colors.surface,
     }}
   >
     <summary

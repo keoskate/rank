@@ -129,7 +129,7 @@ const AccountSummaryPanel = ({ account, loading, error }) => {
         display: 'flex',
         flexWrap: 'wrap',
         gap: 0,
-        backgroundColor: theme.colors.white || '#fff',
+        backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.gray200}`,
         borderRadius: theme.borderRadius.md,
         marginBottom: theme.spacing.md,
