@@ -18,6 +18,57 @@ import SemiconductorSentimentPanel from '../trading/SemiconductorSentimentPanel'
 import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
 
+// Defined at module scope so referential identity is stable across parent
+// re-renders (5s poll cycle). Previously defined inline → new function
+// reference each render → forced remount of every SectionHeader + TwoCol.
+const SectionHeader = ({ index, label }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: theme.spacing.md,
+      marginTop: theme.spacing.lg,
+      marginBottom: 4,
+    }}
+  >
+    <span
+      style={{
+        fontFamily: theme.typography.fontFamilyMono,
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        color: theme.colors.gray400,
+        letterSpacing: '0.08em',
+      }}
+    >
+      {String(index).padStart(2, '0')}
+    </span>
+    <span
+      style={{
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        letterSpacing: '0.22em',
+        color: theme.colors.charcoal,
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </span>
+    <div style={{ flex: 1, height: 1, background: theme.colors.ruler }} />
+  </div>
+);
+
+const TwoCol = ({ children }) => (
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+      gap: theme.spacing.md,
+    }}
+  >
+    {children}
+  </div>
+);
+
 const MAX_LOGS = 200;
 const POLL_INTERVAL = 5000;
 const TRACKED_SYMBOLS = ['SOXL', 'SOXS'];
@@ -237,54 +288,6 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   }, [addLog, fetchData]);
 
   const runningSessions = sessions.filter(s => s.status === 'running').length;
-
-  const SectionHeader = ({ index, label }) => (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: theme.spacing.md,
-        marginTop: theme.spacing.lg,
-        marginBottom: 4,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: theme.typography.fontFamilyMono,
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          color: theme.colors.gray400,
-          letterSpacing: '0.08em',
-        }}
-      >
-        {String(index).padStart(2, '0')}
-      </span>
-      <span
-        style={{
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          letterSpacing: '0.22em',
-          color: theme.colors.charcoal,
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </span>
-      <div style={{ flex: 1, height: 1, background: theme.colors.ruler }} />
-    </div>
-  );
-
-  const TwoCol = ({ children }) => (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-        gap: theme.spacing.md,
-      }}
-    >
-      {children}
-    </div>
-  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
