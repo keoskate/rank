@@ -95,6 +95,15 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const [socket, setSocket] = useState(null);
 
   const socketRef = useRef(null);
+  // Guards setState calls in fetchData from firing after unmount — critical
+  // because the page polls 5s with a Promise.all of 5 endpoints; navigating
+  // away mid-fetch otherwise triggers "setState on unmounted" warnings.
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const addLog = useCallback((level, message, session) => {
     setLogs(prev => {
@@ -123,6 +132,8 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
           fetch(`/api/alpaca/positions?mode=${tradingMode}`),
           fetch(`/api/alpaca/orders?mode=${tradingMode}&status=all&limit=100`),
         ]);
+
+      if (!mountedRef.current) return; // unmounted during Promise.all → bail
 
       // Server is reachable if any request succeeded
       newHealth.server = sessionsRes.ok ? 'ok' : 'degraded';
@@ -167,6 +178,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         setOrdersError(`HTTP ${ordersRes.status}`);
       }
     } catch (err) {
+      if (!mountedRef.current) return;
       newHealth.server = 'down';
       newHealth.alpaca = 'down';
       newHealth.sentiment = 'down';
@@ -175,6 +187,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       setOrdersError(err?.message || 'fetch failed');
     }
 
+    if (!mountedRef.current) return;
     setHealth(newHealth);
     setLastRefresh(new Date());
   }, [tradingMode]);
