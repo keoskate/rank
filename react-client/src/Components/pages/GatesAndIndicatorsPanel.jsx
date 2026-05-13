@@ -43,7 +43,7 @@ const indicatorColor = (label, val) => {
   return theme.colors.gray700;
 };
 
-const SymbolIndicators = ({ symbol, indicators }) => {
+const SymbolIndicators = memo(({ symbol, indicators }) => {
   if (!indicators) {
     return (
       <div style={{ flex: 1, minWidth: 220, padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray200}`, borderRadius: 4 }}>
@@ -79,7 +79,7 @@ const SymbolIndicators = ({ symbol, indicators }) => {
       </div>
     </div>
   );
-};
+});
 
 const GatesAndIndicatorsPanel = ({ logs, indicators, sentiment }) => {
   const recentGates = useMemo(() => {

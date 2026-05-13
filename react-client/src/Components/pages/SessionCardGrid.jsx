@@ -61,7 +61,7 @@ const StatusDot = ({ status }) => {
   );
 };
 
-const SessionCard = ({ session, isFlashing }) => {
+const SessionCard = memo(({ session, isFlashing }) => {
   const { stats = {}, positions = [], recentDecisions = [], config = {} } = session;
   const lastDecision = recentDecisions[0];
   const pnl = stats.totalPnL || 0;
@@ -258,7 +258,7 @@ const SessionCard = ({ session, isFlashing }) => {
       </div>
     </Card>
   );
-};
+});
 
 const SessionCardGrid = ({ sessions, flashTrades }) => {
   if (!sessions || sessions.length === 0) {

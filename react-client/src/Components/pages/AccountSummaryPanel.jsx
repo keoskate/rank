@@ -19,7 +19,7 @@ const formatPct = value => {
   return `${sign}${num.toFixed(2)}%`;
 };
 
-const Stat = ({ label, value, sub, valueColor, mono = true }) => (
+const Stat = memo(({ label, value, sub, valueColor, mono = true }) => (
   <div
     style={{
       flex: 1,
@@ -62,7 +62,7 @@ const Stat = ({ label, value, sub, valueColor, mono = true }) => (
       </div>
     )}
   </div>
-);
+));
 
 const AccountSummaryPanel = ({ account, loading, error }) => {
   if (error) {
