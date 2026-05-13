@@ -101,6 +101,10 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   // Tracks pending setTimeouts (flashTrade clear, post-trade refresh) so we
   // can cancel them on unmount instead of leaking + writing to dead state.
   const timeoutsRef = useRef(new Set());
+  // Ref keeps the latest fetchData callable from inside the WebSocket
+  // useEffect without forcing the socket to tear down + reconnect every
+  // time tradingMode changes (fetchData identity is gated on tradingMode).
+  const fetchDataRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -201,6 +205,10 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     setLastRefresh(new Date());
   }, [tradingMode]);
 
+  // Keep the ref pointing at the latest fetchData so the WebSocket effect
+  // can call it without depending on fetchData identity.
+  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
+
   // Initial fetch + polling
   useEffect(() => {
     fetchData();
@@ -289,8 +297,9 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         }, 2000);
       }
 
-      // Refresh data after trade
-      trackedTimeout(fetchData, 1000);
+      // Refresh data after trade (via ref so we don't depend on fetchData
+      // identity in the WebSocket effect's deps)
+      trackedTimeout(() => fetchDataRef.current?.(), 1000);
     });
 
     sock.on('alert', alert => {
@@ -317,7 +326,11 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current.clear();
     };
-  }, [addLog, fetchData]);
+    // Intentionally omit fetchData from deps — accessed via fetchDataRef
+    // so socket persists across tradingMode changes. addLog is stable
+    // (useCallback []) so it's safe to omit too.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const runningSessions = sessions.filter(s => s.status === 'running').length;
 
