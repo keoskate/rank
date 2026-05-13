@@ -4,6 +4,7 @@
  * MVP Flow: Rankings → Stock Detail → Trade
  * Clean navigation with primary nav + Tools dropdown
  */
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import NavBar from './NavBar';
 import StockDataProvider from './StockDataProvider';
@@ -28,10 +29,13 @@ import StrategyLabPage from './pages/StrategyLabPage';
 import OvernightOptimizationPage from './pages/OvernightOptimizationPage';
 import CharlieStrategyPage from './pages/CharlieStrategyPage';
 import SemiconductorDemoPage from './pages/SemiconductorDemoPage';
-import IntraDayCommandCenter from './pages/IntraDayCommandCenter';
+// Lazy-loaded — pulls in lightweight-charts, socket.io-client, and 11 sub-panels (~1MB).
+// Only loads when user actually navigates to /command-center.
+const IntraDayCommandCenter = lazy(() => import('./pages/IntraDayCommandCenter'));
 import DataExplorer from './pages/DataExplorer';
 import SymbolInspector from './pages/SymbolInspector';
-import ProbabilityScannerPage from './pages/ProbabilityScannerPage';
+// Lazy-loaded — scanner page pulls in all its sub-components.
+const ProbabilityScannerPage = lazy(() => import('./pages/ProbabilityScannerPage'));
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -53,6 +57,7 @@ function App() {
               <NavBar />
               {/* Main routes - using React Router v6 syntax */}
               <ErrorBoundary message="This page encountered an error. Try navigating to a different page.">
+                <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: '#888', fontFamily: 'monospace' }}>Loading…</div>}>
                 <Routes>
                   {/* MVP Primary Routes */}
                   <Route path="/" element={<RankingsPage />} />
@@ -113,6 +118,7 @@ function App() {
                     element={<ComponentCatalog />}
                   />
                 </Routes>
+                </Suspense>
               </ErrorBoundary>
             </div>
           </Router>

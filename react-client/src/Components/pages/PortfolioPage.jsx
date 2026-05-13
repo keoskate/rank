@@ -5,7 +5,7 @@
  * Analytics tab provides comprehensive trading performance analysis.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import theme from '../../theme';
 import Card from '../common/Card';
@@ -13,7 +13,10 @@ import Button from '../common/Button';
 import MetricCard from '../common/MetricCard';
 import PortfolioPerformanceChart from '../common/PortfolioPerformanceChart';
 import PerformanceAnalyticsPanel from './PerformanceAnalyticsPanel';
-import IntraDayCommandCenter from './IntraDayCommandCenter';
+// Lazy-loaded — only ~10% of portfolio sessions open the Command Center tab.
+// Avoids pulling lightweight-charts, socket.io-client, and 11 sub-panels into
+// the main portfolio bundle.
+const IntraDayCommandCenter = lazy(() => import('./IntraDayCommandCenter'));
 
 const PortfolioPage = () => {
   const navigate = useNavigate();
@@ -303,7 +306,9 @@ const PortfolioPage = () => {
 
       {/* Command Center Tab Content */}
       {activeTab === 'command' && (
-        <IntraDayCommandCenter tradingMode={tradingMode} />
+        <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: '#888', fontFamily: 'monospace' }}>Loading command center…</div>}>
+          <IntraDayCommandCenter tradingMode={tradingMode} />
+        </Suspense>
       )}
 
       {/* Overview Tab Content */}
