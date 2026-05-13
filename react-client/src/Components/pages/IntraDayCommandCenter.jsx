@@ -94,11 +94,13 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const [liveIndicators, setLiveIndicators] = useState({});
   const [socket, setSocket] = useState(null);
 
-  const socketRef = useRef(null);
   // Guards setState calls in fetchData from firing after unmount — critical
   // because the page polls 5s with a Promise.all of 5 endpoints; navigating
   // away mid-fetch otherwise triggers "setState on unmounted" warnings.
   const mountedRef = useRef(true);
+  // Tracks pending setTimeouts (flashTrade clear, post-trade refresh) so we
+  // can cancel them on unmount instead of leaking + writing to dead state.
+  const timeoutsRef = useRef(new Set());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -211,8 +213,16 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     const sock = io(window.location.origin, {
       transports: ['websocket', 'polling'],
     });
-    socketRef.current = sock;
     setSocket(sock);
+
+    const trackedTimeout = (cb, ms) => {
+      const id = setTimeout(() => {
+        timeoutsRef.current.delete(id);
+        cb();
+      }, ms);
+      timeoutsRef.current.add(id);
+      return id;
+    };
 
     sock.on('connect', () => {
       setWsConnected(true);
@@ -270,7 +280,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       // Flash the session card
       if (trade.sessionId) {
         setFlashTrades(prev => new Set(prev).add(trade.sessionId));
-        setTimeout(() => {
+        trackedTimeout(() => {
           setFlashTrades(prev => {
             const next = new Set(prev);
             next.delete(trade.sessionId);
@@ -280,7 +290,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       }
 
       // Refresh data after trade
-      setTimeout(fetchData, 1000);
+      trackedTimeout(fetchData, 1000);
     });
 
     sock.on('alert', alert => {
@@ -304,6 +314,8 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     return () => {
       sock.disconnect();
       setSocket(null);
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current.clear();
     };
   }, [addLog, fetchData]);
 
