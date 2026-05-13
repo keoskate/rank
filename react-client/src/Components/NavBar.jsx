@@ -16,6 +16,7 @@ const NavBar = () => {
     { path: '/', label: 'Rankings' },
     { path: '/portfolio', label: 'Portfolio' },
     { path: '/live-trading', label: 'Trading' },
+    { path: '/scanner', label: 'Scanner' },
   ];
 
   const toolsNav = [

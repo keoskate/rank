@@ -31,6 +31,7 @@ import SemiconductorDemoPage from './pages/SemiconductorDemoPage';
 import IntraDayCommandCenter from './pages/IntraDayCommandCenter';
 import DataExplorer from './pages/DataExplorer';
 import SymbolInspector from './pages/SymbolInspector';
+import ProbabilityScannerPage from './pages/ProbabilityScannerPage';
 
 // Legacy pages (keep for now)
 import InvestTab from './pages/InvestTab';
@@ -95,6 +96,7 @@ function App() {
                   />
                   <Route path="/data-explorer" element={<DataExplorer />} />
                   <Route path="/inspect" element={<SymbolInspector />} />
+                  <Route path="/scanner" element={<ProbabilityScannerPage />} />
 
                   {/* Legacy routes (keep accessible) */}
                   <Route path="/invest" element={<InvestTab />} />

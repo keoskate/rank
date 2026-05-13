@@ -915,6 +915,7 @@ app.use(require('./routes/backtest')(deps));
 app.use(require('./routes/strategyLab')(deps));
 app.use(require('./routes/sprint')(deps));
 app.use(require('./routes/misc')(deps));
+app.use(require('./routes/scanner')(deps));
 
 // ================================
 // STATIC FILES & CATCH-ALL

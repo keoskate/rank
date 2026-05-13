@@ -912,4 +912,85 @@ async function evaluateExit(sessionId, symbol) {
   }
 }
 
-module.exports = { init, evaluateEntry, evaluateExit };
+/**
+ * Stateless symbol evaluator for the scanner. Returns the same shape
+ * fields as evaluateEntry but without session dependency. Uses default
+ * config (momentum entry strategy, 1.5x volume threshold, RSI 30/70).
+ *
+ * Returns { confidence, signalCount, signalScore, shouldEnter, reasons }.
+ * Confidence is bounded 50-95 like the live engine.
+ */
+function evaluateSymbolStateless(symbol, candles, indicators) {
+  if (!indicators || !indicators.rsi) {
+    return { confidence: 50, signalCount: 0, signalScore: 0, shouldEnter: false, reasons: ['no indicators'] };
+  }
+
+  const SIGNAL_WEIGHTS = {
+    strategyMatch: 20, volumeSpike: 15, rsiSignal: 12,
+    macdConfirmation: 8, bollingerOversold: 10,
+  };
+
+  const factors = [];
+  let signalCount = 0;
+  let signalScore = 0;
+  let strategyMatch = false;
+
+  const rsiValue = indicators.rsi.value;
+  const volumeRatio = indicators.volume?.ratio ?? 1;
+  const hasVolumeSpike = volumeRatio >= 1.5;
+  const macdBullish = !!(indicators.macd?.bullish || indicators.macd?.crossover);
+  const bbPercentB = indicators.bollingerBands?.percentB;
+
+  // Strategy match: momentum-style entry (RSI 50-65) is the default;
+  // we also accept dip-style (RSI < 45 + below VWAP) for scanner breadth.
+  if (rsiValue > 50 && rsiValue < 65) {
+    strategyMatch = true;
+    signalCount++;
+    signalScore += SIGNAL_WEIGHTS.strategyMatch;
+    factors.push(`RSI momentum zone (${rsiValue.toFixed(1)})`);
+  } else if (rsiValue < 45 && indicators.vwap && candles?.length) {
+    const lastClose = candles[candles.length - 1].close;
+    const vwapValue = indicators.vwap.value || indicators.vwap.price;
+    if (vwapValue && lastClose < vwapValue) {
+      strategyMatch = true;
+      signalCount += 2;
+      signalScore += SIGNAL_WEIGHTS.strategyMatch;
+      factors.push(`RSI dip (${rsiValue.toFixed(1)}) + below VWAP`);
+    }
+  }
+
+  if (hasVolumeSpike) {
+    signalCount++;
+    signalScore += SIGNAL_WEIGHTS.volumeSpike;
+    factors.push(`Volume ${volumeRatio.toFixed(2)}x`);
+  }
+
+  if (indicators.rsi.divergence?.bullish) {
+    signalCount++;
+    signalScore += SIGNAL_WEIGHTS.rsiSignal;
+    factors.push('Bullish RSI divergence');
+  } else if (rsiValue < 40) {
+    signalCount++;
+    signalScore += SIGNAL_WEIGHTS.rsiSignal;
+    factors.push('RSI oversold zone');
+  }
+
+  if (macdBullish) {
+    signalCount++;
+    signalScore += SIGNAL_WEIGHTS.macdConfirmation;
+    factors.push(indicators.macd.crossover ? 'MACD bullish crossover' : 'MACD bullish');
+  }
+
+  if (Number.isFinite(bbPercentB) && bbPercentB < 0.2) {
+    signalCount++;
+    signalScore += SIGNAL_WEIGHTS.bollingerOversold;
+    factors.push('Near lower Bollinger Band');
+  }
+
+  const confidence = Math.min(50 + signalScore, 95);
+  const shouldEnter = strategyMatch && signalCount >= 2 && confidence >= 65;
+
+  return { confidence, signalCount, signalScore, shouldEnter, reasons: factors };
+}
+
+module.exports = { init, evaluateEntry, evaluateExit, evaluateSymbolStateless };
