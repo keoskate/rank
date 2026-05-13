@@ -174,17 +174,24 @@ async function evaluateEntry(sessionId, symbol) {
           const lastBar = candles[candles.length - 1];
           const breakAbove = lastBar.close > range.high;
           const breakBelow = lastBar.close < range.low;
-          if ((breakAbove || breakBelow) && hasVolumeSpike) {
+          // Long-only: a "short break below" signal can't be executed as a
+          // SELL/short because the engine only places BUY orders. Acting on
+          // short breaks by buying the same symbol inverts the intended
+          // edge (lost $39 on the SOXL ORB short→buy bug 2026-05-13).
+          // Skip short signals entirely until we wire SOXL↔SOXS auto-switch
+          // or add real short-order support.
+          if (breakAbove && hasVolumeSpike) {
             strategyMatch = true;
             signalCount += 2;
             signalScore += SIGNAL_WEIGHTS.strategyMatch;
-            const direction = breakAbove ? 'long' : 'short';
-            orbContext = { range, direction };
+            orbContext = { range, direction: 'long' };
             factors.push(
-              `ORB ${direction} break ${breakAbove ? 'above' : 'below'} $${(breakAbove ? range.high : range.low).toFixed(2)} (range $${range.height.toFixed(2)}) on ${volumeRatio.toFixed(2)}x volume [+${SIGNAL_WEIGHTS.strategyMatch}w]`
+              `ORB long break above $${range.high.toFixed(2)} (range $${range.height.toFixed(2)}) on ${volumeRatio.toFixed(2)}x volume [+${SIGNAL_WEIGHTS.strategyMatch}w]`
             );
-          } else if (breakAbove || breakBelow) {
+          } else if (breakAbove) {
             factors.push(`ORB break with weak volume ${volumeRatio.toFixed(2)}x — needs ≥${volumeMultiplier}x`);
+          } else if (breakBelow) {
+            factors.push(`ORB short break below $${range.low.toFixed(2)} — long-only mode, skipped`);
           }
         }
       }
