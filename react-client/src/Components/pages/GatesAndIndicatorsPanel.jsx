@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { useMemo, useState, useEffect, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
 
@@ -82,6 +82,14 @@ const SymbolIndicators = memo(({ symbol, indicators }) => {
 });
 
 const GatesAndIndicatorsPanel = ({ logs, indicators, sentiment }) => {
+  // Tick every 30s so the 60s TTL window slides forward and stale blocker
+  // chips age out even when no fresh logs are arriving (off-market hours).
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const recentGates = useMemo(() => {
     const counts = new Map();
     const ttl = 60 * 1000;
@@ -97,7 +105,10 @@ const GatesAndIndicatorsPanel = ({ logs, indicators, sentiment }) => {
       counts.set(gate.short, entry);
     }
     return Array.from(counts.values()).sort((a, b) => b.lastAt - a.lastAt);
-  }, [logs]);
+    // tick is intentionally in deps to force recompute as time passes,
+    // even when `logs` hasn't changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logs, tick]);
 
   return (
     <Card>
