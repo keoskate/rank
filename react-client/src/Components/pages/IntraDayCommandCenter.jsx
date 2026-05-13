@@ -105,6 +105,13 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // Returns prev if structurally equal to next so memo'd children skip
+  // re-render. JSON.stringify is sub-ms for our data sizes (~10 positions
+  // × ~10 fields, ~5 sessions, etc.) and cheaper than the child reconcile.
+  const stableSet = (setter, next) => {
+    setter(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  };
+
   const addLog = useCallback((level, message, session) => {
     setLogs(prev => {
       const next = [
@@ -140,12 +147,12 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
       if (sessionsRes.ok) {
         const data = await sessionsRes.json();
-        setSessions(data.sessions || []);
+        stableSet(setSessions, data.sessions || []);
       }
 
       if (sentimentRes.ok) {
         const data = await sentimentRes.json();
-        setSentiment(data);
+        stableSet(setSentiment, data);
         newHealth.sentiment = 'ok';
       } else {
         newHealth.sentiment = 'degraded';
@@ -155,7 +162,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         newHealth.alpaca = 'ok';
         const data = await accountRes.json();
         // The route wraps the body as { success: true, account: {...} }
-        setAccount(data.account || data);
+        stableSet(setAccount, data.account || data);
         setAccountError(null);
       } else {
         newHealth.alpaca = 'degraded';
@@ -164,7 +171,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
       if (positionsRes.ok) {
         const data = await positionsRes.json();
-        setPositions(Array.isArray(data.positions) ? data.positions : []);
+        stableSet(setPositions, Array.isArray(data.positions) ? data.positions : []);
         setPositionsError(null);
       } else {
         setPositionsError(`HTTP ${positionsRes.status}`);
@@ -172,7 +179,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
       if (ordersRes.ok) {
         const data = await ordersRes.json();
-        setOrders(Array.isArray(data.orders) ? data.orders : []);
+        stableSet(setOrders, Array.isArray(data.orders) ? data.orders : []);
         setOrdersError(null);
       } else {
         setOrdersError(`HTTP ${ordersRes.status}`);
