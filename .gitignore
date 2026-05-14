@@ -76,6 +76,10 @@ data/improvement-log.json
 data/cheddarflow-*.json
 data/cheddarflow-*.png
 
+# Scanner + analyst runtime outputs (regenerated each run; keep .gitkeep)
+data/scanner-results/*.json
+data/stock-analyses/*.json
+
 # Training data (personal trade history)
 data/training/*.json
 
