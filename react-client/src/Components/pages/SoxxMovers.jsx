@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import { fmtET } from '../../utils/timeFormat';
 
 // Market caps in $B — approximate, refreshed periodically. Used for context only.
 const SOXX_TOP = [
@@ -127,7 +128,7 @@ const SoxxMovers = () => {
               <span style={{ color: totalContribution >= 0 ? theme.colors.success : theme.colors.error, fontWeight: 700 }}>
                 {totalContribution >= 0 ? '+' : ''}{totalContribution.toFixed(2)}%
               </span>
-              {' '}· {updatedAt ? updatedAt.toLocaleTimeString('en-US', { hour12: false }) : ''}
+              {' '}· {updatedAt ? `${fmtET(updatedAt)} ET` : ''}
             </>
           )}
         </div>

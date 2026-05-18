@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import theme from '../../theme';
+import { fmtET } from '../../utils/timeFormat';
 
 const FLASH_MS = 450;
 
@@ -123,7 +124,7 @@ const Ticker = memo(({ symbol, state, openPrice, position, index }) => {
             textTransform: 'uppercase',
           }}
         >
-          {lastTickAt ? new Date(lastTickAt).toLocaleTimeString('en-US', { hour12: false }) : 'AWAITING TICK'}
+          {lastTickAt ? `${fmtET(lastTickAt)} ET` : 'AWAITING TICK'}
         </div>
       </div>
       <div

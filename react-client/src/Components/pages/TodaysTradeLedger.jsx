@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import theme from '../../theme';
+import { fmtET } from '../../utils/timeFormat';
 
 const formatMoney = (n, opts = {}) => {
   const { showSign = false, decimals = 2 } = opts;
@@ -18,16 +19,7 @@ const formatQty = n => {
   return Math.abs(num) < 1 ? num.toFixed(6) : num.toLocaleString('en-US');
 };
 
-const formatTime = iso => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
+const formatTime = iso => (iso ? fmtET(iso) : '—');
 
 const cell = {
   padding: `${theme.spacing.xs} ${theme.spacing.sm}`,

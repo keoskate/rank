@@ -1,6 +1,7 @@
 import { useEffect, useRef, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import { fmtET } from '../../utils/timeFormat';
 
 const LEVEL_CONFIG = {
   EXEC: { color: theme.colors.success, icon: '$' },
@@ -22,11 +23,7 @@ const CommandCenterLogFeed = ({ logs, sentiment }) => {
     }
   }, [logs]);
 
-  const formatTime = (ts) => {
-    if (!ts) return '--:--:--';
-    const d = new Date(ts);
-    return d.toLocaleTimeString('en-US', { hour12: false });
-  };
+  const formatTime = ts => fmtET(ts);
 
   return (
     <Card style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

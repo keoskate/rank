@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import { fmtET } from '../../utils/timeFormat';
 
 const GATE_PATTERNS = [
   { match: /Phase OPEN/i,       short: 'Phase OPEN',        why: 'Pre-10am — no entries' },
@@ -64,7 +65,7 @@ const SymbolIndicators = memo(({ symbol, indicators }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <div style={{ fontWeight: 700 }}>{symbol}</div>
         <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, fontFamily: 'monospace' }}>
-          {indicators.updatedAt ? new Date(indicators.updatedAt).toLocaleTimeString('en-US', { hour12: false }) : '—'}
+          {indicators.updatedAt ? `${fmtET(indicators.updatedAt)} ET` : '—'}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>

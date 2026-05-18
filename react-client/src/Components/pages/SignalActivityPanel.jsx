@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, memo, useMemo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import { fmtET } from '../../utils/timeFormat';
 
 const FILTERS = {
   ALL:     { label: 'All',     match: () => true },
@@ -22,7 +23,7 @@ const LEVEL_COLOR = {
   EXIT:   theme.colors.warning,
 };
 
-const fmtTime = ts => (ts ? new Date(ts).toLocaleTimeString('en-US', { hour12: false }) : '--:--:--');
+const fmtTime = ts => fmtET(ts);
 
 const SignalActivityPanel = ({ logs }) => {
   const [active, setActive] = useState('ALL');
