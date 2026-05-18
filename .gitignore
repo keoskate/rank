@@ -80,6 +80,10 @@ data/cheddarflow-*.png
 data/scanner-results/*.json
 data/stock-analyses/*.json
 
+# UI inspection artifacts (Playwright screenshots + logs)
+data/ui-inspect/*.png
+data/ui-inspect/*.json
+
 # Training data (personal trade history)
 data/training/*.json
 
