@@ -18,6 +18,7 @@
  */
 
 process.env.AI_ENGINE_DRY_RUN = '1';
+require('dotenv').config();
 
 const { loadAllBrokers } = require('../server/brokers/brokerLoader');
 const { brokerToSessionConfig } = require('../server/brokers/brokerSchema');

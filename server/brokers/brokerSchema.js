@@ -1,0 +1,400 @@
+// server/brokers/brokerSchema.js
+// Validates broker frontmatter and translates it into a session-engine config.
+// The .md frontmatter is the source of truth for a broker's personality + knobs.
+
+const ALLOWED_TIERS = ['simulated', 'paper'];
+const ALLOWED_SIZING = ['fixed', 'fractional-kelly', 'confidence-scaled'];
+const ALLOWED_REGIMES = ['low-entropy', 'high-entropy', 'any'];
+const ALLOWED_LLM_ROLES = ['advisor', 'gate'];
+const ALLOWED_INTERVALS = ['intraday-5m', 'intraday-1h', 'eod'];
+const ALLOWED_STRATEGIES = [
+  'momentum-breakout',
+  'mean-reversion',
+  'entropy-adaptive',
+  'medallion-ensemble',
+  'llm-gated',
+  'balanced',
+  'conservative',
+  'aggressive',
+  // Plugin-backed strategies (route to a non-technical signal source):
+  'options-flow',
+];
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
+
+const BROKER_DEFAULTS = {
+  tier: 'simulated',
+  capital: 100000,
+  // When promoted to tier=paper, the broker is allocated this much of the
+  // shared Alpaca paper account. Defaults to 20% of `capital` (e.g. $20k
+  // for a $100k broker). Sum across paper-tier brokers must fit within the
+  // Alpaca paper account's buying power.
+  paperAllocation: null,
+  watchlist: [],
+  strategy: 'balanced',
+  risk: {
+    perTrade: 0.02,
+    maxDrawdown: 0.15,
+    sizing: 'confidence-scaled',
+    kellyFraction: 0.25,
+    maxPositions: 3,
+    maxPositionSizePercent: 15,
+  },
+  regime: {
+    enabled: false,
+    entropyWindows: [21, 63, 252],
+    preferred: 'any',
+    blockOnTransition: true,
+    referenceSymbol: null,
+  },
+  llm: {
+    enabled: false,
+    model: 'claude-sonnet-4-5',
+    callBudget: 50,
+    role: 'advisor',
+  },
+  selfImprovement: {
+    intervals: ['eod'],
+    fullAutonomy: false,
+  },
+  // Options-flow plugin tunables (only used when strategy: options-flow).
+  // Harmless defaults for every other broker.
+  flow: {
+    minPremium: 250000, // min total option premium in the window to act ($)
+    minSkew: 0.65, // dominant call/put premium share to call it directional
+    lookbackMinutes: 30, // how far back to aggregate flow alerts
+  },
+};
+
+function deepMerge(base, over) {
+  if (over === undefined || over === null) return base;
+  if (typeof base !== 'object' || Array.isArray(base)) return over;
+  const out = { ...base };
+  for (const k of Object.keys(over)) {
+    if (
+      over[k] !== null &&
+      typeof over[k] === 'object' &&
+      !Array.isArray(over[k]) &&
+      typeof base[k] === 'object' &&
+      !Array.isArray(base[k])
+    ) {
+      out[k] = deepMerge(base[k], over[k]);
+    } else if (over[k] !== undefined) {
+      out[k] = over[k];
+    }
+  }
+  return out;
+}
+
+function pushIf(errs, cond, msg) {
+  if (!cond) errs.push(msg);
+}
+
+/**
+ * Validates and normalizes a broker definition parsed from frontmatter.
+ * @param {object} raw The raw frontmatter object (after gray-matter).
+ * @param {string} filename The source filename (used for slug fallback + errors).
+ * @returns {{ broker: object | null, errors: string[] }}
+ */
+function validateBroker(raw, filename = '') {
+  const errs = [];
+  if (!raw || typeof raw !== 'object') {
+    return { broker: null, errors: ['frontmatter missing or not an object'] };
+  }
+
+  const filenameSlug = filename
+    ? filename.replace(/\.md$/, '').split('/').pop()
+    : '';
+  const slug = (raw.slug || filenameSlug || '').trim();
+  pushIf(
+    errs,
+    SLUG_RE.test(slug),
+    `slug "${slug}" must match ${SLUG_RE} (lowercase, dashes, 3-50 chars)`
+  );
+
+  const name = (raw.name || slug).toString();
+  pushIf(errs, name.length > 0 && name.length <= 80, 'name must be 1-80 chars');
+
+  const tier = raw.tier || BROKER_DEFAULTS.tier;
+  pushIf(
+    errs,
+    ALLOWED_TIERS.includes(tier),
+    `tier must be one of ${ALLOWED_TIERS.join('|')}`
+  );
+
+  const capital = Number(raw.capital ?? BROKER_DEFAULTS.capital);
+  pushIf(
+    errs,
+    capital >= 1000 && capital <= 10_000_000,
+    'capital must be 1000..10_000_000'
+  );
+
+  // paperAllocation may be null (use default = 20% of capital) or a number
+  const rawPaperAlloc = raw.paperAllocation;
+  let paperAllocation = null;
+  if (rawPaperAlloc !== null && rawPaperAlloc !== undefined) {
+    paperAllocation = Number(rawPaperAlloc);
+    pushIf(
+      errs,
+      paperAllocation >= 500 && paperAllocation <= 1_000_000,
+      'paperAllocation (when set) must be 500..1_000_000'
+    );
+  }
+
+  const watchlist = Array.isArray(raw.watchlist)
+    ? raw.watchlist.map(s => String(s).toUpperCase())
+    : [];
+  pushIf(
+    errs,
+    watchlist.length >= 1 && watchlist.length <= 50,
+    'watchlist must have 1-50 symbols'
+  );
+
+  const strategy = raw.strategy || BROKER_DEFAULTS.strategy;
+  pushIf(
+    errs,
+    ALLOWED_STRATEGIES.includes(strategy),
+    `strategy must be one of ${ALLOWED_STRATEGIES.join('|')}`
+  );
+
+  const risk = deepMerge(BROKER_DEFAULTS.risk, raw.risk || {});
+  pushIf(
+    errs,
+    risk.perTrade > 0 && risk.perTrade <= 0.1,
+    'risk.perTrade must be in (0, 0.1]'
+  );
+  pushIf(
+    errs,
+    risk.maxDrawdown > 0 && risk.maxDrawdown <= 0.5,
+    'risk.maxDrawdown must be in (0, 0.5]'
+  );
+  pushIf(
+    errs,
+    ALLOWED_SIZING.includes(risk.sizing),
+    `risk.sizing must be one of ${ALLOWED_SIZING.join('|')}`
+  );
+  pushIf(
+    errs,
+    risk.kellyFraction > 0 && risk.kellyFraction <= 1.0,
+    'risk.kellyFraction must be in (0, 1]'
+  );
+  pushIf(
+    errs,
+    Number.isInteger(risk.maxPositions) &&
+      risk.maxPositions >= 1 &&
+      risk.maxPositions <= 20,
+    'risk.maxPositions must be int 1..20'
+  );
+  pushIf(
+    errs,
+    risk.maxPositionSizePercent > 0 && risk.maxPositionSizePercent <= 100,
+    'risk.maxPositionSizePercent must be in (0, 100]'
+  );
+
+  const regime = deepMerge(BROKER_DEFAULTS.regime, raw.regime || {});
+  if (regime.enabled) {
+    pushIf(
+      errs,
+      Array.isArray(regime.entropyWindows) && regime.entropyWindows.length > 0,
+      'regime.entropyWindows must be a non-empty array when regime.enabled=true'
+    );
+    pushIf(
+      errs,
+      regime.entropyWindows.every(
+        n => Number.isInteger(n) && n >= 5 && n <= 504
+      ),
+      'regime.entropyWindows must be ints 5..504'
+    );
+    pushIf(
+      errs,
+      ALLOWED_REGIMES.includes(regime.preferred),
+      `regime.preferred must be one of ${ALLOWED_REGIMES.join('|')}`
+    );
+  }
+
+  const llm = deepMerge(BROKER_DEFAULTS.llm, raw.llm || {});
+  if (llm.enabled) {
+    pushIf(
+      errs,
+      typeof llm.model === 'string' && llm.model.length > 0,
+      'llm.model must be a non-empty string'
+    );
+    pushIf(
+      errs,
+      Number.isInteger(llm.callBudget) &&
+        llm.callBudget >= 1 &&
+        llm.callBudget <= 5000,
+      'llm.callBudget must be int 1..5000'
+    );
+    pushIf(
+      errs,
+      ALLOWED_LLM_ROLES.includes(llm.role),
+      `llm.role must be one of ${ALLOWED_LLM_ROLES.join('|')}`
+    );
+  }
+
+  const flow = deepMerge(BROKER_DEFAULTS.flow, raw.flow || {});
+  pushIf(
+    errs,
+    typeof flow.minPremium === 'number' && flow.minPremium >= 0,
+    'flow.minPremium must be a non-negative number'
+  );
+  pushIf(
+    errs,
+    typeof flow.minSkew === 'number' &&
+      flow.minSkew >= 0.5 &&
+      flow.minSkew <= 1,
+    'flow.minSkew must be in [0.5, 1]'
+  );
+  pushIf(
+    errs,
+    Number.isInteger(flow.lookbackMinutes) &&
+      flow.lookbackMinutes >= 1 &&
+      flow.lookbackMinutes <= 1440,
+    'flow.lookbackMinutes must be int 1..1440'
+  );
+
+  const selfImprovement = deepMerge(
+    BROKER_DEFAULTS.selfImprovement,
+    raw.selfImprovement || {}
+  );
+  pushIf(
+    errs,
+    Array.isArray(selfImprovement.intervals),
+    'selfImprovement.intervals must be an array'
+  );
+  pushIf(
+    errs,
+    selfImprovement.intervals.every(i => ALLOWED_INTERVALS.includes(i)),
+    `selfImprovement.intervals values must be one of ${ALLOWED_INTERVALS.join('|')}`
+  );
+
+  if (errs.length > 0) return { broker: null, errors: errs };
+
+  return {
+    broker: {
+      slug,
+      name,
+      tier,
+      capital,
+      paperAllocation,
+      watchlist,
+      strategy,
+      risk,
+      regime,
+      llm,
+      selfImprovement,
+      flow,
+    },
+    errors: [],
+  };
+}
+
+/**
+ * The effective capital this broker should start with given its tier:
+ * - simulated → broker.capital (the persona's stated virtual stake)
+ * - paper → broker.paperAllocation, OR 20% of capital if unset
+ * Used by the bridge when transitioning between tiers.
+ */
+function effectiveCapital(broker) {
+  if (broker.tier === 'paper') {
+    return broker.paperAllocation ?? Math.round(broker.capital * 0.2);
+  }
+  return broker.capital;
+}
+
+/**
+ * Translates a validated broker into a session-engine config compatible with DEFAULT_CONFIG.
+ * The engine remains the source of truth for runtime; this is the bridge.
+ */
+function brokerToSessionConfig(broker, personaBody = '') {
+  // BROKER_PAPER_TRADING=off forces every broker back to simulation regardless
+  // of declared tier. Safety kill-switch for days you don't trust the system.
+  const killSwitch = process.env.BROKER_PAPER_TRADING === 'off';
+  const effectiveTier = killSwitch ? 'simulated' : broker.tier;
+  const cap = effectiveCapital({ ...broker, tier: effectiveTier });
+
+  return {
+    name: broker.name,
+    brokerSlug: broker.slug,
+    brokerPersona: personaBody,
+    tier: effectiveTier,
+    declaredTier: broker.tier, // preserves persona intent even when kill-switched
+    // simulationMode drives orderExecutor's routing: true → simulatedExecutor,
+    // false → real Alpaca via tradingMode.
+    simulationMode: effectiveTier === 'simulated',
+    paperTradeOnly: effectiveTier === 'paper',
+    tradingMode: effectiveTier === 'paper' ? 'paper' : 'paper', // both stay on paper Alpaca; live tier doesn't exist yet
+    initialCapital: cap,
+    allocatedCapital: cap,
+    paperAllocation: broker.paperAllocation,
+    watchlist: broker.watchlist,
+    autoTrade: true,
+    manageAllPositions: false,
+
+    // Risk
+    riskPerTradePercent: broker.risk.perTrade * 100,
+    maxDrawdownPercent: broker.risk.maxDrawdown * 100,
+    sizingStrategy: broker.risk.sizing,
+    kellyFraction: broker.risk.kellyFraction,
+    maxPositions: broker.risk.maxPositions,
+    maxPositionSizePercent: broker.risk.maxPositionSizePercent,
+
+    // Strategy → entry style mapping. strategyKey drives strategy-plugin
+    // dispatch (see server/strategies/index.js resolve()); entryStrategy is the
+    // technical-indicators preset used when this broker runs that plugin.
+    entryStrategy: mapStrategyToEntryStyle(broker.strategy),
+    strategyKey: broker.strategy,
+
+    // Options-flow plugin tunables (no-ops for non-flow brokers).
+    minPremium: (broker.flow || BROKER_DEFAULTS.flow).minPremium,
+    minSkew: (broker.flow || BROKER_DEFAULTS.flow).minSkew,
+    lookbackMinutes: (broker.flow || BROKER_DEFAULTS.flow).lookbackMinutes,
+
+    // Regime
+    entropyGateEnabled: broker.regime.enabled,
+    entropyWindows: broker.regime.entropyWindows,
+    preferredRegime: broker.regime.preferred,
+    blockOnRegimeTransition: broker.regime.blockOnTransition,
+    regimeReferenceSymbol: broker.regime.referenceSymbol,
+
+    // LLM
+    brokerLlmEnabled: broker.llm.enabled,
+    brokerLlmModel: broker.llm.model,
+    brokerLlmCallBudget: broker.llm.callBudget,
+    brokerLlmRole: broker.llm.role,
+
+    // Self-improvement
+    selfImproveIntervals: broker.selfImprovement.intervals,
+    selfImproveFullAutonomy: broker.selfImprovement.fullAutonomy,
+  };
+}
+
+function mapStrategyToEntryStyle(strategy) {
+  switch (strategy) {
+    case 'momentum-breakout':
+    case 'aggressive':
+      return 'momentum';
+    case 'mean-reversion':
+    case 'conservative':
+      return 'conservative';
+    case 'entropy-adaptive':
+    case 'medallion-ensemble':
+    case 'llm-gated':
+    case 'balanced':
+    default:
+      return 'balanced';
+  }
+}
+
+module.exports = {
+  BROKER_DEFAULTS,
+  ALLOWED_TIERS,
+  ALLOWED_SIZING,
+  ALLOWED_REGIMES,
+  ALLOWED_LLM_ROLES,
+  ALLOWED_INTERVALS,
+  ALLOWED_STRATEGIES,
+  validateBroker,
+  brokerToSessionConfig,
+  effectiveCapital,
+};

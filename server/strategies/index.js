@@ -12,12 +12,22 @@
  */
 
 const technicalIndicators = require('./technicalIndicators');
+const optionsFlow = require('./optionsFlow');
 
 const DEFAULT_SLUG = 'technical-indicators';
 
 // slug → plugin module
 const registry = {
   [technicalIndicators.slug]: technicalIndicators,
+  [optionsFlow.slug]: optionsFlow,
+};
+
+// Frontmatter `strategy` value → plugin slug. Strategy values not listed here
+// (momentum-breakout, mean-reversion, balanced, …) fall through to the default
+// technical-indicators plugin. This lets a broker pick its signal source with a
+// single frontmatter field.
+const PLUGIN_BY_STRATEGY = {
+  'options-flow': 'options-flow',
 };
 
 /**
@@ -40,8 +50,16 @@ function get(slug) {
  * @returns {object} a strategy plugin (always falls back to the default)
  */
 function resolve(config = {}) {
-  const slug = config.strategyPlugin;
-  if (slug && registry[slug]) return registry[slug];
+  // 1) explicit plugin slug (session config) wins
+  const direct = config.strategyPlugin;
+  if (direct && registry[direct]) return registry[direct];
+  // 2) map from the frontmatter `strategy` (broker object) or `strategyKey`
+  //    (session config copies broker.strategy → strategyKey)
+  const viaStrategy =
+    PLUGIN_BY_STRATEGY[config.strategy] ||
+    PLUGIN_BY_STRATEGY[config.strategyKey];
+  if (viaStrategy && registry[viaStrategy]) return registry[viaStrategy];
+  // 3) default plugin
   return registry[DEFAULT_SLUG];
 }
 
