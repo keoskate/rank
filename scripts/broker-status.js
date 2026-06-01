@@ -108,10 +108,31 @@ async function main() {
     const tier = (b.tier || '—').padEnd(8);
     const name = (b.name || b.slug || '?').padEnd(22);
     // Signal funnel: evaluated / passed / entered
-    const funnel = `${s.signalsEvaluated || 0}/${s.signalsPassed || 0}/${s.signalsEntered || 0}`.padStart(11);
+    const funnel =
+      `${s.signalsEvaluated || 0}/${s.signalsPassed || 0}/${s.signalsEntered || 0}`.padStart(
+        11
+      );
     console.log(
       ` ${name} ${tier}  ${pnlColored}  ${trades}   ${wr}  ${cash}  ${pos}  ${funnel}`
     );
+    // Per-source edge gate (sim→paper promotion): show the broker's primary
+    // signal source, its expectancy, and whether it clears the bar for real money.
+    const edge = b.session?.edge;
+    if (edge && edge.source) {
+      const gate = edge.pass
+        ? color('✓ edge', 'green')
+        : color('✗ no-edge', 'yellow');
+      const exp =
+        edge.expectancyPct != null
+          ? `${edge.expectancyPct >= 0 ? '+' : ''}${edge.expectancyPct.toFixed(3)}%/trade`
+          : `$${(edge.expectancyUsd || 0).toFixed(2)}/trade`;
+      console.log(
+        color(
+          `     └ ${gate}  ${edge.source}  ${exp}  (${edge.trades} trades)`,
+          'gray'
+        )
+      );
+    }
   }
   console.log();
 }
