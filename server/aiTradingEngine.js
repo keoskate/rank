@@ -26,12 +26,17 @@ const LeveragedEtfStrategy = require('./leveragedEtfStrategy');
 const alpacaStream = require('./alpacaStreamClient');
 const signalEvaluator = require('./signalEvaluator');
 const orderExecutor = require('./orderExecutor');
+const simulatedExecutor = require('./brokers/simulatedExecutor');
+const entropyGate = require('./strategies/entropyGate');
 
 // Leveraged ETF strategy instance for flow sentiment analysis
 const leveragedEtfStrategy = new LeveragedEtfStrategy();
 
 // Options flow data cache path
-const FLOW_CACHE_FILE = path.join(__dirname, '../data/cheddarflow-data-cache.json');
+const FLOW_CACHE_FILE = path.join(
+  __dirname,
+  '../data/cheddarflow-data-cache.json'
+);
 
 /**
  * Get cached CheddarFlow data for a symbol.
@@ -51,7 +56,9 @@ function getCachedFlowData(symbol) {
 
     // Find the most recent entry for this base symbol
     const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .split('T')[0];
 
     // Try today first, then yesterday
     const todayKey = `${baseSymbol}-${today}`;
@@ -163,8 +170,13 @@ const regimeEngines = new Map();
 function getOrCreateRegimeEngine(referenceSymbol) {
   const key = referenceSymbol.toUpperCase();
   if (!regimeEngines.has(key)) {
-    const { SemiconductorSentimentEngine } = require('./semiconductorSentiment');
-    regimeEngines.set(key, new SemiconductorSentimentEngine({ referenceSymbol: key }));
+    const {
+      SemiconductorSentimentEngine,
+    } = require('./semiconductorSentiment');
+    regimeEngines.set(
+      key,
+      new SemiconductorSentimentEngine({ referenceSymbol: key })
+    );
     tradingLogger.logInfo(`[AI Engine] Created regime engine for ${key}`);
   }
   return regimeEngines.get(key);
@@ -189,16 +201,35 @@ const entryContexts = new Map();
 
 // Leveraged ETF classification for regime-aware trading
 // Bullish ETFs profit in up markets, Bearish ETFs profit in down markets
-const BULLISH_ETFS = ['SOXL', 'QBTX', 'PLTU', 'TQQQ', 'SPXL', 'UPRO', 'TECL', 'FNGU'];
+const BULLISH_ETFS = [
+  'SOXL',
+  'QBTX',
+  'PLTU',
+  'TQQQ',
+  'SPXL',
+  'UPRO',
+  'TECL',
+  'FNGU',
+];
 const BEARISH_ETFS = ['SOXS', 'QBTZ', 'SQQQ', 'SPXS', 'TECS', 'FNGD'];
 
 // Leverage multiplier for leveraged ETFs - used to scale stop-losses appropriately
 // A 1% stop on a 3x ETF triggers from a 0.33% underlying move (noise), so we scale by leverage
 const ETF_LEVERAGE = {
-  'SOXL': 3, 'SOXS': 3, 'QBTX': 3, 'QBTZ': 3,
-  'TQQQ': 3, 'SQQQ': 3, 'SPXL': 3, 'SPXS': 3,
-  'TECL': 3, 'TECS': 3, 'FNGU': 3, 'FNGD': 3,
-  'PLTU': 2, 'PLTZ': 2,
+  SOXL: 3,
+  SOXS: 3,
+  QBTX: 3,
+  QBTZ: 3,
+  TQQQ: 3,
+  SQQQ: 3,
+  SPXL: 3,
+  SPXS: 3,
+  TECL: 3,
+  TECS: 3,
+  FNGU: 3,
+  FNGD: 3,
+  PLTU: 2,
+  PLTZ: 2,
 };
 function getEtfLeverage(symbol) {
   return ETF_LEVERAGE[symbol.toUpperCase()] || 1;
@@ -206,12 +237,18 @@ function getEtfLeverage(symbol) {
 
 // Bull/Bear ETF pair mapping - used for cross-session conflict detection
 const ETF_PAIRS = {
-  'SOXL': 'SOXS', 'SOXS': 'SOXL',
-  'QBTX': 'QBTZ', 'QBTZ': 'QBTX',
-  'TQQQ': 'SQQQ', 'SQQQ': 'TQQQ',
-  'SPXL': 'SPXS', 'SPXS': 'SPXL',
-  'TECL': 'TECS', 'TECS': 'TECL',
-  'FNGU': 'FNGD', 'FNGD': 'FNGU',
+  SOXL: 'SOXS',
+  SOXS: 'SOXL',
+  QBTX: 'QBTZ',
+  QBTZ: 'QBTX',
+  TQQQ: 'SQQQ',
+  SQQQ: 'TQQQ',
+  SPXL: 'SPXS',
+  SPXS: 'SPXL',
+  TECL: 'TECS',
+  TECS: 'TECL',
+  FNGU: 'FNGD',
+  FNGD: 'FNGU',
 };
 function getOppositeEtf(symbol) {
   return ETF_PAIRS[symbol.toUpperCase()] || null;
@@ -230,7 +267,7 @@ function isDST(date) {
 }
 
 // Global position size limits - prevents any single position from dominating portfolio
-const GLOBAL_MAX_POSITION_PERCENT = 25;     // No single position > 25% of portfolio
+const GLOBAL_MAX_POSITION_PERCENT = 25; // No single position > 25% of portfolio
 const GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT = 65; // Total across all sessions < 65% of portfolio
 
 /**
@@ -303,7 +340,11 @@ function isRegimeAligned(etfType, marketRegime) {
 function getRawMarketRegime(session, indicators) {
   const trend = indicators?.trend || {};
   const cfg = session.config;
-  if (cfg.semiconductorMode && sentimentEngine && sentimentEngine.sentimentCache) {
+  if (
+    cfg.semiconductorMode &&
+    sentimentEngine &&
+    sentimentEngine.sentimentCache
+  ) {
     const dir = sentimentEngine.sentimentCache.direction;
     if (dir === 'bullish') return 'bull';
     if (dir === 'bearish') return 'bear';
@@ -317,8 +358,10 @@ function getRawMarketRegime(session, indicators) {
     }
     return 'sideways';
   } else {
-    if (trend.shortTerm === 'bullish' && trend.mediumTerm === 'bullish') return 'bull';
-    if (trend.shortTerm === 'bearish' && trend.mediumTerm === 'bearish') return 'bear';
+    if (trend.shortTerm === 'bullish' && trend.mediumTerm === 'bullish')
+      return 'bull';
+    if (trend.shortTerm === 'bearish' && trend.mediumTerm === 'bearish')
+      return 'bear';
     return 'sideways';
   }
 }
@@ -346,7 +389,9 @@ function getStableRegime(session, rawRegime) {
   // Raw matches confirmed — no change needed, cancel any pending
   if (rawRegime === state.confirmedRegime) {
     if (state.pendingRegime) {
-      tradingLogger.logInfo(`[AI Engine] Regime pending ${state.pendingRegime} cancelled — reverted to ${state.confirmedRegime}`);
+      tradingLogger.logInfo(
+        `[AI Engine] Regime pending ${state.pendingRegime} cancelled — reverted to ${state.confirmedRegime}`
+      );
     }
     state.pendingRegime = null;
     state.pendingSince = null;
@@ -358,14 +403,20 @@ function getStableRegime(session, rawRegime) {
     // New pending regime
     state.pendingRegime = rawRegime;
     state.pendingSince = Date.now();
-    tradingLogger.logInfo(`[AI Engine] Regime pending: ${rawRegime} (need ${hysteresisMinutes} min to confirm, current: ${state.confirmedRegime})`);
+    tradingLogger.logInfo(
+      `[AI Engine] Regime pending: ${rawRegime} (need ${hysteresisMinutes} min to confirm, current: ${state.confirmedRegime})`
+    );
     return state.confirmedRegime;
   }
 
   // Same pending regime — check if enough time has passed
   const pendingMinutes = (Date.now() - state.pendingSince) / (1000 * 60);
   if (pendingMinutes >= hysteresisMinutes) {
-    tradingLogger.logConfig('Regime confirmed', { field: 'regime', oldValue: state.confirmedRegime, newValue: rawRegime });
+    tradingLogger.logConfig('Regime confirmed', {
+      field: 'regime',
+      oldValue: state.confirmedRegime,
+      newValue: rawRegime,
+    });
     state.confirmedRegime = rawRegime;
     state.pendingRegime = null;
     state.pendingSince = null;
@@ -398,7 +449,9 @@ function shouldThrottleError(sessionId, errorMessage) {
     const suppressedCount = existing.count;
     existing.count = 0;
     if (suppressedCount > 0) {
-      tradingLogger.logInfo(`[AI Engine] (${suppressedCount} similar errors suppressed in last ${ERROR_THROTTLE_MINUTES}m)`);
+      tradingLogger.logInfo(
+        `[AI Engine] (${suppressedCount} similar errors suppressed in last ${ERROR_THROTTLE_MINUTES}m)`
+      );
     }
     return false;
   }
@@ -418,7 +471,10 @@ async function updatePDTStateCache(tradingMode) {
   const cacheValidMs = pdtStateCache.cacheValidMinutes * 60 * 1000;
 
   // Return cached if still valid
-  if (pdtStateCache.lastChecked && now - pdtStateCache.lastChecked < cacheValidMs) {
+  if (
+    pdtStateCache.lastChecked &&
+    now - pdtStateCache.lastChecked < cacheValidMs
+  ) {
     return pdtStateCache;
   }
 
@@ -441,7 +497,9 @@ async function updatePDTStateCache(tradingMode) {
 
     return pdtStateCache;
   } catch (err) {
-    tradingLogger.logError('[AI Engine] Failed to check PDT status', { error: err.message });
+    tradingLogger.logError('[AI Engine] Failed to check PDT status', {
+      error: err.message,
+    });
     return pdtStateCache; // Return stale cache on error
   }
 }
@@ -502,7 +560,10 @@ function clearStalePositionState(sessionId, symbol) {
   if (hadPosition) {
     session.portfolio.positions.delete(symbol);
     saveSessions();
-    tradingLogger.logInfo(`[AI Engine] Cleared stale position state for ${symbol}`, { sessionId, sessionName: session.name, symbol });
+    tradingLogger.logInfo(
+      `[AI Engine] Cleared stale position state for ${symbol}`,
+      { sessionId, sessionName: session.name, symbol }
+    );
 
     // Also clear entry context
     const sessionContexts = entryContexts.get(sessionId);
@@ -516,6 +577,9 @@ function clearStalePositionState(sessionId, symbol) {
  * Save sessions to file for persistence
  */
 function saveSessions() {
+  // Dry-run mode (CLI harness): keep the engine inert — never touch the
+  // persisted ai-sessions.json from a throwaway evaluation process.
+  if (process.env.AI_ENGINE_DRY_RUN) return;
   try {
     const sessionsData = {};
     sessions.forEach((session, sessionId) => {
@@ -541,7 +605,9 @@ function saveSessions() {
       if (fs.existsSync(bak1)) fs.renameSync(bak1, bak2);
       if (fs.existsSync(SESSION_FILE)) fs.copyFileSync(SESSION_FILE, bak1);
     } catch (backupErr) {
-      tradingLogger.logError('[AI Engine] Backup rotation failed', { error: backupErr.message });
+      tradingLogger.logError('[AI Engine] Backup rotation failed', {
+        error: backupErr.message,
+      });
     }
 
     // Atomic write: write to .tmp then rename (atomic on POSIX)
@@ -549,7 +615,9 @@ function saveSessions() {
     fs.writeFileSync(tmpFile, jsonData);
     fs.renameSync(tmpFile, SESSION_FILE);
   } catch (err) {
-    tradingLogger.logError('[AI Engine] Failed to save sessions', { error: err.message });
+    tradingLogger.logError('[AI Engine] Failed to save sessions', {
+      error: err.message,
+    });
   }
 }
 
@@ -586,32 +654,48 @@ function loadSessions() {
           const wins = session.stats.wins || 0;
           const losses = session.stats.losses || 0;
           session.stats.totalTrades = wins + losses;
-          session.stats.winRate = session.stats.totalTrades > 0
-            ? parseFloat(((wins / session.stats.totalTrades) * 100).toFixed(1))
-            : 0;
+          session.stats.winRate =
+            session.stats.totalTrades > 0
+              ? parseFloat(
+                  ((wins / session.stats.totalTrades) * 100).toFixed(1)
+                )
+              : 0;
         }
 
         sessions.set(sessionId, session);
 
         // Restart trading loop if session was running
         if (session.status === 'running') {
-          tradingLogger.logInfo(`[AI Engine] Restoring running session "${session.name}"`, { sessionId, sessionName: session.name });
+          tradingLogger.logInfo(
+            `[AI Engine] Restoring running session "${session.name}"`,
+            { sessionId, sessionName: session.name }
+          );
           startTradingLoop(sessionId);
         }
       });
-      tradingLogger.logInfo(`[AI Engine] Loaded ${sessions.size} session(s) from disk`);
+      tradingLogger.logInfo(
+        `[AI Engine] Loaded ${sessions.size} session(s) from disk`
+      );
       if (cleanedDecisions > 0) {
-        tradingLogger.logInfo(`[AI Engine] Cleaned ${cleanedDecisions} non-actionable decisions from history`);
+        tradingLogger.logInfo(
+          `[AI Engine] Cleaned ${cleanedDecisions} non-actionable decisions from history`
+        );
         saveSessions(); // Save the cleaned data
       }
     }
   } catch (err) {
-    tradingLogger.logError('[AI Engine] Failed to load sessions', { error: err.message });
+    tradingLogger.logError('[AI Engine] Failed to load sessions', {
+      error: err.message,
+    });
   }
 }
 
-// Load sessions on module initialization
-loadSessions();
+// Load sessions on module initialization.
+// Skipped in dry-run mode so requiring the engine from a CLI harness doesn't
+// restore live sessions or start their trading loops.
+if (!process.env.AI_ENGINE_DRY_RUN) {
+  loadSessions();
+}
 
 /**
  * Get the trading mode for a session based on its config
@@ -672,22 +756,22 @@ const DEFAULT_CONFIG = {
   // When hit: closes open positions and pauses session until next trading day
   dailyProfitTargetPercent: null,
   // Risk management - stop losses execute even when autoTrade is off
-  allowStopLossExit: true,  // CRITICAL: Allow stop loss to execute regardless of autoTrade
+  allowStopLossExit: true, // CRITICAL: Allow stop loss to execute regardless of autoTrade
   // Semiconductor Strategy Settings
-  semiconductorMode: false,          // Enable semiconductor-specific logic (SOXX-based sentiment)
-  marketGate: null,                  // null | 'bullish' | 'bearish' | 'any' - direction gate for entry
-  marketGateMinConfidence: 60,       // Minimum sentiment confidence to pass gate
-  aiSentimentEnabled: false,         // Use Claude for sentiment analysis boost
-  maxSoxsHoldMinutes: 120,           // Max hold time for SOXS positions (decay protection)
-  allowDirectionSwitch: true,        // Allow switching direction mid-day if confidence is high
+  semiconductorMode: false, // Enable semiconductor-specific logic (SOXX-based sentiment)
+  marketGate: null, // null | 'bullish' | 'bearish' | 'any' - direction gate for entry
+  marketGateMinConfidence: 60, // Minimum sentiment confidence to pass gate
+  aiSentimentEnabled: false, // Use Claude for sentiment analysis boost
+  maxSoxsHoldMinutes: 120, // Max hold time for SOXS positions (decay protection)
+  allowDirectionSwitch: true, // Allow switching direction mid-day if confidence is high
   // Regime Gate Settings (for non-semiconductor sessions)
-  regimeGateEnabled: false,            // Enable macro regime gating via a reference symbol
-  regimeReferenceSymbol: null,         // Reference symbol for regime engine (e.g., 'QQQ', 'SPY')
+  regimeGateEnabled: false, // Enable macro regime gating via a reference symbol
+  regimeReferenceSymbol: null, // Reference symbol for regime engine (e.g., 'QQQ', 'SPY')
   // Hold time settings (prevents whipsaw exits)
-  minHoldMinutes: 30,                  // Minimum hold time before any exit (except stop loss)
-  counterTrendMinHoldMinutes: 15,      // Minimum hold for counter-trend positions
+  minHoldMinutes: 30, // Minimum hold time before any exit (except stop loss)
+  counterTrendMinHoldMinutes: 15, // Minimum hold for counter-trend positions
   // Regime hysteresis (prevents flip-flopping)
-  regimeHysteresisMinutes: 10,         // Regime must persist this long before switching
+  regimeHysteresisMinutes: 10, // Regime must persist this long before switching
 };
 
 // ============================================================
@@ -698,58 +782,61 @@ const DEFAULT_CONFIG = {
 const STRATEGY_PRESETS = {
   SOXL_MOMENTUM: {
     name: 'SOXL Bullish Momentum',
-    description: 'Trades SOXL on bullish semiconductor days. Uses AI sentiment analysis.',
+    description:
+      'Trades SOXL on bullish semiconductor days. Uses AI sentiment analysis.',
     watchlist: ['SOXL'],
     semiconductorMode: true,
     marketGate: 'bullish',
     marketGateMinConfidence: 65,
     entryStrategy: 'momentum',
-    takeProfitPercent: 3.0,      // Wider target for 3x leverage
-    stopLossPercent: 1.5,        // Tighter stop for leverage
-    trailingStopPercent: 50,     // Lock in 50% of gains once activated
+    takeProfitPercent: 3.0, // Wider target for 3x leverage
+    stopLossPercent: 1.5, // Tighter stop for leverage
+    trailingStopPercent: 50, // Lock in 50% of gains once activated
     trailingStopMinProfitPercent: 1.5, // Activate after 1.5% gain (reachable intraday for 3x)
     minSignalsRequired: 2,
     maxPositions: 1,
     maxPositionSizePercent: 30,
     aiSentimentEnabled: true,
-    autoTrade: false,            // Require explicit opt-in
+    autoTrade: false, // Require explicit opt-in
   },
 
   SOXS_HEDGE: {
     name: 'SOXS Bearish Hedge',
-    description: 'Trades SOXS as a hedge on bearish semiconductor days. Auto-exits to avoid decay.',
+    description:
+      'Trades SOXS as a hedge on bearish semiconductor days. Auto-exits to avoid decay.',
     watchlist: ['SOXS'],
     semiconductorMode: true,
     marketGate: 'bearish',
     marketGateMinConfidence: 70, // Higher confidence for inverse ETF
     entryStrategy: 'conservative',
-    takeProfitPercent: 2.0,      // Quicker profit taking (decay)
-    stopLossPercent: 1.0,        // Tight stop
-    trailingStopPercent: 50,     // Lock in 50% of gains once activated
+    takeProfitPercent: 2.0, // Quicker profit taking (decay)
+    stopLossPercent: 1.0, // Tight stop
+    trailingStopPercent: 50, // Lock in 50% of gains once activated
     trailingStopMinProfitPercent: 1.0, // Activate early — SOXS decays, take what you can
     minSignalsRequired: 2,
-    maxSoxsHoldMinutes: 120,     // Max 2 hour hold
+    maxSoxsHoldMinutes: 120, // Max 2 hour hold
     maxPositions: 1,
-    maxPositionSizePercent: 20,  // Smaller size for hedge
+    maxPositionSizePercent: 20, // Smaller size for hedge
     aiSentimentEnabled: true,
     autoTrade: false,
   },
 
   SOXL_SOXS_COMBO: {
     name: 'SOXL/SOXS Dynamic',
-    description: 'Dynamically trades SOXL or SOXS based on semiconductor sentiment. AI-powered direction.',
+    description:
+      'Dynamically trades SOXL or SOXS based on semiconductor sentiment. AI-powered direction.',
     watchlist: ['SOXL', 'SOXS'],
     semiconductorMode: true,
-    marketGate: 'any',           // Trades both directions
+    marketGate: 'any', // Trades both directions
     marketGateMinConfidence: 60,
     entryStrategy: 'balanced',
     takeProfitPercent: 2.5,
     stopLossPercent: 1.2,
-    trailingStopPercent: 50,     // Lock in 50% of gains once activated
+    trailingStopPercent: 50, // Lock in 50% of gains once activated
     trailingStopMinProfitPercent: 1.5, // Activate after 1.5% gain
     minSignalsRequired: 2,
-    maxSoxsHoldMinutes: 90,      // Shorter hold for SOXS
-    maxPositions: 1,             // One at a time
+    maxSoxsHoldMinutes: 90, // Shorter hold for SOXS
+    maxPositions: 1, // One at a time
     maxPositionSizePercent: 25,
     aiSentimentEnabled: true,
     allowDirectionSwitch: true,
@@ -758,7 +845,8 @@ const STRATEGY_PRESETS = {
 
   QBTX_QBTZ_COMBO: {
     name: 'QBTX/QBTZ Dynamic',
-    description: 'Dynamically trades QBTX or QBTZ based on QQQ regime sentiment. Macro-aware direction.',
+    description:
+      'Dynamically trades QBTX or QBTZ based on QQQ regime sentiment. Macro-aware direction.',
     watchlist: ['QBTX', 'QBTZ'],
     semiconductorMode: false,
     regimeGateEnabled: true,
@@ -767,8 +855,8 @@ const STRATEGY_PRESETS = {
     marketGateMinConfidence: 60,
     entryStrategy: 'balanced',
     takeProfitPercent: 2.5,
-    stopLossPercent: 1.0,        // Auto-scaled to 3% by leverage-aware stops
-    trailingStopPercent: 50,     // Lock in 50% of gains once activated
+    stopLossPercent: 1.0, // Auto-scaled to 3% by leverage-aware stops
+    trailingStopPercent: 50, // Lock in 50% of gains once activated
     trailingStopMinProfitPercent: 1.5, // Activate after 1.5% gain
     minSignalsRequired: 2,
     maxPositions: 1,
@@ -779,8 +867,9 @@ const STRATEGY_PRESETS = {
 
   INVESTIGATE_TRADER: {
     name: 'Investigate-Based Trader',
-    description: 'General-purpose trader for any symbol. Uses technical scoring for entry/exit.',
-    watchlist: [],                    // Set at session start
+    description:
+      'General-purpose trader for any symbol. Uses technical scoring for entry/exit.',
+    watchlist: [], // Set at session start
     semiconductorMode: false,
     regimeGateEnabled: false,
     entryStrategy: 'balanced',
@@ -791,11 +880,11 @@ const STRATEGY_PRESETS = {
     minConfidence: 65,
     maxPositions: 1,
     maxPositionSizePercent: 15,
-    autoTrade: false,                 // User opts in explicitly
+    autoTrade: false, // User opts in explicitly
     exitBeforeClose: true,
     exitBeforeCloseMinutes: 15,
     minHoldMinutes: 15,
-    dailyProfitTargetPercent: null,   // Optional: e.g. 2.0 = pause after +2% day
+    dailyProfitTargetPercent: null, // Optional: e.g. 2.0 = pause after +2% day
   },
 };
 
@@ -895,12 +984,14 @@ async function checkMarketGate(session, sentiment) {
  * @param {Object} sentiment - Current sentiment { direction, confidence }
  */
 function handleSentimentSessionSwitch(blockedSession, sentiment) {
-  if (!sentiment || !sentiment.direction || sentiment.direction === 'neutral') return;
+  if (!sentiment || !sentiment.direction || sentiment.direction === 'neutral')
+    return;
   if (!blockedSession.config.semiconductorMode) return;
 
   // Throttle: skip if we switched for this session recently
   const lastSwitch = lastSentimentSwitch.get(blockedSession.sessionId);
-  if (lastSwitch && Date.now() - lastSwitch < SENTIMENT_SWITCH_COOLDOWN_MS) return;
+  if (lastSwitch && Date.now() - lastSwitch < SENTIMENT_SWITCH_COOLDOWN_MS)
+    return;
 
   const blockedGate = blockedSession.config.marketGate;
   if (!blockedGate || blockedGate === 'any') return; // Only switch directional sessions
@@ -918,7 +1009,13 @@ function handleSentimentSessionSwitch(blockedSession, sentiment) {
 
     // Resume paused sessions whose gate matches current sentiment
     if (session.status === 'paused' && gate === sentiment.direction) {
-      tradingLogger.logConfig('Auto-resuming session', { sessionId: sid, sessionName: session.name, field: 'status', oldValue: 'paused', newValue: 'running' });
+      tradingLogger.logConfig('Auto-resuming session', {
+        sessionId: sid,
+        sessionName: session.name,
+        field: 'status',
+        oldValue: 'paused',
+        newValue: 'running',
+      });
       resumeSession(sid);
       didSwitch = true;
 
@@ -935,8 +1032,18 @@ function handleSentimentSessionSwitch(blockedSession, sentiment) {
   }
 
   // Auto-pause the blocked session if it has no open positions
-  if (didSwitch && blockedSession.status === 'running' && blockedSession.portfolio.positions.size === 0) {
-    tradingLogger.logConfig('Auto-pausing session', { sessionId: blockedSession.sessionId, sessionName: blockedSession.name, field: 'status', oldValue: 'running', newValue: 'paused' });
+  if (
+    didSwitch &&
+    blockedSession.status === 'running' &&
+    blockedSession.portfolio.positions.size === 0
+  ) {
+    tradingLogger.logConfig('Auto-pausing session', {
+      sessionId: blockedSession.sessionId,
+      sessionName: blockedSession.name,
+      field: 'status',
+      oldValue: 'running',
+      newValue: 'paused',
+    });
     pauseSession(blockedSession.sessionId);
 
     websocketServer.broadcastToAll('trading_alert', {
@@ -962,11 +1069,13 @@ function handleSentimentSessionSwitch(blockedSession, sentiment) {
  * @param {Object} sentiment - Current sentiment { direction, confidence }
  */
 function handleRegimeSessionSwitch(blockedSession, sentiment) {
-  if (!sentiment || !sentiment.direction || sentiment.direction === 'neutral') return;
+  if (!sentiment || !sentiment.direction || sentiment.direction === 'neutral')
+    return;
   if (!blockedSession.config.regimeGateEnabled) return;
 
   const lastSwitch = lastSentimentSwitch.get(blockedSession.sessionId);
-  if (lastSwitch && Date.now() - lastSwitch < SENTIMENT_SWITCH_COOLDOWN_MS) return;
+  if (lastSwitch && Date.now() - lastSwitch < SENTIMENT_SWITCH_COOLDOWN_MS)
+    return;
 
   const blockedGate = blockedSession.config.marketGate;
   if (!blockedGate || blockedGate === 'any') return;
@@ -984,7 +1093,13 @@ function handleRegimeSessionSwitch(blockedSession, sentiment) {
     if (!gate || gate === 'any') continue;
 
     if (session.status === 'paused' && gate === sentiment.direction) {
-      tradingLogger.logConfig('Regime auto-resuming session', { sessionId: sid, sessionName: session.name, field: 'status', oldValue: 'paused', newValue: 'running' });
+      tradingLogger.logConfig('Regime auto-resuming session', {
+        sessionId: sid,
+        sessionName: session.name,
+        field: 'status',
+        oldValue: 'paused',
+        newValue: 'running',
+      });
       resumeSession(sid);
       didSwitch = true;
 
@@ -1000,8 +1115,18 @@ function handleRegimeSessionSwitch(blockedSession, sentiment) {
     }
   }
 
-  if (didSwitch && blockedSession.status === 'running' && blockedSession.portfolio.positions.size === 0) {
-    tradingLogger.logConfig('Regime auto-pausing session', { sessionId: blockedSession.sessionId, sessionName: blockedSession.name, field: 'status', oldValue: 'running', newValue: 'paused' });
+  if (
+    didSwitch &&
+    blockedSession.status === 'running' &&
+    blockedSession.portfolio.positions.size === 0
+  ) {
+    tradingLogger.logConfig('Regime auto-pausing session', {
+      sessionId: blockedSession.sessionId,
+      sessionName: blockedSession.name,
+      field: 'status',
+      oldValue: 'running',
+      newValue: 'paused',
+    });
     pauseSession(blockedSession.sessionId);
 
     websocketServer.broadcastToAll('trading_alert', {
@@ -1045,7 +1170,9 @@ function getGlobalPositionExposure() {
         sessionId: sid,
         sessionName: session.name,
         quantity: position.quantity || 0,
-        marketValue: position.marketValue || (position.quantity * (position.currentPrice || 0)),
+        marketValue:
+          position.marketValue ||
+          position.quantity * (position.currentPrice || 0),
       });
     }
   }
@@ -1100,7 +1227,10 @@ function canEnterGlobally(sessionId, symbol) {
   // Check aggregate exposure — block if total market value for this symbol exceeds cap
   const allHolders = positionsBySymbol.get(upper);
   if (allHolders && allHolders.length > 0 && pdtStateCache.equity > 0) {
-    const totalExposure = allHolders.reduce((sum, h) => sum + (h.marketValue || 0), 0);
+    const totalExposure = allHolders.reduce(
+      (sum, h) => sum + (h.marketValue || 0),
+      0
+    );
     const exposurePct = (totalExposure / pdtStateCache.equity) * 100;
     if (exposurePct >= MAX_AGGREGATE_EXPOSURE_PCT) {
       return {
@@ -1135,7 +1265,10 @@ function canExitGlobally(symbol, sessionId) {
 }
 
 function claimExitLock(symbol, sessionId) {
-  globalExitLocks.set(symbol.toUpperCase(), { sessionId, timestamp: Date.now() });
+  globalExitLocks.set(symbol.toUpperCase(), {
+    sessionId,
+    timestamp: Date.now(),
+  });
 }
 
 function releaseExitLock(symbol, sessionId) {
@@ -1153,7 +1286,10 @@ function releaseExitLock(symbol, sessionId) {
  */
 function checkSymbolSentimentAlignment(symbol, sentiment) {
   if (!sentiment || sentiment.direction === 'neutral') {
-    return { allowed: false, reason: 'Sentiment is neutral - waiting for direction' };
+    return {
+      allowed: false,
+      reason: 'Sentiment is neutral - waiting for direction',
+    };
   }
 
   const etfType = getEtfType(symbol);
@@ -1197,7 +1333,10 @@ function checkSoxsHoldTime(position, maxHoldMinutes) {
     return { shouldExit: false, reason: null };
   }
 
-  const holdMinutes = differenceInMinutes(new Date(), new Date(position.entryTime));
+  const holdMinutes = differenceInMinutes(
+    new Date(),
+    new Date(position.entryTime)
+  );
 
   if (holdMinutes >= maxHoldMinutes) {
     return {
@@ -1224,9 +1363,20 @@ function checkSoxsHoldTime(position, maxHoldMinutes) {
  * @param {string} assetType - 'stocks' or 'crypto'
  * @returns {Array} - Array of OHLCV bars
  */
-async function getAggregatesForAsset(symbol, multiplier, timespan, options, assetType) {
+async function getAggregatesForAsset(
+  symbol,
+  multiplier,
+  timespan,
+  options,
+  assetType
+) {
   if (assetUtils.isCrypto(assetType)) {
-    return polygonClient.getCryptoAggregates(symbol, multiplier, timespan, options);
+    return polygonClient.getCryptoAggregates(
+      symbol,
+      multiplier,
+      timespan,
+      options
+    );
   }
   return polygonClient.getAggregates(symbol, multiplier, timespan, options);
 }
@@ -1262,11 +1412,8 @@ async function getLatestQuoteForAsset(symbol, assetType) {
  * @returns {Object} - Order result
  */
 async function placeOrderForAsset(orderParams, tradingMode, assetType) {
-  const {
-    _sessionAllowsExtendedHours,
-    _referencePrice,
-    ...cleanParams
-  } = orderParams;
+  const { _sessionAllowsExtendedHours, _referencePrice, ...cleanParams } =
+    orderParams;
 
   // Extended hours path: only for stocks, only when enabled, only when outside regular hours
   if (
@@ -1285,7 +1432,10 @@ async function placeOrderForAsset(orderParams, tradingMode, assetType) {
         refPrice = quote.bidPrice;
       }
     } catch (err) {
-      tradingLogger.logError('[AI Engine] Extended hours quote fetch failed', { symbol: cleanParams.symbol, error: err.message });
+      tradingLogger.logError('[AI Engine] Extended hours quote fetch failed', {
+        symbol: cleanParams.symbol,
+        error: err.message,
+      });
     }
 
     if (!refPrice || refPrice <= 0) {
@@ -1298,9 +1448,15 @@ async function placeOrderForAsset(orderParams, tradingMode, assetType) {
     const buffer = cleanParams.side === 'buy' ? 1.005 : 0.995;
     const limitPrice = Number((refPrice * buffer).toFixed(2));
 
-    tradingLogger.logExecution(`EXTENDED_HOURS_${cleanParams.side.toUpperCase()}`, cleanParams.symbol, {
-      quantity: cleanParams.qty, price: limitPrice, reason: `Extended-hours limit order (ref $${Number(refPrice).toFixed(2)})`,
-    });
+    tradingLogger.logExecution(
+      `EXTENDED_HOURS_${cleanParams.side.toUpperCase()}`,
+      cleanParams.symbol,
+      {
+        quantity: cleanParams.qty,
+        price: limitPrice,
+        reason: `Extended-hours limit order (ref $${Number(refPrice).toFixed(2)})`,
+      }
+    );
 
     return alpacaClient.placeOrder(
       {
@@ -1361,11 +1517,24 @@ function startSession(userId, config = {}) {
   // SAFETY: Enforce capital limits — prevent unbounded position sizing
   if (!sessionConfig.allocatedCapital || sessionConfig.allocatedCapital <= 0) {
     sessionConfig.allocatedCapital = 10000; // Safe default: $10k
-    tradingLogger.logRisk('Missing allocatedCapital', { reason: 'No allocatedCapital set, defaulting to $10,000', value: 0, threshold: 10000, action: 'Using default $10,000' });
+    tradingLogger.logRisk('Missing allocatedCapital', {
+      reason: 'No allocatedCapital set, defaulting to $10,000',
+      value: 0,
+      threshold: 10000,
+      action: 'Using default $10,000',
+    });
   }
   if (!sessionConfig.maxPositionSize || sessionConfig.maxPositionSize <= 0) {
-    sessionConfig.maxPositionSize = Math.min(5000, sessionConfig.allocatedCapital * 0.5);
-    tradingLogger.logRisk('Missing maxPositionSize', { reason: `No maxPositionSize set, defaulting to $${sessionConfig.maxPositionSize}`, value: 0, threshold: sessionConfig.maxPositionSize, action: 'Using calculated default' });
+    sessionConfig.maxPositionSize = Math.min(
+      5000,
+      sessionConfig.allocatedCapital * 0.5
+    );
+    tradingLogger.logRisk('Missing maxPositionSize', {
+      reason: `No maxPositionSize set, defaulting to $${sessionConfig.maxPositionSize}`,
+      value: 0,
+      threshold: sessionConfig.maxPositionSize,
+      action: 'Using calculated default',
+    });
   }
 
   // Generate a unique name if not provided
@@ -1374,6 +1543,10 @@ function startSession(userId, config = {}) {
     sessionConfig.name = `Strategy ${existingSessions.length + 1}`;
   }
 
+  const startingCash =
+    parseFloat(sessionConfig.initialCapital) ||
+    parseFloat(sessionConfig.allocatedCapital) ||
+    100000;
   const session = {
     sessionId,
     userId,
@@ -1382,9 +1555,9 @@ function startSession(userId, config = {}) {
     startTime: new Date(),
     config: sessionConfig,
     portfolio: {
-      cash: 100000, // Virtual cash for simulation
+      cash: startingCash,
       positions: new Map(),
-      initialValue: 100000,
+      initialValue: startingCash,
     },
     stats: {
       totalTrades: 0,
@@ -1392,9 +1565,16 @@ function startSession(userId, config = {}) {
       losses: 0,
       totalPnL: 0,
       consecutiveLosses: 0,
-      peakValue: 100000,
+      peakValue: startingCash,
       maxDrawdown: 0,
       winRate: 0,
+      // Signal funnel: how many entry evaluations clear each stage.
+      // evaluated = every evaluateEntry past the cooldown gate
+      // passed    = decision.shouldEnter === true
+      // entered   = an entry order actually executed
+      signalsEvaluated: 0,
+      signalsPassed: 0,
+      signalsEntered: 0,
     },
     decisions: [],
     alerts: [],
@@ -1406,7 +1586,10 @@ function startSession(userId, config = {}) {
   sessions.set(sessionId, session);
   decisionHistory.set(sessionId, []);
 
-  tradingLogger.logInfo(`[AI Engine] Session "${sessionConfig.name}" started for user ${userId}`, { sessionId, sessionName: sessionConfig.name });
+  tradingLogger.logInfo(
+    `[AI Engine] Session "${sessionConfig.name}" started for user ${userId}`,
+    { sessionId, sessionName: sessionConfig.name }
+  );
 
   // Log session start with config summary
   tradingLogger.logConfig('Session started', {
@@ -1471,7 +1654,7 @@ function getAllUserSessions(userId) {
       let unrealizedPnL = 0;
       const openPositions = [];
       if (session.portfolio?.positions) {
-        session.portfolio.positions.forEach((pos) => {
+        session.portfolio.positions.forEach(pos => {
           unrealizedPnL += pos.unrealizedPnL || 0;
           openPositions.push({
             symbol: pos.symbol,
@@ -1505,12 +1688,21 @@ function getAllUserSessions(userId) {
         stats: {
           ...session.stats,
           // Always recalculate winRate from source-of-truth (wins/losses)
-          winRate: (session.stats?.wins + session.stats?.losses) > 0
-            ? parseFloat(((session.stats.wins / (session.stats.wins + session.stats.losses)) * 100).toFixed(1))
-            : 0,
-          totalTrades: (session.stats?.wins || 0) + (session.stats?.losses || 0),
+          winRate:
+            session.stats?.wins + session.stats?.losses > 0
+              ? parseFloat(
+                  (
+                    (session.stats.wins /
+                      (session.stats.wins + session.stats.losses)) *
+                    100
+                  ).toFixed(1)
+                )
+              : 0,
+          totalTrades:
+            (session.stats?.wins || 0) + (session.stats?.losses || 0),
           unrealizedPnL,
-          totalPnLWithUnrealized: (session.stats?.totalPnL || 0) + unrealizedPnL,
+          totalPnLWithUnrealized:
+            (session.stats?.totalPnL || 0) + unrealizedPnL,
         },
         config: session.config,
         watchlist: session.config?.watchlist || [],
@@ -1566,7 +1758,10 @@ function stopSession(sessionId) {
     finalPositions: Array.from(session.portfolio.positions.values()),
   };
 
-  tradingLogger.logConfig('Session stopped', { sessionId, sessionName: session.name });
+  tradingLogger.logConfig('Session stopped', {
+    sessionId,
+    sessionName: session.name,
+  });
 
   // Save to disk
   saveSessions();
@@ -1599,7 +1794,12 @@ async function deleteSession(sessionId, options = {}) {
     const tradingMode = getSessionTradingMode(session);
     const positions = Array.from(session.portfolio.positions.values());
 
-    tradingLogger.logRisk('PANIC SELL', { sessionId, sessionName, reason: `Closing ${positions.length} positions (session delete)`, action: `${tradingMode.toUpperCase()} mode` });
+    tradingLogger.logRisk('PANIC SELL', {
+      sessionId,
+      sessionName,
+      reason: `Closing ${positions.length} positions (session delete)`,
+      action: `${tradingMode.toUpperCase()} mode`,
+    });
 
     // Get asset type for crypto/stock routing
     const sessionAssetType = session.config.assetType || 'stocks';
@@ -1637,9 +1837,20 @@ async function deleteSession(sessionId, options = {}) {
             pnlPercent: position.unrealizedPnLPercent,
           });
 
-          tradingLogger.logInfo(`[AI Engine] Panic sold ${position.quantity} ${position.symbol}`, { sessionId, sessionName, symbol: position.symbol });
+          tradingLogger.logInfo(
+            `[AI Engine] Panic sold ${position.quantity} ${position.symbol}`,
+            { sessionId, sessionName, symbol: position.symbol }
+          );
         } catch (err) {
-          tradingLogger.logError(`[AI Engine] Failed to panic sell ${position.symbol}`, { sessionId, sessionName, symbol: position.symbol, error: err.message });
+          tradingLogger.logError(
+            `[AI Engine] Failed to panic sell ${position.symbol}`,
+            {
+              sessionId,
+              sessionName,
+              symbol: position.symbol,
+              error: err.message,
+            }
+          );
           errors.push({
             symbol: position.symbol,
             error: err.message,
@@ -1695,7 +1906,12 @@ async function panicSell(sessionId) {
   const sessionPositions = Array.from(session.portfolio.positions.values());
   const watchlistSymbols = session.config.watchlist || [];
 
-  tradingLogger.logRisk('PANIC SELL', { sessionId, sessionName, reason: 'Manual panic sell initiated', action: `${tradingMode.toUpperCase()} mode` });
+  tradingLogger.logRisk('PANIC SELL', {
+    sessionId,
+    sessionName,
+    reason: 'Manual panic sell initiated',
+    action: `${tradingMode.toUpperCase()} mode`,
+  });
 
   // Also check actual Alpaca positions for watchlist symbols
   const assetType = session.config.assetType || 'stocks';
@@ -1764,9 +1980,20 @@ async function panicSell(sessionId) {
             pnl: position.unrealizedPnL,
           });
 
-          tradingLogger.logInfo(`[AI Engine] Panic sold ${position.quantity} ${position.symbol}`, { sessionId, sessionName, symbol: position.symbol });
+          tradingLogger.logInfo(
+            `[AI Engine] Panic sold ${position.quantity} ${position.symbol}`,
+            { sessionId, sessionName, symbol: position.symbol }
+          );
         } catch (err) {
-          tradingLogger.logError(`[AI Engine] Failed to panic sell ${position.symbol}`, { sessionId, sessionName, symbol: position.symbol, error: err.message });
+          tradingLogger.logError(
+            `[AI Engine] Failed to panic sell ${position.symbol}`,
+            {
+              sessionId,
+              sessionName,
+              symbol: position.symbol,
+              error: err.message,
+            }
+          );
           errors.push({
             symbol: position.symbol,
             error: err.message,
@@ -1775,7 +2002,11 @@ async function panicSell(sessionId) {
       }
     }
   } catch (err) {
-    tradingLogger.logError('[AI Engine] Failed to fetch Alpaca positions', { sessionId, sessionName, error: err.message });
+    tradingLogger.logError('[AI Engine] Failed to fetch Alpaca positions', {
+      sessionId,
+      sessionName,
+      error: err.message,
+    });
     errors.push({ error: err.message });
   }
 
@@ -1858,7 +2089,13 @@ function cloneSession(sessionId, options = {}) {
   sessions.set(newSessionId, newSession);
   decisionHistory.set(newSessionId, []);
 
-  tradingLogger.logConfig('Session cloned', { sessionId: newSessionId, sessionName: clonedConfig.name, field: 'clonedFrom', oldValue: sessionId, newValue: newSessionId });
+  tradingLogger.logConfig('Session cloned', {
+    sessionId: newSessionId,
+    sessionName: clonedConfig.name,
+    field: 'clonedFrom',
+    oldValue: sessionId,
+    newValue: newSessionId,
+  });
 
   saveSessions();
 
@@ -1889,7 +2126,10 @@ function pauseSession(sessionId) {
       clearTimeout(session.tickTimeoutId);
       session.tickTimeoutId = null;
     }
-    tradingLogger.logConfig('Session paused', { sessionId, sessionName: session.name });
+    tradingLogger.logConfig('Session paused', {
+      sessionId,
+      sessionName: session.name,
+    });
     saveSessions();
     _recalculateStreamSubscriptions();
   }
@@ -1905,7 +2145,10 @@ function resumeSession(sessionId) {
     session.status = 'running';
     session.circuitBreakerTriggered = false;
     session.stats.consecutiveLosses = 0;
-    tradingLogger.logConfig('Session resumed', { sessionId, sessionName: session.name });
+    tradingLogger.logConfig('Session resumed', {
+      sessionId,
+      sessionName: session.name,
+    });
     saveSessions();
     // Restart trading loop
     startTradingLoop(sessionId);
@@ -1964,6 +2207,10 @@ function getSession(sessionId) {
     startTime: session.startTime,
     config: session.config,
     stats: session.stats,
+    cash: session.portfolio?.cash,
+    initialValue: session.portfolio?.initialValue,
+    regimeState: session.regimeState || null,
+    entropyRegimeState: session.entropyRegimeState || null,
     positions: Array.from(session.portfolio.positions.values()),
     recentDecisions: session.decisions.slice(-50),
     circuitBreakerTriggered: session.circuitBreakerTriggered,
@@ -2038,11 +2285,17 @@ async function startTradingLoop(sessionId) {
   try {
     await syncPortfolio(sessionId);
   } catch (error) {
-    tradingLogger.logError(`[AI Engine] Portfolio sync failed for "${session.name}"`, { sessionId, sessionName: session.name, error: error.message });
+    tradingLogger.logError(
+      `[AI Engine] Portfolio sync failed for "${session.name}"`,
+      { sessionId, sessionName: session.name, error: error.message }
+    );
   }
 
   // Adaptive tick rate: 3s with leveraged positions, 5s with non-leveraged, 10s scanning
-  tradingLogger.logInfo(`[AI Engine] Trading loop started for "${session.name}" (adaptive tick)`, { sessionId, sessionName: session.name });
+  tradingLogger.logInfo(
+    `[AI Engine] Trading loop started for "${session.name}" (adaptive tick)`,
+    { sessionId, sessionName: session.name }
+  );
 
   async function tradingTick() {
     const currentSession = sessions.get(sessionId);
@@ -2056,7 +2309,8 @@ async function startTradingLoop(sessionId) {
 
     // Check if market is open (skip for crypto - trades 24/7)
     // Auto-detect asset type from watchlist if not explicitly set
-    const sessionAssetType = currentSession.config?.assetType ||
+    const sessionAssetType =
+      currentSession.config?.assetType ||
       detectAssetTypeFromWatchlist(currentSession.config?.watchlist || []);
 
     if (
@@ -2106,7 +2360,12 @@ async function startTradingLoop(sessionId) {
           // Check if position was entered on a previous calendar day
           const isStale = entryDate.toDateString() !== now.toDateString();
           if (isStale) {
-            tradingLogger.logRisk('Stale position guard', { sessionId, sessionName: currentSession.name, reason: `${symbol} (${leverage}x leveraged) held overnight from ${entryDate.toISOString()}`, action: 'Force exiting' });
+            tradingLogger.logRisk('Stale position guard', {
+              sessionId,
+              sessionName: currentSession.name,
+              reason: `${symbol} (${leverage}x leveraged) held overnight from ${entryDate.toISOString()}`,
+              action: 'Force exiting',
+            });
             await executeExit(sessionId, symbol, {
               shouldExit: true,
               exitReason: `Stale position guard: ${leverage}x leveraged ETF held overnight`,
@@ -2124,18 +2383,32 @@ async function startTradingLoop(sessionId) {
       // This prevents overnight exposure for day trading strategies
       // Skip EOD exit for crypto sessions — crypto trades 24/7, no market close
       const isCryptoSession = currentSession.config.assetType === 'crypto';
-      const exitBeforeClose = !isCryptoSession && currentSession.config.exitBeforeClose !== false; // Default true for stocks
+      const exitBeforeClose =
+        !isCryptoSession && currentSession.config.exitBeforeClose !== false; // Default true for stocks
       // FIX 6c: Leveraged ETFs get wider EOD window (at least 30 min before close)
-      const hasLeveragedPositions = Array.from(currentSession.portfolio.positions.keys())
-        .some(sym => getEtfLeverage(sym) > 1);
-      const configEodMinutes = currentSession.config.exitBeforeCloseMinutes || 15;
-      const exitBeforeCloseMinutes = hasLeveragedPositions ? Math.max(configEodMinutes, 30) : configEodMinutes;
+      const hasLeveragedPositions = Array.from(
+        currentSession.portfolio.positions.keys()
+      ).some(sym => getEtfLeverage(sym) > 1);
+      const configEodMinutes =
+        currentSession.config.exitBeforeCloseMinutes || 15;
+      const exitBeforeCloseMinutes = hasLeveragedPositions
+        ? Math.max(configEodMinutes, 30)
+        : configEodMinutes;
       const minutesUntilClose = getMinutesUntilClose();
 
-      if (exitBeforeClose && minutesUntilClose > 0 && minutesUntilClose <= exitBeforeCloseMinutes) {
+      if (
+        exitBeforeClose &&
+        minutesUntilClose > 0 &&
+        minutesUntilClose <= exitBeforeCloseMinutes
+      ) {
         const positions = Array.from(currentSession.portfolio.positions.keys());
         if (positions.length > 0) {
-          tradingLogger.logRisk('EOD EXIT', { sessionId, sessionName: currentSession.name, reason: `${minutesUntilClose.toFixed(0)} min until close, closing ${positions.length} position(s)`, action: 'Closing all positions' });
+          tradingLogger.logRisk('EOD EXIT', {
+            sessionId,
+            sessionName: currentSession.name,
+            reason: `${minutesUntilClose.toFixed(0)} min until close, closing ${positions.length} position(s)`,
+            action: 'Closing all positions',
+          });
 
           for (const symbol of positions) {
             const position = currentSession.portfolio.positions.get(symbol);
@@ -2161,7 +2434,12 @@ async function startTradingLoop(sessionId) {
       // Analyze watchlist and make decisions
       await analyzeAndTrade(sessionId);
     } catch (error) {
-      tradingLogger.logError('[AI Engine] Error in trading loop', { sessionId, sessionName: currentSession.name, error: error.message, stack: error.stack });
+      tradingLogger.logError('[AI Engine] Error in trading loop', {
+        sessionId,
+        sessionName: currentSession.name,
+        error: error.message,
+        stack: error.stack,
+      });
       websocketServer.sendAlert(currentSession.userId, {
         type: 'error',
         title: 'Trading Error',
@@ -2176,13 +2454,14 @@ async function startTradingLoop(sessionId) {
       const positions = Array.from(latestSession.portfolio.positions.keys());
       const hasLeveraged = positions.some(sym => getEtfLeverage(sym) > 1);
       const hasPositions = positions.length > 0;
-      const nearClose = getMinutesUntilClose() > 0 && getMinutesUntilClose() <= 30;
+      const nearClose =
+        getMinutesUntilClose() > 0 && getMinutesUntilClose() <= 30;
 
       let tickMs;
       if ((hasLeveraged || nearClose) && hasPositions) {
-        tickMs = 3000;  // 3s: leveraged positions or near close with positions
+        tickMs = 3000; // 3s: leveraged positions or near close with positions
       } else if (hasPositions) {
-        tickMs = 5000;  // 5s: non-leveraged positions
+        tickMs = 5000; // 5s: non-leveraged positions
       } else {
         tickMs = 10000; // 10s: scanning only
       }
@@ -2221,8 +2500,12 @@ function getMarketHolidays(year) {
   // Good Friday (Friday before Easter - approximate)
   // Easter calculation is complex, using fixed dates for known years
   const goodFridays = {
-    2024: '2024-03-29', 2025: '2025-04-18', 2026: '2026-04-03',
-    2027: '2027-03-26', 2028: '2028-04-14', 2029: '2029-03-30'
+    2024: '2024-03-29',
+    2025: '2025-04-18',
+    2026: '2026-04-03',
+    2027: '2027-03-26',
+    2028: '2028-04-14',
+    2029: '2029-03-30',
   };
   if (goodFridays[year]) holidays.add(goodFridays[year]);
 
@@ -2406,6 +2689,21 @@ async function syncPortfolio(sessionId) {
   const session = sessions.get(sessionId);
   if (!session) return;
 
+  // SIMULATION MODE: skip Alpaca calls; just mark-to-market existing positions.
+  // The simulated executor owns cash + positions for these sessions.
+  if (session.config.simulationMode) {
+    try {
+      await simulatedExecutor.markToMarket(session);
+    } catch (err) {
+      tradingLogger.logError('[Sim] markToMarket failed', {
+        sessionId,
+        sessionName: session.name,
+        error: err.message,
+      });
+    }
+    return;
+  }
+
   try {
     // Get the trading mode for this session (paper or live)
     const tradingMode = getSessionTradingMode(session);
@@ -2413,7 +2711,10 @@ async function syncPortfolio(sessionId) {
     const account = await alpacaClient.getAccount(tradingMode);
     const positions = await getPositionsForAsset(tradingMode, assetType);
     // DEBUG: Log positions from Alpaca with session name
-    tradingLogger.logInfo(`[AI Engine] "${session.name}" synced: ${positions.length} positions (${assetType}, ${tradingMode})`, { sessionId, sessionName: session.name });
+    tradingLogger.logInfo(
+      `[AI Engine] "${session.name}" synced: ${positions.length} positions (${assetType}, ${tradingMode})`,
+      { sessionId, sessionName: session.name }
+    );
 
     session.portfolio.cash = parseFloat(account.cash);
     session.portfolio.initialValue = parseFloat(account.portfolio_value);
@@ -2425,8 +2726,12 @@ async function syncPortfolio(sessionId) {
     // Update positions (preserve entryTime and highWaterMark from existing positions if available)
     // Note: alpacaClient.getPositions() returns camelCase fields (quantity, avgEntryPrice, etc.)
     // Filter to watchlist symbols only (unless manageAllPositions) to prevent cross-session contamination
-    const watchlistUpper = (session.config.watchlist || []).map(s => s.toUpperCase());
-    const sessionAssetType = session.config.assetType || detectAssetTypeFromWatchlist(session.config.watchlist || []);
+    const watchlistUpper = (session.config.watchlist || []).map(s =>
+      s.toUpperCase()
+    );
+    const sessionAssetType =
+      session.config.assetType ||
+      detectAssetTypeFromWatchlist(session.config.watchlist || []);
     // For sessions that allow duplicate positions across siblings, additionally
     // attribute by tradingLog: a session only claims a broker position if its
     // own tradingLog has a net long in that symbol. Otherwise multiple sessions
@@ -2479,12 +2784,20 @@ async function syncPortfolio(sessionId) {
     });
     session.portfolio.positions = newPositions;
 
-    tradingLogger.logInfo(`[AI Engine] Portfolio synced (${tradingMode.toUpperCase()}): $${session.portfolio.cash.toFixed(2)} cash, ${session.portfolio.positions.size} positions`, { sessionId, sessionName: session.name });
+    tradingLogger.logInfo(
+      `[AI Engine] Portfolio synced (${tradingMode.toUpperCase()}): $${session.portfolio.cash.toFixed(2)} cash, ${session.portfolio.positions.size} positions`,
+      { sessionId, sessionName: session.name }
+    );
 
     // Periodically save session state
     saveSessions();
   } catch (error) {
-    tradingLogger.logError('[AI Engine] Failed to sync portfolio', { sessionId, sessionName: session.name, error: error.message, stack: error.stack });
+    tradingLogger.logError('[AI Engine] Failed to sync portfolio', {
+      sessionId,
+      sessionName: session.name,
+      error: error.message,
+      stack: error.stack,
+    });
   }
 }
 
@@ -2507,13 +2820,21 @@ async function analyzeAndTrade(sessionId) {
 
   const dailyTarget = session.config.dailyProfitTargetPercent;
   if (dailyTarget && dailyTarget > 0 && !session.dailyTargetHit) {
-    const todayPnL = (session.stats?.totalPnL || 0) - (session.dailyStartPnL || 0);
+    const todayPnL =
+      (session.stats?.totalPnL || 0) - (session.dailyStartPnL || 0);
     const initialValue = session.portfolio?.initialValue || 100000;
     const dayPnLPct = (todayPnL / initialValue) * 100;
 
     if (dayPnLPct >= dailyTarget) {
       session.dailyTargetHit = true;
-      tradingLogger.logRisk('Daily profit target hit', { sessionId, sessionName: session.name, reason: `+${dayPnLPct.toFixed(2)}% hit ${dailyTarget}% target`, value: dayPnLPct, threshold: dailyTarget, action: 'Closing positions and pausing' });
+      tradingLogger.logRisk('Daily profit target hit', {
+        sessionId,
+        sessionName: session.name,
+        reason: `+${dayPnLPct.toFixed(2)}% hit ${dailyTarget}% target`,
+        value: dayPnLPct,
+        threshold: dailyTarget,
+        action: 'Closing positions and pausing',
+      });
 
       // Close any open positions via the standard exit path
       const openSymbols = Array.from(session.portfolio.positions.keys());
@@ -2551,7 +2872,10 @@ async function analyzeAndTrade(sessionId) {
 
   // Log only when there are symbols to analyze
   if (watchlist?.length > 0) {
-    tradingLogger.logInfo(`[AI Engine] Analyzing ${watchlist.length} symbols for "${session.name}"`, { sessionId, sessionName: session.name });
+    tradingLogger.logInfo(
+      `[AI Engine] Analyzing ${watchlist.length} symbols for "${session.name}"`,
+      { sessionId, sessionName: session.name }
+    );
   }
 
   // ============================================================
@@ -2567,25 +2891,36 @@ async function analyzeAndTrade(sessionId) {
     // Check if AI analysis should be triggered (phase transitions, direction changes)
     const aiTrigger = sentimentEngine.shouldTriggerAIAnalysis(sentiment);
     if (aiTrigger.shouldTrigger && session.config.aiSentimentEnabled) {
-      tradingLogger.logInfo(`[AI Engine] ${session.name}: AI analysis triggered - ${aiTrigger.reason}`, { sessionId, sessionName: session.name });
+      tradingLogger.logInfo(
+        `[AI Engine] ${session.name}: AI analysis triggered - ${aiTrigger.reason}`,
+        { sessionId, sessionName: session.name }
+      );
       aiAnalysis = await aiAnalyst.analyze(sentiment, aiTrigger.trigger);
 
       // Apply AI confidence adjustment
       if (aiAnalysis && aiAnalysis.confidenceAdjustment) {
         const originalConfidence = sentiment.confidence;
-        sentiment.confidence = Math.max(0, Math.min(100,
-          sentiment.confidence + aiAnalysis.confidenceAdjustment
-        ));
+        sentiment.confidence = Math.max(
+          0,
+          Math.min(100, sentiment.confidence + aiAnalysis.confidenceAdjustment)
+        );
         sentiment.aiEnhanced = true;
         sentiment.aiAnalysis = aiAnalysis;
-        tradingLogger.logInfo(`[AI Engine] ${session.name}: AI adjusted confidence ${originalConfidence}% -> ${sentiment.confidence}%`, { sessionId, sessionName: session.name });
+        tradingLogger.logInfo(
+          `[AI Engine] ${session.name}: AI adjusted confidence ${originalConfidence}% -> ${sentiment.confidence}%`,
+          { sessionId, sessionName: session.name }
+        );
       }
     }
 
     // Check market gate before proceeding
     const gateCheck = await checkMarketGate(session, sentiment);
     if (!gateCheck.allowed) {
-      tradingLogger.logRisk('Market gate blocked', { sessionId, sessionName: session.name, reason: gateCheck.reason });
+      tradingLogger.logRisk('Market gate blocked', {
+        sessionId,
+        sessionName: session.name,
+        reason: gateCheck.reason,
+      });
 
       // Broadcast gate status to frontend
       websocketServer.broadcastToAll('trading_log', {
@@ -2595,29 +2930,51 @@ async function analyzeAndTrade(sessionId) {
         message: `Market gate: ${gateCheck.reason}`,
         sessionId: session.sessionId,
         sessionName: session.name,
-        sentiment: sentiment ? {
-          direction: sentiment.direction,
-          confidence: sentiment.confidence,
-        } : null,
+        sentiment: sentiment
+          ? {
+              direction: sentiment.direction,
+              confidence: sentiment.confidence,
+            }
+          : null,
         timestamp: new Date().toISOString(),
       });
 
       // Still check existing positions for exit signals even when gate is blocked
       // Filter to watchlist positions only (unless manageAllPositions is set)
-      const gateBlockedPositions = Array.from(session.portfolio.positions.keys());
+      const gateBlockedPositions = Array.from(
+        session.portfolio.positions.keys()
+      );
       const watchlistUpperCaseGate = watchlist.map(s => s.toUpperCase());
-      const positionsToCheck = session.config.manageAllPositions === true
-        ? gateBlockedPositions
-        : gateBlockedPositions.filter(symbol => watchlistUpperCaseGate.includes(symbol.toUpperCase()));
+      const positionsToCheck =
+        session.config.manageAllPositions === true
+          ? gateBlockedPositions
+          : gateBlockedPositions.filter(symbol =>
+              watchlistUpperCaseGate.includes(symbol.toUpperCase())
+            );
 
       for (const symbol of positionsToCheck) {
         // Check for SOXS hold time limit
-        if (symbol.toUpperCase() === 'SOXS' && session.config.maxSoxsHoldMinutes) {
+        if (
+          symbol.toUpperCase() === 'SOXS' &&
+          session.config.maxSoxsHoldMinutes
+        ) {
           const position = session.portfolio.positions.get(symbol);
-          const holdCheck = checkSoxsHoldTime(position, session.config.maxSoxsHoldMinutes);
+          const holdCheck = checkSoxsHoldTime(
+            position,
+            session.config.maxSoxsHoldMinutes
+          );
           if (holdCheck.shouldExit) {
-            tradingLogger.logRisk('SOXS hold time exceeded', { sessionId, sessionName: session.name, reason: holdCheck.reason, symbol, action: 'Force exiting' });
-            await executeExit(sessionId, symbol, { shouldExit: true, reason: holdCheck.reason });
+            tradingLogger.logRisk('SOXS hold time exceeded', {
+              sessionId,
+              sessionName: session.name,
+              reason: holdCheck.reason,
+              symbol,
+              action: 'Force exiting',
+            });
+            await executeExit(sessionId, symbol, {
+              shouldExit: true,
+              reason: holdCheck.reason,
+            });
             continue;
           }
         }
@@ -2625,8 +2982,17 @@ async function analyzeAndTrade(sessionId) {
         // Check market phase for force exit
         const forceExitCheck = sentimentEngine.shouldForceExit(symbol);
         if (forceExitCheck.shouldExit) {
-          tradingLogger.logRisk('Force exit', { sessionId, sessionName: session.name, reason: forceExitCheck.reason, symbol, action: 'Force exiting' });
-          await executeExit(sessionId, symbol, { shouldExit: true, reason: forceExitCheck.reason });
+          tradingLogger.logRisk('Force exit', {
+            sessionId,
+            sessionName: session.name,
+            reason: forceExitCheck.reason,
+            symbol,
+            action: 'Force exiting',
+          });
+          await executeExit(sessionId, symbol, {
+            shouldExit: true,
+            reason: forceExitCheck.reason,
+          });
           continue;
         }
 
@@ -2646,7 +3012,10 @@ async function analyzeAndTrade(sessionId) {
     // Check market phase for entry permission
     const phase = sentimentEngine.getMarketPhase();
     if (!phase.tradingAllowed) {
-      tradingLogger.logInfo(`[AI Engine] ${session.name}: Phase ${phase.phase} - no new entries allowed`, { sessionId, sessionName: session.name });
+      tradingLogger.logInfo(
+        `[AI Engine] ${session.name}: Phase ${phase.phase} - no new entries allowed`,
+        { sessionId, sessionName: session.name }
+      );
       return;
     }
 
@@ -2663,12 +3032,14 @@ async function analyzeAndTrade(sessionId) {
         signals: sentiment.signals,
         aiEnhanced: sentiment.aiEnhanced,
       },
-      aiAnalysis: aiAnalysis ? {
-        direction: aiAnalysis.direction,
-        confidenceAdjustment: aiAnalysis.confidenceAdjustment,
-        reasoning: aiAnalysis.reasoning,
-        riskLevel: aiAnalysis.riskLevel,
-      } : null,
+      aiAnalysis: aiAnalysis
+        ? {
+            direction: aiAnalysis.direction,
+            confidenceAdjustment: aiAnalysis.confidenceAdjustment,
+            reasoning: aiAnalysis.reasoning,
+            riskLevel: aiAnalysis.riskLevel,
+          }
+        : null,
       timestamp: new Date().toISOString(),
     });
   }
@@ -2676,12 +3047,22 @@ async function analyzeAndTrade(sessionId) {
   // ============================================================
   // REGIME GATE: For non-semiconductor sessions with regime gating
   // ============================================================
-  if (!session.config.semiconductorMode && session.config.regimeGateEnabled && session.config.regimeReferenceSymbol) {
-    const regimeEngine = getOrCreateRegimeEngine(session.config.regimeReferenceSymbol);
+  if (
+    !session.config.semiconductorMode &&
+    session.config.regimeGateEnabled &&
+    session.config.regimeReferenceSymbol
+  ) {
+    const regimeEngine = getOrCreateRegimeEngine(
+      session.config.regimeReferenceSymbol
+    );
     sentiment = await regimeEngine.getSentiment();
     const gateCheck = await checkMarketGate(session, sentiment);
     if (!gateCheck.allowed) {
-      tradingLogger.logRisk('Regime gate blocked', { sessionId, sessionName: session.name, reason: `${session.config.regimeReferenceSymbol}: ${gateCheck.reason}` });
+      tradingLogger.logRisk('Regime gate blocked', {
+        sessionId,
+        sessionName: session.name,
+        reason: `${session.config.regimeReferenceSymbol}: ${gateCheck.reason}`,
+      });
 
       websocketServer.broadcastToAll('trading_log', {
         id: `${Date.now()}-regime-gate-${session.sessionId}`,
@@ -2690,7 +3071,9 @@ async function analyzeAndTrade(sessionId) {
         message: `Regime gate (${session.config.regimeReferenceSymbol}): ${gateCheck.reason}`,
         sessionId: session.sessionId,
         sessionName: session.name,
-        sentiment: sentiment ? { direction: sentiment.direction, confidence: sentiment.confidence } : null,
+        sentiment: sentiment
+          ? { direction: sentiment.direction, confidence: sentiment.confidence }
+          : null,
         timestamp: new Date().toISOString(),
       });
 
@@ -2698,10 +3081,12 @@ async function analyzeAndTrade(sessionId) {
       const positions = Array.from(session.portfolio.positions.keys());
       const wlUpper = watchlist.map(s => s.toUpperCase());
       const toCheck = session.config.manageAllPositions
-        ? positions : positions.filter(s => wlUpper.includes(s.toUpperCase()));
+        ? positions
+        : positions.filter(s => wlUpper.includes(s.toUpperCase()));
       for (const sym of toCheck) {
         const exitDecision = await evaluateExit(sessionId, sym);
-        if (exitDecision.shouldExit) await executeExit(sessionId, sym, exitDecision);
+        if (exitDecision.shouldExit)
+          await executeExit(sessionId, sym, exitDecision);
       }
       handleRegimeSessionSwitch(session, sentiment);
       return;
@@ -2710,7 +3095,10 @@ async function analyzeAndTrade(sessionId) {
     // Check market phase for entry permission
     const regimePhase = regimeEngine.getMarketPhase();
     if (!regimePhase.tradingAllowed) {
-      tradingLogger.logInfo(`[AI Engine] ${session.name}: Regime phase ${regimePhase.phase} - no new entries allowed`, { sessionId, sessionName: session.name });
+      tradingLogger.logInfo(
+        `[AI Engine] ${session.name}: Regime phase ${regimePhase.phase} - no new entries allowed`,
+        { sessionId, sessionName: session.name }
+      );
       return;
     }
   }
@@ -2724,24 +3112,50 @@ async function analyzeAndTrade(sessionId) {
   const watchlistUpperCase = watchlist.map(s => s.toUpperCase());
   const positionsToManage = manageAllPositions
     ? currentPositions
-    : currentPositions.filter(symbol => watchlistUpperCase.includes(symbol.toUpperCase()));
+    : currentPositions.filter(symbol =>
+        watchlistUpperCase.includes(symbol.toUpperCase())
+      );
 
-  if (currentPositions.length > 0 && positionsToManage.length === 0 && !manageAllPositions) {
+  if (
+    currentPositions.length > 0 &&
+    positionsToManage.length === 0 &&
+    !manageAllPositions
+  ) {
     // Log once per session when we're skipping all positions (they're outside our watchlist)
-    if (Math.random() < 0.01) { // Log rarely to avoid spam
-      tradingLogger.logInfo(`[AI Engine] ${session.name}: Skipping ${currentPositions.length} positions (none in watchlist)`, { sessionId, sessionName: session.name });
+    if (Math.random() < 0.01) {
+      // Log rarely to avoid spam
+      tradingLogger.logInfo(
+        `[AI Engine] ${session.name}: Skipping ${currentPositions.length} positions (none in watchlist)`,
+        { sessionId, sessionName: session.name }
+      );
     }
   }
 
   // First, check existing positions for exit signals
   for (const symbol of positionsToManage) {
     // SEMICONDUCTOR MODE: Check SOXS hold time limit
-    if (session.config.semiconductorMode && symbol.toUpperCase() === 'SOXS' && session.config.maxSoxsHoldMinutes) {
+    if (
+      session.config.semiconductorMode &&
+      symbol.toUpperCase() === 'SOXS' &&
+      session.config.maxSoxsHoldMinutes
+    ) {
       const position = session.portfolio.positions.get(symbol);
-      const holdCheck = checkSoxsHoldTime(position, session.config.maxSoxsHoldMinutes);
+      const holdCheck = checkSoxsHoldTime(
+        position,
+        session.config.maxSoxsHoldMinutes
+      );
       if (holdCheck.shouldExit) {
-        tradingLogger.logRisk('SOXS hold time exceeded', { sessionId, sessionName: session.name, reason: holdCheck.reason, symbol, action: 'Force exiting' });
-        await executeExit(sessionId, symbol, { shouldExit: true, reason: holdCheck.reason });
+        tradingLogger.logRisk('SOXS hold time exceeded', {
+          sessionId,
+          sessionName: session.name,
+          reason: holdCheck.reason,
+          symbol,
+          action: 'Force exiting',
+        });
+        await executeExit(sessionId, symbol, {
+          shouldExit: true,
+          reason: holdCheck.reason,
+        });
         continue;
       }
     }
@@ -2750,8 +3164,17 @@ async function analyzeAndTrade(sessionId) {
     if (session.config.semiconductorMode) {
       const forceExitCheck = sentimentEngine.shouldForceExit(symbol);
       if (forceExitCheck.shouldExit) {
-        tradingLogger.logRisk('Force exit (main loop)', { sessionId, sessionName: session.name, reason: forceExitCheck.reason, symbol, action: 'Force exiting' });
-        await executeExit(sessionId, symbol, { shouldExit: true, reason: forceExitCheck.reason });
+        tradingLogger.logRisk('Force exit (main loop)', {
+          sessionId,
+          sessionName: session.name,
+          reason: forceExitCheck.reason,
+          symbol,
+          action: 'Force exiting',
+        });
+        await executeExit(sessionId, symbol, {
+          shouldExit: true,
+          reason: forceExitCheck.reason,
+        });
         continue;
       }
     }
@@ -2787,7 +3210,12 @@ async function analyzeAndTrade(sessionId) {
 
       // PAIR GUARD: Don't enter if we already hold the opposing ETF in this session
       const opposite = getOppositeEtf(symbol);
-      if (opposite && normalizedPositions.map(s => s.toUpperCase()).includes(opposite.toUpperCase())) {
+      if (
+        opposite &&
+        normalizedPositions
+          .map(s => s.toUpperCase())
+          .includes(opposite.toUpperCase())
+      ) {
         continue;
       }
 
@@ -2796,8 +3224,12 @@ async function analyzeAndTrade(sessionId) {
         const alignmentCheck = checkSymbolSentimentAlignment(symbol, sentiment);
         if (!alignmentCheck.allowed) {
           // Log but don't spam - only log occasionally
-          if (Math.random() < 0.1) { // Log ~10% of the time
-            tradingLogger.logInfo(`[AI Engine] ${session.name}: Skipping ${symbol} - ${alignmentCheck.reason}`, { sessionId, sessionName: session.name, symbol });
+          if (Math.random() < 0.1) {
+            // Log ~10% of the time
+            tradingLogger.logInfo(
+              `[AI Engine] ${session.name}: Skipping ${symbol} - ${alignmentCheck.reason}`,
+              { sessionId, sessionName: session.name, symbol }
+            );
           }
           continue;
         }
@@ -2805,17 +3237,27 @@ async function analyzeAndTrade(sessionId) {
         // Check market phase entry permission for this specific symbol
         const entryCheck = sentimentEngine.canEnterPosition(symbol);
         if (!entryCheck.allowed) {
-          tradingLogger.logInfo(`[AI Engine] ${session.name}: Cannot enter ${symbol} - ${entryCheck.reason}`, { sessionId, sessionName: session.name, symbol });
+          tradingLogger.logInfo(
+            `[AI Engine] ${session.name}: Cannot enter ${symbol} - ${entryCheck.reason}`,
+            { sessionId, sessionName: session.name, symbol }
+          );
           continue;
         }
       }
 
       // REGIME GATE: Check symbol alignment for regime-gated sessions
-      if (!session.config.semiconductorMode && session.config.regimeGateEnabled && sentiment) {
+      if (
+        !session.config.semiconductorMode &&
+        session.config.regimeGateEnabled &&
+        sentiment
+      ) {
         const alignmentCheck = checkSymbolSentimentAlignment(symbol, sentiment);
         if (!alignmentCheck.allowed) {
           if (Math.random() < 0.1) {
-            tradingLogger.logInfo(`[AI Engine] ${session.name}: Regime skipping ${symbol} - ${alignmentCheck.reason}`, { sessionId, sessionName: session.name, symbol });
+            tradingLogger.logInfo(
+              `[AI Engine] ${session.name}: Regime skipping ${symbol} - ${alignmentCheck.reason}`,
+              { sessionId, sessionName: session.name, symbol }
+            );
           }
           continue;
         }
@@ -2827,7 +3269,12 @@ async function analyzeAndTrade(sessionId) {
         const globalCheck = canEnterGlobally(sessionId, symbol);
         if (!globalCheck.allowed) {
           if (Math.random() < 0.05) {
-            tradingLogger.logRisk('Cross-session block', { sessionId, sessionName: session.name, reason: globalCheck.reason, symbol });
+            tradingLogger.logRisk('Cross-session block', {
+              sessionId,
+              sessionName: session.name,
+              reason: globalCheck.reason,
+              symbol,
+            });
           }
           continue;
         }
@@ -2839,7 +3286,10 @@ async function analyzeAndTrade(sessionId) {
       if (existingLock && existingLock.sessionId !== sessionId) {
         const lockAge = Date.now() - existingLock.timestamp;
         if (lockAge < ENTRY_LOCK_TIMEOUT_MS) {
-          tradingLogger.logInfo(`[AI Engine] ${session.name}: Skipping ${symbol} — entry lock held by "${existingLock.sessionName}"`, { sessionId, sessionName: session.name, symbol });
+          tradingLogger.logInfo(
+            `[AI Engine] ${session.name}: Skipping ${symbol} — entry lock held by "${existingLock.sessionName}"`,
+            { sessionId, sessionName: session.name, symbol }
+          );
           continue;
         }
         // Lock expired, clear it
@@ -2847,7 +3297,11 @@ async function analyzeAndTrade(sessionId) {
       }
 
       // Acquire lock before evaluating
-      globalEntryLocks.set(lockKey, { sessionId, sessionName: session.name, timestamp: Date.now() });
+      globalEntryLocks.set(lockKey, {
+        sessionId,
+        sessionName: session.name,
+        timestamp: Date.now(),
+      });
       try {
         const entryDecision = await evaluateEntry(sessionId, symbol);
         if (
@@ -2868,10 +3322,49 @@ async function analyzeAndTrade(sessionId) {
     // Sort by confidence descending — best opportunity first
     candidates.sort((a, b) => b.decision.confidence - a.decision.confidence);
 
-    // Execute top N candidates (up to remaining position capacity)
+    // Execute top N candidates (up to remaining position capacity).
+    // For broker sessions with entropyGateEnabled, run the Shannon-entropy
+    // regime gate before each executeEntry — vetoes setups that don't match
+    // the broker's preferred regime, and broadcasts the latest regime state.
     const slotsAvailable = maxPositions - session.portfolio.positions.size;
     for (const candidate of candidates.slice(0, slotsAvailable)) {
+      if (session.config.entropyGateEnabled) {
+        try {
+          const gate = await entropyGate.checkEntropyGate(
+            session,
+            candidate.symbol
+          );
+          session.entropyRegimeState = {
+            ...(gate.regime || {}),
+            timestamp: new Date().toISOString(),
+          };
+          if (!gate.allow) {
+            tradingLogger.logInfo(
+              `[Entropy] ${session.name} blocked ${candidate.symbol}: ${gate.reason}`,
+              {
+                sessionId,
+                sessionName: session.name,
+                symbol: candidate.symbol,
+                regime: gate.regime,
+              }
+            );
+            continue;
+          }
+        } catch (err) {
+          tradingLogger.logError(`[Entropy] gate check failed`, {
+            sessionId,
+            sessionName: session.name,
+            symbol: candidate.symbol,
+            error: err.message,
+          });
+          // Fail open: don't block on transient gate errors
+        }
+      }
       await executeEntry(sessionId, candidate.symbol, candidate.decision);
+      // Signal funnel: an entry order was actually placed for this candidate.
+      if (session.stats) {
+        session.stats.signalsEntered = (session.stats.signalsEntered || 0) + 1;
+      }
     }
   }
 }
@@ -2884,6 +3377,45 @@ async function analyzeAndTrade(sessionId) {
  */
 async function evaluateEntry(sessionId, symbol) {
   return signalEvaluator.evaluateEntry(sessionId, symbol);
+}
+
+/**
+ * Run a strategy's entry evaluation for a symbol against a throwaway session,
+ * without touching the order path or persisting anything. Used by the
+ * scripts/dry-run-strategy.js CLI to validate a plugin in isolation.
+ *
+ * The engine must be required with AI_ENGINE_DRY_RUN set so it stays inert
+ * (no autostart, no persistence). The temp session is injected into the live
+ * `sessions` map (the dispatcher reads it via ctx.sessions) and removed after.
+ *
+ * @param {object} config - a session config (e.g. from brokerToSessionConfig)
+ * @param {string} symbol - Stock symbol to evaluate
+ * @returns {object} the entry decision object
+ */
+async function dryRunEntry(config = {}, symbol) {
+  const tempId = `dry-run-${symbol}-${Date.now()}`;
+  const sessionConfig = { ...DEFAULT_CONFIG, ...config };
+  const session = {
+    sessionId: tempId,
+    userId: 'dry-run',
+    name: sessionConfig.name || `dry-run-${config.brokerSlug || 'broker'}`,
+    status: 'running',
+    startTime: new Date(),
+    config: sessionConfig,
+    portfolio: { cash: 100000, positions: new Map(), initialValue: 100000 },
+    stats: { signalsEvaluated: 0, signalsPassed: 0, signalsEntered: 0 },
+    decisions: [],
+    alerts: [],
+    tradingLog: [],
+  };
+  sessions.set(tempId, session);
+  try {
+    const decision = await signalEvaluator.evaluateEntry(tempId, symbol);
+    return { decision, funnel: session.stats };
+  } finally {
+    sessions.delete(tempId);
+    decisionHistory.delete(tempId);
+  }
 }
 
 /**
@@ -3018,8 +3550,277 @@ function updateConfig(sessionId, newConfig) {
   const { name: _excludedName, ...configWithoutName } = newConfig;
   session.config = { ...session.config, ...configWithoutName };
 
-  tradingLogger.logConfig('Config updated', { sessionId, sessionName: session.name });
+  tradingLogger.logConfig('Config updated', {
+    sessionId,
+    sessionName: session.name,
+  });
   saveSessions();
+}
+
+/**
+ * Reset a session's portfolio to a fresh starting capital. Used by the broker
+ * bridge when an agent's persona file changes its `capital` field, or when a
+ * persisted session has drifted away from its broker's intended starting pool.
+ * Only honored for simulated sessions to prevent accidental wipes on live paper.
+ */
+/**
+ * Manually trigger a simulated entry on a session, bypassing the analyze loop.
+ * Useful for testing end-to-end while markets are closed. Only works for
+ * sessions in simulationMode — refuses to touch live/paper sessions.
+ */
+async function manualSimEntry(sessionId, symbol, decision = {}) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+  if (!session.config.simulationMode)
+    return { error: 'session not in simulationMode' };
+  await simulatedExecutor.simulatedEntry(session, symbol.toUpperCase(), {
+    confidence: decision.confidence || 75,
+    reason: decision.reason || 'manual test trade',
+  });
+  return { ok: true };
+}
+
+/**
+ * Manually trigger a simulated exit. Same constraints as manualSimEntry.
+ */
+async function manualSimExit(sessionId, symbol, decision = {}) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+  if (!session.config.simulationMode)
+    return { error: 'session not in simulationMode' };
+  await simulatedExecutor.simulatedExit(session, symbol.toUpperCase(), {
+    reason: decision.reason || 'manual test exit',
+    exitReason: decision.exitReason || decision.reason || 'manual test exit',
+  });
+  return { ok: true };
+}
+
+/**
+ * Test-only: seed a session's tradingLog and stats with N synthetic closed
+ * trades drawn from a target win rate + payoff ratio. Used to demo the
+ * tier-promotion engine and unblock Phase 6 dev before real history accumulates.
+ *
+ * Only honored for simulationMode sessions to prevent accidental tampering.
+ */
+function seedSyntheticTradeHistory(sessionId, opts = {}) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+  if (!session.config.simulationMode)
+    return { error: 'session not in simulationMode' };
+
+  const n = Math.max(1, Math.min(500, parseInt(opts.trades) || 100));
+  const winRate = Math.max(0, Math.min(1, parseFloat(opts.winRate) || 0.6));
+  const avgWinPct = Math.max(0.01, parseFloat(opts.avgWinPct) || 1.5);
+  const avgLossPct = Math.max(0.01, parseFloat(opts.avgLossPct) || 0.8);
+  const daysBack = Math.max(1, parseInt(opts.daysBack) || 25);
+
+  // Backdate the session start so promotion's "minDays" gate is satisfied
+  session.startTime = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+
+  session.stats = session.stats || {};
+  Object.assign(session.stats, {
+    totalTrades: 0,
+    wins: 0,
+    losses: 0,
+    totalPnL: 0,
+    consecutiveLosses: 0,
+    peakValue: session.portfolio?.initialValue || 100000,
+    maxDrawdown: 0,
+    winRate: 0,
+  });
+  session.tradingLog = [];
+
+  let cumulativePnL = 0;
+  const startCapital = session.portfolio?.initialValue || 100000;
+  let peak = startCapital;
+  let currentEquity = startCapital;
+  const dollarRisk = startCapital * 0.05;
+
+  for (let i = 0; i < n; i++) {
+    const win = Math.random() < winRate;
+    const pct = win
+      ? avgWinPct * (0.6 + Math.random() * 0.8)
+      : -avgLossPct * (0.6 + Math.random() * 0.8);
+    const realizedPnL = dollarRisk * (pct / 100);
+    const ts = new Date(
+      Date.now() - ((n - i) * daysBack * 24 * 60 * 60 * 1000) / n
+    ).toISOString();
+
+    session.tradingLog.push({
+      tradeId: `synthetic-${i}`,
+      side: 'sell',
+      symbol: 'SYNTH',
+      quantity: 1,
+      price: 100 + pct,
+      realizedPnL,
+      realizedPct: pct,
+      exitReason: 'synthetic seed',
+      entryPrice: 100,
+      timestamp: ts,
+      simulated: true,
+    });
+
+    if (win) {
+      session.stats.wins++;
+      session.stats.consecutiveLosses = 0;
+    } else {
+      session.stats.losses++;
+      session.stats.consecutiveLosses++;
+    }
+    cumulativePnL += realizedPnL;
+    currentEquity = startCapital + cumulativePnL;
+    if (currentEquity > peak) peak = currentEquity;
+    const drawdown = peak > 0 ? ((peak - currentEquity) / peak) * 100 : 0;
+    if (drawdown > session.stats.maxDrawdown)
+      session.stats.maxDrawdown = drawdown;
+  }
+
+  session.stats.totalTrades = n;
+  session.stats.totalPnL = cumulativePnL;
+  session.stats.peakValue = peak;
+  session.stats.winRate =
+    n > 0 ? parseFloat(((session.stats.wins / n) * 100).toFixed(1)) : 0;
+
+  saveSessions();
+  return {
+    ok: true,
+    seeded: n,
+    winRate: session.stats.winRate,
+    totalPnL: cumulativePnL,
+    maxDrawdown: session.stats.maxDrawdown,
+    startTime: session.startTime,
+  };
+}
+
+/**
+ * Transition a broker session from simulated to paper (real Alpaca paper).
+ * Preserves historical stats (wins, losses, totalPnL, peakValue, maxDrawdown,
+ * winRate) so the tier-promotion engine still sees the broker's track record,
+ * but resets the portfolio to the paper allocation since the broker is now
+ * trading the shared paper account, not a virtual pool.
+ *
+ * Appends a marker entry to tradingLog so the audit trail captures the
+ * tier change. Closes any open simulated positions first (they were virtual).
+ */
+function transitionToPaperTier(sessionId, paperAllocation) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+  if (session.config.simulationMode === false) {
+    return { error: 'session is already on real Alpaca path' };
+  }
+  // Wipe simulated positions — they were virtual; the real Alpaca account has
+  // no such positions to match. Cash resets to the paper allocation.
+  const previousPnL = session.stats?.totalPnL || 0;
+  session.portfolio = {
+    cash: paperAllocation,
+    positions: new Map(),
+    initialValue: paperAllocation,
+  };
+  session.config.simulationMode = false;
+  session.config.tradingMode = 'paper';
+  session.config.allocatedCapital = paperAllocation;
+  session.config.initialCapital = paperAllocation;
+  session.config.tier = 'paper';
+  session.tradingLog = session.tradingLog || [];
+  session.tradingLog.push({
+    tradeId: `tier-promote-${Date.now()}`,
+    side: 'meta',
+    symbol: 'TIER',
+    timestamp: new Date().toISOString(),
+    note: `promoted simulated → paper (allocation=$${paperAllocation}, prior sim PnL=$${previousPnL.toFixed(2)})`,
+  });
+  // Reset peak so paper drawdown is measured from the new starting capital,
+  // not the simulated peak. Stats history (wins/losses) is preserved.
+  if (session.stats) session.stats.peakValue = paperAllocation;
+  saveSessions();
+  return { ok: true, paperAllocation, previousPnL };
+}
+
+/**
+ * Demote: paper → simulated. Closes any open real positions (panic sell)
+ * before resetting to a fresh simulated capital pool. Stats history preserved.
+ */
+async function transitionToSimulatedTier(sessionId, simCapital) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+  if (session.config.simulationMode === true) {
+    return { error: 'session is already simulated' };
+  }
+  // Close any open real positions first — we're walking away from this account
+  try {
+    await panicSell(sessionId);
+  } catch (err) {
+    tradingLogger.logError(
+      `[Tier] panic-sell on demote failed for ${session.name}`,
+      {
+        sessionId,
+        error: err.message,
+      }
+    );
+  }
+  session.portfolio = {
+    cash: simCapital,
+    positions: new Map(),
+    initialValue: simCapital,
+  };
+  session.config.simulationMode = true;
+  session.config.allocatedCapital = simCapital;
+  session.config.initialCapital = simCapital;
+  session.config.tier = 'simulated';
+  session.tradingLog = session.tradingLog || [];
+  session.tradingLog.push({
+    tradeId: `tier-demote-${Date.now()}`,
+    side: 'meta',
+    symbol: 'TIER',
+    timestamp: new Date().toISOString(),
+    note: `demoted paper → simulated (new sim capital=$${simCapital})`,
+  });
+  if (session.stats) session.stats.peakValue = simCapital;
+  saveSessions();
+  return { ok: true, simCapital };
+}
+
+/**
+ * Reset just the consecutive-losses counter and circuit-breaker flag without
+ * touching cash, positions, or any other state. Useful after applying engine
+ * fixes (e.g. new safety guards) so a broker doesn't immediately trip its
+ * breaker on its pre-fix loss streak.
+ */
+function resetLossStreak(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+  if (!session.config.simulationMode) return { error: 'not in simulationMode' };
+  const prev = session.stats?.consecutiveLosses || 0;
+  if (session.stats) session.stats.consecutiveLosses = 0;
+  session.circuitBreakerTriggered = false;
+  saveSessions();
+  return { ok: true, prevConsecutiveLosses: prev };
+}
+
+function resetSessionCapital(sessionId, capital) {
+  const session = sessions.get(sessionId);
+  if (!session) return false;
+  if (!session.config.simulationMode) return false;
+  session.portfolio = {
+    cash: capital,
+    positions: new Map(),
+    initialValue: capital,
+  };
+  session.stats = {
+    ...(session.stats || {}),
+    totalTrades: 0,
+    wins: 0,
+    losses: 0,
+    totalPnL: 0,
+    unrealizedPnL: 0,
+    totalPnLWithUnrealized: 0,
+    consecutiveLosses: 0,
+    peakValue: capital,
+    maxDrawdown: 0,
+    winRate: 0,
+  };
+  saveSessions();
+  return true;
 }
 
 /**
@@ -3037,17 +3838,25 @@ async function manualOverride(sessionId, symbol, action, quantity) {
   const tradingMode = session.config.tradingMode || 'paper';
 
   // Normalize symbol for the asset type
-  const normalizedSymbol = assetUtils.normalizeSymbol(symbol, assetType, 'alpaca');
+  const normalizedSymbol = assetUtils.normalizeSymbol(
+    symbol,
+    assetType,
+    'alpaca'
+  );
 
   try {
     if (action === 'buy') {
-      const order = await placeOrderForAsset({
-        symbol: normalizedSymbol,
-        qty: quantity,
-        side: 'buy',
-        type: 'market',
-        time_in_force: assetUtils.isCrypto(assetType) ? 'gtc' : 'day',
-      }, tradingMode, assetType);
+      const order = await placeOrderForAsset(
+        {
+          symbol: normalizedSymbol,
+          qty: quantity,
+          side: 'buy',
+          type: 'market',
+          time_in_force: assetUtils.isCrypto(assetType) ? 'gtc' : 'day',
+        },
+        tradingMode,
+        assetType
+      );
 
       logDecision(sessionId, {
         symbol: normalizedSymbol,
@@ -3058,7 +3867,11 @@ async function manualOverride(sessionId, symbol, action, quantity) {
 
       return { success: true, orderId: order.id };
     } else if (action === 'sell') {
-      const result = await closePositionForAsset(normalizedSymbol, tradingMode, assetType);
+      const result = await closePositionForAsset(
+        normalizedSymbol,
+        tradingMode,
+        assetType
+      );
 
       logDecision(sessionId, {
         symbol: normalizedSymbol,
@@ -3113,7 +3926,7 @@ function getDailySummary(sessionId) {
  */
 function _recalculateStreamSubscriptions() {
   const needed = new Set();
-  sessions.forEach((session) => {
+  sessions.forEach(session => {
     if (session.status === 'running') {
       const watchlist = session.config.watchlist || [];
       for (const sym of watchlist) needed.add(sym);
@@ -3134,7 +3947,7 @@ function _recalculateStreamSubscriptions() {
  * Reuses executeExit() which has globalExitLocks for race safety.
  */
 function fastPathExitCheck(symbol, wsPrice) {
-  sessions.forEach((session) => {
+  sessions.forEach(session => {
     if (session.status !== 'running') return;
 
     const position = session.portfolio.positions.get(symbol);
@@ -3146,7 +3959,8 @@ function fastPathExitCheck(symbol, wsPrice) {
     if (!entryPrice || entryPrice <= 0) return;
 
     const pnlPercent = ((wsPrice - entryPrice) / entryPrice) * 100;
-    position.unrealizedPnL = (wsPrice - entryPrice) * (position.quantity || position.shares || 0);
+    position.unrealizedPnL =
+      (wsPrice - entryPrice) * (position.quantity || position.shares || 0);
     position.unrealizedPnLPercent = pnlPercent;
 
     // Update high water mark for trailing stop
@@ -3157,16 +3971,29 @@ function fastPathExitCheck(symbol, wsPrice) {
     const cfg = session.config;
     const leverage = getEtfLeverage(symbol);
     const rawStopLoss = cfg.stopLossPercent || 1;
-    const stopLossPercent = leverage > 1 ? Math.max(rawStopLoss, rawStopLoss * leverage) : rawStopLoss;
+    const stopLossPercent =
+      leverage > 1
+        ? Math.max(rawStopLoss, rawStopLoss * leverage)
+        : rawStopLoss;
 
     // 1. Hard stop-loss
     if (pnlPercent <= -stopLossPercent) {
-      tradingLogger.logRisk('WS Fast-Path STOP LOSS', { sessionId: session.sessionId, sessionName: session.name, symbol, reason: `${pnlPercent.toFixed(2)}% <= -${stopLossPercent}%`, value: pnlPercent, threshold: -stopLossPercent, action: 'Triggering exit' });
+      tradingLogger.logRisk('WS Fast-Path STOP LOSS', {
+        sessionId: session.sessionId,
+        sessionName: session.name,
+        symbol,
+        reason: `${pnlPercent.toFixed(2)}% <= -${stopLossPercent}%`,
+        value: pnlPercent,
+        threshold: -stopLossPercent,
+        action: 'Triggering exit',
+      });
       executeExit(session.sessionId, symbol, {
         exitReason: `WS Fast-Path Stop Loss (${pnlPercent.toFixed(2)}%)`,
         reason: 'stop loss',
         confidence: 100,
-        factors: [`Real-time price $${wsPrice.toFixed(2)} hit stop loss at ${pnlPercent.toFixed(2)}%`],
+        factors: [
+          `Real-time price $${wsPrice.toFixed(2)} hit stop loss at ${pnlPercent.toFixed(2)}%`,
+        ],
       });
       return;
     }
@@ -3174,14 +4001,25 @@ function fastPathExitCheck(symbol, wsPrice) {
     // 2. Trailing stop
     const trailingStopPercent = cfg.trailingStopPercent;
     if (trailingStopPercent && position.highWaterMark) {
-      const dropFromHigh = ((position.highWaterMark - wsPrice) / position.highWaterMark) * 100;
+      const dropFromHigh =
+        ((position.highWaterMark - wsPrice) / position.highWaterMark) * 100;
       if (dropFromHigh >= trailingStopPercent) {
-        tradingLogger.logRisk('WS Fast-Path TRAILING STOP', { sessionId: session.sessionId, sessionName: session.name, symbol, reason: `Dropped ${dropFromHigh.toFixed(2)}% from high $${position.highWaterMark.toFixed(2)}`, value: dropFromHigh, threshold: trailingStopPercent, action: 'Triggering exit' });
+        tradingLogger.logRisk('WS Fast-Path TRAILING STOP', {
+          sessionId: session.sessionId,
+          sessionName: session.name,
+          symbol,
+          reason: `Dropped ${dropFromHigh.toFixed(2)}% from high $${position.highWaterMark.toFixed(2)}`,
+          value: dropFromHigh,
+          threshold: trailingStopPercent,
+          action: 'Triggering exit',
+        });
         executeExit(session.sessionId, symbol, {
           exitReason: `WS Fast-Path Trailing Stop (${dropFromHigh.toFixed(2)}% from high)`,
           reason: 'stop loss',
           confidence: 95,
-          factors: [`Real-time price $${wsPrice.toFixed(2)} dropped ${dropFromHigh.toFixed(2)}% from high $${position.highWaterMark.toFixed(2)}`],
+          factors: [
+            `Real-time price $${wsPrice.toFixed(2)} dropped ${dropFromHigh.toFixed(2)}% from high $${position.highWaterMark.toFixed(2)}`,
+          ],
         });
       }
     }
@@ -3195,12 +4033,16 @@ alpacaStream.on('trade', ({ symbol, price }) => {
 });
 
 alpacaStream.on('authenticated', () => {
-  tradingLogger.logInfo('[AI Engine] Alpaca stream authenticated — syncing subscriptions');
+  tradingLogger.logInfo(
+    '[AI Engine] Alpaca stream authenticated — syncing subscriptions'
+  );
   _recalculateStreamSubscriptions();
 });
 
-alpacaStream.on('error', (err) => {
-  tradingLogger.logError('[AI Engine] Alpaca stream error', { error: err.message });
+alpacaStream.on('error', err => {
+  tradingLogger.logError('[AI Engine] Alpaca stream error', {
+    error: err.message,
+  });
 });
 
 // Start the stream connection
@@ -3235,8 +4077,11 @@ function getSessionHealth() {
   return health;
 }
 
-// Background stale session monitor — checks every 60s, alerts via WebSocket
-const _staleMonitorInterval = setInterval(() => {
+// Background stale session monitor — checks every 60s, alerts via WebSocket.
+// Disabled in dry-run mode so a CLI harness can exit cleanly.
+const _staleMonitorInterval = process.env.AI_ENGINE_DRY_RUN
+  ? null
+  : setInterval(() => {
   const now = Date.now();
   sessions.forEach((session, sessionId) => {
     if (session.status !== 'running') return;
@@ -3335,6 +4180,7 @@ const _sharedCtx = {
 };
 signalEvaluator.init(_sharedCtx);
 orderExecutor.init(_sharedCtx);
+simulatedExecutor.init(_sharedCtx);
 
 module.exports = {
   startSession,
@@ -3349,7 +4195,15 @@ module.exports = {
   getAllUserSessions,
   evaluateEntry,
   evaluateExit,
+  dryRunEntry,
   updateConfig,
+  resetSessionCapital,
+  resetLossStreak,
+  manualSimEntry,
+  manualSimExit,
+  seedSyntheticTradeHistory,
+  transitionToPaperTier,
+  transitionToSimulatedTier,
   manualOverride,
   getDailySummary,
   getDecisionHistory,
