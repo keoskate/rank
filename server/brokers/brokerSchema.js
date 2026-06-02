@@ -363,7 +363,7 @@ function brokerToSessionConfig(broker, personaBody = '') {
   const effectiveTier = killSwitch ? 'simulated' : broker.tier;
   const cap = effectiveCapital({ ...broker, tier: effectiveTier });
 
-  return {
+  const config = {
     name: broker.name,
     brokerSlug: broker.slug,
     brokerPersona: personaBody,
@@ -430,6 +430,26 @@ function brokerToSessionConfig(broker, personaBody = '') {
     selfImproveIntervals: broker.selfImprovement.intervals,
     selfImproveFullAutonomy: broker.selfImprovement.fullAutonomy,
   };
+
+  // Apply the strategy plugin's hold policy (if any). Multi-day plugins
+  // (insider, dark-pool) hold overnight with wider targets and a max-hold in
+  // days; intraday plugins declare none and keep the engine's defaults. Routed
+  // through the same registry the dispatcher uses. Required lazily to avoid any
+  // load-order coupling between the schema and the strategy modules.
+  const { resolve } = require('../strategies');
+  const hp = resolve(config)?.holdPolicy;
+  if (hp) {
+    if (hp.exitBeforeClose === false) config.exitBeforeClose = false;
+    if (hp.takeProfitPercent != null) {
+      config.takeProfitPercent = hp.takeProfitPercent;
+    }
+    if (hp.stopLossPercent != null) config.stopLossPercent = hp.stopLossPercent;
+    if (hp.maxHoldDays != null) config.maxHoldDays = hp.maxHoldDays;
+    if (hp.minHoldMinutes != null) config.minHoldMinutes = hp.minHoldMinutes;
+    config.holdHorizon = hp.horizon || 'multi-day';
+  }
+
+  return config;
 }
 
 function mapStrategyToEntryStyle(strategy) {

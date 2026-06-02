@@ -138,5 +138,16 @@ module.exports = {
     'darkpool.minPremium',
     'darkpool.minBuyShare',
   ],
+  // Dark-pool accumulation plays out over a few sessions, not minutes — hold
+  // a swing horizon rather than force-closing at the bell. (No backtest yet;
+  // shorter/tighter than insider, revisit once we have dark-pool history.)
+  holdPolicy: {
+    horizon: 'multi-day',
+    exitBeforeClose: false,
+    takeProfitPercent: 4,
+    stopLossPercent: 2,
+    maxHoldDays: 5,
+    minHoldMinutes: 30,
+  },
   evaluate,
 };

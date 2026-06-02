@@ -138,5 +138,16 @@ async function evaluate(session, symbol, ctx) {
 module.exports = {
   slug: SLUG,
   mutableFields: ['insider.lookbackDays', 'insider.minNotional'],
+  // Multi-day hold: the insider backtest showed the edge is a multi-session
+  // drift (+4-6% over 1-5 days) that tight intraday exits stop out of. Hold
+  // overnight, wider stop, exit on an 8/4 target or after 10 days.
+  holdPolicy: {
+    horizon: 'multi-day',
+    exitBeforeClose: false,
+    takeProfitPercent: 8,
+    stopLossPercent: 4,
+    maxHoldDays: 10,
+    minHoldMinutes: 60,
+  },
   evaluate,
 };

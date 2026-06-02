@@ -45,7 +45,14 @@ async function evaluateEntry(sessionId, symbol) {
     if (lastSellTime) {
       const minutesSinceSell = (Date.now() - lastSellTime) / (1000 * 60);
       if (minutesSinceSell < ctx.TRADE_COOLDOWN_MINUTES) {
-        tradingLogger.logRisk('Cooldown active', { sessionId, sessionName: session.name, reason: `${symbol} sold ${minutesSinceSell.toFixed(1)} min ago`, value: minutesSinceSell, threshold: ctx.TRADE_COOLDOWN_MINUTES, symbol });
+        tradingLogger.logRisk('Cooldown active', {
+          sessionId,
+          sessionName: session.name,
+          reason: `${symbol} sold ${minutesSinceSell.toFixed(1)} min ago`,
+          value: minutesSinceSell,
+          threshold: ctx.TRADE_COOLDOWN_MINUTES,
+          symbol,
+        });
         return {
           shouldEnter: false,
           reason: `Cooldown: ${(ctx.TRADE_COOLDOWN_MINUTES - minutesSinceSell).toFixed(0)} min remaining`,
@@ -91,10 +98,16 @@ async function evaluateExit(sessionId, symbol) {
     // Get recent candles first (needed for regime detection)
     // Use asset-type-aware helper for crypto/stock routing
     const sessionAssetType = session.config.assetType || 'stocks';
-    const candles = await ctx.getAggregatesForAsset(symbol, 5, 'minute', {
-      from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      to: new Date(),
-    }, sessionAssetType);
+    const candles = await ctx.getAggregatesForAsset(
+      symbol,
+      5,
+      'minute',
+      {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(),
+      },
+      sessionAssetType
+    );
 
     if (!candles || candles.length < 50) {
       return { shouldExit: false };
@@ -113,7 +126,10 @@ async function evaluateExit(sessionId, symbol) {
     // Current price: prefer real-time WS price over stale candle close
     // IMPORTANT: Computed BEFORE hold time gate so stop-loss can fire immediately
     const wsExitPrice = alpacaStream.getLatestPrice(symbol);
-    const currentPrice = (wsExitPrice && !wsExitPrice.isStale) ? wsExitPrice.price : candles[candles.length - 1].close;
+    const currentPrice =
+      wsExitPrice && !wsExitPrice.isStale
+        ? wsExitPrice.price
+        : candles[candles.length - 1].close;
     const pnlPercent = position.unrealizedPnLPercent;
 
     // Emergency stop-loss check — BEFORE minimum hold time gate.
@@ -123,12 +139,22 @@ async function evaluateExit(sessionId, symbol) {
     const stopLossPercent = cfg.stopLossPercent || 1;
 
     if (pnlPercent <= -stopLossPercent) {
-      tradingLogger.logRisk('STOP LOSS during hold period', { sessionId, sessionName: session.name, symbol, reason: `${pnlPercent.toFixed(2)}% <= -${stopLossPercent}%`, value: pnlPercent, threshold: -stopLossPercent, action: 'Exiting immediately' });
+      tradingLogger.logRisk('STOP LOSS during hold period', {
+        sessionId,
+        sessionName: session.name,
+        symbol,
+        reason: `${pnlPercent.toFixed(2)}% <= -${stopLossPercent}%`,
+        value: pnlPercent,
+        threshold: -stopLossPercent,
+        action: 'Exiting immediately',
+      });
       return {
         shouldExit: true,
         confidence: 100,
         exitReason: `Stop loss triggered (${pnlPercent.toFixed(2)}%)`,
-        factors: [`STOP LOSS -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`],
+        factors: [
+          `STOP LOSS -${stopLossPercent}% triggered (at ${pnlPercent.toFixed(2)}%)`,
+        ],
         currentPrice,
         pnlPercent,
         isPartialExit: false,
@@ -139,20 +165,61 @@ async function evaluateExit(sessionId, symbol) {
     // Use || to ensure 0 falls back to default (0 min hold is dangerous)
     // NOTE: Stop-loss exits above bypass this gate entirely
     const configMinHold = session.config.minHoldMinutes || 30;
-    const configCounterTrendHold = session.config.counterTrendMinHoldMinutes || 15;
-    const MIN_HOLD_MINUTES = isPositionCounterTrend ? configCounterTrendHold : configMinHold;
+    const configCounterTrendHold =
+      session.config.counterTrendMinHoldMinutes || 15;
+    const MIN_HOLD_MINUTES = isPositionCounterTrend
+      ? configCounterTrendHold
+      : configMinHold;
     // FIX: Default to Date.now() if entryTime is undefined/null to prevent NaN hold calculations
     let entryTime = position.entryTime || position.createdAt;
     if (!entryTime) {
       entryTime = Date.now();
-      tradingLogger.logRisk('entryTime undefined', { sessionId, sessionName: session.name, symbol, reason: `${symbol}: entryTime is undefined, defaulting to now — hold-time gate bypassed`, action: 'Using Date.now() as fallback' });
+      tradingLogger.logRisk('entryTime undefined', {
+        sessionId,
+        sessionName: session.name,
+        symbol,
+        reason: `${symbol}: entryTime is undefined, defaulting to now — hold-time gate bypassed`,
+        action: 'Using Date.now() as fallback',
+      });
     }
     if (entryTime) {
       const holdDuration = Date.now() - new Date(entryTime).getTime();
       const holdMinutes = holdDuration / (1000 * 60);
       if (holdMinutes < MIN_HOLD_MINUTES) {
-        tradingLogger.logInfo(`[AI Engine] ${symbol}: Holding for ${holdMinutes.toFixed(1)} min (min: ${MIN_HOLD_MINUTES} min${isPositionCounterTrend ? ' [counter-trend]' : ''})`, { sessionId, sessionName: session.name, symbol });
+        tradingLogger.logInfo(
+          `[AI Engine] ${symbol}: Holding for ${holdMinutes.toFixed(1)} min (min: ${MIN_HOLD_MINUTES} min${isPositionCounterTrend ? ' [counter-trend]' : ''})`,
+          { sessionId, sessionName: session.name, symbol }
+        );
         return { shouldExit: false, reason: 'Minimum hold time not reached' };
+      }
+    }
+
+    // Max hold (multi-day strategies only): force an exit after N days so a
+    // stale multi-day thesis doesn't linger forever. Purely additive — intraday
+    // plugins never set cfg.maxHoldDays, so this is a no-op for them.
+    const maxHoldDays = session.config.maxHoldDays;
+    if (maxHoldDays && entryTime) {
+      const holdDays =
+        (Date.now() - new Date(entryTime).getTime()) / (24 * 60 * 60 * 1000);
+      if (holdDays >= maxHoldDays) {
+        tradingLogger.logRisk('Max hold reached', {
+          sessionId,
+          sessionName: session.name,
+          symbol,
+          reason: `${holdDays.toFixed(1)}d >= ${maxHoldDays}d`,
+          value: holdDays,
+          threshold: maxHoldDays,
+          action: 'Force exit',
+        });
+        return {
+          shouldExit: true,
+          confidence: 100,
+          exitReason: `Max hold ${maxHoldDays}d reached (${holdDays.toFixed(1)}d)`,
+          factors: [`MAX HOLD ${maxHoldDays}d reached`],
+          currentPrice,
+          pnlPercent,
+          isPartialExit: false,
+        };
       }
     }
 
@@ -163,7 +230,10 @@ async function evaluateExit(sessionId, symbol) {
 
     // Config and leverage already computed above (before hold time gate)
     const rawTakeProfit = cfg.takeProfitPercent || 2;
-    const takeProfitPercent = leverage > 1 ? Math.max(rawTakeProfit, rawTakeProfit * leverage) : rawTakeProfit;
+    const takeProfitPercent =
+      leverage > 1
+        ? Math.max(rawTakeProfit, rawTakeProfit * leverage)
+        : rawTakeProfit;
     const exitOnRsiExtreme = cfg.exitOnRsiExtreme !== false;
     const rsiOverbought = cfg.rsiOverbought || 70;
 
@@ -196,8 +266,10 @@ async function evaluateExit(sessionId, symbol) {
       } else {
         const tpScore = isAggressiveScalp ? 100 : 30;
         exitScore += tpScore;
-        criticalExitScore += tpScore;  // Profit targets are structural — never dampen
-        exitReason = alreadyPartial ? 'Remainder profit target' : 'Profit target reached';
+        criticalExitScore += tpScore; // Profit targets are structural — never dampen
+        exitReason = alreadyPartial
+          ? 'Remainder profit target'
+          : 'Profit target reached';
         factors.push(
           `Profit target +${takeProfitPercent}% reached (at +${pnlPercent.toFixed(2)}%)${isAggressiveScalp ? ' [SCALP]' : ''}${alreadyPartial ? ' [REMAINDER]' : ''}`
         );
@@ -241,15 +313,21 @@ async function evaluateExit(sessionId, symbol) {
 
       if (currentPrice <= triggerPrice) {
         exitScore += 35;
-        criticalExitScore += 35;  // Trailing stop is structural — never dampen
+        criticalExitScore += 35; // Trailing stop is structural — never dampen
         exitReason = 'Trailing stop triggered';
         factors.push(
           `Trailing stop (locked ${lockedInGainPercent.toFixed(2)}% of ${highWaterMarkPnlPercent.toFixed(2)}% gain)`
         );
       }
-    } else if (trailingStopOfTP > 0 && pnlPercent > 0 && highWaterMarkPnlPercent < trailingStopMinProfitPercent) {
+    } else if (
+      trailingStopOfTP > 0 &&
+      pnlPercent > 0 &&
+      highWaterMarkPnlPercent < trailingStopMinProfitPercent
+    ) {
       // Log that trailing stop is waiting for minimum profit
-      factors.push(`Trailing stop waiting (need ${trailingStopMinProfitPercent}% gain, have ${highWaterMarkPnlPercent.toFixed(2)}%)`);
+      factors.push(
+        `Trailing stop waiting (need ${trailingStopMinProfitPercent}% gain, have ${highWaterMarkPnlPercent.toFixed(2)}%)`
+      );
     }
 
     // RSI overbought (configurable)
@@ -268,20 +346,31 @@ async function evaluateExit(sessionId, symbol) {
     // FIX 6b: Leveraged ETFs get wider EOD window (at least 30 min before close)
     const minutesUntilClose = ctx.getMinutesUntilClose();
     const configEodMin = cfg.exitBeforeCloseMinutes || 15;
-    const exitBeforeCloseMinutes = leverage > 1 ? Math.max(configEodMin, 30) : configEodMin;
+    const exitBeforeCloseMinutes =
+      leverage > 1 ? Math.max(configEodMin, 30) : configEodMin;
     const exitBeforeClose = cfg.exitBeforeClose !== false; // Default true
 
-    if (exitBeforeClose && minutesUntilClose > 0 && minutesUntilClose <= exitBeforeCloseMinutes) {
+    if (
+      exitBeforeClose &&
+      minutesUntilClose > 0 &&
+      minutesUntilClose <= exitBeforeCloseMinutes
+    ) {
       // Force exit regardless of P&L when approaching market close
       exitScore += 100; // Guaranteed exit - don't hold overnight
       criticalExitScore += 100;
       exitReason = `End-of-day exit (${minutesUntilClose.toFixed(0)} min until close)`;
       factors.push(`EOD EXIT: ${minutesUntilClose.toFixed(0)} min until close`);
-    } else if (exitBeforeClose && minutesUntilClose > 0 && minutesUntilClose <= 30) {
+    } else if (
+      exitBeforeClose &&
+      minutesUntilClose > 0 &&
+      minutesUntilClose <= 30
+    ) {
       // Strong signal to exit within 30 min of close
       exitScore += 50;
       criticalExitScore += 50;
-      factors.push(`Approaching market close (${minutesUntilClose.toFixed(0)} min)`);
+      factors.push(
+        `Approaching market close (${minutesUntilClose.toFixed(0)} min)`
+      );
     }
 
     // Volume declining while price rising (distribution)
@@ -313,7 +402,9 @@ async function evaluateExit(sessionId, symbol) {
     if (isPositionCounterTrend && etfType !== 'neutral') {
       // Add mild exit pressure for counter-trend positions
       exitScore += 10;
-      factors.push(`Warning: Counter-trend position: ${etfType} ETF in ${marketRegime} market`);
+      factors.push(
+        `Warning: Counter-trend position: ${etfType} ETF in ${marketRegime} market`
+      );
 
       // If losing on a counter-trend position, add moderate pressure
       if (pnlPercent < 0) {
@@ -334,10 +425,11 @@ async function evaluateExit(sessionId, symbol) {
     // Critical signals (stop loss, trailing stop, EOD, profit targets) are NEVER dampened.
     // Dampening scales with profit depth: deeper profit = stronger hold.
     const baseDampeningFactor = cfg.trendDampeningFactor ?? 0.4;
-    const shouldDampenExits = pnlPercent > 0
-      && indicators.adx.trending
-      && ctx.isRegimeAligned(etfType, marketRegime)
-      && baseDampeningFactor < 1.0;
+    const shouldDampenExits =
+      pnlPercent > 0 &&
+      indicators.adx.trending &&
+      ctx.isRegimeAligned(etfType, marketRegime) &&
+      baseDampeningFactor < 1.0;
 
     if (shouldDampenExits) {
       const dampenableScore = exitScore - criticalExitScore;
@@ -345,11 +437,18 @@ async function evaluateExit(sessionId, symbol) {
         // Scale dampening by profit depth relative to take-profit target
         const takeProfitPct = cfg.takeProfitPercent || 2;
         const profitDepth = Math.min(pnlPercent / takeProfitPct, 2.0); // Cap at 2x target
-        const trendDampeningFactor = Math.max(0.2, baseDampeningFactor * (1 - profitDepth * 0.3));
+        const trendDampeningFactor = Math.max(
+          0.2,
+          baseDampeningFactor * (1 - profitDepth * 0.3)
+        );
         const originalExitScore = exitScore;
-        const dampenedScore = Math.round(dampenableScore * trendDampeningFactor);
+        const dampenedScore = Math.round(
+          dampenableScore * trendDampeningFactor
+        );
         exitScore = criticalExitScore + dampenedScore;
-        factors.push(`Trend dampening: ${originalExitScore}->${exitScore} (ADX trending, ${marketRegime} regime, factor=${trendDampeningFactor.toFixed(2)}, depth=${profitDepth.toFixed(1)}x)`);
+        factors.push(
+          `Trend dampening: ${originalExitScore}->${exitScore} (ADX trending, ${marketRegime} regime, factor=${trendDampeningFactor.toFixed(2)}, depth=${profitDepth.toFixed(1)}x)`
+        );
       }
     }
 
@@ -357,12 +456,14 @@ async function evaluateExit(sessionId, symbol) {
     // If profit is positive but under minimum threshold, require MUCH higher exit score
     // (Stop loss at 100 pts still works, but technical signals alone won't trigger exit)
     // Leverage-aware: 3x ETFs keep 1.5% (0.5% * 3), regular stocks use 0.5%
-    const minProfitForExit = cfg.minProfitForExitPercent || (0.5 * leverage); // Scales with leverage
+    const minProfitForExit = cfg.minProfitForExitPercent || 0.5 * leverage; // Scales with leverage
     const isProfitTooSmall = pnlPercent > 0 && pnlPercent < minProfitForExit;
     const effectiveExitThreshold = isProfitTooSmall ? 95 : 70; // Raised 50->70: non-critical exits require stronger confluence
 
     if (isProfitTooSmall && exitScore >= 70 && exitScore < 95) {
-      factors.push(`Hold - profit ${pnlPercent.toFixed(2)}% too small (need ${minProfitForExit}% or stop loss)`);
+      factors.push(
+        `Hold - profit ${pnlPercent.toFixed(2)}% too small (need ${minProfitForExit}% or stop loss)`
+      );
     }
 
     // Non-critical exit threshold raised from 50 to 70 to prevent noise-driven whipsaws.
@@ -441,17 +542,28 @@ async function evaluateExit(sessionId, symbol) {
     const failures = (ctx.exitEvalFailCounts.get(failKey) || 0) + 1;
     ctx.exitEvalFailCounts.set(failKey, failures);
 
-    tradingLogger.logError(`Exit evaluation failed for ${symbol} (failure ${failures}/${ctx.EXIT_EVAL_MAX_FAILURES})`, {
-      sessionId,
-      sessionName: session?.name,
-      symbol,
-      error: error.message,
-      consecutiveFailures: failures,
-    });
+    tradingLogger.logError(
+      `Exit evaluation failed for ${symbol} (failure ${failures}/${ctx.EXIT_EVAL_MAX_FAILURES})`,
+      {
+        sessionId,
+        sessionName: session?.name,
+        symbol,
+        error: error.message,
+        consecutiveFailures: failures,
+      }
+    );
 
     // Force exit after consecutive data failures to prevent stuck positions
     if (failures >= ctx.EXIT_EVAL_MAX_FAILURES) {
-      tradingLogger.logRisk('FORCE EXIT', { sessionId, sessionName: session?.name, symbol, reason: `${failures} consecutive eval failures`, value: failures, threshold: ctx.EXIT_EVAL_MAX_FAILURES, action: 'Force exiting position' });
+      tradingLogger.logRisk('FORCE EXIT', {
+        sessionId,
+        sessionName: session?.name,
+        symbol,
+        reason: `${failures} consecutive eval failures`,
+        value: failures,
+        threshold: ctx.EXIT_EVAL_MAX_FAILURES,
+        action: 'Force exiting position',
+      });
       ctx.exitEvalFailCounts.delete(failKey);
       return {
         shouldExit: true,
@@ -475,12 +587,21 @@ async function evaluateExit(sessionId, symbol) {
  */
 function evaluateSymbolStateless(symbol, candles, indicators) {
   if (!indicators || !indicators.rsi) {
-    return { confidence: 50, signalCount: 0, signalScore: 0, shouldEnter: false, reasons: ['no indicators'] };
+    return {
+      confidence: 50,
+      signalCount: 0,
+      signalScore: 0,
+      shouldEnter: false,
+      reasons: ['no indicators'],
+    };
   }
 
   const SIGNAL_WEIGHTS = {
-    strategyMatch: 20, volumeSpike: 15, rsiSignal: 12,
-    macdConfirmation: 8, bollingerOversold: 10,
+    strategyMatch: 20,
+    volumeSpike: 15,
+    rsiSignal: 12,
+    macdConfirmation: 8,
+    bollingerOversold: 10,
   };
 
   const factors = [];
@@ -491,7 +612,9 @@ function evaluateSymbolStateless(symbol, candles, indicators) {
   const rsiValue = indicators.rsi.value;
   const volumeRatio = indicators.volume?.ratio ?? 1;
   const hasVolumeSpike = volumeRatio >= 1.5;
-  const macdBullish = !!(indicators.macd?.bullish || indicators.macd?.crossover);
+  const macdBullish = !!(
+    indicators.macd?.bullish || indicators.macd?.crossover
+  );
   const bbPercentB = indicators.bollingerBands?.percentB;
 
   // Strategy match: momentum-style entry (RSI 50-65) is the default;
@@ -531,7 +654,9 @@ function evaluateSymbolStateless(symbol, candles, indicators) {
   if (macdBullish) {
     signalCount++;
     signalScore += SIGNAL_WEIGHTS.macdConfirmation;
-    factors.push(indicators.macd.crossover ? 'MACD bullish crossover' : 'MACD bullish');
+    factors.push(
+      indicators.macd.crossover ? 'MACD bullish crossover' : 'MACD bullish'
+    );
   }
 
   if (Number.isFinite(bbPercentB) && bbPercentB < 0.2) {
@@ -543,7 +668,13 @@ function evaluateSymbolStateless(symbol, candles, indicators) {
   const confidence = Math.min(50 + signalScore, 95);
   const shouldEnter = strategyMatch && signalCount >= 2 && confidence >= 65;
 
-  return { confidence, signalCount, signalScore, shouldEnter, reasons: factors };
+  return {
+    confidence,
+    signalCount,
+    signalScore,
+    shouldEnter,
+    reasons: factors,
+  };
 }
 
 module.exports = { init, evaluateEntry, evaluateExit, evaluateSymbolStateless };
