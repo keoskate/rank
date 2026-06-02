@@ -43,7 +43,13 @@ const PROMOTE = {
 // doesn't actually have an edge. Checked per-source, not just in aggregate.
 const EDGE_GATE = {
   minTrades: 50, // closed trades attributed to the broker's primary source
-  minExpectancyPct: 0, // mean per-trade % return must exceed this (i.e. > 0)
+  // Mean per-trade % return must clear a COST-AWARE floor, not just zero. ~10bps
+  // round-trip on a normal stock, more on 3x ETFs — a sub-cost "edge" is a loss.
+  minExpectancyPct: 0.15,
+  // Require statistical significance too: the one-sided 95% lower bound on
+  // expectancy (mean − 1.64·stdev/√n) must also be positive, so a few lucky
+  // trades can't certify a source.
+  requireSignificant: true,
 };
 const DEMOTE = {
   maxDrawdownPct: 20,
@@ -104,7 +110,10 @@ function computeSharpe(session, opts = {}) {
   let sq = 0;
   for (const r of returns) sq += (r - mean) ** 2;
   const stdev = Math.sqrt(sq / returns.length);
-  if (!isFinite(stdev) || stdev <= 0) return null;
+  // Guard against float residue: constant returns (e.g. a fixed-TP scalper)
+  // produce stdev ~1e-16, which would yield a ~1e16 "Sharpe" and auto-promote a
+  // noise/constant strategy. Treat anything below 1e-9 as zero variance.
+  if (!isFinite(stdev) || stdev < 1e-9) return null;
   // Annualization assumes one trade per "day" — for higher turnover this would
   // need adjustment. Good enough for the demo + relative ranking across brokers.
   return (mean / stdev) * Math.sqrt(tradesPerYear);
@@ -139,25 +148,41 @@ function aggregateBySource(session) {
         totalPnL: 0,
         wins: 0,
         losses: 0,
-        _pctSum: 0,
-        _pctCount: 0,
+        _pct: [],
       });
     s.trades++;
     s.totalPnL += pnl;
     if (pnl >= 0) s.wins++;
     else s.losses++;
     if (typeof t.realizedPct === 'number') {
-      s._pctSum += t.realizedPct;
-      s._pctCount++;
+      s._pct.push(t.realizedPct);
     }
   }
   for (const source of Object.keys(bySource)) {
     const s = bySource[source];
     s.winRate = s.trades > 0 ? s.wins / s.trades : 0;
     s.expectancyUsd = s.trades > 0 ? s.totalPnL / s.trades : 0;
-    s.expectancyPct = s._pctCount > 0 ? s._pctSum / s._pctCount : null;
-    delete s._pctSum;
-    delete s._pctCount;
+    const pcts = s._pct;
+    if (pcts.length > 0) {
+      const m = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+      s.expectancyPct = m;
+      // Sample stdev + one-sided 95% lower confidence bound on the mean.
+      if (pcts.length > 1) {
+        const v =
+          pcts.reduce((a, b) => a + (b - m) ** 2, 0) / (pcts.length - 1);
+        s.expectancyStdev = Math.sqrt(v);
+        s.expectancyLowerCB =
+          m - 1.64 * (s.expectancyStdev / Math.sqrt(pcts.length));
+      } else {
+        s.expectancyStdev = null;
+        s.expectancyLowerCB = null;
+      }
+    } else {
+      s.expectancyPct = null;
+      s.expectancyStdev = null;
+      s.expectancyLowerCB = null;
+    }
+    delete s._pct;
   }
   return bySource;
 }
@@ -191,6 +216,11 @@ function evaluateEdgeGate(session) {
     };
   }
   const { source, metrics } = primary;
+  const expStr =
+    metrics.expectancyPct != null
+      ? metrics.expectancyPct.toFixed(3) + '%'
+      : '$' + metrics.expectancyUsd.toFixed(2);
+
   const enoughTrades = metrics.trades >= EDGE_GATE.minTrades;
   // Prefer % expectancy; fall back to $ expectancy sign when % is unavailable.
   const expectancy =
@@ -201,15 +231,25 @@ function evaluateEdgeGate(session) {
         : metrics.expectancyUsd < 0
           ? -1
           : 0;
-  const positiveEdge = expectancy > EDGE_GATE.minExpectancyPct;
-  const pass = enoughTrades && positiveEdge;
+  // Cost-aware floor: mean expectancy must clear minExpectancyPct, not just 0.
+  const clearsFloor = expectancy > EDGE_GATE.minExpectancyPct;
+  // Significance: the 95% lower bound on expectancy must also be positive (skip
+  // when % series unavailable, i.e. live-only $ trades).
+  const significant =
+    !EDGE_GATE.requireSignificant ||
+    metrics.expectancyLowerCB == null ||
+    metrics.expectancyLowerCB > 0;
+
+  const pass = enoughTrades && clearsFloor && significant;
   let reason;
   if (pass) {
-    reason = `${source}: ${metrics.trades} trades, expectancy ${metrics.expectancyPct != null ? metrics.expectancyPct.toFixed(3) + '%' : '$' + metrics.expectancyUsd.toFixed(2)}/trade`;
+    reason = `${source}: ${metrics.trades} trades, expectancy ${expStr}/trade (lcb ${metrics.expectancyLowerCB != null ? metrics.expectancyLowerCB.toFixed(3) + '%' : 'n/a'})`;
   } else if (!enoughTrades) {
     reason = `${source}: only ${metrics.trades}/${EDGE_GATE.minTrades} source trades`;
+  } else if (!clearsFloor) {
+    reason = `${source}: expectancy ${expStr}/trade below ${EDGE_GATE.minExpectancyPct}% cost floor`;
   } else {
-    reason = `${source}: non-positive expectancy (${metrics.expectancyPct != null ? metrics.expectancyPct.toFixed(3) + '%' : '$' + metrics.expectancyUsd.toFixed(2)}/trade)`;
+    reason = `${source}: not significant (lower bound ${metrics.expectancyLowerCB?.toFixed(3)}% ≤ 0)`;
   }
   return {
     pass,
@@ -218,6 +258,7 @@ function evaluateEdgeGate(session) {
     trades: metrics.trades,
     expectancyPct: metrics.expectancyPct,
     expectancyUsd: metrics.expectancyUsd,
+    expectancyLowerCB: metrics.expectancyLowerCB ?? null,
     bySource,
   };
 }

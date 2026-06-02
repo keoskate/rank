@@ -141,11 +141,14 @@ module.exports = {
   // Dark-pool accumulation plays out over a few sessions, not minutes — hold
   // a swing horizon rather than force-closing at the bell. (No backtest yet;
   // shorter/tighter than insider, revisit once we have dark-pool history.)
+  // Wider stop than the original 2% (which made the default exit net-negative
+  // per audit, regardless of signal quality). Dark-pool has no proven edge yet
+  // — stays in pure simulation — but the exit shouldn't poison the test.
   holdPolicy: {
     horizon: 'multi-day',
     exitBeforeClose: false,
-    takeProfitPercent: 4,
-    stopLossPercent: 2,
+    takeProfitPercent: 6,
+    stopLossPercent: 4,
     maxHoldDays: 5,
     minHoldMinutes: 30,
   },

@@ -138,14 +138,15 @@ async function evaluate(session, symbol, ctx) {
 module.exports = {
   slug: SLUG,
   mutableFields: ['insider.lookbackDays', 'insider.minNotional'],
-  // Multi-day hold: the insider backtest showed the edge is a multi-session
-  // drift (+4-6% over 1-5 days) that tight intraday exits stop out of. Hold
-  // overnight, wider stop, exit on an 8/4 target or after 10 days.
+  // Multi-day hold with a WIDE stop. Backtest (250 events, $500k+): a 4% stop
+  // sits inside these small-caps' noise band and halves the edge (SL4 +1.76%/
+  // 50% win → SL8 +3.70%/71% win, stops cut from 38 to 14). Hold overnight,
+  // TP10/SL8, exit after 10 days. Trailing stays off (engine default).
   holdPolicy: {
     horizon: 'multi-day',
     exitBeforeClose: false,
-    takeProfitPercent: 8,
-    stopLossPercent: 4,
+    takeProfitPercent: 10,
+    stopLossPercent: 8,
     maxHoldDays: 10,
     minHoldMinutes: 60,
   },
