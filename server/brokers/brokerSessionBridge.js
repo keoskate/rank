@@ -158,7 +158,10 @@ async function listBrokersWithSessionState() {
       tier: broker.tier,
       capital: broker.capital,
       strategy: broker.strategy,
-      watchlist: broker.watchlist,
+      // Prefer the LIVE session watchlist when present — scanner brokers
+      // (e.g. insider-following) rewrite it at runtime from the feed, so the
+      // static .md seed would be misleading on the dashboard.
+      watchlist: raw?.config?.watchlist || broker.watchlist,
       regime: broker.regime,
       llm: broker.llm,
       session: projection
