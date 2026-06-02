@@ -3729,9 +3729,14 @@ function transitionToPaperTier(sessionId, paperAllocation) {
     timestamp: new Date().toISOString(),
     note: `promoted simulated → paper (allocation=$${paperAllocation}, prior sim PnL=$${previousPnL.toFixed(2)})`,
   });
-  // Reset peak so paper drawdown is measured from the new starting capital,
-  // not the simulated peak. Stats history (wins/losses) is preserved.
-  if (session.stats) session.stats.peakValue = paperAllocation;
+  // Reset peak AND drawdown so paper risk is measured from the new starting
+  // capital, not the simulated history. Previously only peakValue was reset, so
+  // a healthy broker promoted after a clean run was demoted/fired on its first
+  // paper eval on a stale sim-era drawdown. Stats history (wins/losses) is kept.
+  if (session.stats) {
+    session.stats.peakValue = paperAllocation;
+    session.stats.maxDrawdown = 0;
+  }
   saveSessions();
   return { ok: true, paperAllocation, previousPnL };
 }
@@ -4082,31 +4087,31 @@ function getSessionHealth() {
 const _staleMonitorInterval = process.env.AI_ENGINE_DRY_RUN
   ? null
   : setInterval(() => {
-  const now = Date.now();
-  sessions.forEach((session, sessionId) => {
-    if (session.status !== 'running') return;
-    const lastTick = session.lastTickTime;
-    if (!lastTick) return; // Not yet started
-    const staleMs = now - lastTick;
-    if (staleMs > STALE_SESSION_THRESHOLD_MS) {
-      const staleSeconds = Math.round(staleMs / 1000);
-      tradingLogger.logRisk('SESSION STALE', {
-        sessionId,
-        sessionName: session.name,
-        reason: `No tick for ${staleSeconds}s`,
-        value: staleSeconds,
-        threshold: Math.round(STALE_SESSION_THRESHOLD_MS / 1000),
-        action: 'WebSocket alert sent',
+      const now = Date.now();
+      sessions.forEach((session, sessionId) => {
+        if (session.status !== 'running') return;
+        const lastTick = session.lastTickTime;
+        if (!lastTick) return; // Not yet started
+        const staleMs = now - lastTick;
+        if (staleMs > STALE_SESSION_THRESHOLD_MS) {
+          const staleSeconds = Math.round(staleMs / 1000);
+          tradingLogger.logRisk('SESSION STALE', {
+            sessionId,
+            sessionName: session.name,
+            reason: `No tick for ${staleSeconds}s`,
+            value: staleSeconds,
+            threshold: Math.round(STALE_SESSION_THRESHOLD_MS / 1000),
+            action: 'WebSocket alert sent',
+          });
+          websocketServer.sendAlert(session.userId, {
+            type: 'error',
+            title: 'Session Stale',
+            message: `"${session.name}" has not ticked for ${staleSeconds}s — trading loop may have died`,
+            severity: 'critical',
+          });
+        }
       });
-      websocketServer.sendAlert(session.userId, {
-        type: 'error',
-        title: 'Session Stale',
-        message: `"${session.name}" has not ticked for ${staleSeconds}s — trading loop may have died`,
-        severity: 'critical',
-      });
-    }
-  });
-}, 60000);
+    }, 60000);
 
 // Cleanup on process exit
 process.on('beforeExit', () => clearInterval(_staleMonitorInterval));

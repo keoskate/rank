@@ -136,7 +136,15 @@ async function evaluateExit(sessionId, symbol) {
     // A 3x ETF can move 5%+ in 30 minutes; stop-loss must never be gated by hold time.
     const cfg = session.config;
     const leverage = ctx.getEtfLeverage(symbol);
-    const stopLossPercent = cfg.stopLossPercent || 1;
+    // Leverage-scale the stop to match the WS fast-path (aiTradingEngine
+    // ~:3973). Previously this path used the raw stop while the WS path scaled
+    // it, so a 3x ETF's effective stop was non-deterministic (-1% vs -3%) and
+    // asymmetric with the already-scaled take-profit.
+    const rawStopLoss = cfg.stopLossPercent || 1;
+    const stopLossPercent =
+      leverage > 1
+        ? Math.max(rawStopLoss, rawStopLoss * leverage)
+        : rawStopLoss;
 
     if (pnlPercent <= -stopLossPercent) {
       tradingLogger.logRisk('STOP LOSS during hold period', {

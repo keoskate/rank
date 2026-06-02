@@ -59,6 +59,8 @@ const DEMOTE = {
 const FIRE = {
   maxDrawdownPct: 30,
   demotionsIn30Days: 2,
+  minTrades: 30, // don't fire on drawdown without a real track record
+  minDays: 10,
 };
 
 // ---------- ledger ----------
@@ -99,24 +101,32 @@ async function getLedger() {
  * reasonable proxy for daily-return Sharpe.
  */
 function computeSharpe(session, opts = {}) {
-  const tradesPerYear = opts.tradesPerYear || 252;
+  const tradingDaysPerYear = opts.tradesPerYear || 252;
   const log = (session && session.tradingLog) || [];
   const exits = log.filter(
     t => t && t.side === 'sell' && typeof t.realizedPct === 'number'
   );
   if (exits.length < 2) return null;
-  const returns = exits.map(t => t.realizedPct / 100);
-  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+  // Bucket per-trade returns into CALENDAR-DAY returns before annualizing.
+  // Previously this annualized a per-trade Sharpe by √252, which treated 200
+  // intraday trades as 200 days — a 0.1%/trade churner (inside cost) faked a
+  // Sharpe of 1.67 and cleared the gate. Daily bucketing removes the turnover
+  // game.
+  const byDay = new Map();
+  for (const t of exits) {
+    const day = (t.timestamp || '').slice(0, 10) || 'na';
+    byDay.set(day, (byDay.get(day) || 0) + t.realizedPct / 100);
+  }
+  const daily = [...byDay.values()];
+  if (daily.length < 2) return null; // need ≥2 distinct trading days
+  const mean = daily.reduce((a, b) => a + b, 0) / daily.length;
   let sq = 0;
-  for (const r of returns) sq += (r - mean) ** 2;
-  const stdev = Math.sqrt(sq / returns.length);
-  // Guard against float residue: constant returns (e.g. a fixed-TP scalper)
-  // produce stdev ~1e-16, which would yield a ~1e16 "Sharpe" and auto-promote a
-  // noise/constant strategy. Treat anything below 1e-9 as zero variance.
+  for (const r of daily) sq += (r - mean) ** 2;
+  const stdev = Math.sqrt(sq / daily.length);
+  // Constant returns produce stdev ~1e-16 → a ~1e16 "Sharpe"; treat near-zero
+  // variance as undefined so a fixed-TP strategy can't auto-promote.
   if (!isFinite(stdev) || stdev < 1e-9) return null;
-  // Annualization assumes one trade per "day" — for higher turnover this would
-  // need adjustment. Good enough for the demo + relative ranking across brokers.
-  return (mean / stdev) * Math.sqrt(tradesPerYear);
+  return (mean / stdev) * Math.sqrt(tradingDaysPerYear);
 }
 
 /**
@@ -312,8 +322,14 @@ function evaluateBroker(broker, session, ledger) {
     edge,
   };
 
-  // FIRE: catastrophic drawdown wipes the broker regardless of tier
-  if (maxDD > FIRE.maxDrawdownPct) {
+  // FIRE: catastrophic drawdown wipes the broker — but only once it has a real
+  // track record. Without this guard a 1-day-old broker with 2 trades and a
+  // transient 31% mark is permanently archived. Require min trades + days first.
+  if (
+    maxDD > FIRE.maxDrawdownPct &&
+    totalTrades >= FIRE.minTrades &&
+    days >= FIRE.minDays
+  ) {
     return {
       action: 'fire',
       reason: `drawdown ${maxDD.toFixed(1)}% > ${FIRE.maxDrawdownPct}% threshold`,
