@@ -122,6 +122,19 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Middleware for JSON parsing
 app.use(bodyParser.json());
 
+// Lightweight liveness probe for the process supervisor / Fly health check.
+// Intentionally does NO work (no DB/API/engine calls) so it answers instantly
+// and distinguishes "process alive" from "trading healthy".
+const _serverStartedAt = Date.now();
+app.get('/healthz', (req, res) => {
+  res.json({
+    ok: true,
+    uptimeSeconds: Math.round((Date.now() - _serverStartedAt) / 1000),
+    pid: process.pid,
+    ts: new Date().toISOString(),
+  });
+});
+
 // ================================
 // IN-MEMORY STATE
 // ================================
@@ -1212,6 +1225,19 @@ server.listen(PORT, () => {
     );
     telegramBot.hookIntoEvents(websocketServer.getIO());
     console.log('📱 Telegram bot initialized');
+    // Engine-online alert. Because the supervisor auto-restarts on crash, a
+    // burst of these is your signal that the engine bounced — uptime monitoring
+    // without a separate service.
+    try {
+      const brokerCount = (aiTradingEngine.getAllUserSessions('brokers') || [])
+        .length;
+      const host = process.env.FLY_APP_NAME ? 'cloud' : 'local';
+      telegramBot.sendAlert(
+        `🟢 Broker engine online (${host}) — ${brokerCount} brokers, ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET`
+      );
+    } catch (e) {
+      /* best-effort */
+    }
   }
 });
 
