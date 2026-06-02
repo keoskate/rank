@@ -18,6 +18,8 @@ const ALLOWED_STRATEGIES = [
   'aggressive',
   // Plugin-backed strategies (route to a non-technical signal source):
   'options-flow',
+  'insider-following',
+  'dark-pool',
 ];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
@@ -62,6 +64,17 @@ const BROKER_DEFAULTS = {
     minPremium: 250000, // min total option premium in the window to act ($)
     minSkew: 0.65, // dominant call/put premium share to call it directional
     lookbackMinutes: 30, // how far back to aggregate flow alerts
+  },
+  // Insider-following plugin tunables (strategy: insider-following).
+  insider: {
+    minNotional: 100000, // min open-market insider buy $ in the window
+    lookbackDays: 10, // how many days of filings to aggregate
+  },
+  // Dark-pool plugin tunables (strategy: dark-pool).
+  darkpool: {
+    minPremium: 1000000, // min dark-pool premium in the window ($)
+    minBuyShare: 0.6, // buy-side share of premium to call it accumulation
+    lookbackMinutes: 120, // how far back to aggregate prints
   },
 };
 
@@ -253,6 +266,41 @@ function validateBroker(raw, filename = '') {
     'flow.lookbackMinutes must be int 1..1440'
   );
 
+  const insider = deepMerge(BROKER_DEFAULTS.insider, raw.insider || {});
+  pushIf(
+    errs,
+    typeof insider.minNotional === 'number' && insider.minNotional >= 0,
+    'insider.minNotional must be a non-negative number'
+  );
+  pushIf(
+    errs,
+    Number.isInteger(insider.lookbackDays) &&
+      insider.lookbackDays >= 1 &&
+      insider.lookbackDays <= 90,
+    'insider.lookbackDays must be int 1..90'
+  );
+
+  const darkpool = deepMerge(BROKER_DEFAULTS.darkpool, raw.darkpool || {});
+  pushIf(
+    errs,
+    typeof darkpool.minPremium === 'number' && darkpool.minPremium >= 0,
+    'darkpool.minPremium must be a non-negative number'
+  );
+  pushIf(
+    errs,
+    typeof darkpool.minBuyShare === 'number' &&
+      darkpool.minBuyShare >= 0.5 &&
+      darkpool.minBuyShare <= 1,
+    'darkpool.minBuyShare must be in [0.5, 1]'
+  );
+  pushIf(
+    errs,
+    Number.isInteger(darkpool.lookbackMinutes) &&
+      darkpool.lookbackMinutes >= 1 &&
+      darkpool.lookbackMinutes <= 1440,
+    'darkpool.lookbackMinutes must be int 1..1440'
+  );
+
   const selfImprovement = deepMerge(
     BROKER_DEFAULTS.selfImprovement,
     raw.selfImprovement || {}
@@ -284,6 +332,8 @@ function validateBroker(raw, filename = '') {
       llm,
       selfImprovement,
       flow,
+      insider,
+      darkpool,
     },
     errors: [],
   };
@@ -349,6 +399,19 @@ function brokerToSessionConfig(broker, personaBody = '') {
     minPremium: (broker.flow || BROKER_DEFAULTS.flow).minPremium,
     minSkew: (broker.flow || BROKER_DEFAULTS.flow).minSkew,
     lookbackMinutes: (broker.flow || BROKER_DEFAULTS.flow).lookbackMinutes,
+
+    // Insider-following plugin tunables.
+    insiderMinNotional: (broker.insider || BROKER_DEFAULTS.insider).minNotional,
+    insiderLookbackDays: (broker.insider || BROKER_DEFAULTS.insider)
+      .lookbackDays,
+
+    // Dark-pool plugin tunables.
+    darkpoolMinPremium: (broker.darkpool || BROKER_DEFAULTS.darkpool)
+      .minPremium,
+    darkpoolMinBuyShare: (broker.darkpool || BROKER_DEFAULTS.darkpool)
+      .minBuyShare,
+    darkpoolLookbackMinutes: (broker.darkpool || BROKER_DEFAULTS.darkpool)
+      .lookbackMinutes,
 
     // Regime
     entropyGateEnabled: broker.regime.enabled,
