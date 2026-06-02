@@ -69,6 +69,7 @@ const BROKER_DEFAULTS = {
   insider: {
     minNotional: 100000, // min open-market insider buy $ in the window
     lookbackDays: 10, // how many days of filings to aggregate
+    scanner: false, // if true, watchlist is auto-refreshed from the insider feed
   },
   // Dark-pool plugin tunables (strategy: dark-pool).
   darkpool: {
@@ -404,6 +405,8 @@ function brokerToSessionConfig(broker, personaBody = '') {
     insiderMinNotional: (broker.insider || BROKER_DEFAULTS.insider).minNotional,
     insiderLookbackDays: (broker.insider || BROKER_DEFAULTS.insider)
       .lookbackDays,
+    insiderScanner:
+      (broker.insider || BROKER_DEFAULTS.insider).scanner === true,
 
     // Dark-pool plugin tunables.
     darkpoolMinPremium: (broker.darkpool || BROKER_DEFAULTS.darkpool)

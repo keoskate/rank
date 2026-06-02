@@ -39,8 +39,9 @@ selfImprovement:
     - eod
   fullAutonomy: true
 insider:
-  minNotional: 100000
+  minNotional: 500000
   lookbackDays: 10
+  scanner: true
 ---
 
 # Personality

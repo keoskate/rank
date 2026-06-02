@@ -345,6 +345,57 @@ async function analyzeInsiderActivity(symbol, opts = {}) {
   };
 }
 
+/**
+ * Scanner universe: tickers with recent qualifying open-market insider BUYING,
+ * sourced from the market-wide insider feed. This is how a feed-driven insider
+ * broker finds names to trade instead of staring at a fixed watchlist (mega-caps
+ * rarely have insider buys). Returns tickers ranked by total buy notional.
+ *
+ * @param {object} opts { minNotional=500000, lookbackDays=10, max=15 }
+ * @returns {Promise<string[]>}
+ */
+async function getRecentInsiderBuyTickers(opts = {}) {
+  const minNotional = opts.minNotional ?? 500000;
+  const lookbackDays = opts.lookbackDays ?? 10;
+  const max = opts.max ?? 15;
+  if (!isConfigured()) return [];
+
+  const cutoff = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
+  const byTicker = new Map(); // ticker -> total qualifying buy notional
+  let page = 0;
+  while (page < 10) {
+    const res = await makeRequest(
+      `/api/insider/transactions?limit=500&page=${page}`,
+      10 * 60 * 1000
+    );
+    const rows = Array.isArray(res.data) ? res.data : [];
+    if (!rows.length) break;
+    let anyInWindow = false;
+    for (const r of rows) {
+      const date = (r.filing_date || r.transaction_date || '').slice(0, 10);
+      const ts = date ? Date.parse(date) : NaN;
+      if (Number.isFinite(ts) && ts >= cutoff) anyInWindow = true;
+      if (Number.isFinite(ts) && ts < cutoff) continue;
+      if (r.transaction_code !== 'P' || !(r.is_officer || r.is_director)) {
+        continue;
+      }
+      const amount = Number(r.amount);
+      const price = parseFloat(r.price) || 0;
+      if (amount <= 0) continue;
+      const notional = Math.abs(amount) * price;
+      if (notional < minNotional || !r.ticker) continue;
+      byTicker.set(r.ticker, (byTicker.get(r.ticker) || 0) + notional);
+    }
+    page++;
+    if (!res.has_more || !anyInWindow) break;
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return [...byTicker.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([t]) => t);
+}
+
 // ---------------------------------------------------------------------------
 // Dark pool prints (Phase 4)
 // ---------------------------------------------------------------------------
@@ -473,6 +524,7 @@ module.exports = {
   analyzeTickerFlow,
   getInsiderBuySells,
   analyzeInsiderActivity,
+  getRecentInsiderBuyTickers,
   getDarkPoolPrints,
   analyzeDarkPool,
   clearCache,

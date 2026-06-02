@@ -1169,6 +1169,41 @@ server.listen(PORT, () => {
   setInterval(maybeCaptureFlow, 15 * 60 * 1000);
   maybeCaptureFlow();
 
+  // --- Insider scanner: feed-driven watchlist -------------------------------
+  // Insider buys are sparse and almost never land on mega-caps, so a fixed
+  // watchlist misses the signal. For insider-following brokers with
+  // insiderScanner enabled, refresh the watchlist from the market-wide insider
+  // feed (names with recent qualifying open-market buys) every 30 min.
+  const uwClient = require('./unusualWhalesClient');
+  async function refreshInsiderScanners() {
+    try {
+      const sessions =
+        aiTradingEngine.getAllUserSessions(brokerBridge.BROKER_USER_ID) || [];
+      const scanners = sessions.filter(
+        s =>
+          s.config?.strategyKey === 'insider-following' &&
+          s.config?.insiderScanner
+      );
+      if (!scanners.length) return;
+      for (const s of scanners) {
+        const tickers = await uwClient.getRecentInsiderBuyTickers({
+          minNotional: s.config.insiderMinNotional || 500000,
+          lookbackDays: s.config.insiderLookbackDays || 10,
+          max: 15,
+        });
+        if (!tickers.length) continue;
+        aiTradingEngine.updateConfig(s.sessionId, { watchlist: tickers });
+        console.log(
+          `🛰️  Insider scanner: ${s.name} → ${tickers.length} names (${tickers.slice(0, 6).join(', ')}…)`
+        );
+      }
+    } catch (err) {
+      console.error('[insider-scanner] refresh failed:', err.message);
+    }
+  }
+  setInterval(refreshInsiderScanners, 30 * 60 * 1000);
+  refreshInsiderScanners();
+
   // Initialize Telegram bot if configured
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_OWNER_ID) {
     telegramBot.initialize(
