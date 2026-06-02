@@ -1150,6 +1150,25 @@ server.listen(PORT, () => {
   setInterval(maybeWriteDailySummary, 5 * 60 * 1000);
   maybeWriteDailySummary();
 
+  // --- Options-flow forward capture ----------------------------------------
+  // Flow can't be backtested from history (UW flow-alerts is recent-only), so
+  // we snapshot it ourselves every 15 min during market hours to build a
+  // backtestable dataset over time → data/flow-history/<ET-date>.jsonl.
+  const flowCapture = require('./flowCapture');
+  function maybeCaptureFlow() {
+    const { minutes, isWeekend } = nowEastern();
+    // 9:30am (570) … 4:00pm (960) ET on weekdays.
+    if (isWeekend || minutes < 570 || minutes > 960) return;
+    flowCapture
+      .captureSnapshot()
+      .then(r => {
+        if (r.captured) console.log(`📸 Flow snapshot: ${r.captured} symbols`);
+      })
+      .catch(err => console.error('[flow-capture] failed:', err.message));
+  }
+  setInterval(maybeCaptureFlow, 15 * 60 * 1000);
+  maybeCaptureFlow();
+
   // Initialize Telegram bot if configured
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_OWNER_ID) {
     telegramBot.initialize(
