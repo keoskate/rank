@@ -1060,34 +1060,95 @@ server.listen(PORT, () => {
       console.error('[brief] generation failed:', err.message);
     }
 
-    // Daily summary: append a structured record (per-source P&L, funnel, edge)
-    // to data/daily-history.json so we can track over time whether the system
-    // is evolving in the right direction. Markdown lands in data/reports/.
+    // Daily summary (structured per-source record + markdown). Also fires on a
+    // precise market-close schedule defined below; idempotent (keyed by date).
+    writeDailySummary(nowEastern().dateStr);
+  }, DAILY_MS);
+
+  // --- Daily summary scheduling --------------------------------------------
+  // The 24h interval above is anchored to server start, so on its own it would
+  // capture the day at an arbitrary time. This adds a reliable capture right
+  // after the 4:00pm ET close — and a catch-up if the server was down at close.
+  // Idempotent: the record is keyed by date and upsert replaces in place.
+  function writeDailySummary(dateStr) {
     try {
+      const fs = require('fs');
       const {
         buildRecord,
         upsertHistory,
         renderMarkdown,
       } = require('../scripts/daily-summary');
-      const fs = require('fs');
-      const today = new Date().toISOString().slice(0, 10);
-      const rec = buildRecord(today);
+      const rec = buildRecord(dateStr);
       upsertHistory(rec);
-      const dailyPath = path.join(
+      const out = path.join(
         __dirname,
         '..',
         'data',
         'reports',
-        `daily-${today}.md`
+        `daily-${dateStr}.md`
       );
-      fs.writeFileSync(dailyPath, renderMarkdown(rec));
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      fs.writeFileSync(out, renderMarkdown(rec));
       console.log(
-        `📊 Daily summary: $${rec.exchange.todayPnL.toFixed(2)} today, ${rec.exchange.todayClosed} closed → data/daily-history.json`
+        `📊 Daily summary ${dateStr}: $${rec.exchange.todayPnL.toFixed(2)} today, ${rec.exchange.todayClosed} closed`
       );
+      return rec;
     } catch (err) {
-      console.error('[daily-summary] generation failed:', err.message);
+      console.error('[daily-summary] failed:', err.message);
     }
-  }, DAILY_MS);
+  }
+
+  // Current Eastern-time wall clock (DST-safe via Intl).
+  function nowEastern() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      weekday: 'short',
+    }).formatToParts(new Date());
+    const get = t => parts.find(p => p.type === t)?.value;
+    const hour = parseInt(get('hour'), 10) % 24;
+    const wd = get('weekday');
+    return {
+      dateStr: `${get('year')}-${get('month')}-${get('day')}`,
+      minutes: hour * 60 + parseInt(get('minute'), 10),
+      isWeekend: wd === 'Sat' || wd === 'Sun',
+    };
+  }
+
+  function dailyRecordExists(dateStr) {
+    try {
+      const fs = require('fs');
+      const h = JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, '..', 'data', 'daily-history.json'),
+          'utf8'
+        )
+      );
+      return Array.isArray(h) && h.some(r => r.date === dateStr);
+    } catch {
+      return false;
+    }
+  }
+
+  // Poll every 5 min: once it's a weekday past 4:05pm ET and today's record
+  // isn't written, write it. Survives restarts (checks the history file) and
+  // self-corrects; runs once immediately as a startup catch-up.
+  const CLOSE_MINUTE = 16 * 60 + 5; // 4:05pm ET
+  function maybeWriteDailySummary() {
+    const { dateStr, minutes, isWeekend } = nowEastern();
+    if (isWeekend || minutes < CLOSE_MINUTE || dailyRecordExists(dateStr)) {
+      return;
+    }
+    console.log(`📊 Market-close daily summary for ${dateStr}…`);
+    writeDailySummary(dateStr);
+  }
+  setInterval(maybeWriteDailySummary, 5 * 60 * 1000);
+  maybeWriteDailySummary();
 
   // Initialize Telegram bot if configured
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_OWNER_ID) {

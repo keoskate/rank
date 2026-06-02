@@ -54,6 +54,17 @@ function parseArgs(argv) {
   return args;
 }
 
+// Canonical trading-day key: the Eastern-time calendar date. Market-hours
+// trades carry UTC timestamps whose date matches the ET date, so filtering by
+// this string against timestamp.slice(0,10) is correct intraday.
+const etDate = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+
 const fmtUsd = n => {
   if (n == null || Number.isNaN(n)) return '$0.00';
   const s = n >= 0 ? '+' : '-';
@@ -354,7 +365,7 @@ function main() {
   const args = parseArgs(process.argv);
   if (args.trend) return renderTrend(args.trendDays);
 
-  const dateStr = args.date || new Date().toISOString().slice(0, 10);
+  const dateStr = args.date || etDate();
   const rec = buildRecord(dateStr);
 
   if (args.print) {
