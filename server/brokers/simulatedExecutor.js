@@ -10,6 +10,7 @@ const tradingLogger = require('../tradingLogger');
 const websocketServer = require('../websocketServer');
 const kellySizing = require('../risk/kellySizing');
 const polygonClient = require('../polygonClient');
+const transactionCost = require('../risk/transactionCost');
 
 // Tiny in-process price cache so a flurry of broker ticks doesn't hammer
 // the data APIs. 5-second TTL — fresh enough for sim, gentle on rate limits.
@@ -438,11 +439,14 @@ async function simulatedExit(session, symbol, decision) {
 
   const proceeds = exitQty * exitPrice;
   const cost = exitQty * position.averageCost;
-  const realizedPnL = proceeds - cost;
+  // Round-trip transaction cost (spread + slippage + commission) so realized
+  // P&L is NET — what a real account keeps. Charged against the entry notional.
+  const txCost = transactionCost.roundTripCost(symbol, cost);
+  const realizedPnL = proceeds - cost - txCost;
   const realizedPct = cost > 0 ? (realizedPnL / cost) * 100 : 0;
 
-  // Mutate state
-  session.portfolio.cash += proceeds;
+  // Mutate state — cash reflects the cost outflow too.
+  session.portfolio.cash += proceeds - txCost;
 
   if (isPartial && exitQty < position.quantity) {
     position.quantity -= exitQty;

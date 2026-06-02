@@ -15,6 +15,7 @@ const tradingLogger = require('./tradingLogger');
 const websocketServer = require('./websocketServer');
 const assetUtils = require('./assetUtils');
 const simulatedExecutor = require('./brokers/simulatedExecutor');
+const transactionCost = require('./risk/transactionCost');
 
 // Shared context — populated by init() from aiTradingEngine.js
 let ctx = {};
@@ -988,11 +989,16 @@ async function executeExit(sessionId, symbol, decision) {
         decision.entryPrice ||
         positionState?.averageCost ||
         0;
-      const actualPnl =
+      const grossPnl =
         entryPrice > 0
           ? (filledPrice - entryPrice) * quantity
           : decision.pnl || 0;
-      const pnl = actualPnl;
+      // Net of round-trip transaction cost (matches the simulated path).
+      const txCost = transactionCost.roundTripCost(
+        symbol,
+        (entryPrice || filledPrice) * quantity
+      );
+      const pnl = grossPnl - txCost;
 
       // Log execution to trading logger with actual fill price
       tradingLogger.logExecution('SELL', symbol, {

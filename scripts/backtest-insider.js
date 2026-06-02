@@ -23,6 +23,10 @@
 require('dotenv').config();
 const uw = require('../server/unusualWhalesClient');
 const polygon = require('../server/polygonClient');
+const { bpsPerSide } = require('../server/risk/transactionCost');
+
+// Round-trip cost as a fraction of notional (entry + exit), for net returns.
+const COST_FRAC = (sym => (bpsPerSide(sym) * 2) / 10000)('GENERIC');
 
 function parseArgs(argv) {
   const a = { events: 250, min: 100000, tp: 8, sl: 4, hold: 10 };
@@ -108,7 +112,7 @@ function evaluateForward(bars, date, { tp, sl, hold }) {
 
   const ret = n => {
     const b = bars[idx + n];
-    return b ? b.close / entry - 1 : null;
+    return b ? b.close / entry - 1 - COST_FRAC : null; // net of round-trip cost
   };
 
   // TP/SL walk over the holding window.
@@ -120,16 +124,16 @@ function evaluateForward(bars, date, { tp, sl, hold }) {
     const b = bars[idx + n];
     if (!b) break;
     if (b.low <= slPx) {
-      exitRet = -sl / 100;
+      exitRet = -sl / 100 - COST_FRAC;
       exitReason = 'stop';
       break;
     }
     if (b.high >= tpPx) {
-      exitRet = tp / 100;
+      exitRet = tp / 100 - COST_FRAC;
       exitReason = 'target';
       break;
     }
-    exitRet = b.close / entry - 1;
+    exitRet = b.close / entry - 1 - COST_FRAC;
   }
 
   return {
@@ -150,7 +154,7 @@ function baselineForward(bars, { hold }) {
   for (let i = 0; i + hold < bars.length; i += step) {
     const entry = bars[i].open;
     const exit = bars[i + 5]?.close;
-    if (entry > 0 && exit > 0) outs.push(exit / entry - 1);
+    if (entry > 0 && exit > 0) outs.push(exit / entry - 1 - COST_FRAC);
   }
   return outs;
 }
