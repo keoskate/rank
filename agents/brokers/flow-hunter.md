@@ -41,6 +41,7 @@ flow:
   minPremium: 500000
   minSkew: 0.7
   lookbackMinutes: 30
+  scanner: true
 ---
 
 # Personality

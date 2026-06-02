@@ -524,6 +524,63 @@ async function analyzeDarkPool(symbol, opts = {}) {
   };
 }
 
+/**
+ * Scanner universe for the options-flow broker: liquid tickers with the hottest
+ * unusual options flow right now, from the market-wide flow-alerts feed. Ranked
+ * by total alert premium; gated on market cap so we stay in optionable, liquid
+ * names. The plugin then decides direction (call-premium skew) per ticker.
+ * @param {object} opts { minMarketCap=5e9, max=12 }
+ * @returns {Promise<string[]>}
+ */
+async function getTopFlowTickers(opts = {}) {
+  const minMarketCap = opts.minMarketCap ?? 5_000_000_000;
+  const max = opts.max ?? 12;
+  if (!isConfigured()) return [];
+  const res = await makeRequest('/api/option-trades/flow-alerts', 60 * 1000);
+  const rows = Array.isArray(res.data) ? res.data : [];
+  const byTicker = new Map();
+  for (const r of rows) {
+    if (!r.ticker) continue;
+    const cap = _num(r.marketcap);
+    if (cap > 0 && cap < minMarketCap) continue;
+    const prem =
+      _num(r.total_ask_side_prem) + _num(r.total_bid_side_prem) ||
+      _num(r.volume) * _num(r.price) * 100;
+    byTicker.set(r.ticker, (byTicker.get(r.ticker) || 0) + prem);
+  }
+  return [...byTicker.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([t]) => t);
+}
+
+/**
+ * Scanner universe for the dark-pool broker: tickers with the biggest recent
+ * dark-pool prints, from the market-wide recent-prints feed. Ranked by total
+ * premium; penny names filtered out by price. The plugin decides direction
+ * (buy-side share of premium) per ticker.
+ * @param {object} opts { minPrice=5, max=12 }
+ * @returns {Promise<string[]>}
+ */
+async function getTopDarkPoolTickers(opts = {}) {
+  const minPrice = opts.minPrice ?? 5;
+  const max = opts.max ?? 12;
+  if (!isConfigured()) return [];
+  const res = await makeRequest('/api/darkpool/recent', 60 * 1000);
+  const rows = Array.isArray(res.data) ? res.data : [];
+  const byTicker = new Map();
+  for (const r of rows) {
+    if (!r.ticker) continue;
+    const price = _num(r.price);
+    if (price > 0 && price < minPrice) continue;
+    byTicker.set(r.ticker, (byTicker.get(r.ticker) || 0) + _num(r.premium));
+  }
+  return [...byTicker.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([t]) => t);
+}
+
 const clearCache = () => cache.clear();
 
 module.exports = {
@@ -535,7 +592,9 @@ module.exports = {
   getInsiderBuySells,
   analyzeInsiderActivity,
   getRecentInsiderBuyTickers,
+  getTopFlowTickers,
   getDarkPoolPrints,
   analyzeDarkPool,
+  getTopDarkPoolTickers,
   clearCache,
 };

@@ -64,6 +64,7 @@ const BROKER_DEFAULTS = {
     minPremium: 250000, // min total option premium in the window to act ($)
     minSkew: 0.65, // dominant call/put premium share to call it directional
     lookbackMinutes: 30, // how far back to aggregate flow alerts
+    scanner: false, // if true, watchlist auto-refreshes from the hottest flow
   },
   // Insider-following plugin tunables (strategy: insider-following).
   insider: {
@@ -76,6 +77,7 @@ const BROKER_DEFAULTS = {
     minPremium: 1000000, // min dark-pool premium in the window ($)
     minBuyShare: 0.6, // buy-side share of premium to call it accumulation
     lookbackMinutes: 120, // how far back to aggregate prints
+    scanner: false, // if true, watchlist auto-refreshes from biggest dark prints
   },
 };
 
@@ -400,6 +402,7 @@ function brokerToSessionConfig(broker, personaBody = '') {
     minPremium: (broker.flow || BROKER_DEFAULTS.flow).minPremium,
     minSkew: (broker.flow || BROKER_DEFAULTS.flow).minSkew,
     lookbackMinutes: (broker.flow || BROKER_DEFAULTS.flow).lookbackMinutes,
+    flowScanner: (broker.flow || BROKER_DEFAULTS.flow).scanner === true,
 
     // Insider-following plugin tunables.
     insiderMinNotional: (broker.insider || BROKER_DEFAULTS.insider).minNotional,
@@ -415,6 +418,8 @@ function brokerToSessionConfig(broker, personaBody = '') {
       .minBuyShare,
     darkpoolLookbackMinutes: (broker.darkpool || BROKER_DEFAULTS.darkpool)
       .lookbackMinutes,
+    darkpoolScanner:
+      (broker.darkpool || BROKER_DEFAULTS.darkpool).scanner === true,
 
     // Regime
     entropyGateEnabled: broker.regime.enabled,

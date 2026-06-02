@@ -42,6 +42,7 @@ darkpool:
   minPremium: 5000000
   minBuyShare: 0.62
   lookbackMinutes: 120
+  scanner: true
 ---
 
 # Personality
