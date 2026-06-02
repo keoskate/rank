@@ -78,6 +78,9 @@ const SelfImprovementEngine = require('./selfImprovementEngine');
 // Watchlist Regime Detector
 const WatchlistRegimeDetector = require('./watchlistRegimeDetector');
 
+// AI Broker Agents — markdown-driven autonomous trading personas
+const brokerBridge = require('./brokers/brokerSessionBridge');
+
 // Initialize Sprint 1 modules
 const transactionCostModel = new TransactionCostModel();
 const leveragedEtfRules = new LeveragedEtfRules();
@@ -97,7 +100,7 @@ const overnightOptimizer = new OvernightOptimizer();
 
 // Initialize Leveraged ETF Strategy and CheddarFlow Scraper
 const leveragedEtfStrategy = new LeveragedEtfStrategy();
-let cheddarFlowScraper = null; // Lazy init to avoid starting browser on server start
+const cheddarFlowScraper = null; // Lazy init to avoid starting browser on server start
 
 // Initialize Self-Improvement Engine
 const selfImprovementEngine = new SelfImprovementEngine();
@@ -916,6 +919,9 @@ app.use(require('./routes/strategyLab')(deps));
 app.use(require('./routes/sprint')(deps));
 app.use(require('./routes/misc')(deps));
 app.use(require('./routes/scanner')(deps));
+app.use(
+  require('./routes/brokers')({ ...deps, brokerBridge, aiTradingEngine })
+);
 
 // ================================
 // STATIC FILES & CATCH-ALL
@@ -976,9 +982,119 @@ server.listen(PORT, () => {
   console.log(`   POST /api/alpaca/orders`);
   console.log(`\n🔌 WebSocket: ws://localhost:${PORT}`);
 
+  // Initialize the AI Broker bridge: scan agents/brokers/*.md and reconcile
+  // each into a running trading session, then watch the directory for adds/changes.
+  brokerBridge.init({ engine: aiTradingEngine, logger: console });
+  brokerBridge
+    .syncBrokersToSessions()
+    .then(summary => {
+      console.log(
+        `\n🤝 Brokers: ${summary.loaded} loaded · ${summary.started} started · ${summary.updated} updated · ${summary.errored} errored`
+      );
+      if (summary.errored > 0) {
+        summary.errors.forEach(e =>
+          console.error(`   ✗ ${e.file}: ${e.errors.join('; ')}`)
+        );
+      }
+      brokerBridge.startWatcher();
+    })
+    .catch(err => console.error('[bridge] initial sync failed:', err));
+
+  // Daily tier evaluation: every 24h, check if any broker should be promoted,
+  // demoted, or fired. Manual triggers also available via POST /api/brokers/tier-eval.
+  const tierPromotion = require('./brokers/tierPromotion');
+  const selfMutation = require('./brokers/selfMutation');
+  const DAILY_MS = 24 * 60 * 60 * 1000;
+  setInterval(() => {
+    tierPromotion
+      .runTierEvaluation(
+        { engine: aiTradingEngine, bridge: brokerBridge },
+        { breed: process.env.BROKER_BREED === '1' }
+      )
+      .then(r => {
+        const s = r.summary;
+        if (s.promoted + s.demoted + s.fired + s.bred > 0) {
+          console.log(
+            `🎚️  Tier eval: ${s.promoted} promoted · ${s.demoted} demoted · ${s.fired} fired · ${s.bred} bred`
+          );
+        }
+      })
+      .catch(err => console.error('[tier] daily eval failed:', err.message));
+
+    // Phase 6: nightly self-mutation pass. Only brokers whose
+    // selfImprovement.intervals includes 'eod' are touched. Disabled if
+    // ANTHROPIC_API_KEY is not set.
+    if (process.env.ANTHROPIC_API_KEY) {
+      selfMutation
+        .runAllSelfMutations({ engine: aiTradingEngine, interval: 'eod' })
+        .then(r => {
+          if (r.mutated > 0 || r.errors > 0) {
+            console.log(
+              `🧬 Self-mutation (eod): ${r.evaluated} evaluated · ${r.mutated} mutated · ${r.errors} errors · ${r.skipped} skipped`
+            );
+          }
+        })
+        .catch(err =>
+          console.error('[self-mutation] daily eod failed:', err.message)
+        );
+    }
+
+    // Morning brief: write a markdown snapshot of today's broker activity to
+    // data/reports/YYYY-MM-DD.md so you can read overnight outcomes without
+    // the server running. Generates after self-mutation so mutations are captured.
+    try {
+      const { generateBrief } = require('../scripts/morning-brief');
+      const fs = require('fs');
+      const today = new Date().toISOString().slice(0, 10);
+      const reportPath = path.join(
+        __dirname,
+        '..',
+        'data',
+        'reports',
+        `${today}.md`
+      );
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+      fs.writeFileSync(reportPath, generateBrief(today));
+      console.log(`📰 Morning brief: ${reportPath}`);
+    } catch (err) {
+      console.error('[brief] generation failed:', err.message);
+    }
+
+    // Daily summary: append a structured record (per-source P&L, funnel, edge)
+    // to data/daily-history.json so we can track over time whether the system
+    // is evolving in the right direction. Markdown lands in data/reports/.
+    try {
+      const {
+        buildRecord,
+        upsertHistory,
+        renderMarkdown,
+      } = require('../scripts/daily-summary');
+      const fs = require('fs');
+      const today = new Date().toISOString().slice(0, 10);
+      const rec = buildRecord(today);
+      upsertHistory(rec);
+      const dailyPath = path.join(
+        __dirname,
+        '..',
+        'data',
+        'reports',
+        `daily-${today}.md`
+      );
+      fs.writeFileSync(dailyPath, renderMarkdown(rec));
+      console.log(
+        `📊 Daily summary: $${rec.exchange.todayPnL.toFixed(2)} today, ${rec.exchange.todayClosed} closed → data/daily-history.json`
+      );
+    } catch (err) {
+      console.error('[daily-summary] generation failed:', err.message);
+    }
+  }, DAILY_MS);
+
   // Initialize Telegram bot if configured
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_OWNER_ID) {
-    telegramBot.initialize(process.env.TELEGRAM_BOT_TOKEN, process.env.TELEGRAM_OWNER_ID);
+    telegramBot.initialize(
+      process.env.TELEGRAM_BOT_TOKEN,
+      process.env.TELEGRAM_OWNER_ID
+    );
     telegramBot.hookIntoEvents(websocketServer.getIO());
     console.log('📱 Telegram bot initialized');
   }
@@ -993,7 +1109,9 @@ let isShuttingDown = false;
 async function gracefulShutdown(signal) {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  console.log(`\n[Server] ${signal} received — initiating graceful shutdown...`);
+  console.log(
+    `\n[Server] ${signal} received — initiating graceful shutdown...`
+  );
 
   try {
     // Save current session state immediately. We deliberately preserve
@@ -1040,12 +1158,18 @@ async function gracefulShutdown(signal) {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-process.on('uncaughtException', (err) => {
-  console.error('[Server] Uncaught exception — saving state before crash:', err);
+process.on('uncaughtException', err => {
+  console.error(
+    '[Server] Uncaught exception — saving state before crash:',
+    err
+  );
   try {
     aiTradingEngine.saveSessions();
   } catch (saveErr) {
-    console.error('[Server] Failed to save sessions on crash:', saveErr.message);
+    console.error(
+      '[Server] Failed to save sessions on crash:',
+      saveErr.message
+    );
   }
   process.exit(1);
 });
