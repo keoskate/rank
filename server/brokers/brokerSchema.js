@@ -188,8 +188,8 @@ function validateBroker(raw, filename = '') {
   );
   pushIf(
     errs,
-    risk.kellyFraction > 0 && risk.kellyFraction <= 1.0,
-    'risk.kellyFraction must be in (0, 1]'
+    risk.kellyFraction > 0 && risk.kellyFraction <= 0.5,
+    'risk.kellyFraction must be in (0, 0.5]'
   );
   pushIf(
     errs,
