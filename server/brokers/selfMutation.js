@@ -49,11 +49,25 @@ const MUTABLE_FIELDS = new Set([
   'regime.preferred',
   'regime.blockOnTransition',
   'regime.referenceSymbol',
-  'llm.callBudget',
+  // 'llm.callBudget' deliberately NOT mutable — a broker must not be able to
+  // raise its own LLM cost ceiling.
   'llm.role',
   'selfImprovement.intervals',
   'selfImprovement.fullAutonomy',
 ]);
+
+// Semantic safety controls (distinct from the schema's hard bounds). The schema
+// allows e.g. perTrade up to 0.10; these soft ceilings stop a broker talking
+// itself to that extreme over nightly runs.
+const MUTATION_CONFIDENCE_MIN = 0.6; // skip applying low-confidence batches
+const MAX_APPLIED_PER_RUN = 3; // cap mutations applied in one pass
+const MAX_STEP_FRACTION = 0.3; // reject numeric jumps > ±30% of current value
+const SOFT_CEILINGS = {
+  'risk.perTrade': 0.05,
+  'risk.kellyFraction': 0.5,
+  'risk.maxPositionSizePercent': 50,
+  'risk.maxPositions': 10,
+};
 
 // Hard floor: brokers below this many closed trades get skipped — there's
 // nothing for the LLM to learn from yet.
@@ -165,7 +179,22 @@ function _appendPersonaNotes(persona, notes) {
   // body shows past notes in that shape. Strip a leading ISO date so we don't
   // double-stamp ("2026-05-21: 2026-05-21: ...").
   const stripLeadingDate = s => s.replace(/^\s*\d{4}-\d{2}-\d{2}\s*:\s*/, '');
-  const block = notes.map(n => `- ${stamp}: ${stripLeadingDate(n)}`).join('\n');
+  // Sanitize: the persona body is fed back verbatim into the system prompt, so
+  // a note must not be able to inject a fake markdown heading or multi-line
+  // instructions to its future self. Flatten newlines, strip leading '#'
+  // markers, collapse whitespace, and hard-cap length.
+  const sanitize = s =>
+    String(s)
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/^[\s#>*-]+/, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 280);
+  const block = notes
+    .map(n => `- ${stamp}: ${sanitize(stripLeadingDate(n))}`)
+    .filter(line => line.length > `- ${stamp}: `.length)
+    .join('\n');
+  if (!block) return persona;
   if (/^##\s+Self-Improvement Notes\b/m.test(persona)) {
     // Insert the block right after the heading line
     return persona.replace(
@@ -255,18 +284,64 @@ async function mutateBroker(
   const applied = [];
   const rejected = [];
 
+  // Confidence gate: a batch the model isn't confident in is logged but not
+  // applied. (confidence is collected per analysis; previously ignored.)
+  const confidence =
+    typeof parsed.confidence === 'number' ? parsed.confidence : 1;
+  const lowConfidence = confidence < MUTATION_CONFIDENCE_MIN;
+
   // Allow-list = global mutable fields ∪ the broker's strategy-plugin fields.
   // Each plugin declares which of its own config knobs the LLM may tune.
-  // (Phase 1: technical-indicators declares none, so this is a no-op.)
   const pluginFields = strategies.resolve(broker)?.mutableFields || [];
   const allowedFields = new Set([...MUTABLE_FIELDS, ...pluginFields]);
 
   for (const prop of parsed.proposals || []) {
+    if (lowConfidence) {
+      rejected.push({
+        ...prop,
+        reason: `low confidence ${confidence.toFixed(2)} < ${MUTATION_CONFIDENCE_MIN}`,
+      });
+      continue;
+    }
+    if (applied.length >= MAX_APPLIED_PER_RUN) {
+      rejected.push({
+        ...prop,
+        reason: `per-run cap (${MAX_APPLIED_PER_RUN}) reached`,
+      });
+      continue;
+    }
     if (!allowedFields.has(prop.field)) {
       rejected.push({ ...prop, reason: 'field is immutable' });
       continue;
     }
     const before = _getDeep(next, prop.field);
+    // Velocity cap: reject numeric jumps larger than ±30% of the current value
+    // (stops a broker ratcheting a knob to its schema extreme in one step).
+    if (
+      typeof before === 'number' &&
+      typeof prop.proposedValue === 'number' &&
+      before !== 0 &&
+      Math.abs(prop.proposedValue - before) / Math.abs(before) >
+        MAX_STEP_FRACTION
+    ) {
+      rejected.push({
+        ...prop,
+        reason: `step > ±${MAX_STEP_FRACTION * 100}% of current (${before})`,
+      });
+      continue;
+    }
+    // Soft operational ceiling (tighter than the schema's hard bound).
+    if (
+      SOFT_CEILINGS[prop.field] != null &&
+      typeof prop.proposedValue === 'number' &&
+      prop.proposedValue > SOFT_CEILINGS[prop.field]
+    ) {
+      rejected.push({
+        ...prop,
+        reason: `exceeds soft ceiling ${SOFT_CEILINGS[prop.field]}`,
+      });
+      continue;
+    }
     _setDeep(next, prop.field, prop.proposedValue);
     const v = validateBroker(next, `${broker.slug}.md`);
     if (!v.broker) {
