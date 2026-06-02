@@ -29,11 +29,22 @@ const { bpsPerSide } = require('../server/risk/transactionCost');
 const COST_FRAC = (sym => (bpsPerSide(sym) * 2) / 10000)('GENERIC');
 
 function parseArgs(argv) {
-  const a = { events: 250, min: 100000, tp: 8, sl: 4, hold: 10 };
+  // minCap/minPrice = liquidity filter matching the live scanner (0 = off).
+  const a = {
+    events: 250,
+    min: 100000,
+    tp: 8,
+    sl: 4,
+    hold: 10,
+    minCap: 0,
+    minPrice: 0,
+  };
   for (let i = 2; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, '');
     const v = argv[i + 1];
-    if (['events', 'min', 'tp', 'sl', 'hold'].includes(k)) {
+    if (
+      ['events', 'min', 'tp', 'sl', 'hold', 'minCap', 'minPrice'].includes(k)
+    ) {
       a[k] = parseFloat(v);
       i++;
     }
@@ -47,7 +58,12 @@ const pctStr = n => `${n >= 0 ? '+' : ''}${(n * 100).toFixed(2)}%`;
 
 // Pull officer/director PURCHASE events from the market-wide insider feed,
 // paginating until we have `want` of them (or run out).
-async function sourcePurchaseEvents(want, minNotional) {
+async function sourcePurchaseEvents(
+  want,
+  minNotional,
+  minCap = 0,
+  minPrice = 0
+) {
   const events = [];
   let page = 0;
   const seen = new Set();
@@ -65,6 +81,10 @@ async function sourcePurchaseEvents(want, minNotional) {
       const isInsider = r.is_officer || r.is_director;
       // Open-market purchase (P), by an officer/director, real money.
       if (code !== 'P' || amount <= 0 || !isInsider) continue;
+      // Liquidity filter (matches the live scanner): skip micro-caps / pennies.
+      const cap = parseFloat(r.marketcap) || 0;
+      if (minCap > 0 && cap > 0 && cap < minCap) continue;
+      if (minPrice > 0 && price > 0 && price < minPrice) continue;
       const notional = Math.abs(amount) * price;
       if (notional < minNotional) continue;
       const date = (r.filing_date || r.transaction_date || '').slice(0, 10);
@@ -169,7 +189,12 @@ async function main() {
   console.log(
     `\n🔎 Insider backtest — sourcing up to ${args.events} officer/director purchases ≥ $${args.min.toLocaleString()}…`
   );
-  const events = await sourcePurchaseEvents(args.events, args.min);
+  const events = await sourcePurchaseEvents(
+    args.events,
+    args.min,
+    args.minCap,
+    args.minPrice
+  );
   console.log(`   Found ${events.length} qualifying purchase events.`);
   if (!events.length) {
     console.log('   No events — try a lower --min.');
