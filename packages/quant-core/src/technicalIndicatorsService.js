@@ -149,23 +149,53 @@ function calculateSMA(closes, period) {
 }
 
 /**
- * Calculate VWAP (Volume Weighted Average Price)
- * @param {object[]} candles - OHLCV candles
- * @returns {number[]} VWAP values
+ * The Eastern-time calendar day for a candle, used to reset VWAP each session.
+ */
+function _candleDay(c) {
+  const t =
+    c.timestamp ?? c.time ?? c.t ?? (c.date ? Date.parse(c.date) : null);
+  if (t == null) return 'na';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(t));
+}
+
+/**
+ * Calculate VWAP (Volume Weighted Average Price), RESET each trading day.
+ * Library VWAP is cumulative; run over a multi-session window (the engine passes
+ * ~24h / ~2 days of 5-min bars) it anchors to a prior day's open and becomes a
+ * meaningless intraday reference by day 2 — which corrupts the mandatory
+ * `belowVwap` entry gate. Segment by ET calendar day and reset per session.
+ * @param {object[]} candles - OHLCV candles (chronological)
+ * @returns {number[]} VWAP values, aligned 1:1 with input
  */
 function calculateVWAP(candles) {
   if (!candles || candles.length === 0) {
     return [];
   }
 
-  const vwap = ti.VWAP.calculate({
-    high: candles.map(c => c.high),
-    low: candles.map(c => c.low),
-    close: candles.map(c => c.close),
-    volume: candles.map(c => c.volume),
-  });
-
-  return vwap;
+  const out = [];
+  let i = 0;
+  while (i < candles.length) {
+    const day = _candleDay(candles[i]);
+    let j = i;
+    while (j < candles.length && _candleDay(candles[j]) === day) j++;
+    const seg = candles.slice(i, j);
+    const segVwap = ti.VWAP.calculate({
+      high: seg.map(c => c.high),
+      low: seg.map(c => c.low),
+      close: seg.map(c => c.close),
+      volume: seg.map(c => c.volume),
+    });
+    // Keep 1:1 alignment with input even if the library warms up.
+    for (let k = 0; k < seg.length - segVwap.length; k++) out.push(undefined);
+    for (const v of segVwap) out.push(v);
+    i = j;
+  }
+  return out;
 }
 
 /**
@@ -306,7 +336,8 @@ function detectRSIDivergence(closes, rsiValues, lookback = 10) {
   // tight intraday range (< 1% wide), price can be within 1% of BOTH
   // extremes — and the prior implementation flagged both bullish AND
   // bearish divergence simultaneously, which is logically incoherent.
-  const rangePercent = priceLow > 0 ? ((priceHigh - priceLow) / priceLow) * 100 : 0;
+  const rangePercent =
+    priceLow > 0 ? ((priceHigh - priceLow) / priceLow) * 100 : 0;
   const RANGE_FLOOR = 1.0; // require >=1% range
 
   // Bullish divergence: price near recent low, RSI made higher low

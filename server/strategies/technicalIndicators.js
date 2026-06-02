@@ -199,6 +199,11 @@ async function evaluate(session, symbol, ctx) {
     }
 
     if (entryStrategy === 'balanced') {
+      // `balanced` is the same dip entry as `dip` — RSI below threshold + below
+      // VWAP. (Audit: the former "momentum-bounce" second branch, RSI 30-40 +
+      // bullish MACD + volume, fired 0 distinct entries in 6 months because
+      // RSI 30-40 is a strict subset of RSI < 45 and always caught by the dip
+      // branch first. Removed as dead code; `balanced` ≡ `dip`.)
       const balancedRsiThreshold = (rsiOversold || 30) + 15;
       if (indicators.rsi.value < balancedRsiThreshold && belowVwap) {
         strategyMatch = true;
@@ -206,21 +211,6 @@ async function evaluate(session, symbol, ctx) {
         signalScore += SIGNAL_WEIGHTS.strategyMatch;
         factors.push(
           `RSI dip (${indicators.rsi.value.toFixed(1)}) + below VWAP [+${SIGNAL_WEIGHTS.strategyMatch}w]`
-        );
-      }
-
-      // Momentum bounce - RSI rising from oversold with bullish MACD + volume
-      if (
-        indicators.rsi.value > rsiOversold &&
-        indicators.rsi.value < 40 &&
-        (indicators.macd.bullish || indicators.macd.crossover) &&
-        hasVolumeSpike
-      ) {
-        strategyMatch = true;
-        signalCount++;
-        signalScore += SIGNAL_WEIGHTS.strategyMatch;
-        factors.push(
-          `RSI momentum (${indicators.rsi.value.toFixed(1)}) + bullish MACD + volume [+${SIGNAL_WEIGHTS.strategyMatch}w]`
         );
       }
     }
