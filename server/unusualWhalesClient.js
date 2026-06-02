@@ -358,6 +358,12 @@ async function getRecentInsiderBuyTickers(opts = {}) {
   const minNotional = opts.minNotional ?? 500000;
   const lookbackDays = opts.lookbackDays ?? 10;
   const max = opts.max ?? 15;
+  // Liquidity floor: ~60% of insider buys are in sub-$500M micro-caps (often
+  // sub-$1 names) that are untradeable at size — the edge doesn't survive their
+  // spreads/gaps (a sub-$1 holding gapped -10% for a $1.5k loss on day 1).
+  // Only follow insiders into names liquid enough to actually trade.
+  const minMarketCap = opts.minMarketCap ?? 1_000_000_000;
+  const minPrice = opts.minPrice ?? 5;
   if (!isConfigured()) return [];
 
   const cutoff = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
@@ -382,6 +388,10 @@ async function getRecentInsiderBuyTickers(opts = {}) {
       const amount = Number(r.amount);
       const price = parseFloat(r.price) || 0;
       if (amount <= 0) continue;
+      // Liquidity gates — skip micro-caps and penny names.
+      const marketcap = _num(r.marketcap);
+      if (marketcap > 0 && marketcap < minMarketCap) continue;
+      if (price > 0 && price < minPrice) continue;
       const notional = Math.abs(amount) * price;
       if (notional < minNotional || !r.ticker) continue;
       byTicker.set(r.ticker, (byTicker.get(r.ticker) || 0) + notional);
