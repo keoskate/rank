@@ -1216,6 +1216,10 @@ server.listen(PORT, () => {
   }
   setInterval(refreshInsiderScanners, 30 * 60 * 1000);
   refreshInsiderScanners();
+  // Re-run shortly after boot: the first call can land before the bridge has
+  // created the broker sessions, which would leave a scanner broker idle on its
+  // seed watchlist for up to 30 min after a restart.
+  setTimeout(refreshInsiderScanners, 90 * 1000);
 
   // Initialize Telegram bot if configured
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_OWNER_ID) {
