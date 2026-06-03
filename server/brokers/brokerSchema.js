@@ -21,6 +21,7 @@ const ALLOWED_STRATEGIES = [
   'insider-following',
   'dark-pool',
   'trend-following',
+  'cross-sectional-momentum',
 ];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
