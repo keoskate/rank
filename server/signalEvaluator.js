@@ -599,27 +599,48 @@ async function evaluateExit(sessionId, symbol) {
       }
     );
 
-    // Force exit after consecutive data failures to prevent stuck positions
+    // INVARIANT: never liquidate on a dead price feed. A failed exit evaluation
+    // means we have NO trustworthy price, so any exit here is priced blind.
+    // The old behavior force-sold after 3 failures — which dumped overnight
+    // holds into the gap-down open (the single largest realized-loss driver,
+    // ~$1.2k of the cohort's bleed) AND corrupted per-source edge stats by
+    // booking data-outage losses against the strategy. Instead we HOLD and
+    // escalate a risk alert so a human can intervene; normal exit logic resumes
+    // automatically the moment the feed recovers (the success path above resets
+    // this counter). The position is never silently abandoned — it is loudly
+    // flagged. A data failure is not a thesis break.
     if (failures >= ctx.EXIT_EVAL_MAX_FAILURES) {
-      tradingLogger.logRisk('FORCE EXIT', {
-        sessionId,
-        sessionName: session?.name,
-        symbol,
-        reason: `${failures} consecutive eval failures`,
-        value: failures,
-        threshold: ctx.EXIT_EVAL_MAX_FAILURES,
-        action: 'Force exiting position',
-      });
-      ctx.exitEvalFailCounts.delete(failKey);
-      return {
-        shouldExit: true,
-        reason: `Force exit: ${failures} consecutive data failures`,
-        confidence: 100,
-        factors: [`${failures} consecutive exit evaluation failures`],
-      };
+      // Alert on the threshold crossing and every EXIT_EVAL_MAX_FAILURES cycles
+      // thereafter, so a prolonged outage escalates without spamming the log.
+      if (failures % ctx.EXIT_EVAL_MAX_FAILURES === 0) {
+        tradingLogger.logRisk('DATA FEED DOWN — HOLDING (no blind exit)', {
+          sessionId,
+          sessionName: session?.name,
+          symbol,
+          reason: `${failures} consecutive exit-eval failures (price feed unavailable)`,
+          value: failures,
+          threshold: ctx.EXIT_EVAL_MAX_FAILURES,
+          action:
+            'Holding position; refusing to exit on a stale/dead quote. Manual review advised.',
+        });
+        websocketServer.broadcastToAll('trading_log', {
+          id: `${Date.now()}-feeddown-${symbol}-${Math.random().toString(36).substr(2, 9)}`,
+          level: 'WARNING',
+          category: 'RISK',
+          symbol,
+          sessionId,
+          sessionName: session?.name,
+          message: `DATA FEED DOWN: ${symbol} un-evaluable for ${failures} cycles — HOLDING, no blind liquidation. Manual review advised.`,
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
 
-    return { shouldExit: false, reason: error.message };
+    // Hold through the outage — a data failure is never an exit signal.
+    return {
+      shouldExit: false,
+      reason: `hold (exit eval failed, feed unavailable: ${error.message})`,
+    };
   }
 }
 

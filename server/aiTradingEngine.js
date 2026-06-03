@@ -150,7 +150,10 @@ const ENTRY_LOCK_TIMEOUT_MS = 30000; // Lock expires after 30s (covers eval + or
 const globalExitLocks = new Map();
 const EXIT_LOCK_TIMEOUT_MS = 5000;
 
-// Exit evaluation failure tracking - forces exit after consecutive data failures
+// Exit evaluation failure tracking. A dead price feed must NEVER trigger a
+// blind liquidation — after this many consecutive failures the evaluator HOLDS
+// and escalates a risk alert (see signalEvaluator catch block), and the counter
+// resets automatically when the feed recovers.
 // Map structure: `${sessionId}:${symbol}` -> consecutiveFailures
 const exitEvalFailCounts = new Map();
 const EXIT_EVAL_MAX_FAILURES = 3;
