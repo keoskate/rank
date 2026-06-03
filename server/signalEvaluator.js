@@ -94,6 +94,44 @@ async function evaluateExit(sessionId, symbol) {
   const position = session.portfolio.positions.get(symbol);
   if (!position) return { shouldExit: false };
 
+  // Plugin-owned exit: strategies whose exit is a signal, not a price level
+  // (e.g. trend-following exits on a trend break, never on stop/target/EOD),
+  // provide their own evaluateExit. When present, it GOVERNS — the universal
+  // technical exit below is bypassed. Returns null on a data failure so the
+  // engine's force-exit failure-counter backstop still applies.
+  const plugin = strategies.resolve(session.config);
+  if (typeof plugin.evaluateExit === 'function') {
+    try {
+      const d = await plugin.evaluateExit(session, symbol, position, ctx);
+      if (d && typeof d.shouldExit === 'boolean') {
+        if (d.shouldExit) {
+          ctx.logDecision(sessionId, d);
+          tradingLogger.logSignal('EXIT', symbol, {
+            sessionId,
+            sessionName: session.name,
+            reasons: d.reasons || [d.exitReason],
+            currentPrice: d.currentPrice,
+            shouldExit: true,
+            pnlPercent: d.pnlPercent,
+          });
+          websocketServer.sendAIDecision(session.userId, {
+            ...d,
+            sessionName: session.name,
+          });
+        }
+        ctx.exitEvalFailCounts.delete(`${sessionId}:${symbol}`);
+        return d;
+      }
+    } catch (err) {
+      tradingLogger.logError(`Plugin exit failed for ${symbol}`, {
+        sessionId,
+        symbol,
+        error: err.message,
+      });
+      // fall through to universal exit on error
+    }
+  }
+
   try {
     // Get recent candles first (needed for regime detection)
     // Use asset-type-aware helper for crypto/stock routing

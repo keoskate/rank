@@ -20,6 +20,7 @@ const ALLOWED_STRATEGIES = [
   'options-flow',
   'insider-following',
   'dark-pool',
+  'trend-following',
 ];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
