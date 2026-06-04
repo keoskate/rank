@@ -380,7 +380,8 @@ async function getBars(
   timeframe = '1Day',
   start = null,
   end = null,
-  limit = 10000
+  limit = 10000,
+  adjustment = null // 'raw'|'split'|'dividend'|'all'. null = Alpaca default (raw).
 ) {
   // Market data uses a different endpoint than trading API
   const MARKET_DATA_URL = 'https://data.alpaca.markets';
@@ -403,6 +404,7 @@ async function getBars(
 
       if (start) params.append('start', start);
       if (end) params.append('end', end);
+      if (adjustment) params.append('adjustment', adjustment);
       if (nextPageToken) params.append('page_token', nextPageToken);
 
       const config = {

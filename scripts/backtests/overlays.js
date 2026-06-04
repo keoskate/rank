@@ -110,7 +110,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function fetchBars(sym) {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const bars = await alpacaClient.getBars(sym, '1Day', START, END);
+      // adjustment:'all' = split + dividend adjusted (total-return prices).
+      // Without this Alpaca returns RAW prices and every split is a fake crash.
+      const bars = await alpacaClient.getBars(
+        sym,
+        '1Day',
+        START,
+        END,
+        10000,
+        'all'
+      );
       return (bars || [])
         .filter(b => b && b.close > 0 && b.timestamp)
         .map(b => ({ date: b.timestamp.slice(0, 10), close: b.close }));
