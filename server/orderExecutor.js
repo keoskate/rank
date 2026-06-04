@@ -286,6 +286,18 @@ async function executeEntry(sessionId, symbol, decision) {
       return;
     }
 
+    // Macro (FRED) risk-on/off overlay: shrink the position in a risk-off
+    // regime. decision.macroSizeScalar is attached by the engine's macro gate;
+    // 1 (or undefined) is a no-op, so this is inert unless the broker opts in.
+    const macroScalar = decision.macroSizeScalar;
+    if (
+      typeof macroScalar === 'number' &&
+      macroScalar >= 0 &&
+      macroScalar < 1
+    ) {
+      maxPositionValue *= macroScalar;
+    }
+
     const riskAmount =
       effectivePortfolioValue *
       ((session.config.riskPerTradePercent || 2) / 100);

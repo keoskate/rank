@@ -28,6 +28,7 @@ const signalEvaluator = require('./signalEvaluator');
 const orderExecutor = require('./orderExecutor');
 const simulatedExecutor = require('./brokers/simulatedExecutor');
 const entropyGate = require('./strategies/entropyGate');
+const macroRegimeGate = require('./strategies/macroRegimeGate');
 
 // Leveraged ETF strategy instance for flow sentiment analysis
 const leveragedEtfStrategy = new LeveragedEtfStrategy();
@@ -3355,6 +3356,40 @@ async function analyzeAndTrade(sessionId) {
           }
         } catch (err) {
           tradingLogger.logError(`[Entropy] gate check failed`, {
+            sessionId,
+            sessionName: session.name,
+            symbol: candidate.symbol,
+            error: err.message,
+          });
+          // Fail open: don't block on transient gate errors
+        }
+      }
+      // Macro (FRED) risk-on/off overlay: force-flat veto in a credit-stress
+      // regime, otherwise attach a position-size scalar (×1 risk-on, ×0.25
+      // risk-off) that the executor applies. Inert unless the broker opts in AND
+      // FRED_API_KEY is set.
+      if (session.config.macroGateEnabled) {
+        try {
+          const mgate = await macroRegimeGate.checkMacroGate(session);
+          session.macroRegimeState = {
+            ...(mgate.regime || {}),
+            timestamp: new Date().toISOString(),
+          };
+          if (!mgate.allow) {
+            tradingLogger.logInfo(
+              `[Macro] ${session.name} blocked ${candidate.symbol}: ${mgate.reason}`,
+              {
+                sessionId,
+                sessionName: session.name,
+                symbol: candidate.symbol,
+                regime: mgate.regime,
+              }
+            );
+            continue;
+          }
+          candidate.decision.macroSizeScalar = mgate.sizeScalar;
+        } catch (err) {
+          tradingLogger.logError(`[Macro] gate check failed`, {
             sessionId,
             sessionName: session.name,
             symbol: candidate.symbol,

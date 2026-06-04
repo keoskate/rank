@@ -301,6 +301,14 @@ async function simulatedEntry(session, symbol, decision) {
     targetValue = _sizeByConfidence(sizingBase, confidence, effectiveMaxPct);
   }
 
+  // Macro (FRED) risk-on/off overlay: shrink the position in a risk-off regime.
+  // decision.macroSizeScalar is attached by the engine's macro gate; 1 (or
+  // undefined) is a no-op, so this is inert unless the broker opts in.
+  const macroScalar = decision.macroSizeScalar;
+  if (typeof macroScalar === 'number' && macroScalar >= 0 && macroScalar < 1) {
+    targetValue *= macroScalar;
+  }
+
   // Quantity (integer for stocks; fractional for crypto via existing assetUtils)
   let quantity = Math.floor(targetValue / price);
   if (quantity <= 0) {

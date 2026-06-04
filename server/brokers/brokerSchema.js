@@ -50,6 +50,11 @@ const BROKER_DEFAULTS = {
     blockOnTransition: true,
     referenceSymbol: null,
   },
+  // Macro (FRED) risk-on/off overlay. Off by default; inert without FRED_API_KEY.
+  macro: {
+    enabled: false,
+    riskOffScalar: 0.25, // position-size multiplier when macro is risk-off
+  },
   llm: {
     enabled: false,
     model: 'claude-sonnet-4-5',
@@ -229,6 +234,17 @@ function validateBroker(raw, filename = '') {
     );
   }
 
+  const macro = deepMerge(BROKER_DEFAULTS.macro, raw.macro || {});
+  if (macro.enabled) {
+    pushIf(
+      errs,
+      typeof macro.riskOffScalar === 'number' &&
+        macro.riskOffScalar >= 0 &&
+        macro.riskOffScalar <= 1,
+      'macro.riskOffScalar must be a number in [0, 1]'
+    );
+  }
+
   const llm = deepMerge(BROKER_DEFAULTS.llm, raw.llm || {});
   if (llm.enabled) {
     pushIf(
@@ -334,6 +350,7 @@ function validateBroker(raw, filename = '') {
       strategy,
       risk,
       regime,
+      macro,
       llm,
       selfImprovement,
       flow,
@@ -429,6 +446,10 @@ function brokerToSessionConfig(broker, personaBody = '') {
     preferredRegime: broker.regime.preferred,
     blockOnRegimeTransition: broker.regime.blockOnTransition,
     regimeReferenceSymbol: broker.regime.referenceSymbol,
+
+    // Macro (FRED) risk-on/off overlay
+    macroGateEnabled: (broker.macro || BROKER_DEFAULTS.macro).enabled,
+    macroRiskOffScalar: (broker.macro || BROKER_DEFAULTS.macro).riskOffScalar,
 
     // LLM
     brokerLlmEnabled: broker.llm.enabled,
