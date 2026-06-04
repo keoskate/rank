@@ -3933,20 +3933,68 @@ function getDailySummary(sessionId) {
  * Subscribes to new symbols, unsubscribes removed ones.
  */
 function _recalculateStreamSubscriptions() {
-  const needed = new Set();
+  // The Alpaca IEX real-time feed caps subscriptions at the data plan's symbol
+  // limit (30); an over-limit subscribe is rejected wholesale (code=405) and
+  // subscribes NOTHING, starving every symbol of real-time prices and pushing
+  // exits onto the slower (and recently flaky) Polygon REST path — the root
+  // cause of the data-failure exit losses. So we PRIORITIZE: symbols with open
+  // positions first (they need fresh ticks for fast-path stop-loss/exit and
+  // mark-to-market), then fill the remaining slots with watchlist entry
+  // candidates (which tolerate Polygon REST for entries).
+  const cap = alpacaStream.maxSymbols || 28;
+
+  const seen = new Set();
+  const positionSyms = [];
+  const watchlistSyms = [];
+  // Pass 1: open positions across all running sessions (highest priority).
   sessions.forEach(session => {
-    if (session.status === 'running') {
-      const watchlist = session.config.watchlist || [];
-      for (const sym of watchlist) needed.add(sym);
+    if (session.status !== 'running') return;
+    for (const sym of session.portfolio.positions.keys()) {
+      if (!seen.has(sym)) {
+        seen.add(sym);
+        positionSyms.push(sym);
+      }
+    }
+  });
+  // Pass 2: remaining watchlist names (entry candidates).
+  sessions.forEach(session => {
+    if (session.status !== 'running') return;
+    for (const sym of session.config.watchlist || []) {
+      if (!seen.has(sym)) {
+        seen.add(sym);
+        watchlistSyms.push(sym);
+      }
     }
   });
 
-  const current = new Set(alpacaStream.getStatus().subscribedSymbols);
-  const toAdd = [...needed].filter(s => !current.has(s));
-  const toRemove = [...current].filter(s => !needed.has(s));
+  // Positions always covered; fill the rest with watchlist up to the cap.
+  const needed = [...positionSyms];
+  for (const sym of watchlistSyms) {
+    if (needed.length >= cap) break;
+    needed.push(sym);
+  }
+  const neededSet = new Set(needed);
 
-  if (toAdd.length > 0) alpacaStream.subscribe(toAdd);
+  if (positionSyms.length > cap) {
+    tradingLogger.logRisk('STREAM SYMBOL CAP', {
+      reason: `${positionSyms.length} open-position symbols exceed the stream cap (${cap})`,
+      value: positionSyms.length,
+      threshold: cap,
+      action:
+        'Lowest-priority held positions will rely on Polygon REST for exits',
+    });
+  }
+
+  const current = new Set(alpacaStream.getStatus().subscribedSymbols);
+  const toRemove = [...current].filter(s => !neededSet.has(s));
+  // Preserve positions-first ordering so the client's ceiling, if ever hit,
+  // drops watchlist tail rather than a held position.
+  const toAdd = needed.filter(s => !current.has(s));
+
+  // Unsubscribe BEFORE subscribe so freed slots are available under the cap
+  // (e.g. a new position swapping in for a dropped watchlist name).
   if (toRemove.length > 0) alpacaStream.unsubscribe(toRemove);
+  if (toAdd.length > 0) alpacaStream.subscribe(toAdd);
 }
 
 /**
@@ -4116,8 +4164,28 @@ const _staleMonitorInterval = process.env.AI_ENGINE_DRY_RUN
       });
     }, 60000);
 
+// Periodic stream-subscription reconcile. _recalculateStreamSubscriptions only
+// runs on session lifecycle events, but positions open/close mid-session — this
+// makes sure a freshly-opened position claims a prioritized real-time slot
+// within ~20s (and a closed one frees its slot). Cheap: only subscribe/
+// unsubscribe deltas are sent; a no-change pass is a couple of set diffs.
+const _streamReconcileInterval = process.env.AI_ENGINE_DRY_RUN
+  ? null
+  : setInterval(() => {
+      try {
+        _recalculateStreamSubscriptions();
+      } catch (err) {
+        tradingLogger.logError('Stream subscription reconcile failed', {
+          error: err.message,
+        });
+      }
+    }, 20000);
+
 // Cleanup on process exit
-process.on('beforeExit', () => clearInterval(_staleMonitorInterval));
+process.on('beforeExit', () => {
+  clearInterval(_staleMonitorInterval);
+  if (_streamReconcileInterval) clearInterval(_streamReconcileInterval);
+});
 
 // --- Wire up extracted modules ---
 // Build shared context for signalEvaluator and orderExecutor.

@@ -25,6 +25,13 @@ const HEARTBEAT_TIMEOUT_MS = 30000;
 // Price is stale if older than 15 seconds
 const STALE_THRESHOLD_MS = 15000;
 
+// The Alpaca IEX real-time feed caps concurrent symbol subscriptions at 30.
+// An over-limit subscribe is rejected WHOLESALE (code=405) and subscribes
+// nothing, starving every symbol of real-time prices. Stay safely under it
+// (default 28; raise via ALPACA_STREAM_MAX_SYMBOLS if on an unlimited SIP plan).
+const MAX_STREAM_SYMBOLS =
+  parseInt(process.env.ALPACA_STREAM_MAX_SYMBOLS, 10) || 28;
+
 class AlpacaStreamClient extends EventEmitter {
   constructor() {
     super();
@@ -37,13 +44,19 @@ class AlpacaStreamClient extends EventEmitter {
     this._heartbeatTimer = null;
     this._intentionalClose = false;
     this._connecting = false;
+    // Exposed so the engine can prioritize which symbols claim the limited slots.
+    this.maxSymbols = MAX_STREAM_SYMBOLS;
   }
 
   /**
    * Connect to Alpaca's data WebSocket
    */
   connect() {
-    if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this._ws &&
+      (this._ws.readyState === WebSocket.OPEN ||
+        this._ws.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
     if (this._connecting) return;
@@ -55,7 +68,10 @@ class AlpacaStreamClient extends EventEmitter {
     try {
       credentials = tradingModeManager.getCredentials();
     } catch (err) {
-      console.error('[Alpaca Stream] Cannot connect — missing credentials:', err.message);
+      console.error(
+        '[Alpaca Stream] Cannot connect — missing credentials:',
+        err.message
+      );
       this._connecting = false;
       return;
     }
@@ -74,10 +90,14 @@ class AlpacaStreamClient extends EventEmitter {
     this._ws.on('open', () => {
       console.log('[Alpaca Stream] WebSocket opened, authenticating...');
       this._connecting = false;
-      this._send({ action: 'auth', key: credentials.apiKey, secret: credentials.secretKey });
+      this._send({
+        action: 'auth',
+        key: credentials.apiKey,
+        secret: credentials.secretKey,
+      });
     });
 
-    this._ws.on('message', (raw) => {
+    this._ws.on('message', raw => {
       this._resetHeartbeat();
       try {
         const messages = JSON.parse(raw);
@@ -90,7 +110,7 @@ class AlpacaStreamClient extends EventEmitter {
       }
     });
 
-    this._ws.on('error', (err) => {
+    this._ws.on('error', err => {
       console.error('[Alpaca Stream] WebSocket error:', err.message);
       this._connecting = false;
       this.emit('error', err);
@@ -101,7 +121,9 @@ class AlpacaStreamClient extends EventEmitter {
       this._authenticated = false;
       this._clearHeartbeat();
       const reasonStr = reason ? reason.toString() : 'unknown';
-      console.log(`[Alpaca Stream] Disconnected (code=${code}, reason=${reasonStr})`);
+      console.log(
+        `[Alpaca Stream] Disconnected (code=${code}, reason=${reasonStr})`
+      );
       this.emit('disconnected', { code, reason: reasonStr });
 
       if (!this._intentionalClose) {
@@ -138,8 +160,27 @@ class AlpacaStreamClient extends EventEmitter {
   subscribe(symbols) {
     if (!symbols || symbols.length === 0) return;
 
-    const newSymbols = symbols.filter(s => !this._subscribedSymbols.has(s));
+    let newSymbols = symbols.filter(s => !this._subscribedSymbols.has(s));
     if (newSymbols.length === 0) return;
+
+    // Hard ceiling backstop: never exceed the feed's symbol cap, or the whole
+    // subscribe is rejected (code=405) and we lose real-time on EVERYTHING.
+    // The caller (engine) passes symbols already prioritized (open positions
+    // first), so any overflow we drop here is the lowest-priority tail, which
+    // degrades gracefully to Polygon REST.
+    const room = MAX_STREAM_SYMBOLS - this._subscribedSymbols.size;
+    if (room <= 0) {
+      console.warn(
+        `[Alpaca Stream] At symbol cap (${MAX_STREAM_SYMBOLS}); dropping ${newSymbols.length} subscribe(s): ${newSymbols.join(', ')}`
+      );
+      return;
+    }
+    if (newSymbols.length > room) {
+      console.warn(
+        `[Alpaca Stream] Symbol cap ${MAX_STREAM_SYMBOLS}: subscribing ${room} of ${newSymbols.length}; dropping ${newSymbols.slice(room).join(', ')}`
+      );
+      newSymbols = newSymbols.slice(0, room);
+    }
 
     for (const s of newSymbols) {
       this._subscribedSymbols.add(s);
@@ -147,7 +188,9 @@ class AlpacaStreamClient extends EventEmitter {
 
     if (this._authenticated) {
       this._send({ action: 'subscribe', trades: newSymbols });
-      console.log(`[Alpaca Stream] Subscribing to trades: ${newSymbols.join(', ')}`);
+      console.log(
+        `[Alpaca Stream] Subscribing to trades: ${newSymbols.join(', ')}`
+      );
     }
   }
 
@@ -168,7 +211,9 @@ class AlpacaStreamClient extends EventEmitter {
 
     if (this._authenticated) {
       this._send({ action: 'unsubscribe', trades: toRemove });
-      console.log(`[Alpaca Stream] Unsubscribing from trades: ${toRemove.join(', ')}`);
+      console.log(
+        `[Alpaca Stream] Unsubscribing from trades: ${toRemove.join(', ')}`
+      );
     }
   }
 
@@ -194,9 +239,11 @@ class AlpacaStreamClient extends EventEmitter {
    * Check if WebSocket is connected and authenticated
    */
   isConnected() {
-    return this._ws !== null &&
+    return (
+      this._ws !== null &&
       this._ws.readyState === WebSocket.OPEN &&
-      this._authenticated;
+      this._authenticated
+    );
   }
 
   /**
@@ -231,13 +278,17 @@ class AlpacaStreamClient extends EventEmitter {
           if (this._subscribedSymbols.size > 0) {
             const symbols = Array.from(this._subscribedSymbols);
             this._send({ action: 'subscribe', trades: symbols });
-            console.log(`[Alpaca Stream] Re-subscribing to: ${symbols.join(', ')}`);
+            console.log(
+              `[Alpaca Stream] Re-subscribing to: ${symbols.join(', ')}`
+            );
           }
         }
         break;
 
       case 'error':
-        console.error(`[Alpaca Stream] Server error: ${msg.msg} (code=${msg.code})`);
+        console.error(
+          `[Alpaca Stream] Server error: ${msg.msg} (code=${msg.code})`
+        );
         this.emit('error', new Error(msg.msg));
         // Auth failures: don't reconnect
         if (msg.code === 402 || msg.code === 406) {
@@ -246,7 +297,9 @@ class AlpacaStreamClient extends EventEmitter {
         break;
 
       case 'subscription':
-        console.log(`[Alpaca Stream] Subscription confirmed — trades: [${(msg.trades || []).join(', ')}]`);
+        console.log(
+          `[Alpaca Stream] Subscription confirmed — trades: [${(msg.trades || []).join(', ')}]`
+        );
         break;
 
       case 't': // Trade
@@ -297,17 +350,24 @@ class AlpacaStreamClient extends EventEmitter {
     this._clearReconnect();
 
     if (this._reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
-      console.error(`[Alpaca Stream] Max reconnect attempts (${RECONNECT_MAX_ATTEMPTS}) reached. Giving up.`);
+      console.error(
+        `[Alpaca Stream] Max reconnect attempts (${RECONNECT_MAX_ATTEMPTS}) reached. Giving up.`
+      );
       return;
     }
 
     // Exponential backoff with jitter
-    const baseDelay = Math.min(RECONNECT_BASE_MS * Math.pow(2, this._reconnectAttempts), RECONNECT_MAX_MS);
+    const baseDelay = Math.min(
+      RECONNECT_BASE_MS * Math.pow(2, this._reconnectAttempts),
+      RECONNECT_MAX_MS
+    );
     const jitter = Math.random() * baseDelay * 0.3;
     const delay = Math.round(baseDelay + jitter);
     this._reconnectAttempts++;
 
-    console.log(`[Alpaca Stream] Reconnecting in ${delay}ms (attempt ${this._reconnectAttempts}/${RECONNECT_MAX_ATTEMPTS})`);
+    console.log(
+      `[Alpaca Stream] Reconnecting in ${delay}ms (attempt ${this._reconnectAttempts}/${RECONNECT_MAX_ATTEMPTS})`
+    );
     this._reconnectTimer = setTimeout(() => this.connect(), delay);
   }
 
@@ -324,7 +384,11 @@ class AlpacaStreamClient extends EventEmitter {
       this._heartbeatTimer = setTimeout(() => {
         console.warn('[Alpaca Stream] No messages for 30s — reconnecting');
         if (this._ws) {
-          try { this._ws.close(4000, 'Heartbeat timeout'); } catch (e) { /* ignore */ }
+          try {
+            this._ws.close(4000, 'Heartbeat timeout');
+          } catch (e) {
+            /* ignore */
+          }
         }
       }, HEARTBEAT_TIMEOUT_MS);
     }
