@@ -7,8 +7,10 @@
  * minimum premium so we only act on size.
  *
  * Long-only, like the rest of the engine: bullish flow → BUY; bearish flow is
- * reported but skipped (no short orders). Exits are handled by the universal
- * exit logic (stop/target/EOD) — this plugin owns only the entry decision.
+ * reported but skipped (no short orders). Counter-tide entries (bullish flow
+ * into a bearish market tide) are VETOED — we don't buy strength into a falling
+ * tape. Exits are handled by the universal exit logic (stop/target/EOD) — this
+ * plugin owns only the entry decision.
  *
  * Contract: evaluate(session, symbol, ctx) => decisionObject  (source: 'options-flow')
  */
@@ -72,11 +74,19 @@ async function evaluate(session, symbol, ctx) {
     // Base confidence from the flow score (0..1 → 50..95).
     let confidence = Math.round(50 + (flow.score || 0) * 45);
 
-    // Tide adjustment: bullish flow + bullish tide = tailwind; bullish flow vs
-    // bearish tide = headwind. Mirror for shorts (skipped, but affects logging).
-    if (tide && tide.sentiment === 'bearish' && flow.sentiment === 'bullish') {
+    // Tide as a HARD veto, not a soft penalty. Forensics on the live cohort
+    // found every losing entry fired "bullish flow against bearish tide" — the
+    // broker was systematically buying strength into a falling tape, which drove
+    // the bulk of the chop/whipsaw losses (~$876). A -15 confidence nudge was
+    // not enough to stop it, so counter-tide entries are now refused outright.
+    // Aligned tide still earns a small tailwind bump.
+    const counterTide =
+      tide && tide.sentiment === 'bearish' && flow.sentiment === 'bullish';
+    if (counterTide) {
       confidence = Math.max(confidence - 15, 0);
-      reasons.push('headwind: bullish flow against bearish tide (-15)');
+      reasons.push(
+        'VETO: bullish flow into bearish tide — refusing to buy strength into a falling tape'
+      );
     } else if (
       tide &&
       tide.sentiment === 'bullish' &&
@@ -89,7 +99,8 @@ async function evaluate(session, symbol, ctx) {
     const isBullish = flow.sentiment === 'bullish';
     const meetsConfidence = confidence >= minConfidence;
     const hasPrice = currentPrice > 0;
-    const shouldEnter = isBullish && meetsConfidence && hasPrice;
+    const shouldEnter =
+      isBullish && meetsConfidence && hasPrice && !counterTide;
 
     if (flow.sentiment === 'bearish') {
       reasons.push('bearish flow — long-only mode, skipped');

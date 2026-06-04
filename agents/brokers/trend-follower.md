@@ -32,11 +32,11 @@ risk:
   maxPositions: 5
   maxPositionSizePercent: 20
 regime:
-  enabled: false
+  enabled: true
   entropyWindows:
     - 21
     - 63
-  preferred: any
+  preferred: low-entropy
   blockOnTransition: false
   referenceSymbol: SPY
 llm:
@@ -82,6 +82,10 @@ names — this is a regime engine, not a stock picker.
 - Hold the top 5 trending names, equal-weight (~20% each). Fewer than 5 in an
   uptrend → the rest sits in cash. Nothing in an uptrend → 100% cash.
 - Eligibility: price above the 200-day SMA **and** positive 12-1 month momentum.
+- Chop filter: a Shannon-entropy regime gate (SPY, 21/63d) only lets me OPEN new
+  positions when the broad tape is in a low-entropy (trending) state — I won't
+  initiate fresh trends into high-entropy chop, the regime that whipsaws me
+  worst. Exits are never gated; only new entries wait for a trending tape.
 - Exit is the trend, not a stop or a target: the moment a holding closes below
   its 200-day SMA (or momentum turns negative), I'm out. No fixed stop — the
   trend break is the stop.
