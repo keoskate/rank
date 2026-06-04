@@ -31,7 +31,9 @@ const { shannonEntropy } = require('@keo/quant-core');
 // so we finally capture the 2018-Q4 selloff, the 2020 COVID V-bottom crash, AND
 // the 2022 bear — three stress regimes instead of one.
 const START = '2016-01-01';
-const END = new Date().toISOString().split('T')[0];
+// End a few days back: Alpaca's free plan blocks SIP data from the most recent
+// ~15 min, which rejects any request that spans today's (incomplete) bar.
+const END = new Date(Date.now() - 3 * 864e5).toISOString().split('T')[0];
 const SLEEP_MS = 180;
 
 const TREND_UNIVERSE = [
