@@ -24,34 +24,94 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const polygon = require('../../server/polygonClient');
-const { bpsPerSide } = require('../../server/risk/transactionCost');
+const alpacaClient = require('../../server/alpacaClient');
 const { shannonEntropy } = require('@keo/quant-core');
 
-const START = '2018-01-01';
+// Alpaca daily history reaches back to 2016-01-04 (vs Polygon's 2021-06 floor),
+// so we finally capture the 2018-Q4 selloff, the 2020 COVID V-bottom crash, AND
+// the 2022 bear — three stress regimes instead of one.
+const START = '2016-01-01';
 const END = new Date().toISOString().split('T')[0];
 const SLEEP_MS = 180;
 
 const TREND_UNIVERSE = [
-  'SPY', 'QQQ', 'IWM', 'DIA', 'XLK', 'SMH', 'XLF', 'XLE', 'XLV', 'XLY',
-  'XLP', 'XLI', 'XLU', 'XLB', 'XLRE', 'XLC', 'EEM', 'EFA',
+  'SPY',
+  'QQQ',
+  'IWM',
+  'DIA',
+  'XLK',
+  'SMH',
+  'XLF',
+  'XLE',
+  'XLV',
+  'XLY',
+  'XLP',
+  'XLI',
+  'XLU',
+  'XLB',
+  'XLRE',
+  'XLC',
+  'EEM',
+  'EFA',
 ];
 const XSMOM_UNIVERSE = [
-  'AAPL', 'MSFT', 'NVDA', 'AMD', 'AVGO', 'ORCL', 'CRM', 'ADBE', 'CSCO', 'QCOM',
-  'TXN', 'INTC', 'AMAT', 'MU', 'GOOGL', 'META', 'NFLX', 'DIS', 'CMCSA', 'TMUS',
-  'AMZN', 'TSLA', 'HD', 'MCD', 'NKE', 'COST', 'WMT', 'LOW', 'JPM', 'BAC', 'WFC',
-  'GS', 'MS', 'AXP', 'SCHW', 'UNH', 'JNJ', 'LLY', 'ABBV', 'MRK', 'PFE', 'XOM',
-  'CVX', 'CAT', 'BA',
+  'AAPL',
+  'MSFT',
+  'NVDA',
+  'AMD',
+  'AVGO',
+  'ORCL',
+  'CRM',
+  'ADBE',
+  'CSCO',
+  'QCOM',
+  'TXN',
+  'INTC',
+  'AMAT',
+  'MU',
+  'GOOGL',
+  'META',
+  'NFLX',
+  'DIS',
+  'CMCSA',
+  'TMUS',
+  'AMZN',
+  'TSLA',
+  'HD',
+  'MCD',
+  'NKE',
+  'COST',
+  'WMT',
+  'LOW',
+  'JPM',
+  'BAC',
+  'WFC',
+  'GS',
+  'MS',
+  'AXP',
+  'SCHW',
+  'UNH',
+  'JNJ',
+  'LLY',
+  'ABBV',
+  'MRK',
+  'PFE',
+  'XOM',
+  'CVX',
+  'CAT',
+  'BA',
 ];
 const ALL_SYMS = [...new Set([...TREND_UNIVERSE, ...XSMOM_UNIVERSE])];
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function fetchBars(sym) {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const bars = await polygon.getHistoricalAggregates(sym, START, END, 'day');
-      return bars.filter((b) => b && b.close > 0);
+      const bars = await alpacaClient.getBars(sym, '1Day', START, END);
+      return (bars || [])
+        .filter(b => b && b.close > 0 && b.timestamp)
+        .map(b => ({ date: b.timestamp.slice(0, 10), close: b.close }));
     } catch (e) {
       await sleep(1500 * (attempt + 1));
     }
@@ -104,7 +164,8 @@ function statsFromDaily(dates, eq) {
   const rets = [];
   for (let i = 1; i < eq.length; i++) rets.push(eq[i] / eq[i - 1] - 1);
   const n = eq.length;
-  const years = (new Date(dates[n - 1]) - new Date(dates[0])) / (365.25 * 864e5);
+  const years =
+    (new Date(dates[n - 1]) - new Date(dates[0])) / (365.25 * 864e5);
   const cagr = Math.pow(eq[n - 1] / eq[0], 1 / years) - 1;
   const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
   const variance =
@@ -119,7 +180,15 @@ function statsFromDaily(dates, eq) {
     if (dd < maxDD) maxDD = dd;
   }
   const calmar = maxDD === 0 ? 0 : cagr / Math.abs(maxDD);
-  return { totalRet: eq[n - 1] / eq[0] - 1, cagr, vol, sharpe, maxDD, calmar, years };
+  return {
+    totalRet: eq[n - 1] / eq[0] - 1,
+    cagr,
+    vol,
+    sharpe,
+    maxDD,
+    calmar,
+    years,
+  };
 }
 
 function windowReturn(dates, eq, from, to) {
@@ -145,7 +214,7 @@ function fmtPct(x) {
 }
 
 async function main() {
-  const CACHE = path.join(__dirname, '.overlays-bars-cache.json');
+  const CACHE = path.join(__dirname, '.overlays-bars-alpaca.json');
   let data = {};
   if (fs.existsSync(CACHE)) {
     data = JSON.parse(fs.readFileSync(CACHE, 'utf8'));
@@ -163,7 +232,7 @@ async function main() {
   }
 
   // Master calendar from SPY.
-  const dates = data['SPY'].map((b) => b.date);
+  const dates = data['SPY'].map(b => b.date);
   const series = {}; // sym -> aligned forward-filled close array
   for (const sym of Object.keys(data)) {
     const m = {};
@@ -176,7 +245,7 @@ async function main() {
     }
     series[sym] = arr;
   }
-  const have = (s) => series[s] != null;
+  const have = s => series[s] != null;
 
   // ---- FRED macro state per trading day (lagged 1 day when applied) ----
   // Source order: local CSVs (scripts/backtests/fred-<id>.csv) if dropped in,
@@ -248,8 +317,10 @@ async function main() {
       }
     }
     const hyMa = cnt ? s / cnt : h;
-    if (cs > 0 && h < hyMa) macroScalar[i] = 1; // risk-on
-    else if (h > hyMa * HY_SPIKE_MULT || cs < DEEP_INV) macroScalar[i] = 0; // force-flat
+    if (cs > 0 && h < hyMa)
+      macroScalar[i] = 1; // risk-on
+    else if (h > hyMa * HY_SPIKE_MULT || cs < DEEP_INV)
+      macroScalar[i] = 0; // force-flat
     else macroScalar[i] = 0.25; // risk-off
   }
 
@@ -259,7 +330,7 @@ async function main() {
   let prevNormH = null;
   function spyLowEntropy(i) {
     if (entropyCache.has(i)) return entropyCache.get(i);
-    const closes = spy.slice(0, i + 1).filter((x) => x != null);
+    const closes = spy.slice(0, i + 1).filter(x => x != null);
     if (closes.length < 70) {
       entropyCache.set(i, true);
       return true; // not enough data — fail open (allow)
@@ -333,7 +404,7 @@ async function main() {
         if (ok) ranked.push({ sym, mom });
       }
       ranked.sort((a, b) => b.mom - a.mom);
-      const picks = ranked.slice(0, topN).map((x) => x.sym);
+      const picks = ranked.slice(0, topN).map(x => x.sym);
 
       // entropy gate: NEW entries (not already held) only allowed when SPY is
       // low-entropy. Continuing holdings are kept; blocked new picks -> cash.
@@ -349,7 +420,10 @@ async function main() {
       if (investedW < 1) newHoldings['CASH'] = 1 - investedW;
 
       // turnover cost
-      const allS = new Set([...Object.keys(holdings), ...Object.keys(newHoldings)]);
+      const allS = new Set([
+        ...Object.keys(holdings),
+        ...Object.keys(newHoldings),
+      ]);
       let turnover = 0;
       for (const s of allS) {
         if (s === 'CASH') continue;
@@ -364,7 +438,7 @@ async function main() {
     // re-baseline to 1.0 so stats reflect the active trading window only.
     const k = firstActive > 0 ? firstActive - 1 : 0;
     const tDates = eqDates.slice(k);
-    const tEq = eq.slice(k).map((v) => v / eq[k]);
+    const tEq = eq.slice(k).map(v => v / eq[k]);
     const activeDays = eqDates.length - 1 - k;
     return {
       eqDates: tDates,
@@ -395,24 +469,41 @@ async function main() {
       }
       outEq.push(outEq[outEq.length - 1] * mult);
     }
-    return { eqDates, eq: outEq, exposure: base.exposure, rebalances: base.rebalances };
+    return {
+      eqDates,
+      eq: outEq,
+      exposure: base.exposure,
+      rebalances: base.rebalances,
+    };
   }
 
   // ---- run both strategies × {base, +entropy, +FRED, +both} ----
   const strategies = {
-    Trend: { universe: TREND_UNIVERSE, topN: 5, lookback: 252, skip: 21, requireTrend: true },
-    XSMom: { universe: XSMOM_UNIVERSE, topN: 9, lookback: 126, skip: 21, requireTrend: false },
+    Trend: {
+      universe: TREND_UNIVERSE,
+      topN: 5,
+      lookback: 252,
+      skip: 21,
+      requireTrend: true,
+    },
+    XSMom: {
+      universe: XSMOM_UNIVERSE,
+      topN: 9,
+      lookback: 126,
+      skip: 21,
+      requireTrend: false,
+    },
   };
 
   const regimes = {
+    '2018Q4 selloff': ['2018-09-20', '2018-12-24'],
     '2020 crash': ['2020-02-19', '2020-03-23'],
-    '2020 full': ['2020-01-01', '2020-12-31'],
     '2022 bear': ['2022-01-01', '2022-12-31'],
   };
 
   const out = { window: { START, END }, results: {} };
   const lines = [];
-  const log = (s) => {
+  const log = s => {
     lines.push(s);
     console.log(s);
   };
@@ -426,23 +517,42 @@ async function main() {
       arms['+both'] = applyFred(ent);
     }
 
-    log(`\n================ ${sName} (effective ${arms.base.eqDates[0]} -> ${arms.base.eqDates[arms.base.eqDates.length - 1]}) ================`);
-    log('arm'.padEnd(10) + 'CAGR'.padStart(8) + 'Vol'.padStart(8) + 'Sharpe'.padStart(8) + 'MaxDD'.padStart(9) + 'Calmar'.padStart(8) + 'Expos'.padStart(8) + 'TotRet'.padStart(9));
+    log(
+      `\n================ ${sName} (effective ${arms.base.eqDates[0]} -> ${arms.base.eqDates[arms.base.eqDates.length - 1]}) ================`
+    );
+    log(
+      'arm'.padEnd(10) +
+        'CAGR'.padStart(8) +
+        'Vol'.padStart(8) +
+        'Sharpe'.padStart(8) +
+        'MaxDD'.padStart(9) +
+        'Calmar'.padStart(8) +
+        'Expos'.padStart(8) +
+        'TotRet'.padStart(9)
+    );
     const statByArm = {};
     for (const [aName, r] of Object.entries(arms)) {
       const st = statsFromDaily(r.eqDates, r.eq);
       statByArm[aName] = st;
       log(
         aName.padEnd(10) +
-          fmtPct(st.cagr).padStart(8) + fmtPct(st.vol).padStart(8) +
-          st.sharpe.toFixed(2).padStart(8) + fmtPct(st.maxDD).padStart(9) +
-          st.calmar.toFixed(2).padStart(8) + fmtPct(r.exposure).padStart(8) +
+          fmtPct(st.cagr).padStart(8) +
+          fmtPct(st.vol).padStart(8) +
+          st.sharpe.toFixed(2).padStart(8) +
+          fmtPct(st.maxDD).padStart(9) +
+          st.calmar.toFixed(2).padStart(8) +
+          fmtPct(r.exposure).padStart(8) +
           fmtPct(st.totalRet).padStart(9)
       );
     }
     // regime windows (return / maxDD) per arm
     log('\n  -- regime stress (return / maxDD) --');
-    log('arm'.padEnd(10) + Object.keys(regimes).map((k) => k.padStart(20)).join(''));
+    log(
+      'arm'.padEnd(10) +
+        Object.keys(regimes)
+          .map(k => k.padStart(20))
+          .join('')
+    );
     const regByArm = {};
     for (const [aName, r] of Object.entries(arms)) {
       regByArm[aName] = {};
@@ -457,7 +567,9 @@ async function main() {
     out.results[sName] = {
       stats: statByArm,
       regimes: regByArm,
-      exposure: Object.fromEntries(Object.entries(arms).map(([k, v]) => [k, v.exposure])),
+      exposure: Object.fromEntries(
+        Object.entries(arms).map(([k, v]) => [k, v.exposure])
+      ),
     };
   }
 
@@ -466,7 +578,7 @@ async function main() {
   log(`\nWrote ${outPath}`);
 }
 
-main().catch((e) => {
+main().catch(e => {
   console.error(e);
   process.exit(1);
 });

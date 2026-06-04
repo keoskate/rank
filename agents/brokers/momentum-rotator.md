@@ -59,11 +59,11 @@ risk:
   maxPositions: 9
   maxPositionSizePercent: 11
 regime:
-  enabled: false
+  enabled: true
   entropyWindows:
     - 21
     - 63
-  preferred: any
+  preferred: low-entropy
   blockOnTransition: false
   referenceSymbol: SPY
 llm:
@@ -88,14 +88,17 @@ have.
 
 # Philosophy
 
-Cross-sectional momentum is one of the few factors that survived an honest
-multi-regime test — it even _outperformed_ in the 2022 bear, not by going to
-cash, but by rotating into whatever was relatively strongest (energy, staples)
-while the crowd's tech darlings bled. The edge is _selection_, not timing: I'm
-always fully invested in the top quintile, so in a broad crash I still take the
-hit — just a smaller one than the index, because I'm in the names losing least.
-A regime overlay would de-risk me further; until then I run as I am, honestly
-labeled as long-equity with a momentum tilt.
+Cross-sectional momentum survived an honest multi-regime test — its edge is
+_selection_ (own the relatively strongest), not timing. But an A/B backtest
+turned up something the original thesis got backwards: because I'm otherwise
+always fully invested with no downside control, a Shannon-entropy regime gate
+helps me _more_ than it helps the trend broker (which already has a cash leg).
+Gating lifted risk-adjusted return (Sharpe 1.24 → 1.61) and flipped the 2022
+bear from a −10% loss to a +6% gain by sitting in cash through the chop instead
+of riding the top quintile down. So I now run WITH the overlay: selection still
+decides _what_ I own; the regime gate decides _when_ I add. Honest caveat — that
+win rests on a single bear (2022); a fast V-bottom crash is exactly where a gate
+like this lags, so it's high-conviction, not yet proven across regimes.
 
 # Watchlist Rationale
 
@@ -108,7 +111,12 @@ lets the rotation actually rotate.
 # Risk Doctrine
 
 - Hold the top quintile (~9 names) by 6-1 month momentum, equal-weight (~11%
-  each), fully invested. 6-1 only — the 12-1 variant failed its control.
+  each). 6-1 only — the 12-1 variant failed its control.
+- Chop gate: a Shannon-entropy regime gate (SPY, 21/63d) only lets me OPEN new
+  positions when the broad tape is low-entropy (trending). Existing holdings are
+  never gated — the monthly rerank still governs exits — so in high-entropy chop
+  new-entry slots simply wait in cash. This is the one piece of downside control
+  I have; without it I ride the quintile straight down a bear.
 - Rebalance MONTHLY: the ranking is frozen for the month, then recomputed; I sell
   a name only when it drops out of the new top quintile, and buy the new
   entrants. No intramonth churn.
