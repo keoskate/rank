@@ -115,3 +115,5 @@ data/logs/trading.log
 .claude/*
 !.claude/agents/
 !.claude/commands/
+
+scripts/backtests/.overlays-bars-cache.json
