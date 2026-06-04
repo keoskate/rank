@@ -62,6 +62,18 @@ const FIRE = {
   minTrades: 30, // don't fire on drawdown without a real track record
   minDays: 10,
 };
+// Auto-defund: pause a SIM broker that has PROVEN its primary source loses money,
+// so it stops polluting the leaderboard and burning the discovery runway. This
+// is the mirror image of the promotion edge gate: where promotion needs the 95%
+// LOWER bound on expectancy above zero, defund needs the 95% UPPER bound below
+// zero (we are confident, not merely unlucky, that the source is a net loser).
+const DEFUND = {
+  minTrades: 12, // enough sample that the significance test means something
+  // Cooldown so a manual resume (POST /api/ai/session/resume) gets a real grace
+  // window to prove itself before the daily eval can re-pause it; survives
+  // restarts because it reads the on-disk ledger.
+  cooldownHours: 24,
+};
 
 // ---------- ledger ----------
 
@@ -176,21 +188,26 @@ function aggregateBySource(session) {
     if (pcts.length > 0) {
       const m = pcts.reduce((a, b) => a + b, 0) / pcts.length;
       s.expectancyPct = m;
-      // Sample stdev + one-sided 95% lower confidence bound on the mean.
+      // Sample stdev + one-sided 95% confidence bounds on the mean. The LOWER
+      // bound gates promotion (must be > 0 to certify an edge); the UPPER bound
+      // gates auto-defund (must be < 0 to confidently condemn a source).
       if (pcts.length > 1) {
         const v =
           pcts.reduce((a, b) => a + (b - m) ** 2, 0) / (pcts.length - 1);
         s.expectancyStdev = Math.sqrt(v);
-        s.expectancyLowerCB =
-          m - 1.64 * (s.expectancyStdev / Math.sqrt(pcts.length));
+        const se = s.expectancyStdev / Math.sqrt(pcts.length);
+        s.expectancyLowerCB = m - 1.64 * se;
+        s.expectancyUpperCB = m + 1.64 * se;
       } else {
         s.expectancyStdev = null;
         s.expectancyLowerCB = null;
+        s.expectancyUpperCB = null;
       }
     } else {
       s.expectancyPct = null;
       s.expectancyStdev = null;
       s.expectancyLowerCB = null;
+      s.expectancyUpperCB = null;
     }
     delete s._pct;
   }
@@ -269,6 +286,7 @@ function evaluateEdgeGate(session) {
     expectancyPct: metrics.expectancyPct,
     expectancyUsd: metrics.expectancyUsd,
     expectancyLowerCB: metrics.expectancyLowerCB ?? null,
+    expectancyUpperCB: metrics.expectancyUpperCB ?? null,
     bySource,
   };
 }
@@ -293,6 +311,20 @@ function countRecentDemotions(ledger, slug, days = 30) {
       e.action === 'demote' &&
       new Date(e.timestamp).getTime() >= since
   ).length;
+}
+
+/**
+ * True if the broker was auto-defunded within the last `hours` — the cooldown
+ * that gives a manual resume a grace window before the next eval can re-pause it.
+ */
+function recentlyDefunded(ledger, slug, hours) {
+  const since = Date.now() - hours * 60 * 60 * 1000;
+  return ledger.events.some(
+    e =>
+      e.slug === slug &&
+      e.action === 'defund' &&
+      new Date(e.timestamp).getTime() >= since
+  );
 }
 
 // ---------- evaluation ----------
@@ -344,8 +376,31 @@ function evaluateBroker(broker, session, ledger) {
     };
   }
 
-  // PROMOTE: sim → paper
+  // PROMOTE / AUTO-DEFUND: sim → paper, or pause a proven loser.
   if (tier === 'simulated') {
+    // AUTO-DEFUND: the broker's primary source is confidently net-negative
+    // (95% upper bound on expectancy < 0) over a real sample. Pause it so it
+    // stops bleeding the daily P&L and skewing the leaderboard. Only fire on a
+    // RUNNING broker (a paused one is already out of the way) and respect the
+    // cooldown so a deliberate manual resume isn't instantly undone.
+    if (
+      session.status === 'running' &&
+      edge.trades >= DEFUND.minTrades &&
+      edge.expectancyUpperCB != null &&
+      edge.expectancyUpperCB < 0 &&
+      !recentlyDefunded(ledger, broker.slug, DEFUND.cooldownHours)
+    ) {
+      const expStr =
+        edge.expectancyPct != null
+          ? `${edge.expectancyPct.toFixed(3)}%`
+          : `$${edge.expectancyUsd.toFixed(2)}`;
+      return {
+        action: 'defund',
+        reason: `${edge.source}: proven-negative edge — ${edge.trades} trades, expectancy ${expStr}/trade (95% upper bound ${edge.expectancyUpperCB.toFixed(3)}% < 0)`,
+        metrics,
+      };
+    }
+
     const meetsAggregate =
       sharpe != null &&
       sharpe >= PROMOTE.minSharpe &&
@@ -492,6 +547,7 @@ async function runTierEvaluation(deps, opts = {}) {
     promoted: 0,
     demoted: 0,
     fired: 0,
+    defunded: 0,
     bred: 0,
   };
 
@@ -640,6 +696,38 @@ async function runTierEvaluation(deps, opts = {}) {
           }
         }
       }
+    } else if (decision.action === 'defund') {
+      // Pause (don't archive) — reversible, keeps the broker and its stats. A
+      // human reinstates via POST /api/ai/session/resume (24h cooldown grace
+      // before the next daily eval can re-pause) or a clean-slate
+      // POST /api/brokers/:slug/reset. No .md rewrite, so no bridge sync.
+      try {
+        engine.pauseSession(session.sessionId);
+      } catch {
+        // best-effort
+      }
+      summary.defunded++;
+      await _appendLedger({
+        slug: broker.slug,
+        action: 'defund',
+        from: broker.tier,
+        to: 'paused',
+        reason: decision.reason,
+        metrics: decision.metrics,
+      });
+      websocketServer.broadcastToAll('broker_tier_change', {
+        slug: broker.slug,
+        from: broker.tier,
+        to: 'paused',
+        reason: decision.reason,
+      });
+      tradingLogger.logRisk('AUTO-DEFUND', {
+        sessionId: session.sessionId,
+        sessionName: session.name,
+        reason: decision.reason,
+        action:
+          'Paused — proven-negative edge. Reinstate via resume (24h grace) or reset.',
+      });
     }
   }
 

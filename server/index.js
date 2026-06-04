@@ -1026,9 +1026,9 @@ server.listen(PORT, () => {
       )
       .then(r => {
         const s = r.summary;
-        if (s.promoted + s.demoted + s.fired + s.bred > 0) {
+        if (s.promoted + s.demoted + s.fired + (s.defunded || 0) + s.bred > 0) {
           console.log(
-            `🎚️  Tier eval: ${s.promoted} promoted · ${s.demoted} demoted · ${s.fired} fired · ${s.bred} bred`
+            `🎚️  Tier eval: ${s.promoted} promoted · ${s.demoted} demoted · ${s.fired} fired · ${s.defunded || 0} defunded · ${s.bred} bred`
           );
         }
       })
