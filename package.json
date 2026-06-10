@@ -29,6 +29,8 @@
     "trend": "node scripts/daily-summary.js --trend",
     "capture:flow": "node scripts/capture-flow.js",
     "backtest:insider": "node scripts/backtest-insider.js",
+    "backtest:trend": "node scripts/backtests/ts-momentum-trend.js",
+    "backtest:view": "node scripts/backtests/view-run.js",
     "lint": "eslint . --ext .js,.jsx",
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write .",

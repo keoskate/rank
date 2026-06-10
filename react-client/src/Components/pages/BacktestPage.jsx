@@ -1,172 +1,100 @@
 /**
- * Backtesting Page - Strategy testing and performance analysis
+ * Backtest Runs - viewer for standardized run artifacts (run.json)
  *
- * Features:
- * - Strategy configuration (top N, rebalance frequency, date range)
- * - Run backtest button
- * - Results display (returns, win rate, Sharpe ratio, max drawdown)
- * - Trade history
- * - Performance charts
+ * This page renders backtest run artifacts produced by the audited backtest
+ * scripts (scripts/backtests/*) through the shared run-artifact pipeline.
+ * It deliberately runs NO backtest engine of its own: every number shown —
+ * equity curve, drawdown, candles, trades, verdict — is read verbatim from
+ * the artifact. The previous version of this page drove a separate
+ * server-side engine whose trade contract drifted (trade.profit vs trade.pnl
+ * → flat equity curves); reading the artifact makes that class of bug
+ * impossible.
+ *
+ * Honesty contract: the verdict banner reflects the five validation gates
+ * (data integrity, faithfulness, out-of-sample, realistic costs, multiple
+ * testing). Until a run passes them, it is UNVALIDATED and the banner says
+ * so — a pretty equity curve is not evidence of edge.
  */
 
 import { useState, useEffect } from 'react';
-import Button from '../common/Button';
 import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
+import EquityCurveChart from '../Analytics/EquityCurveChart';
+import RunPriceChart from '../charts/RunPriceChart';
 import theme from '../../theme';
 
+const GATE_LABELS = {
+  dataIntegrity: 'Data integrity',
+  faithfulness: 'Backtest = live',
+  outOfSample: 'Out-of-sample',
+  realisticCosts: 'Realistic costs',
+  multipleTesting: 'Multiple testing',
+};
+
+const fmtPct = (x, dp = 1) =>
+  x == null ? 'n/a' : `${x >= 0 ? '+' : ''}${(x * 100).toFixed(dp)}%`;
+const fmtUsd = x =>
+  x == null
+    ? 'n/a'
+    : x.toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      });
+
 const BacktestPage = () => {
-  // Strategy configuration
-  const [topN, setTopN] = useState(5);
-  const [rebalanceFrequency, setRebalanceFrequency] = useState('daily');
-  const [days, setDays] = useState(90);
-  const [initialCapital, setInitialCapital] = useState(100000);
-
-  // State
+  const [runs, setRuns] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [run, setRun] = useState(null);
+  const [symbol, setSymbol] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
-  const [snapshotsAvailable, setSnapshotsAvailable] = useState(false);
 
-  // Check if snapshots are available
   useEffect(() => {
-    checkSnapshots();
+    fetch('/api/backtest-runs')
+      .then(r => r.json())
+      .then(d => {
+        const list = d.runs || [];
+        setRuns(list);
+        if (list.length) setSelectedId(prev => prev || list[0].runId);
+      })
+      .catch(e => setError(`Failed to list runs: ${e.message}`));
   }, []);
 
-  const checkSnapshots = async () => {
-    try {
-      const response = await fetch('/api/snapshots/dates');
-      const data = await response.json();
-      setSnapshotsAvailable(data.count > 0);
-    } catch (err) {
-      console.error('Error checking snapshots:', err);
-    }
-  };
-
-  // Generate synthetic historical data
-  const generateHistory = async () => {
-    if (generating) return;
-
-    setGenerating(true);
-    setError(null);
-
-    try {
-      console.log('Generating synthetic history...');
-
-      // Send request with empty stocks array - server will use defaults
-      const response = await fetch('/api/snapshots/generate-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stocks: [], // Server will use default mock stocks
-          days,
-          stockListName: 'default',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to generate history');
-      }
-
-      console.log(`Generated ${data.snapshotsGenerated} snapshots`);
-      setSnapshotsAvailable(true);
-      alert(`✅ Generated ${days} days of synthetic historical data!`);
-    } catch (err) {
-      console.error('Error generating history:', err);
-      setError('Failed to generate historical data: ' + err.message);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Backfill REAL historical data from Polygon API
-  const backfillRealData = async () => {
-    if (generating) return;
-
-    setGenerating(true);
-    setError(null);
-
-    try {
-      console.log('Backfilling real historical data from Polygon API...');
-
-      const response = await fetch('/api/snapshots/backfill-real-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbols: [], // Server will use default symbols
-          days,
-          stockListName: 'Real Data',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to backfill real data');
-      }
-
-      console.log(
-        `Backfilled ${data.snapshotsGenerated} snapshots from ${data.dataSource}`
-      );
-      setSnapshotsAvailable(true);
-      alert(
-        `✅ Fetched ${days} days of REAL market data from ${data.dataSource}!`
-      );
-    } catch (err) {
-      console.error('Error backfilling real data:', err);
-      setError('Failed to fetch real historical data: ' + err.message);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Run backtest
-  const runBacktest = async () => {
-    if (loading || !snapshotsAvailable) return;
-
+  useEffect(() => {
+    if (!selectedId) return;
     setLoading(true);
     setError(null);
-    setResults(null);
+    fetch(`/api/backtest-runs/${selectedId}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(art => {
+        setRun(art);
+        const tradedFirst = Object.keys(art.bars || {});
+        setSymbol(tradedFirst[0] || null);
+      })
+      .catch(e => setError(`Failed to load run: ${e.message}`))
+      .finally(() => setLoading(false));
+  }, [selectedId]);
 
-    try {
-      // Calculate date range
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split('T')[0];
-
-      console.log(`Running backtest: ${startDate} to ${endDate}`);
-
-      const response = await fetch('/api/backtest/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          topN,
-          rebalanceFrequency,
-          initialCapital,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Backtest failed');
-      }
-
-      setResults(data.results);
-      console.log('Backtest completed:', data.results);
-    } catch (err) {
-      console.error('Error running backtest:', err);
-      setError('Failed to run backtest: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Build the precomputed series for EquityCurveChart straight from the
+  // artifact (drawdown arrives as a fraction <= 0; the chart wants positive %)
+  let seriesPeak = -Infinity;
+  const series =
+    run &&
+    run.equity.dates.map((date, i) => {
+      const equity = run.equity.values[i];
+      if (equity > seriesPeak) seriesPeak = equity;
+      return {
+        index: i,
+        date,
+        equity,
+        drawdown: Math.abs(run.equity.drawdown[i]) * 100,
+        highWaterMark: seriesPeak,
+      };
+    });
 
   return (
     <div
@@ -184,284 +112,80 @@ const BacktestPage = () => {
           fontWeight: theme.typography.fontWeight.bold,
         }}
       >
-        📈 Strategy Backtesting
+        📈 Backtest Runs
       </h1>
       <p
         style={{
           color: theme.colors.textLight,
-          marginBottom: theme.spacing.xl,
+          marginBottom: theme.spacing.lg,
           fontSize: theme.typography.fontSize.base,
         }}
       >
-        Test your ranking strategies with historical data
+        Run artifacts from <code>scripts/backtests/</code> — the exact equity
+        curves, trades, and bars each sim produced. Generate new runs with{' '}
+        <code>npm run backtest:trend</code>.
       </p>
 
-      {/* Setup Section */}
-      {!snapshotsAvailable && (
-        <Card variant="warning" style={{ marginBottom: theme.spacing.xl }}>
-          <h3
-            style={{
-              margin: `0 0 ${theme.spacing.sm} 0`,
-              color: theme.colors.warningDark,
-              fontSize: theme.typography.fontSize.lg,
-              fontWeight: theme.typography.fontWeight.medium,
-            }}
-          >
-            ⚠️ No Historical Data Available
-          </h3>
-          <p
-            style={{
-              margin: `0 0 ${theme.spacing.md} 0`,
-              color: theme.colors.warningDark,
-              fontSize: theme.typography.fontSize.base,
-            }}
-          >
-            Choose a data source to enable backtesting:
-          </p>
-          <div
-            style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}
-          >
-            <Button
-              variant="primary"
-              size="large"
-              onClick={generateHistory}
-              disabled={generating}
-              style={{ flex: '1', minWidth: '200px' }}
-            >
-              {generating
-                ? '⏳ Generating...'
-                : `🔄 Generate ${days} Days (Synthetic)`}
-            </Button>
-            <Button
-              variant="success"
-              size="large"
-              onClick={backfillRealData}
-              disabled={generating}
-              style={{ flex: '1', minWidth: '200px' }}
-            >
-              {generating
-                ? '⏳ Fetching...'
-                : `📊 Fetch ${days} Days (Real Data)`}
-            </Button>
-          </div>
-          <p
-            style={{
-              margin: `${theme.spacing.md} 0 0 0`,
-              fontSize: theme.typography.fontSize.sm,
-              color: theme.colors.warningDark,
-            }}
-          >
-            <strong>Synthetic:</strong> Fast, random walk simulation •{' '}
-            <strong>Real Data:</strong> Actual market data from Polygon API (~2
-            min)
-          </p>
-        </Card>
-      )}
-
-      {/* Strategy Configuration */}
-      <Card style={{ marginBottom: theme.spacing.xl }}>
-        <h2
-          style={{
-            margin: `0 0 ${theme.spacing.lg} 0`,
-            color: theme.colors.text,
-            fontSize: theme.typography.fontSize.xl,
-            fontWeight: theme.typography.fontWeight.medium,
-          }}
-        >
-          Strategy Configuration
-        </h2>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: theme.spacing.lg,
-            marginBottom: theme.spacing.lg,
-          }}
-        >
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: theme.spacing.sm,
-                fontWeight: theme.typography.fontWeight.medium,
-                fontSize: theme.typography.fontSize.base,
-                color: theme.colors.text,
-              }}
-            >
-              Top N Stocks
-            </label>
-            <input
-              type="number"
-              value={topN}
-              onChange={e => setTopN(parseInt(e.target.value))}
-              min="1"
-              max="20"
-              style={{
-                width: '100%',
-                padding: theme.spacing.sm,
-                border: `1px solid ${theme.colors.gray400}`,
-                borderRadius: theme.borderRadius.md,
-                fontSize: theme.typography.fontSize.base,
-                fontFamily: theme.typography.fontFamily,
-              }}
-            />
-            <small
-              style={{
-                color: theme.colors.textLight,
-                fontSize: theme.typography.fontSize.sm,
-              }}
-            >
-              Buy the top {topN} ranked stocks
-            </small>
-          </div>
-
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: theme.spacing.sm,
-                fontWeight: theme.typography.fontWeight.medium,
-                fontSize: theme.typography.fontSize.base,
-                color: theme.colors.text,
-              }}
-            >
-              Rebalance Frequency
-            </label>
-            <select
-              value={rebalanceFrequency}
-              onChange={e => setRebalanceFrequency(e.target.value)}
-              style={{
-                width: '100%',
-                padding: theme.spacing.sm,
-                border: `1px solid ${theme.colors.gray400}`,
-                borderRadius: theme.borderRadius.md,
-                fontSize: theme.typography.fontSize.base,
-                fontFamily: theme.typography.fontFamily,
-              }}
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-            <small
-              style={{
-                color: theme.colors.textLight,
-                fontSize: theme.typography.fontSize.sm,
-              }}
-            >
-              How often to rebalance portfolio
-            </small>
-          </div>
-
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: theme.spacing.sm,
-                fontWeight: theme.typography.fontWeight.medium,
-                fontSize: theme.typography.fontSize.base,
-                color: theme.colors.text,
-              }}
-            >
-              Backtest Period (Days)
-            </label>
-            <input
-              type="number"
-              value={days}
-              onChange={e => setDays(parseInt(e.target.value))}
-              min="7"
-              max="365"
-              style={{
-                width: '100%',
-                padding: theme.spacing.sm,
-                border: `1px solid ${theme.colors.gray400}`,
-                borderRadius: theme.borderRadius.md,
-                fontSize: theme.typography.fontSize.base,
-                fontFamily: theme.typography.fontFamily,
-              }}
-            />
-            <small
-              style={{
-                color: theme.colors.textLight,
-                fontSize: theme.typography.fontSize.sm,
-              }}
-            >
-              Number of days to test
-            </small>
-          </div>
-
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: theme.spacing.sm,
-                fontWeight: theme.typography.fontWeight.medium,
-                fontSize: theme.typography.fontSize.base,
-                color: theme.colors.text,
-              }}
-            >
-              Initial Capital ($)
-            </label>
-            <input
-              type="number"
-              value={initialCapital}
-              onChange={e => setInitialCapital(parseInt(e.target.value))}
-              min="1000"
-              step="1000"
-              style={{
-                width: '100%',
-                padding: theme.spacing.sm,
-                border: `1px solid ${theme.colors.gray400}`,
-                borderRadius: theme.borderRadius.md,
-                fontSize: theme.typography.fontSize.base,
-                fontFamily: theme.typography.fontFamily,
-              }}
-            />
-            <small
-              style={{
-                color: theme.colors.textLight,
-                fontSize: theme.typography.fontSize.sm,
-              }}
-            >
-              Starting portfolio value
-            </small>
-          </div>
-        </div>
-
-        <Button
-          variant={snapshotsAvailable ? 'success' : 'primary'}
-          size="large"
-          onClick={runBacktest}
-          disabled={loading || !snapshotsAvailable}
-          style={{
-            width: '100%',
-            fontSize: theme.typography.fontSize.lg,
-          }}
-        >
-          {loading ? '⏳ Running Backtest...' : '🧪 Run Backtest'}
-        </Button>
-      </Card>
-
-      {/* Error Display */}
       {error && (
-        <Card variant="error" style={{ marginBottom: theme.spacing.xl }}>
-          <span
-            style={{
-              color: theme.colors.errorDark,
-              fontSize: theme.typography.fontSize.base,
-            }}
-          >
-            ❌ {error}
-          </span>
+        <Card variant="error" style={{ marginBottom: theme.spacing.lg }}>
+          <span style={{ color: theme.colors.errorDark }}>❌ {error}</span>
         </Card>
       )}
 
-      {/* Results Display */}
-      {results && (
+      {!runs.length && !error && (
+        <Card variant="warning">
+          <strong>No run artifacts yet.</strong> Run a backtest to produce
+          one:&nbsp;<code>npm run backtest:trend</code>, then refresh.
+        </Card>
+      )}
+
+      {runs.length > 0 && (
+        <Card style={{ marginBottom: theme.spacing.lg }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: theme.spacing.sm,
+              fontWeight: theme.typography.fontWeight.medium,
+              color: theme.colors.text,
+            }}
+          >
+            Run
+          </label>
+          <select
+            value={selectedId || ''}
+            onChange={e => setSelectedId(e.target.value)}
+            style={{
+              width: '100%',
+              padding: theme.spacing.sm,
+              border: `1px solid ${theme.colors.gray400}`,
+              borderRadius: theme.borderRadius.md,
+              fontSize: theme.typography.fontSize.base,
+              fontFamily: theme.typography.fontFamilyMono || 'monospace',
+            }}
+          >
+            {runs.map(r => (
+              <option key={r.runId} value={r.runId}>
+                {r.strategyId} · {r.window?.start}→{r.window?.end} · Sharpe{' '}
+                {r.stats?.sharpe?.toFixed(2)} · {r.verdict} · {r.runId}
+              </option>
+            ))}
+          </select>
+        </Card>
+      )}
+
+      {loading && (
+        <Card>
+          <span style={{ color: theme.colors.textLight }}>Loading run…</span>
+        </Card>
+      )}
+
+      {run && !loading && (
         <div>
-          {/* Performance Summary */}
-          <Card style={{ marginBottom: theme.spacing.xl }}>
+          {/* Verdict banner */}
+          <VerdictBanner run={run} />
+
+          {/* Performance summary */}
+          <Card style={{ marginBottom: theme.spacing.lg }}>
             <h2
               style={{
                 margin: `0 0 ${theme.spacing.lg} 0`,
@@ -470,474 +194,446 @@ const BacktestPage = () => {
                 fontWeight: theme.typography.fontWeight.medium,
               }}
             >
-              📊 Performance Summary
+              {run.strategy.id}
+              <span
+                style={{
+                  marginLeft: theme.spacing.md,
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.textLight,
+                  fontWeight: theme.typography.fontWeight.normal,
+                }}
+              >
+                {run.strategy.description}
+              </span>
             </h2>
-
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: theme.spacing.lg,
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: theme.spacing.md,
               }}
             >
-              <PerformanceMetricCard
-                label="Total Return"
-                value={`${results.performance.totalReturn >= 0 ? '+' : ''}${results.performance.totalReturn.toFixed(2)}%`}
-                variant={
-                  results.performance.totalReturn >= 0 ? 'success' : 'error'
+              <Metric
+                label="CAGR"
+                value={fmtPct(run.stats.cagr)}
+                good={run.stats.cagr >= 0}
+              />
+              <Metric label="Vol" value={fmtPct(run.stats.vol)} />
+              <Metric
+                label="Sharpe"
+                value={run.stats.sharpe.toFixed(2)}
+                good={
+                  run.stats.sharpe >= 1
+                    ? true
+                    : run.stats.sharpe < 0.5
+                      ? false
+                      : undefined
                 }
               />
-              <PerformanceMetricCard
-                label="Annualized Return"
-                value={`${results.performance.annualizedReturn >= 0 ? '+' : ''}${results.performance.annualizedReturn.toFixed(2)}%`}
-                variant={
-                  results.performance.annualizedReturn >= 0
-                    ? 'success'
-                    : 'error'
-                }
-              />
-              <PerformanceMetricCard
-                label="Win Rate"
-                value={`${results.trades.winRate.toFixed(1)}%`}
-                variant={results.trades.winRate >= 50 ? 'success' : 'error'}
-              />
-              <PerformanceMetricCard
-                label="Sharpe Ratio"
-                value={results.risk.sharpeRatio.toFixed(2)}
-                variant={
-                  results.risk.sharpeRatio >= 1
-                    ? 'success'
-                    : results.risk.sharpeRatio >= 0.5
-                      ? 'warning'
-                      : 'error'
-                }
-              />
-              <PerformanceMetricCard
+              <Metric
                 label="Max Drawdown"
-                value={`-${results.risk.maxDrawdownPercent.toFixed(2)}%`}
-                variant={
-                  results.risk.maxDrawdownPercent <= 10
-                    ? 'success'
-                    : results.risk.maxDrawdownPercent <= 20
-                      ? 'warning'
-                      : 'error'
+                value={fmtPct(run.stats.maxDD)}
+                good={false}
+              />
+              <Metric label="Calmar" value={run.stats.calmar.toFixed(2)} />
+              <Metric
+                label="Final Equity"
+                value={fmtUsd(run.equity.values[run.equity.values.length - 1])}
+                good={
+                  run.equity.values[run.equity.values.length - 1] >= run.capital
                 }
               />
-              <PerformanceMetricCard
-                label="Total Trades"
-                value={results.trades.sells.toString()}
-                variant="info"
-              />
+              <Metric label="Trades" value={String(run.trades.length)} />
+              {run.benchmark && (
+                <Metric
+                  label={`${run.benchmark.symbol} B&H Sharpe`}
+                  value={run.benchmark.stats.sharpe.toFixed(2)}
+                />
+              )}
             </div>
           </Card>
 
-          {/* Trade Statistics */}
-          <Card style={{ marginBottom: theme.spacing.xl }}>
-            <h2
+          {/* Equity + drawdown (artifact numbers, verbatim) */}
+          <EquityCurveChart
+            series={series}
+            startingCapital={run.capital}
+            height={380}
+            title={`Equity & Drawdown — ${run.strategy.id}`}
+            xLabel="Day"
+            benchmarkValues={run.equity.benchmark || null}
+            benchmarkLabel={
+              run.benchmark ? `${run.benchmark.symbol} buy & hold` : 'Benchmark'
+            }
+          />
+
+          {/* Price candles + trade markers */}
+          <Card style={{ marginBottom: theme.spacing.lg }}>
+            <div
               style={{
-                margin: `0 0 ${theme.spacing.lg} 0`,
-                color: theme.colors.text,
-                fontSize: theme.typography.fontSize.xl,
-                fontWeight: theme.typography.fontWeight.medium,
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.sm,
+                marginBottom: theme.spacing.md,
+                flexWrap: 'wrap',
               }}
             >
-              💹 Trade Statistics
-            </h2>
-
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: theme.typography.fontSize.base,
-              }}
-            >
-              <tbody>
-                <tr
-                  style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}
-                >
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    Profitable Trades:
-                  </td>
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      color: theme.colors.success,
-                    }}
-                  >
-                    {results.trades.profitableTrades}
-                  </td>
-                </tr>
-                <tr
-                  style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}
-                >
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    Losing Trades:
-                  </td>
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      color: theme.colors.error,
-                    }}
-                  >
-                    {results.trades.losingTrades}
-                  </td>
-                </tr>
-                <tr
-                  style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}
-                >
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    Average Return per Trade:
-                  </td>
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {results.trades.avgReturn.toFixed(2)}%
-                  </td>
-                </tr>
-                <tr
-                  style={{ borderBottom: `1px solid ${theme.colors.gray300}` }}
-                >
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    Average Profit per Trade:
-                  </td>
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    ${results.trades.avgProfit.toFixed(2)}
-                  </td>
-                </tr>
-                <tr>
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    Total Profit:
-                  </td>
-                  <td
-                    style={{
-                      padding: `${theme.spacing.sm} 0`,
-                      fontSize: theme.typography.fontSize.lg,
-                      fontWeight: theme.typography.fontWeight.medium,
-                      color:
-                        results.performance.totalProfit >= 0
-                          ? theme.colors.success
-                          : theme.colors.error,
-                    }}
-                  >
-                    ${results.performance.totalProfit.toFixed(2)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Card>
-
-          {/* Trade History */}
-          {results.allTrades && results.allTrades.length > 0 && (
-            <Card style={{ marginBottom: theme.spacing.xl }}>
-              <h2
+              <h3
                 style={{
-                  margin: `0 0 ${theme.spacing.lg} 0`,
+                  margin: 0,
                   color: theme.colors.text,
-                  fontSize: theme.typography.fontSize.xl,
-                  fontWeight: theme.typography.fontWeight.medium,
+                  fontSize: theme.typography.fontSize.lg,
                 }}
               >
-                📋 Trade History
-              </h2>
-              <p
-                style={{
-                  margin: `0 0 ${theme.spacing.md} 0`,
-                  color: theme.colors.textLight,
-                  fontSize: theme.typography.fontSize.base,
-                }}
-              >
-                Showing all {results.allTrades.length} transactions (
-                {results.trades.buys} buys, {results.trades.sells} sells)
-              </p>
-
-              <div style={{ overflowX: 'auto' }}>
-                <table
+                Price & Trades
+              </h3>
+              {Object.keys(run.bars || {}).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setSymbol(s)}
                   style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: theme.typography.fontSize.sm,
+                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                    border:
+                      symbol === s
+                        ? `1px solid ${theme.colors.primary}`
+                        : `1px solid ${theme.colors.gray300}`,
+                    backgroundColor:
+                      symbol === s
+                        ? `${theme.colors.primary}15`
+                        : 'transparent',
+                    color:
+                      symbol === s
+                        ? theme.colors.primary
+                        : theme.colors.gray600,
+                    borderRadius: theme.borderRadius.sm,
+                    cursor: 'pointer',
+                    fontWeight: theme.typography.fontWeight.medium,
                   }}
                 >
-                  <thead>
-                    <tr
-                      style={{
-                        backgroundColor: theme.colors.gray100,
-                        borderBottom: `2px solid ${theme.colors.gray300}`,
-                      }}
-                    >
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'left',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Date
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'left',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Type
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'left',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Symbol
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'right',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Qty
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'right',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Price
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'right',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Amount
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'right',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Return
-                      </th>
-                      <th
-                        style={{
-                          padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          textAlign: 'right',
-                          fontWeight: theme.typography.fontWeight.medium,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        P&L
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.allTrades.map((trade, index) => (
-                      <tr
-                        key={index}
-                        style={{
-                          borderBottom: `1px solid ${theme.colors.gray300}`,
-                        }}
-                      >
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {trade.date}
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                          }}
-                        >
-                          <span
-                            style={{
-                              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                              borderRadius: theme.borderRadius.sm,
-                              fontSize: theme.typography.fontSize.xs,
-                              fontWeight: theme.typography.fontWeight.medium,
-                              backgroundColor:
-                                trade.side === 'buy'
-                                  ? theme.colors.infoLight
-                                  : theme.colors.errorLight,
-                              color:
-                                trade.side === 'buy'
-                                  ? theme.colors.infoDark
-                                  : theme.colors.errorDark,
-                            }}
-                          >
-                            {trade.side.toUpperCase()}
-                          </span>
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            fontWeight: theme.typography.fontWeight.medium,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {trade.symbol}
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            textAlign: 'right',
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {trade.quantity.toLocaleString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            textAlign: 'right',
-                            color: theme.colors.text,
-                          }}
-                        >
-                          ${trade.price.toFixed(2)}
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            textAlign: 'right',
-                            color: theme.colors.text,
-                          }}
-                        >
-                          $
-                          {trade.side === 'buy'
-                            ? trade.cost.toFixed(2)
-                            : trade.proceeds.toFixed(2)}
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            textAlign: 'right',
-                            color:
-                              trade.side === 'sell'
-                                ? trade.returnPct >= 0
-                                  ? theme.colors.success
-                                  : theme.colors.error
-                                : theme.colors.textLight,
-                          }}
-                        >
-                          {trade.side === 'sell'
-                            ? `${trade.returnPct >= 0 ? '+' : ''}${trade.returnPct.toFixed(2)}%`
-                            : '-'}
-                        </td>
-                        <td
-                          style={{
-                            padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-                            textAlign: 'right',
-                            fontWeight: theme.typography.fontWeight.medium,
-                            color:
-                              trade.side === 'sell'
-                                ? trade.profit >= 0
-                                  ? theme.colors.success
-                                  : theme.colors.error
-                                : theme.colors.textLight,
-                          }}
-                        >
-                          {trade.side === 'sell'
-                            ? `${trade.profit >= 0 ? '+' : ''}$${trade.profit.toFixed(2)}`
-                            : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div
+                  {s}
+                </button>
+              ))}
+              <span
                 style={{
-                  marginTop: theme.spacing.md,
-                  padding: theme.spacing.sm,
-                  backgroundColor: theme.colors.gray100,
-                  borderRadius: theme.borderRadius.md,
+                  marginLeft: 'auto',
                   fontSize: theme.typography.fontSize.sm,
-                  color: theme.colors.text,
+                  color: theme.colors.textLight,
                 }}
               >
-                <strong>Reading the table:</strong> BUY transactions show the
-                cost, while SELL transactions show proceeds, return %, and
-                profit/loss. Each sell is matched to its corresponding buy to
-                calculate returns.
-              </div>
-            </Card>
-          )}
+                ▲ buy ▼ sell — markers are the artifact&apos;s trade log
+              </span>
+            </div>
+            {symbol && run.bars[symbol] && (
+              <RunPriceChart
+                bars={run.bars[symbol]}
+                trades={run.trades}
+                symbol={symbol}
+                height={380}
+              />
+            )}
+          </Card>
+
+          {/* Trade log */}
+          <TradeTable trades={run.trades} />
+
+          {/* Reconciliation + caveats */}
+          <HonestyFooter run={run} />
         </div>
       )}
     </div>
   );
 };
 
-// Wrapper component for metric cards with border styling
-const PerformanceMetricCard = ({ label, value, variant }) => (
+const VerdictBanner = ({ run }) => {
+  const verdict = run.validation?.verdict || 'UNVALIDATED';
+  const isValidated = verdict === 'VALIDATED';
+  const failed = verdict.startsWith('FAILED');
+  const bg = isValidated ? '#0f3d2e' : failed ? '#3d0f0f' : '#3d330f';
+  const fg = isValidated ? '#34d399' : failed ? '#f87171' : '#fbbf24';
+  return (
+    <div
+      style={{
+        backgroundColor: bg,
+        border: `1px solid ${fg}`,
+        borderRadius: theme.borderRadius.md,
+        padding: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            color: fg,
+            fontWeight: theme.typography.fontWeight.bold,
+            fontSize: theme.typography.fontSize.lg,
+          }}
+        >
+          {isValidated ? '✓' : '⚠'} {verdict}
+        </span>
+        {Object.entries(run.validation?.gates || {}).map(([k, g]) => (
+          <span
+            key={k}
+            title={g.note || ''}
+            style={{
+              padding: `2px ${theme.spacing.sm}`,
+              borderRadius: theme.borderRadius.sm,
+              fontSize: theme.typography.fontSize.xs,
+              backgroundColor:
+                g.status === 'pass'
+                  ? '#065f46'
+                  : g.status === 'fail'
+                    ? '#7f1d1d'
+                    : '#37415180',
+              color:
+                g.status === 'pass'
+                  ? '#34d399'
+                  : g.status === 'fail'
+                    ? '#f87171'
+                    : '#9ca3af',
+            }}
+          >
+            {g.status === 'pass' ? '✓' : g.status === 'fail' ? '✗' : '·'}{' '}
+            {GATE_LABELS[k] || k}
+          </span>
+        ))}
+      </div>
+      {!isValidated && (
+        <div
+          style={{
+            marginTop: theme.spacing.sm,
+            color: '#d1d5db',
+            fontSize: theme.typography.fontSize.sm,
+          }}
+        >
+          This curve has not cleared the validation gates — treat it as a
+          hypothesis, not an edge.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Metric = ({ label, value, good }) => (
   <div
     style={{
       border: `1px solid ${theme.colors.gray300}`,
       borderRadius: theme.borderRadius.md,
-      padding: theme.spacing.lg,
+      padding: theme.spacing.md,
       textAlign: 'center',
     }}
   >
-    <MetricCard label={label} value={value} variant={variant} />
+    <MetricCard
+      label={label}
+      value={value}
+      variant={good === undefined ? 'info' : good ? 'success' : 'error'}
+    />
   </div>
 );
+
+const TradeTable = ({ trades }) => {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? trades : trades.slice(-30);
+  const cell = {
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    color: theme.colors.text,
+    whiteSpace: 'nowrap',
+  };
+  return (
+    <Card style={{ marginBottom: theme.spacing.lg }}>
+      <h3
+        style={{
+          margin: `0 0 ${theme.spacing.md} 0`,
+          color: theme.colors.text,
+          fontSize: theme.typography.fontSize.lg,
+        }}
+      >
+        Trade Log{' '}
+        <span
+          style={{
+            color: theme.colors.textLight,
+            fontSize: theme.typography.fontSize.sm,
+            fontWeight: theme.typography.fontWeight.normal,
+          }}
+        >
+          {showAll
+            ? `all ${trades.length}`
+            : `last ${visible.length} of ${trades.length}`}{' '}
+          ·{' '}
+          <a
+            href="#show"
+            onClick={e => {
+              e.preventDefault();
+              setShowAll(v => !v);
+            }}
+          >
+            {showAll ? 'show fewer' : 'show all'}
+          </a>
+        </span>
+      </h3>
+      <div style={{ overflowX: 'auto', maxHeight: 420, overflowY: 'auto' }}>
+        <table
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: theme.typography.fontSize.sm,
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                borderBottom: `2px solid ${theme.colors.gray300}`,
+                textAlign: 'right',
+              }}
+            >
+              <th style={{ ...cell, textAlign: 'left' }}>Date</th>
+              <th style={{ ...cell, textAlign: 'left' }}>Side</th>
+              <th style={{ ...cell, textAlign: 'left' }}>Symbol</th>
+              <th style={cell}>Price</th>
+              <th style={cell}>Qty</th>
+              <th style={cell}>Notional</th>
+              <th style={cell}>P&L</th>
+              <th style={cell}>P&L %</th>
+              <th style={{ ...cell, textAlign: 'left' }}>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((t, i) => (
+              <tr
+                key={`${t.date}-${t.symbol}-${i}`}
+                style={{ borderBottom: `1px solid ${theme.colors.gray200}` }}
+              >
+                <td style={{ ...cell, textAlign: 'left' }}>{t.date}</td>
+                <td style={{ ...cell, textAlign: 'left' }}>
+                  <span
+                    style={{
+                      color: t.side === 'buy' ? '#059669' : '#dc2626',
+                      fontWeight: theme.typography.fontWeight.bold,
+                    }}
+                  >
+                    {t.side === 'buy' ? '▲ BUY' : '▼ SELL'}
+                  </span>
+                </td>
+                <td style={{ ...cell, textAlign: 'left', fontWeight: 600 }}>
+                  {t.symbol}
+                </td>
+                <td style={{ ...cell, textAlign: 'right' }}>
+                  ${t.price?.toFixed(2)}
+                </td>
+                <td style={{ ...cell, textAlign: 'right' }}>
+                  {t.qty?.toFixed(1)}
+                </td>
+                <td style={{ ...cell, textAlign: 'right' }}>
+                  {fmtUsd(t.notional)}
+                </td>
+                <td
+                  style={{
+                    ...cell,
+                    textAlign: 'right',
+                    color:
+                      t.pnl == null
+                        ? theme.colors.textLight
+                        : t.pnl >= 0
+                          ? '#059669'
+                          : '#dc2626',
+                  }}
+                >
+                  {t.pnl == null ? '—' : fmtUsd(t.pnl)}
+                </td>
+                <td
+                  style={{
+                    ...cell,
+                    textAlign: 'right',
+                    color:
+                      t.pnlPct == null
+                        ? theme.colors.textLight
+                        : t.pnlPct >= 0
+                          ? '#059669'
+                          : '#dc2626',
+                  }}
+                >
+                  {t.pnlPct == null ? '—' : fmtPct(t.pnlPct, 2)}
+                </td>
+                <td
+                  style={{
+                    ...cell,
+                    textAlign: 'left',
+                    color: theme.colors.textLight,
+                  }}
+                >
+                  {t.reason}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+};
+
+const HonestyFooter = ({ run }) => {
+  const r = run.reconciliation;
+  const ledgerTies = r && r.note && r.note.startsWith('trade ledger ties');
+  return (
+    <Card style={{ marginBottom: theme.spacing.xl }}>
+      <h3
+        style={{
+          margin: `0 0 ${theme.spacing.md} 0`,
+          color: theme.colors.text,
+          fontSize: theme.typography.fontSize.lg,
+        }}
+      >
+        Self-Audit
+      </h3>
+      {r && (
+        <p
+          style={{
+            color: ledgerTies ? '#059669' : '#b45309',
+            fontSize: theme.typography.fontSize.sm,
+            fontFamily: 'monospace',
+          }}
+        >
+          ledger: realized {fmtUsd(r.realizedPnl)} + unrealized{' '}
+          {fmtUsd(r.unrealizedPnl)} vs equity Δ {fmtUsd(r.equityPnl)} → gap{' '}
+          {fmtUsd(r.gap)} {ledgerTies ? '✓' : `⚠ ${r.note}`}
+        </p>
+      )}
+      {run.notes?.length > 0 && (
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: theme.spacing.lg,
+            color: theme.colors.textLight,
+            fontSize: theme.typography.fontSize.sm,
+          }}
+        >
+          {run.notes.map((n, i) => (
+            <li key={i} style={{ marginBottom: theme.spacing.xs }}>
+              {n}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p
+        style={{
+          margin: `${theme.spacing.md} 0 0 0`,
+          color: theme.colors.textLight,
+          fontSize: theme.typography.fontSize.xs,
+          fontFamily: 'monospace',
+        }}
+      >
+        artifact: data/backtests/runs/{run.runId}/run.json · schema v
+        {run.schemaVersion} · data {run.data?.source}/{run.data?.adjustment} ·
+        generated {run.generatedAt}
+      </p>
+    </Card>
+  );
+};
 
 export default BacktestPage;

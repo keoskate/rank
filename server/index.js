@@ -928,6 +928,7 @@ app.use(require('./routes/presets')(deps));
 app.use(require('./routes/semiconductor')(deps));
 app.use(require('./routes/tradingLogs')(deps));
 app.use(require('./routes/backtest')(deps));
+app.use(require('./routes/backtestRuns')());
 app.use(require('./routes/strategyLab')(deps));
 app.use(require('./routes/sprint')(deps));
 app.use(require('./routes/misc')(deps));

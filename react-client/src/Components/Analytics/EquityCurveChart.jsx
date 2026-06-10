@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Chart, registerables } from 'chart.js';
-import { calculateEquityCurve, formatCurrency, formatPercent, chartColors } from './analyticsUtils';
+import {
+  calculateEquityCurve,
+  formatCurrency,
+  formatPercent,
+  chartColors,
+} from './analyticsUtils';
 
 Chart.register(...registerables);
 
@@ -12,6 +17,14 @@ Chart.register(...registerables);
  * - Secondary area: Drawdown (inverted, red fill)
  * - High water mark line (dotted)
  * - Hover tooltips with trade details
+ *
+ * Two data modes:
+ * - trades mode (default): derives the curve from a trade list via
+ *   calculateEquityCurve (per-trade granularity).
+ * - series mode: pass `series` = [{ index, date, equity, drawdown,
+ *   highWaterMark }] to render a precomputed curve EXACTLY as provided (used
+ *   by the backtest run viewer so the chart can't drift from the artifact).
+ *   Optional `benchmarkValues` (aligned numbers) draws a comparison line.
  */
 const EquityCurveChart = ({
   trades = [],
@@ -20,14 +33,19 @@ const EquityCurveChart = ({
   showDrawdown = true,
   showHighWaterMark = true,
   title = 'Equity Curve',
+  series = null,
+  benchmarkValues = null,
+  benchmarkLabel = 'Benchmark',
+  xLabel = 'Trade Number',
 }) => {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
 
-  // Calculate equity curve data
+  // Calculate equity curve data (or use the precomputed series verbatim)
   const data = useMemo(() => {
+    if (series && series.length) return series;
     return calculateEquityCurve(trades, startingCapital);
-  }, [trades, startingCapital]);
+  }, [series, trades, startingCapital]);
 
   // Calculate summary stats
   const stats = useMemo(() => {
@@ -35,7 +53,8 @@ const EquityCurveChart = ({
 
     const finalEquity = data[data.length - 1].equity;
     const maxDrawdown = Math.max(...data.map(d => d.drawdown));
-    const totalReturn = ((finalEquity - startingCapital) / startingCapital) * 100;
+    const totalReturn =
+      ((finalEquity - startingCapital) / startingCapital) * 100;
     const maxEquity = Math.max(...data.map(d => d.equity));
 
     return {
@@ -85,6 +104,19 @@ const EquityCurveChart = ({
       });
     }
 
+    if (benchmarkValues && benchmarkValues.length === data.length) {
+      datasets.push({
+        label: benchmarkLabel,
+        data: benchmarkValues.map((v, i) => ({ x: data[i].index, y: v })),
+        borderColor: '#6b7280',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        tension: 0.1,
+        yAxisID: 'y',
+      });
+    }
+
     if (showDrawdown) {
       datasets.push({
         label: 'Drawdown',
@@ -120,22 +152,29 @@ const EquityCurveChart = ({
           },
           tooltip: {
             callbacks: {
-              title: (items) => {
+              title: items => {
                 const idx = items[0]?.dataIndex;
                 if (idx !== undefined && data[idx]) {
                   const d = data[idx];
-                  return d.date ? `Trade #${idx + 1} - ${new Date(d.date).toLocaleDateString()}` : `Trade #${idx + 1}`;
+                  if (xLabel !== 'Trade Number') {
+                    return d.date
+                      ? new Date(d.date).toLocaleDateString()
+                      : `${xLabel} ${idx + 1}`;
+                  }
+                  return d.date
+                    ? `Trade #${idx + 1} - ${new Date(d.date).toLocaleDateString()}`
+                    : `Trade #${idx + 1}`;
                 }
                 return '';
               },
-              label: (context) => {
+              label: context => {
                 const value = context.parsed.y;
                 if (context.dataset.label === 'Drawdown') {
                   return `Drawdown: ${formatPercent(value)}`;
                 }
                 return `${context.dataset.label}: ${formatCurrency(value)}`;
               },
-              afterBody: (items) => {
+              afterBody: items => {
                 const idx = items[0]?.dataIndex;
                 if (idx !== undefined && data[idx]) {
                   const d = data[idx];
@@ -163,7 +202,7 @@ const EquityCurveChart = ({
             type: 'linear',
             title: {
               display: true,
-              text: 'Trade Number',
+              text: xLabel,
               color: chartColors.text,
             },
             grid: {
@@ -186,28 +225,30 @@ const EquityCurveChart = ({
             },
             ticks: {
               color: chartColors.text,
-              callback: (value) => formatCurrency(value),
+              callback: value => formatCurrency(value),
             },
           },
-          y1: showDrawdown ? {
-            type: 'linear',
-            position: 'right',
-            reverse: true,
-            min: 0,
-            max: Math.max(20, ...data.map(d => d.drawdown)) * 1.1,
-            title: {
-              display: true,
-              text: 'Drawdown (%)',
-              color: chartColors.loss,
-            },
-            grid: {
-              display: false,
-            },
-            ticks: {
-              color: chartColors.loss,
-              callback: (value) => formatPercent(value),
-            },
-          } : undefined,
+          y1: showDrawdown
+            ? {
+                type: 'linear',
+                position: 'right',
+                reverse: true,
+                min: 0,
+                max: Math.max(20, ...data.map(d => d.drawdown)) * 1.1,
+                title: {
+                  display: true,
+                  text: 'Drawdown (%)',
+                  color: chartColors.loss,
+                },
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  color: chartColors.loss,
+                  callback: value => formatPercent(value),
+                },
+              }
+            : undefined,
         },
       },
     });
@@ -217,7 +258,14 @@ const EquityCurveChart = ({
         chartInstance.current.destroy();
       }
     };
-  }, [data, showDrawdown, showHighWaterMark]);
+  }, [
+    data,
+    showDrawdown,
+    showHighWaterMark,
+    benchmarkValues,
+    benchmarkLabel,
+    xLabel,
+  ]);
 
   const containerStyle = {
     backgroundColor: '#111827',
@@ -255,8 +303,13 @@ const EquityCurveChart = ({
     marginBottom: '2px',
   };
 
-  const statValueStyle = (isPositive) => ({
-    color: isPositive === undefined ? chartColors.textLight : isPositive ? chartColors.profit : chartColors.loss,
+  const statValueStyle = isPositive => ({
+    color:
+      isPositive === undefined
+        ? chartColors.textLight
+        : isPositive
+          ? chartColors.profit
+          : chartColors.loss,
     fontSize: '16px',
     fontWeight: '600',
   });
@@ -276,7 +329,8 @@ const EquityCurveChart = ({
             <div style={statStyle}>
               <div style={statLabelStyle}>Total Return</div>
               <div style={statValueStyle(stats.totalReturn >= 0)}>
-                {stats.totalReturn >= 0 ? '+' : ''}{formatPercent(stats.totalReturn)}
+                {stats.totalReturn >= 0 ? '+' : ''}
+                {formatPercent(stats.totalReturn)}
               </div>
             </div>
             <div style={statStyle}>
@@ -287,9 +341,7 @@ const EquityCurveChart = ({
             </div>
             <div style={statStyle}>
               <div style={statLabelStyle}>Trades</div>
-              <div style={statValueStyle()}>
-                {stats.tradeCount}
-              </div>
+              <div style={statValueStyle()}>{stats.tradeCount}</div>
             </div>
           </div>
         )}
