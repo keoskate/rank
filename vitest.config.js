@@ -6,6 +6,7 @@ export default defineConfig({
     include: [
       'server/__tests__/**/*.test.{js,mjs}',
       'packages/*/__tests__/**/*.test.{js,mjs}',
+      'scripts/__tests__/**/*.test.{js,mjs}',
     ],
   },
 });

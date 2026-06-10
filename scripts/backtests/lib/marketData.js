@@ -18,6 +18,16 @@
 //
 // Bars are cached per (symbol, start, end, adjustment) under
 // data/backtests/bars-cache/ so re-runs are instant and deterministic.
+//
+// MINUTE BARS (loadMinuteBars): same one-path discipline, sharded cache under
+// data/backtests/minute-bars-cache/<SYM>/<YYYY-MM>_<adj>.json. RTH only
+// (09:30–16:00 ET inclusive of the 16:00 auction bar) — extended-hours bars
+// are dropped at fetch; a consumer that needs pre/post-market must extend
+// this loader, not fetch around it. Adjustment guidance:
+//   - research/backtests: 'all' (consistent with the daily sim path)
+//   - execution benchmarking: 'raw' — tradingLog fill prices are unadjusted
+//     live prices; a later dividend would shift 'all'-adjusted minute bars
+//     away from the recorded fills and inject phantom bps.
 
 require('dotenv').config();
 const fs = require('fs');
@@ -25,6 +35,10 @@ const path = require('path');
 const alpacaClient = require('../../../server/alpacaClient');
 
 const CACHE_DIR = path.join(__dirname, '../../../data/backtests/bars-cache');
+const MINUTE_CACHE_DIR = path.join(
+  __dirname,
+  '../../../data/backtests/minute-bars-cache'
+);
 const ADJUSTMENT = 'all';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -216,11 +230,311 @@ function alignCloses(bars, dates) {
   return series;
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Minute bars
+// ─────────────────────────────────────────────────────────────────
+
+// One reused ET formatter (Intl construction is expensive; format is not).
+const ET_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+/** ET calendar date + minutes-since-midnight for an ISO timestamp. */
+function etInfo(iso) {
+  const parts = ET_FMT.formatToParts(new Date(iso));
+  const get = t => parts.find(p => p.type === t)?.value;
+  const hour = parseInt(get('hour'), 10) % 24;
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    minutes: hour * 60 + parseInt(get('minute'), 10),
+  };
+}
+
+// RTH window in ET minutes: 09:30 (570) … 16:00 (960), inclusive of the
+// 16:00 bar which carries the closing auction print.
+const RTH_START_MIN = 570;
+const RTH_END_MIN = 960;
+
+/** ['2024-03', '2024-04', ...] covering start..end inclusive. */
+function monthSpan(start, end) {
+  const out = [];
+  let [y, m] = start.slice(0, 7).split('-').map(Number);
+  const last = end.slice(0, 7);
+  for (;;) {
+    const tag = `${y}-${String(m).padStart(2, '0')}`;
+    out.push(tag);
+    if (tag === last) break;
+    m++;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return out;
+}
+
+function lastDayOfMonth(tag) {
+  const [y, m] = tag.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+}
+
+async function fetchMinuteMonth(symbol, fetchStart, fetchEnd, adjustment) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const raw = await alpacaClient.getBars(
+        symbol,
+        '1Min',
+        fetchStart,
+        fetchEnd,
+        100000,
+        adjustment
+      );
+      return (raw || [])
+        .filter(b => b && b.timestamp && b.close > 0)
+        .map(b => ({
+          t: b.timestamp,
+          open: round4(b.open),
+          high: round4(b.high),
+          low: round4(b.low),
+          close: round4(b.close),
+          volume: b.volume ?? 0,
+          vwap: b.vwap ?? null,
+        }))
+        .filter(b => {
+          const { minutes } = etInfo(b.t);
+          return minutes >= RTH_START_MIN && minutes <= RTH_END_MIN;
+        });
+    } catch (e) {
+      await sleep(1500 * (attempt + 1));
+    }
+  }
+  return null;
+}
+
+/**
+ * Structural sanity for a minute-bar series (already RTH-filtered).
+ * Returns findings as {level: 'fail'|'warn', text} so waivers can apply.
+ */
+function checkMinuteBarsSanity(symbol, bars) {
+  const findings = [];
+  if (!bars.length) {
+    findings.push({ level: 'warn', text: 'empty minute series' });
+    return findings;
+  }
+  const dayCounts = new Map();
+  for (let i = 0; i < bars.length; i++) {
+    const b = bars[i];
+    if (i > 0 && b.t <= bars[i - 1].t) {
+      findings.push({
+        level: 'fail',
+        text: `non-increasing timestamps at ${b.t}`,
+      });
+      break;
+    }
+    if (!(b.close > 0) || !(b.open > 0) || !(b.high > 0) || !(b.low > 0)) {
+      findings.push({ level: 'fail', text: `non-positive OHLC at ${b.t}` });
+      break;
+    }
+    if (b.high < b.low) {
+      findings.push({ level: 'fail', text: `high < low at ${b.t}` });
+      break;
+    }
+    const { date, minutes } = etInfo(b.t);
+    if (minutes < RTH_START_MIN || minutes > RTH_END_MIN) {
+      findings.push({
+        level: 'fail',
+        text: `bar outside RTH at ${b.t} (loader filter broken)`,
+      });
+      break;
+    }
+    dayCounts.set(date, (dayCounts.get(date) || 0) + 1);
+  }
+  // Coverage floor per day: full session ≈ 390 bars, half-days ≈ 210.
+  // < 200 catches real intraday gaps without flagging scheduled half-days.
+  for (const [date, n] of dayCounts) {
+    if (n < 200) {
+      findings.push({
+        level: 'warn',
+        text: `only ${n} RTH minute bars on ${date} (gap or halt?)`,
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * Load RTH minute bars for symbols over [start, end], sharded month cache.
+ * Fully-elapsed months are immutable cache hits; the month containing `end`
+ * is cached with a `_to-<end>` suffix and refetched as `end` advances
+ * (stale partials for the same month are pruned).
+ *
+ * Cross-check (adjustment 'all' only): on sampled days, RTH minute volume
+ * must be within 10% of the daily-path volume (warn) and the last RTH
+ * minute close within 0.5% of the daily close (fail, waivable via
+ * known-data-issues.json) — minute and daily paths must describe the same
+ * market.
+ *
+ * @returns {Promise<{bars: Object<string, Array>, integrity: Object}>}
+ *   bars: sym -> [{t, open, high, low, close, volume, vwap}]
+ */
+async function loadMinuteBars(
+  symbols,
+  { start, end, adjustment = ADJUSTMENT, quiet = false, crossCheck = true } = {}
+) {
+  if (!start) throw new Error('loadMinuteBars: start is required');
+  const safeEnd = maxSafeEnd();
+  if (!end || end > safeEnd) {
+    if (end && !quiet) console.warn(`  end ${end} clamped to ${safeEnd}`);
+    end = safeEnd;
+  }
+  // Lazy require to avoid a cycle (dataIntegrity imports checkBarsSanity).
+  const { applyWaivers } = require('./dataIntegrity');
+
+  const bars = {};
+  const integrity = {
+    source: 'alpaca',
+    adjustment,
+    timeframe: '1Min',
+    rth: '09:30-16:00 ET inclusive',
+    window: { start, end },
+    checkedAt: new Date().toISOString(),
+    symbols: {},
+    failures: [],
+  };
+
+  for (const sym of symbols) {
+    const symDir = path.join(MINUTE_CACHE_DIR, sym);
+    fs.mkdirSync(symDir, { recursive: true });
+    const series = [];
+    let fetchFailed = false;
+
+    for (const month of monthSpan(start, end)) {
+      const monthEnd = lastDayOfMonth(month);
+      const complete = monthEnd <= end;
+      const shard = complete
+        ? path.join(symDir, `${month}_${adjustment}.json`)
+        : path.join(symDir, `${month}_${adjustment}_to-${end}.json`);
+
+      let monthBars = null;
+      if (fs.existsSync(shard)) {
+        monthBars = JSON.parse(fs.readFileSync(shard, 'utf8'));
+      } else {
+        monthBars = await fetchMinuteMonth(
+          sym,
+          `${month}-01`,
+          complete ? monthEnd : end,
+          adjustment
+        );
+        if (monthBars) {
+          if (!complete) {
+            // prune stale partial shards for this month+adjustment
+            for (const f of fs.readdirSync(symDir)) {
+              if (f.startsWith(`${month}_${adjustment}_to-`)) {
+                fs.unlinkSync(path.join(symDir, f));
+              }
+            }
+          }
+          fs.writeFileSync(shard, JSON.stringify(monthBars));
+          await sleep(150);
+        } else {
+          fetchFailed = true;
+          break;
+        }
+      }
+      series.push(...monthBars);
+    }
+
+    if (fetchFailed) {
+      integrity.failures.push(sym);
+      integrity.symbols[sym] = { ok: false, issues: ['minute fetch failed'] };
+      if (!quiet) console.warn(`  ✗ ${sym}: minute fetch failed`);
+      continue;
+    }
+
+    // Slice to the requested window (shards hold whole months).
+    const windowed = series.filter(
+      b => b.t.slice(0, 10) >= start && b.t.slice(0, 10) <= end
+    );
+    const findings = checkMinuteBarsSanity(sym, windowed);
+
+    // Cross-check vs the daily path on sampled days ('all' only — the daily
+    // cache has no raw variant here).
+    if (crossCheck && adjustment === 'all' && windowed.length) {
+      const daily = (await loadDailyBars([sym], { start, end, quiet: true }))
+        .bars[sym];
+      if (daily && daily.length) {
+        const dailyByDate = new Map(daily.map(d => [d.date, d]));
+        const byDay = new Map();
+        for (const b of windowed) {
+          const d = etInfo(b.t).date;
+          if (!byDay.has(d)) byDay.set(d, []);
+          byDay.get(d).push(b);
+        }
+        const days = [...byDay.keys()].filter(d => dailyByDate.has(d));
+        const samples = [
+          days[0],
+          days[Math.floor(days.length / 2)],
+          days[days.length - 1],
+        ].filter((d, i, a) => d && a.indexOf(d) === i);
+        for (const d of samples) {
+          const mins = byDay.get(d);
+          const dly = dailyByDate.get(d);
+          const minVol = mins.reduce((s, b) => s + (b.volume || 0), 0);
+          if (dly.volume > 0) {
+            // RTH-only minute volume legitimately runs 10-20% under the
+            // consolidated daily figure (pre/post-market, odd lots) —
+            // measured 11.5-17.9% on SPY 2026-05/06. Flag only beyond 25%.
+            const dv = Math.abs(minVol / dly.volume - 1);
+            if (dv > 0.25) {
+              findings.push({
+                level: 'warn',
+                text: `${d}: RTH minute volume ${(dv * 100).toFixed(1)}% off daily volume`,
+              });
+            }
+          }
+          const lastClose = mins[mins.length - 1].close;
+          const dc = Math.abs(lastClose / dly.close - 1);
+          if (dc > 0.005) {
+            findings.push({
+              level: 'fail',
+              text: `${d}: last RTH minute close ${lastClose} vs daily close ${dly.close} (${(dc * 100).toFixed(2)}% — adjustment drift or contamination?)`,
+            });
+          }
+        }
+      }
+    }
+
+    applyWaivers(sym, findings);
+    const ok = !findings.some(f => f.level === 'fail');
+    integrity.symbols[sym] = {
+      ok,
+      issues: findings.map(f => `${f.level}: ${f.text}`),
+      bars: windowed.length,
+    };
+    if (!ok) integrity.failures.push(sym);
+    if (findings.length && !quiet) {
+      for (const f of findings) console.warn(`  ⚠ ${sym}: ${f.text}`);
+    }
+    bars[sym] = windowed;
+  }
+  return { bars, integrity };
+}
+
 module.exports = {
   loadDailyBars,
+  loadMinuteBars,
   buildCalendar,
   alignCloses,
   checkBarsSanity,
+  checkMinuteBarsSanity,
+  etInfo,
   maxSafeEnd,
   CACHE_DIR,
+  MINUTE_CACHE_DIR,
 };

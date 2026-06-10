@@ -34,6 +34,25 @@ function _loadKnownIssues() {
   }
 }
 
+/**
+ * Apply documented waivers to findings ({level, text}) in place:
+ * a matching FAIL is downgraded to WARN with the waiver note appended —
+ * visible forever, blocking never. Shared by the daily gate below and the
+ * minute-bar path in marketData.loadMinuteBars.
+ */
+function applyWaivers(symbol, findings, knownIssues = _loadKnownIssues()) {
+  const waivers = knownIssues.filter(w => w.symbol === symbol);
+  for (const f of findings) {
+    if (f.level !== 'fail') continue;
+    const w = waivers.find(wv => wv.contains && f.text.includes(wv.contains));
+    if (w) {
+      f.level = 'warn';
+      f.text = `waived(${w.status}): ${f.text} — ${w.note.split('.')[0]}`;
+    }
+  }
+  return findings;
+}
+
 const RAW_CACHE_DIR = path.join(
   __dirname,
   '../../../data/backtests/bars-cache-raw'
@@ -313,15 +332,7 @@ async function runDataIntegrityGate(bars, opts = {}) {
     }
 
     // apply documented waivers: FAIL -> WARN, never hidden
-    const waivers = knownIssues.filter(w => w.symbol === sym);
-    for (const f of findings) {
-      if (f.level !== 'fail') continue;
-      const w = waivers.find(wv => wv.contains && f.text.includes(wv.contains));
-      if (w) {
-        f.level = 'warn';
-        f.text = `waived(${w.status}): ${f.text} — ${w.note.split('.')[0]}`;
-      }
-    }
+    applyWaivers(sym, findings, knownIssues);
 
     const level = findings.some(f => f.level === 'fail')
       ? 'fail'
@@ -352,4 +363,5 @@ module.exports = {
   runDataIntegrityGate,
   checkAdjustmentConsistency,
   checkStaleRuns,
+  applyWaivers,
 };
