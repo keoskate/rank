@@ -14,6 +14,7 @@ const RegimeDetector = require('./regimeDetector');
 const shannonEntropy = require('./shannonEntropy');
 const equityStats = require('./equityStats');
 const entropyGateCore = require('./entropyGateCore');
+const trendCore = require('./trendCore');
 const walkForward = require('./walkForward');
 const significance = require('./significance');
 
@@ -40,6 +41,10 @@ module.exports = {
   // The entropy-gate decision shared by live trading and backtests
   // (faithfulness contract: one core, zero divergence).
   entropyGateCore,
+
+  // The trend-following decision (SMA + 12-1 momentum) shared by the live
+  // trendFollowing plugin and backtests — same faithfulness contract.
+  trendCore,
 
   // Walk-forward OOS evaluation + multiple-testing-aware significance.
   walkForward,

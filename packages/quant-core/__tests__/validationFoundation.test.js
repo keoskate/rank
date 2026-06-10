@@ -7,6 +7,7 @@ const {
   walkForward,
   significance,
   entropyGateCore,
+  trendCore,
   shannonEntropy,
 } = requireCjs('@keo/quant-core');
 
@@ -266,5 +267,54 @@ describe('entropyGateCore', () => {
     });
     if (r.regime.state === 'transitioning') expect(r.allow).toBe(false);
     else expect(r.allow).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// trendCore — the deployed trend-follower decision (faithfulness contract)
+// ─────────────────────────────────────────────────────────────────
+describe('trendCore', () => {
+  it('insufficient history → ok:false, never uptrend (no momentum fallback)', () => {
+    const short = Array.from({ length: 200 }, (_, i) => 100 + i); // < momLookback+1
+    const r = trendCore.evaluateTrend(short, {});
+    expect(r.ok).toBe(false);
+    expect(r.uptrend).toBe(false);
+  });
+
+  it('steady riser is an uptrend; steady faller is not', () => {
+    const up = Array.from({ length: 300 }, (_, i) => 100 * Math.pow(1.001, i));
+    const ru = trendCore.evaluateTrend(up, {});
+    expect(ru.ok).toBe(true);
+    expect(ru.aboveSma).toBe(true);
+    expect(ru.momentum).toBeGreaterThan(0);
+    expect(ru.uptrend).toBe(true);
+
+    const down = Array.from(
+      { length: 300 },
+      (_, i) => 100 * Math.pow(0.999, i)
+    );
+    const rd = trendCore.evaluateTrend(down, {});
+    expect(rd.uptrend).toBe(false);
+  });
+
+  it('momentum must be positive even when price is above the SMA', () => {
+    // long decline then sharp recent pop above SMA: 12-1 momentum (which
+    // skips the last month) stays negative → not eligible
+    const closes = [];
+    for (let i = 0; i < 280; i++) closes.push(200 * Math.pow(0.998, i));
+    for (let i = 0; i < 20; i++) closes.push(closes[closes.length - 1] * 1.03);
+    const r = trendCore.evaluateTrend(closes, {});
+    expect(r.aboveSma).toBe(true);
+    expect(r.momentum).toBeLessThan(0);
+    expect(r.uptrend).toBe(false);
+  });
+
+  it('price override flips the SMA test without touching momentum', () => {
+    const up = Array.from({ length: 300 }, (_, i) => 100 * Math.pow(1.001, i));
+    const base = trendCore.evaluateTrend(up, {});
+    const overridden = trendCore.evaluateTrend(up, { price: base.sma * 0.95 });
+    expect(overridden.aboveSma).toBe(false);
+    expect(overridden.uptrend).toBe(false);
+    expect(overridden.momentum).toBeCloseTo(base.momentum, 12);
   });
 });

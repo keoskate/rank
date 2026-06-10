@@ -185,11 +185,13 @@ npm run backtest:trend             # instrumented trend backtest -> 10 run.json 
 npm run backtest:view              # list run artifacts
 npm run backtest:view <runId>      # terminal viewer (equity, drawdown, candles+markers)
 npm run backtest:view <runId> -- --replay   # animate day by day
-node scripts/backtests/validate-trend.js        # five-gate validation, trend family
+node scripts/backtests/validate-trend.js        # five-gate validation of the DEPLOYED trend-follower spec
 node scripts/backtests/validate-xs-momentum.js  # five-gate validation, xs-momentum
-node scripts/backtests/certify-entropy-gate.js  # live==backtest faithfulness cert
+node scripts/backtests/certify-entropy-gate.js  # live==backtest faithfulness cert (entropy)
+node scripts/backtests/certify-trend-core.js    # live==backtest faithfulness cert (trend)
 node scripts/backtests/revalidate-entropy-gate.js  # gate edge re-test (net of costs)
 ```
+Verdict scoreboard + prioritized next steps: see `ROADMAP.md`.
 Web viewer: `/backtest` page reads `/api/backtest-runs` (artifacts only, no engine).
 
 ## MVP Files (Require Extra Rigor)

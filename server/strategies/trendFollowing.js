@@ -22,9 +22,21 @@
 const tradingLogger = require('../tradingLogger');
 const websocketServer = require('../websocketServer');
 const alpacaStream = require('../alpacaStreamClient');
-const polygonClient = require('../polygonClient');
+const alpacaClient = require('../alpacaClient');
+const { trendCore } = require('@keo/quant-core');
 
 const SLUG = 'trend-following';
+
+// FAITHFULNESS CONTRACT: the trend decision lives in @keo/quant-core
+// trendCore.evaluateTrend — a pure function backtests call too, certified by
+// scripts/backtests/certify-trend-core.js. This module only fetches closes,
+// supplies the realtime price override, and translates session config. It
+// must NOT add decision logic of its own.
+//
+// Data path: Alpaca split+dividend-adjusted daily bars through YESTERDAY
+// (the most recent completed session; the free tier blocks recent SIP data
+// anyway). The previous version used Polygon split-only aggregates — a
+// different adjustment basis than every backtest, i.e. silent divergence.
 
 // Daily-bar cache (one fetch per symbol per ET day).
 const barCache = new Map();
@@ -39,52 +51,60 @@ function _etDay() {
 async function _dailyCloses(symbol) {
   const key = `${symbol}|${_etDay()}`;
   if (barCache.has(key)) return barCache.get(key);
-  const end = new Date().toISOString().slice(0, 10);
+  const end = new Date(Date.now() - 1 * 864e5).toISOString().slice(0, 10);
   const start = new Date(Date.now() - 430 * 864e5).toISOString().slice(0, 10);
-  let bars = [];
+  let closes = [];
   try {
-    bars = await polygonClient.getHistoricalAggregates(
+    const bars = await alpacaClient.getBars(
       symbol,
+      '1Day',
       start,
       end,
-      'day'
+      10000,
+      'all' // split + dividend adjusted — the SAME basis as the backtests
     );
+    closes = (bars || [])
+      .map(b => b.close)
+      .filter(c => Number.isFinite(c) && c > 0);
   } catch {
-    bars = [];
+    closes = []; // fail-safe: no data → no decision (engine backstops apply)
   }
-  const closes = Array.isArray(bars)
-    ? bars.map(b => b.close).filter(Number.isFinite)
-    : [];
   barCache.set(key, closes);
   return closes;
 }
 
 /**
+ * Pure decision from a closes series + session config. Exported so the
+ * faithfulness certification harness can prove this module's config
+ * translation matches the backtests' direct use of the shared core.
+ * @returns {object|null} { currentPrice, sma200, momentum, uptrend }
+ */
+function trendStateFromCloses(closes, cfg = {}, priceOverride = null) {
+  const st = trendCore.evaluateTrend(closes, {
+    smaWindow: cfg.trendSmaWindow || 200,
+    momLookback: cfg.trendMomentumDays || 252, // ~12 months
+    momSkip: cfg.trendMomentumSkipDays ?? 21, // skip most recent ~1 month
+    price: priceOverride > 0 ? priceOverride : undefined,
+  });
+  if (!st.ok) return null; // not enough history to judge trend
+  return {
+    currentPrice: st.price,
+    sma200: st.sma,
+    momentum: st.momentum,
+    uptrend: st.uptrend,
+  };
+}
+
+/**
  * Compute the trend state for a symbol from daily closes.
- * @returns {object|null} { currentPrice, sma200, momentum, uptrend, reason }
+ * @returns {object|null} { currentPrice, sma200, momentum, uptrend }
  */
 async function _trendState(symbol, cfg) {
-  const smaWindow = cfg.trendSmaWindow || 200;
-  const momLookback = cfg.trendMomentumDays || 252; // ~12 months
-  const momSkip = cfg.trendMomentumSkipDays || 21; // skip most recent ~1 month
   const closes = await _dailyCloses(symbol);
-  const n = closes.length;
-  if (n < smaWindow + 5) return null; // not enough history to judge trend
-
-  const sma = closes.slice(-smaWindow).reduce((a, b) => a + b, 0) / smaWindow;
   // realtime price preferred for a timely trend break; fall back to last close
   const ws = alpacaStream.getLatestPrice(symbol);
-  const currentPrice =
-    ws && !ws.isStale && ws.price > 0 ? ws.price : closes[n - 1];
-
-  // 12-1 momentum: return from t-momLookback to t-momSkip (excludes last month)
-  const pOld = closes[n - 1 - momLookback];
-  const pRecent = closes[n - 1 - momSkip];
-  const momentum =
-    pOld && pRecent && pOld > 0 ? pRecent / pOld - 1 : currentPrice / sma - 1;
-
-  const uptrend = currentPrice > sma && momentum > 0;
-  return { currentPrice, sma200: sma, momentum, uptrend };
+  const priceOverride = ws && !ws.isStale && ws.price > 0 ? ws.price : null;
+  return trendStateFromCloses(closes, cfg, priceOverride);
 }
 
 async function evaluate(session, symbol, ctx) {
@@ -168,7 +188,7 @@ async function evaluate(session, symbol, ctx) {
  * (close < 200d SMA OR 12-1 momentum <= 0). This is what removes the bear tail.
  * Returns null on a data failure so the dispatcher's backstops still apply.
  */
-async function evaluateExit(session, symbol, position, ctx) {
+async function evaluateExit(session, symbol, position, _ctx) {
   const cfg = session.config || {};
   const st = await _trendState(symbol, cfg);
   if (!st) return null; // can't judge → let the engine's failure-counter backstop handle it
@@ -202,6 +222,7 @@ async function evaluateExit(session, symbol, position, ctx) {
 
 module.exports = {
   slug: SLUG,
+  trendStateFromCloses, // exported for faithfulness certification
   mutableFields: [], // trend params are not self-mutable (regime-rule, not tunable)
   // Disable the engine's intraday risk exits — the trend exit governs. (The
   // dispatcher routes exits to evaluateExit above, but set these so any
