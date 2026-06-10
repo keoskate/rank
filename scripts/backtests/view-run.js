@@ -102,14 +102,16 @@ class Canvas {
 /**
  * Plot a series as a connected line on the canvas.
  * domainN: logical x-domain length (so partial replay keeps a fixed x-scale).
+ * offset: shift the series right by N logical indices within the domain
+ *         (lets overlays that start later share the closes' x-scale).
  */
-function plotLine(canvas, values, { min, max, color, domainN }) {
+function plotLine(canvas, values, { min, max, color, domainN, offset = 0 }) {
   const n = values.length;
   if (n < 2) return;
   const N = domainN || n;
   const span = max - min || 1;
   const yOf = v => Math.round((1 - (v - min) / span) * (canvas.ph - 1));
-  const xOf = i => Math.round((i / (N - 1)) * (canvas.pw - 1));
+  const xOf = i => Math.round(((i + offset) / (N - 1)) * (canvas.pw - 1));
   let prevX = xOf(0);
   let prevY = yOf(values[0]);
   for (let i = 1; i < n; i++) {
@@ -279,6 +281,46 @@ function renderPrice(art, symbol, width, upTo, dateIndex) {
     color: C.cyan,
     domainN: closes.length - firstIdx,
   });
+  // artifact overlays (extra.levels POC / extra.avwap) — plotted VERBATIM on
+  // the same date domain as the closes; values outside the close range clip;
+  // skipped silently when the artifact carries no extra
+  const overlays = [];
+  const lv = art.extra && art.extra.levels ? art.extra.levels[symbol] : null;
+  if (Array.isArray(lv) && lv.length) {
+    overlays.push({
+      label: 'POC',
+      color: C.yellow,
+      points: lv.filter(l => l.poc != null).map(l => [l.date, l.poc]),
+    });
+  }
+  const aw = art.extra && art.extra.avwap ? art.extra.avwap[symbol] : null;
+  if (aw && Array.isArray(aw.points) && aw.points.length) {
+    overlays.push({
+      label: `AVWAP@${aw.anchor}`,
+      color: C.magenta,
+      points: aw.points
+        .filter(p => p.value != null)
+        .map(p => [p.date, p.value]),
+    });
+  }
+  for (const o of overlays) {
+    const byDate = new Map(o.points);
+    const series = [];
+    let lastVal = null;
+    for (const d of dates) {
+      if (byDate.has(d)) lastVal = byDate.get(d);
+      series.push(lastVal);
+    }
+    const fi = series.findIndex(v => v != null);
+    if (fi < 0) continue;
+    plotLine(canvas, series.slice(fi, upTo), {
+      min,
+      max,
+      color: o.color,
+      domainN: closes.length - firstIdx,
+      offset: fi - firstIdx,
+    });
+  }
   // markers
   const span = max - min || 1;
   const n = closes.length - firstIdx;
@@ -303,7 +345,8 @@ function renderPrice(art, symbol, width, upTo, dateIndex) {
     col(`PRICE ${symbol} `, C.bold) +
       col(`(adjusted close)  `, C.gray) +
       col(`▲${buys} buys `, C.brightGreen) +
-      col(`▼${sells} sells`, C.brightRed)
+      col(`▼${sells} sells`, C.brightRed) +
+      overlays.map(o => col(`  ─${o.label}`, o.color)).join('')
   );
   canvas.render().forEach((r, i) => {
     let label = '';

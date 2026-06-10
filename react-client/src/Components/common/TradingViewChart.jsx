@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as LightweightCharts from 'lightweight-charts';
 import theme from '../../theme';
+import VolumeProfileOverlay from '../charts/VolumeProfileOverlay';
 
 /**
  * TradingView Lightweight Charts V2 Component
@@ -20,6 +21,7 @@ const DEFAULT_INDICATORS = {
   ema9: true,
   volume: true,
   rsi: true,
+  volumeProfile: false, // 20-day volume profile overlay (fetched from server)
 };
 
 // Load indicator preferences from localStorage
@@ -46,6 +48,7 @@ const TradingViewChart = ({
   height = 400,
   showRSI = true, // Show RSI panel by default
   rsiHeight = 120,
+  sigmaLevels = null, // Optional [dev1, dev2, dev3] override for VWAP bands
 }) => {
   const chartContainerRef = useRef(null);
   const rsiContainerRef = useRef(null);
@@ -65,8 +68,18 @@ const TradingViewChart = ({
   const vwapBandD2Ref = useRef(null);
   const vwapBandU3Ref = useRef(null);
   const vwapBandD3Ref = useRef(null);
+  // Volume profile overlay (POC/VAH/VAL price-line handles)
+  const vpPriceLinesRef = useRef([]);
+  // Anchored VWAP (pick-mode click handler + line series handle)
+  const avwapSeriesRef = useRef(null);
+  const anchorClickHandlerRef = useRef(null);
+  // Latest candle data (time/OHLC/volume) for client-side AVWAP computation
+  const chartDataRef = useRef([]);
   const [isReady, setIsReady] = useState(false);
   const [chartError, setChartError] = useState(null);
+  const [volumeProfileData, setVolumeProfileData] = useState(null);
+  const [anchorMode, setAnchorMode] = useState(false);
+  const [hasAvwap, setHasAvwap] = useState(false);
 
   // Indicator visibility state with localStorage persistence
   const [indicators, setIndicators] = useState(loadIndicatorPrefs);
@@ -361,6 +374,12 @@ const TradingViewChart = ({
       rsiChartRef.current = null;
       rsiSeriesRef.current = null;
       rsiSignalSeriesRef.current = null;
+      // chart.remove() disposed all series/price lines; just drop the handles
+      vpPriceLinesRef.current = [];
+      avwapSeriesRef.current = null;
+      anchorClickHandlerRef.current = null;
+      setAnchorMode(false);
+      setHasAvwap(false);
       setIsReady(false);
     };
   }, [showRSI]);
@@ -450,10 +469,12 @@ const TradingViewChart = ({
     const bandU2 = [], bandD2 = [];
     const bandU3 = [], bandD3 = [];
 
-    // Standard deviation multipliers (from Pine Script)
-    const dev1 = 1.28;
-    const dev2 = 2.01;
-    const dev3 = 2.51;
+    // Standard deviation multipliers (from Pine Script), optionally
+    // overridden via the sigmaLevels prop
+    const [dev1, dev2, dev3] =
+      Array.isArray(sigmaLevels) && sigmaLevels.length === 3
+        ? sigmaLevels
+        : [1.28, 2.01, 2.51];
 
     let cumulativeTPV = 0;    // Sum of (TP * Volume)
     let cumulativeVolume = 0; // Sum of Volume
@@ -638,8 +659,12 @@ const TradingViewChart = ({
         high: c.h || c.high,
         low: c.l || c.low,
         close: c.c || c.close,
+        volume: c.v || c.volume || 0, // kept for anchored-VWAP computation
       };
     }).filter(c => c.open && c.high && c.low && c.close);
+
+    // Keep the latest bars around for client-side anchored VWAP
+    chartDataRef.current = candleData;
 
     const volumeData = visibleCandles.map(candle => {
       const c = candle.c !== undefined ? candle : {
@@ -795,6 +820,161 @@ const TradingViewChart = ({
 
   }, [candles, currentCandleIndex, trades, isReady, indicators]);
 
+  // Fetch volume profile when the toggle is on (refetch on symbol change)
+  useEffect(() => {
+    if (!indicators.volumeProfile || !symbol) {
+      setVolumeProfileData(null);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    fetch(`/api/volume-profile/${symbol}?days=20`, {
+      signal: controller.signal,
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (!cancelled) setVolumeProfileData(data);
+      })
+      .catch(err => {
+        if (!cancelled && err.name !== 'AbortError') {
+          console.warn('Volume profile fetch failed:', err.message);
+          setVolumeProfileData(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [indicators.volumeProfile, symbol]);
+
+  // Draw POC/VAH/VAL price lines for the volume profile
+  useEffect(() => {
+    const series = candlestickSeriesRef.current;
+    if (!isReady || !series) return;
+
+    if (indicators.volumeProfile && volumeProfileData) {
+      [
+        { price: volumeProfileData.pocPrice, title: 'POC' },
+        { price: volumeProfileData.vah, title: 'VAH' },
+        { price: volumeProfileData.val, title: 'VAL' },
+      ].forEach(({ price, title }) => {
+        if (typeof price !== 'number' || !isFinite(price)) return;
+        vpPriceLinesRef.current.push(
+          series.createPriceLine({
+            price,
+            color: '#f59e0b',
+            lineWidth: 1,
+            lineStyle: 2, // Dashed
+            axisLabelVisible: true,
+            title,
+          })
+        );
+      });
+    }
+
+    return () => {
+      vpPriceLinesRef.current.forEach(line => {
+        try {
+          series.removePriceLine(line);
+        } catch (e) {
+          // Series already disposed (chart torn down)
+        }
+      });
+      vpPriceLinesRef.current = [];
+    };
+  }, [isReady, indicators.volumeProfile, volumeProfileData]);
+
+  // Clear any anchored VWAP when the symbol changes (display-only feature)
+  useEffect(() => {
+    return () => {
+      if (avwapSeriesRef.current && chartRef.current) {
+        try {
+          chartRef.current.removeSeries(avwapSeriesRef.current);
+        } catch (e) {
+          // Chart already disposed
+        }
+      }
+      avwapSeriesRef.current = null;
+      setHasAvwap(false);
+    };
+  }, [symbol]);
+
+  // Compute anchored VWAP from the clicked bar forward (client-side only)
+  const computeAnchoredVwap = fromTime => {
+    const points = [];
+    let cumulativeTPV = 0;
+    let cumulativeVolume = 0;
+
+    for (const bar of chartDataRef.current) {
+      if (bar.time < fromTime) continue;
+      const typicalPrice = (bar.high + bar.low + bar.close) / 3;
+      const volume = bar.volume || 0;
+      cumulativeTPV += typicalPrice * volume;
+      cumulativeVolume += volume;
+      if (cumulativeVolume > 0) {
+        points.push({
+          time: bar.time,
+          value: cumulativeTPV / cumulativeVolume,
+        });
+      }
+    }
+    return points;
+  };
+
+  const exitAnchorMode = () => {
+    if (anchorClickHandlerRef.current && chartRef.current) {
+      chartRef.current.unsubscribeClick(anchorClickHandlerRef.current);
+    }
+    anchorClickHandlerRef.current = null;
+    setAnchorMode(false);
+  };
+
+  // Anchor VWAP button: existing AVWAP -> clear; picking -> cancel;
+  // otherwise enter pick mode (next chart click anchors the VWAP)
+  const handleAnchorVwapClick = () => {
+    if (!chartRef.current) return;
+
+    if (avwapSeriesRef.current) {
+      try {
+        chartRef.current.removeSeries(avwapSeriesRef.current);
+      } catch (e) {
+        // Chart already disposed
+      }
+      avwapSeriesRef.current = null;
+      setHasAvwap(false);
+      return;
+    }
+
+    if (anchorMode) {
+      exitAnchorMode();
+      return;
+    }
+
+    const handler = param => {
+      exitAnchorMode();
+      if (!param || param.time === undefined || param.time === null) return;
+      const points = computeAnchoredVwap(param.time);
+      if (points.length === 0 || !chartRef.current) return;
+      const series = chartRef.current.addLineSeries({
+        color: '#e879f9',
+        lineWidth: 2,
+        title: 'AVWAP',
+      });
+      series.setData(points);
+      avwapSeriesRef.current = series;
+      setHasAvwap(true);
+    };
+    anchorClickHandlerRef.current = handler;
+    chartRef.current.subscribeClick(handler);
+    setAnchorMode(true);
+  };
+
   // Update chart height
   useEffect(() => {
     if (chartRef.current && chartContainerRef.current) {
@@ -922,6 +1102,7 @@ const TradingViewChart = ({
           { key: 'ema9', label: 'EMA9', color: '#8b5cf6' },
           { key: 'volume', label: 'Volume', color: '#26a69a' },
           { key: 'rsi', label: 'RSI', color: '#6366f1' },
+          { key: 'volumeProfile', label: 'Vol Profile', color: '#f59e0b' },
         ].map(({ key, label, color }) => (
           <button
             key={key}
@@ -951,16 +1132,53 @@ const TradingViewChart = ({
             {label}
           </button>
         ))}
+        <button
+          onClick={handleAnchorVwapClick}
+          title={anchorMode ? 'Click a bar on the chart to anchor' : 'Anchor a VWAP to a bar (display only)'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '3px 8px',
+            border: `1px solid ${anchorMode || hasAvwap ? '#e879f9' : theme.colors.gray300}`,
+            borderRadius: theme.borderRadius.sm,
+            backgroundColor: anchorMode || hasAvwap ? '#e879f915' : 'transparent',
+            color: anchorMode || hasAvwap ? '#e879f9' : theme.colors.textMuted,
+            cursor: anchorMode ? 'crosshair' : 'pointer',
+            fontSize: '10px',
+            fontWeight: anchorMode || hasAvwap ? 'bold' : 'normal',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '2px',
+            backgroundColor: anchorMode || hasAvwap ? '#e879f9' : 'transparent',
+            border: '1px solid #e879f9',
+          }} />
+          {hasAvwap ? 'Clear AVWAP' : anchorMode ? 'Click a bar...' : 'Anchor VWAP'}
+        </button>
       </div>
 
-      {/* TradingView Chart */}
-      <div
-        ref={chartContainerRef}
-        style={{
-          width: '100%',
-          height: height,
-        }}
-      />
+      {/* TradingView Chart (relative wrapper hosts the volume-profile canvas overlay) */}
+      <div style={{ position: 'relative' }}>
+        <div
+          ref={chartContainerRef}
+          style={{
+            width: '100%',
+            height: height,
+          }}
+        />
+        {indicators.volumeProfile && volumeProfileData && isReady && (
+          <VolumeProfileOverlay
+            chart={chartRef.current}
+            series={candlestickSeriesRef.current}
+            profile={volumeProfileData}
+            containerRef={chartContainerRef}
+          />
+        )}
+      </div>
 
       {/* RSI Panel */}
       {showRSI && (

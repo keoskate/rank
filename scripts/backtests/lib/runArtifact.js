@@ -29,8 +29,19 @@
 //   reconciliation: { realizedPnl, unrealizedPnl, equityPnl, gap, gapPct,
 //                     note },
 //   bars:      { SYM: [{date,open,high,low,close,volume}] },     // traded names
-//   notes:     [string]                              // honest caveats
+//   notes:     [string],                             // honest caveats
+//   extra:     { ... }                               // OPTIONAL producer payload
 // }
+//
+// extra (optional, producer-defined). Known viewer-rendered shapes:
+//   extra.levels = { SYM: [{ date:'YYYY-MM-DD', poc, vah, val, naked:boolean }] }
+//       per-day volume-profile levels; the `naked` flags are PRECOMPUTED by
+//       the producer (the viewer never derives them)
+//   extra.avwap  = { SYM: { anchor:'YYYY-MM-DD', points:[{ date, value }] } }
+//       anchored-VWAP series, anchored at `anchor`
+// Viewer rule: viewers (the web /backtest page and scripts/backtests/view-run.js)
+// plot these values VERBATIM — no recomputation, no second engine. Artifacts
+// without `extra` render exactly as before.
 //
 // Artifacts land in data/backtests/runs/<runId>/run.json and the lightweight
 // catalog data/backtests/runs/index.json is updated for listing.
@@ -128,7 +139,7 @@ function writeRunArtifact(input) {
     },
     notes = [],
     gates: gateOverrides = {},
-    extra = null, // optional structured payload (e.g. walk-forward folds)
+    extra = null, // optional structured payload (walk-forward folds, levels/avwap overlays — see header comment)
   } = input;
 
   if (

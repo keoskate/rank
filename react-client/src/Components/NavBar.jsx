@@ -30,6 +30,7 @@ const NavBar = () => {
     { path: '/analytics', label: 'Analytics' },
     { path: '/ab-testing', label: 'A/B Testing' },
     { path: '/walk-forward', label: 'Walk-Forward' },
+    { path: '/darkpool-diagnostics', label: 'Dark Pool' },
   ];
 
   const isActive = path => {

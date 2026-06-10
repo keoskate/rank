@@ -34,6 +34,7 @@ import SemiconductorDemoPage from './pages/SemiconductorDemoPage';
 const IntraDayCommandCenter = lazy(() => import('./pages/IntraDayCommandCenter'));
 import DataExplorer from './pages/DataExplorer';
 import SymbolInspector from './pages/SymbolInspector';
+import DarkPoolDiagnosticsPage from './pages/DarkPoolDiagnosticsPage';
 // Lazy-loaded — scanner page pulls in all its sub-components.
 const ProbabilityScannerPage = lazy(() => import('./pages/ProbabilityScannerPage'));
 
@@ -101,6 +102,10 @@ function App() {
                   />
                   <Route path="/data-explorer" element={<DataExplorer />} />
                   <Route path="/inspect" element={<SymbolInspector />} />
+                  <Route
+                    path="/darkpool-diagnostics"
+                    element={<DarkPoolDiagnosticsPage />}
+                  />
                   <Route path="/scanner" element={<ProbabilityScannerPage />} />
 
                   {/* Legacy routes (keep accessible) */}

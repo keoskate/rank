@@ -404,6 +404,54 @@ export function useTradingViewChart(options = {}) {
   }, []);
 
   /**
+   * Add VWAP standard-deviation bands as four dashed lines
+   * @param {string} id - Base identifier (series become `${id}-u1`, `-l1`, `-u2`, `-l2`)
+   * @param {object} bands - { upper1, lower1, upper2, lower2 } arrays of {time, value}
+   * @param {object} bandOptions - Optional { innerColor, outerUpperColor, outerLowerColor, lineWidth, title }
+   * @returns {Function} Remover that removeIndicator()s all four band series
+   */
+  const addVWAPBands = useCallback(
+    (id, bands = {}, bandOptions = {}) => {
+      const innerColor = bandOptions.innerColor || 'rgba(156, 163, 175, 0.6)';
+      const baseTitle = bandOptions.title || 'VWAP';
+      const specs = [
+        { key: 'upper1', suffix: '-u1', color: innerColor, sigma: '+1σ' },
+        { key: 'lower1', suffix: '-l1', color: innerColor, sigma: '-1σ' },
+        {
+          key: 'upper2',
+          suffix: '-u2',
+          color: bandOptions.outerUpperColor || 'rgba(239, 68, 68, 0.5)',
+          sigma: '+2σ',
+        },
+        {
+          key: 'lower2',
+          suffix: '-l2',
+          color: bandOptions.outerLowerColor || 'rgba(34, 197, 94, 0.5)',
+          sigma: '-2σ',
+        },
+      ];
+
+      const ids = [];
+      specs.forEach(spec => {
+        const data = bands[spec.key];
+        if (!Array.isArray(data) || data.length === 0) return;
+        const seriesId = `${id}${spec.suffix}`;
+        addEMALine(seriesId, data, {
+          color: spec.color,
+          lineWidth: bandOptions.lineWidth || 1,
+          lineStyle: 2, // Dashed
+          title: `${baseTitle} ${spec.sigma}`,
+          showLabel: false,
+        });
+        ids.push(seriesId);
+      });
+
+      return () => ids.forEach(seriesId => removeIndicator(seriesId));
+    },
+    [addEMALine, removeIndicator]
+  );
+
+  /**
    * Clear all indicators
    */
   const clearIndicators = useCallback(() => {
@@ -508,6 +556,7 @@ export function useTradingViewChart(options = {}) {
     addEMALine,
     addBollingerBands,
     addVWAP,
+    addVWAPBands,
     setTradeMarkers,
     addMarker,
     clearMarkers,

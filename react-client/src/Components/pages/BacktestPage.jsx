@@ -328,6 +328,8 @@ const BacktestPage = () => {
                 trades={run.trades}
                 symbol={symbol}
                 height={380}
+                levels={run.extra?.levels?.[symbol]}
+                avwap={run.extra?.avwap?.[symbol]}
               />
             )}
           </Card>
