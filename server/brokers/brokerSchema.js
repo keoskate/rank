@@ -85,6 +85,11 @@ const BROKER_DEFAULTS = {
     minBuyShare: 0.6, // buy-side share of premium to call it accumulation
     lookbackMinutes: 120, // how far back to aggregate prints
     scanner: false, // if true, watchlist auto-refreshes from biggest dark prints
+    // Classifier integrity guards (2026-06-01 audit fixes, darkPoolCore):
+    dropAtMid: true, // at-mid prints are negotiated crosses — indeterminate
+    maxSinglePrintShare: 0.25, // cap one print's premium weight (mega-print flips)
+    minPrints: 5, // require >= N prints on the dominant side
+    rthOnly: true, // ignore after-hours prints entirely
   },
   // Trend-following plugin tunables (strategy: trend-following).
   trend: {
@@ -332,6 +337,30 @@ function validateBroker(raw, filename = '') {
       darkpool.lookbackMinutes <= 1440,
     'darkpool.lookbackMinutes must be int 1..1440'
   );
+  pushIf(
+    errs,
+    typeof darkpool.maxSinglePrintShare === 'number' &&
+      darkpool.maxSinglePrintShare > 0 &&
+      darkpool.maxSinglePrintShare <= 1,
+    'darkpool.maxSinglePrintShare must be in (0, 1]'
+  );
+  pushIf(
+    errs,
+    Number.isInteger(darkpool.minPrints) &&
+      darkpool.minPrints >= 1 &&
+      darkpool.minPrints <= 100,
+    'darkpool.minPrints must be int 1..100'
+  );
+  pushIf(
+    errs,
+    typeof darkpool.dropAtMid === 'boolean',
+    'darkpool.dropAtMid must be a boolean'
+  );
+  pushIf(
+    errs,
+    typeof darkpool.rthOnly === 'boolean',
+    'darkpool.rthOnly must be a boolean'
+  );
 
   const selfImprovement = deepMerge(
     BROKER_DEFAULTS.selfImprovement,
@@ -451,6 +480,14 @@ function brokerToSessionConfig(broker, personaBody = '') {
       .lookbackMinutes,
     darkpoolScanner:
       (broker.darkpool || BROKER_DEFAULTS.darkpool).scanner === true,
+    // Classifier integrity guards (audit fixes — see quant-core darkPoolCore).
+    darkpoolDropAtMid:
+      (broker.darkpool || BROKER_DEFAULTS.darkpool).dropAtMid !== false,
+    darkpoolMaxSinglePrintShare: (broker.darkpool || BROKER_DEFAULTS.darkpool)
+      .maxSinglePrintShare,
+    darkpoolMinPrints: (broker.darkpool || BROKER_DEFAULTS.darkpool).minPrints,
+    darkpoolRthOnly:
+      (broker.darkpool || BROKER_DEFAULTS.darkpool).rthOnly !== false,
 
     // Trend-following plugin tunables
     trendRankBy: (broker.trend || BROKER_DEFAULTS.trend).rankBy,

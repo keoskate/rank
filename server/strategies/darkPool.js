@@ -41,6 +41,11 @@ async function evaluate(session, symbol, ctx) {
       lookbackMinutes,
       minPremium,
       minBuyShare,
+      // Classifier integrity guards (2026-06-01 audit fixes; darkPoolCore).
+      dropAtMid: cfg.darkpoolDropAtMid,
+      maxSinglePrintShare: cfg.darkpoolMaxSinglePrintShare,
+      minPrints: cfg.darkpoolMinPrints,
+      rthOnly: cfg.darkpoolRthOnly,
     });
     const reasons = [...(dp.reasons || [])];
 
@@ -77,6 +82,9 @@ async function evaluate(session, symbol, ctx) {
         sellPremium: dp.sellPremium,
         buyShare: dp.buyShare,
         prints: dp.printCount,
+        countShare: dp.countShare,
+        droppedAtMid: dp.droppedAtMid,
+        windowTruncated: dp.windowTruncated,
       },
       timestamp: new Date(),
       source: SLUG,
@@ -133,10 +141,15 @@ async function evaluate(session, symbol, ctx) {
 
 module.exports = {
   slug: SLUG,
+  // dropAtMid/rthOnly are deliberately NOT mutable: they are classifier
+  // integrity guards from the 2026-06-01 audit, and self-mutation must not
+  // be able to switch them off to chase a livelier signal.
   mutableFields: [
     'darkpool.lookbackMinutes',
     'darkpool.minPremium',
     'darkpool.minBuyShare',
+    'darkpool.maxSinglePrintShare',
+    'darkpool.minPrints',
   ],
   // Dark-pool accumulation plays out over a few sessions, not minutes — hold
   // a swing horizon rather than force-closing at the bell. (No backtest yet;

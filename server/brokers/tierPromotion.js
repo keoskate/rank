@@ -75,6 +75,84 @@ const DEFUND = {
   cooldownHours: 24,
 };
 
+// Validation gate (ROADMAP B6): event-driven sources trade on zero honest
+// evidence until the event-study harness validates them — they are sim-tier
+// hypotheses, not strategies. Even with passing aggregate stats AND a passing
+// edge gate, these sources cannot promote sim → paper without a fresh
+// VALIDATED verdict in data/backtests/validated-sources.json. That registry
+// is written ONLY by validation harnesses (eventStudy/validateStrategy
+// runners) — never hand-edited.
+const REQUIRES_EVENT_VALIDATION = new Set([
+  'dark-pool',
+  'options-flow',
+  'insider-following',
+]);
+const VALIDATION_MAX_AGE_DAYS = 90;
+const VALIDATED_SOURCES_PATH = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  'data',
+  'backtests',
+  'validated-sources.json'
+);
+const DARKPOOL_ARCHIVE_DIR = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  'data',
+  'darkpool-archive'
+);
+const EVENT_STUDY_MIN_ARCHIVE_DAYS = 60;
+
+function _loadValidatedSources() {
+  try {
+    return JSON.parse(fs.readFileSync(VALIDATED_SOURCES_PATH, 'utf8')) || {};
+  } catch {
+    return {};
+  }
+}
+
+function _archivedDarkPoolDays() {
+  try {
+    return fs
+      .readdirSync(DARKPOOL_ARCHIVE_DIR)
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Does this source clear the event-validation requirement for real money?
+ * Non-event sources pass trivially (their path is the five-gate pipeline).
+ */
+function evaluateValidationGate(source) {
+  if (!source || !REQUIRES_EVENT_VALIDATION.has(source)) {
+    return { pass: true, reason: 'not an event-validated source' };
+  }
+  const entry = _loadValidatedSources()[source];
+  if (entry && entry.verdict === 'VALIDATED' && entry.generatedAt) {
+    const ageDays =
+      (Date.now() - new Date(entry.generatedAt).getTime()) / 864e5;
+    if (ageDays <= VALIDATION_MAX_AGE_DAYS) {
+      return {
+        pass: true,
+        reason: `${source} VALIDATED ${entry.generatedAt.slice(0, 10)} (run ${entry.runId || 'n/a'})`,
+      };
+    }
+    return {
+      pass: false,
+      reason: `${source} validation is stale (${Math.round(ageDays)}d > ${VALIDATION_MAX_AGE_DAYS}d) — re-run the event study`,
+    };
+  }
+  let progress = 'awaiting event-study validation (ROADMAP B6)';
+  if (source === 'dark-pool') {
+    progress = `archive ${_archivedDarkPoolDays()}/${EVENT_STUDY_MIN_ARCHIVE_DAYS} days toward event-study eligibility`;
+  }
+  return { pass: false, reason: `${source} unvalidated — ${progress}` };
+}
+
 // ---------- ledger ----------
 
 async function _loadLedger() {
@@ -410,9 +488,19 @@ function evaluateBroker(broker, session, ledger) {
       days >= PROMOTE.minDays;
 
     if (meetsAggregate && edge.pass) {
+      // Event-driven sources additionally need a fresh VALIDATED verdict from
+      // the event-study harness — sim stats alone cannot put them on paper.
+      const validation = evaluateValidationGate(edge.source);
+      if (!validation.pass) {
+        return {
+          action: 'hold',
+          reason: `sim — validation gate blocked promotion: ${validation.reason}`,
+          metrics,
+        };
+      }
       return {
         action: 'promote',
-        reason: `sharpe=${sharpe.toFixed(2)} wr=${(winRate * 100).toFixed(1)}% dd=${maxDD.toFixed(1)}% trades=${totalTrades} days=${days.toFixed(1)} | edge ${edge.reason}`,
+        reason: `sharpe=${sharpe.toFixed(2)} wr=${(winRate * 100).toFixed(1)}% dd=${maxDD.toFixed(1)}% trades=${totalTrades} days=${days.toFixed(1)} | edge ${edge.reason} | ${validation.reason}`,
         metrics,
       };
     }
@@ -760,11 +848,14 @@ module.exports = {
   DEMOTE,
   FIRE,
   EDGE_GATE,
+  REQUIRES_EVENT_VALIDATION,
+  VALIDATED_SOURCES_PATH,
   LEDGER_PATH,
   computeSharpe,
   daysSinceStart,
   aggregateBySource,
   evaluateEdgeGate,
+  evaluateValidationGate,
   evaluateBroker,
   runTierEvaluation,
   getLedger,

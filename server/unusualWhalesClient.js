@@ -15,6 +15,8 @@
  * the key is absent so the plugin can no-op instead of throwing.
  */
 
+const { darkPoolCore } = require('@keo/quant-core');
+
 const API_BASE_URL = 'https://api.unusualwhales.com';
 
 // In-memory cache. Flow is bursty but we only need a fresh-enough snapshot;
@@ -422,19 +424,25 @@ async function getDarkPoolPrints(symbol, ttlMs = 60 * 1000) {
 }
 
 /**
- * Analyze dark-pool prints into a directional accumulation signal. A print is
- * classified buy-side vs sell-side by where it executed relative to the NBBO
- * midpoint (above mid = buyer-initiated accumulation, below = distribution).
+ * Analyze dark-pool prints into a directional accumulation signal.
+ *
+ * Thin fetch+translate wrapper: ALL classification lives in
+ * @keo/quant-core darkPoolCore.classifyDarkPool (the shared-core contract —
+ * the B6 event-study replays data/darkpool-archive/ through the identical
+ * function). Implements the 2026-06-01 audit fixes: at-mid and missing-NBBO
+ * prints dropped, per-print premium cap, count-majority + minPrints,
+ * RTH-only guard, cap-aware windowTruncated flag.
  *
  * @param {string} symbol
- * @param {object} opts { lookbackMinutes=120, minPremium=1000000, minBuyShare=0.6 }
+ * @param {object} opts { lookbackMinutes=120, minPremium=1000000,
+ *   minBuyShare=0.6, dropAtMid=true, maxSinglePrintShare=0.25, minPrints=5,
+ *   rthOnly=true }
  * @returns {object} { configured, symbol, sentiment, score, buyPremium,
- *   sellPremium, totalPremium, buyShare, printCount, lastPrice, reasons }
+ *   sellPremium, totalPremium, buyShare, printCount, lastPrice, reasons,
+ *   buyCount, sellCount, countShare, atMidPremium, droppedAtMid,
+ *   droppedNoNbbo, droppedAfterHours, windowTruncated }
  */
 async function analyzeDarkPool(symbol, opts = {}) {
-  const lookbackMinutes = opts.lookbackMinutes ?? 120;
-  const minPremium = opts.minPremium ?? 1_000_000;
-  const minBuyShare = opts.minBuyShare ?? 0.6;
   if (!isConfigured()) {
     return {
       configured: false,
@@ -445,82 +453,38 @@ async function analyzeDarkPool(symbol, opts = {}) {
   }
 
   const prints = await getDarkPoolPrints(symbol);
-  if (!prints.length) {
-    return {
-      configured: true,
-      symbol,
-      sentiment: 'neutral',
-      score: 0,
-      printCount: 0,
-      reasons: ['no dark pool prints'],
-    };
-  }
-
-  const cutoff = Date.now() - lookbackMinutes * 60 * 1000;
-  let buyPremium = 0;
-  let sellPremium = 0;
-  let printCount = 0;
-  let lastPrice = 0;
-  for (const p of prints) {
-    const ts = p.executed_at ? Date.parse(p.executed_at) : NaN;
-    if (Number.isFinite(ts) && ts < cutoff) continue;
-    const prem = _num(p.premium);
-    if (prem <= 0) continue;
-    printCount++;
-    if (lastPrice === 0) lastPrice = _num(p.price); // newest first
-    const price = _num(p.price);
-    const ask = _num(p.nbbo_ask);
-    const bid = _num(p.nbbo_bid);
-    const mid = ask > 0 && bid > 0 ? (ask + bid) / 2 : price;
-    if (price >= mid) buyPremium += prem;
-    else sellPremium += prem;
-  }
-
-  const totalPremium = buyPremium + sellPremium;
-  if (totalPremium <= 0) {
-    return {
-      configured: true,
-      symbol,
-      sentiment: 'neutral',
-      score: 0,
-      printCount,
-      lastPrice,
-      reasons: [`no dark pool premium in last ${lookbackMinutes}m`],
-    };
-  }
-
-  const buyShare = buyPremium / totalPremium;
-  const bullish = buyShare >= minBuyShare && totalPremium >= minPremium;
-  const sentiment = bullish
-    ? 'bullish'
-    : buyShare <= 1 - minBuyShare && totalPremium >= minPremium
-      ? 'bearish'
-      : 'neutral';
-
-  const shareStrength = Math.min(Math.max((buyShare - 0.5) / 0.4, 0), 1);
-  const premStrength = Math.min(
-    Math.log10(totalPremium) / Math.log10(50_000_000),
-    1
-  );
-  const score = bullish
-    ? Math.min(0.5 * shareStrength + 0.4 * premStrength + 0.1, 1)
-    : 0;
+  const r = darkPoolCore.classifyDarkPool(prints, {
+    asOf: Date.now(),
+    lookbackMinutes: opts.lookbackMinutes,
+    minPremium: opts.minPremium,
+    minBuyShare: opts.minBuyShare,
+    dropAtMid: opts.dropAtMid,
+    maxSinglePrintShare: opts.maxSinglePrintShare,
+    minPrints: opts.minPrints,
+    rthOnly: opts.rthOnly,
+  });
 
   return {
     configured: true,
     symbol: symbol.toUpperCase(),
-    sentiment,
-    score,
-    buyPremium,
-    sellPremium,
-    totalPremium,
-    buyShare,
-    printCount,
-    lastPrice,
-    reasons: [
-      `dark pool buy $${Math.round(buyPremium).toLocaleString()} vs sell $${Math.round(sellPremium).toLocaleString()} (${(buyShare * 100).toFixed(0)}% buy)`,
-      `${printCount} prints/${lookbackMinutes}m`,
-    ],
+    sentiment: r.sentiment,
+    score: r.score,
+    buyPremium: r.buyPremium,
+    sellPremium: r.sellPremium,
+    totalPremium: r.totalPremium,
+    buyShare: r.buyShare,
+    printCount: r.printCount,
+    buyCount: r.buyCount,
+    sellCount: r.sellCount,
+    countShare: r.countShare,
+    atMidPremium: r.atMidPremium,
+    droppedAtMid: r.droppedAtMid,
+    droppedNoNbbo: r.droppedNoNbbo,
+    droppedAfterHours: r.droppedAfterHours,
+    windowTruncated: r.windowTruncated,
+    // lastPrice is now NEVER an after-hours print (audit #5).
+    lastPrice: r.lastRthPrice,
+    reasons: r.reasons,
   };
 }
 
