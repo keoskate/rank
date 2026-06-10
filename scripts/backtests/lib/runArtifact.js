@@ -128,6 +128,7 @@ function writeRunArtifact(input) {
     },
     notes = [],
     gates: gateOverrides = {},
+    extra = null, // optional structured payload (e.g. walk-forward folds)
   } = input;
 
   if (
@@ -227,6 +228,7 @@ function writeRunArtifact(input) {
     reconciliation,
     bars,
     notes,
+    ...(extra ? { extra } : {}),
   };
 
   const dir = path.join(RUNS_DIR, runId);

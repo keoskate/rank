@@ -13,6 +13,9 @@ const technicalIndicators = require('./technicalIndicatorsService');
 const RegimeDetector = require('./regimeDetector');
 const shannonEntropy = require('./shannonEntropy');
 const equityStats = require('./equityStats');
+const entropyGateCore = require('./entropyGateCore');
+const walkForward = require('./walkForward');
+const significance = require('./significance');
 
 module.exports = {
   // Re-exported for `const { getEtfLeverage, isMarketOpen, calculateRSI } = require('@keo/quant-core')`
@@ -33,4 +36,12 @@ module.exports = {
   // Equity-curve statistics (Sharpe, drawdown, CAGR) — the one definition
   // every backtest and report must use.
   equityStats,
+
+  // The entropy-gate decision shared by live trading and backtests
+  // (faithfulness contract: one core, zero divergence).
+  entropyGateCore,
+
+  // Walk-forward OOS evaluation + multiple-testing-aware significance.
+  walkForward,
+  significance,
 };

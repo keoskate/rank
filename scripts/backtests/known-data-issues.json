@@ -1,0 +1,28 @@
+{
+  "_readme": [
+    "Evidence-backed waivers for the data-integrity gate. A waiver downgrades a",
+    "specific finding from FAIL to WARN — it never deletes it; waived findings",
+    "stay visible in every artifact. Every entry must say what was verified and",
+    "how. Do NOT add a waiver to make a backtest pass; add it because you",
+    "checked the underlying data and documented why the flag is a false alarm",
+    "(or which vendor is wrong)."
+  ],
+  "issues": [
+    {
+      "symbol": "META",
+      "contains": "cross-source",
+      "status": "known-bad-source",
+      "note": "Polygon 'META' before 2022-06 is the Roundhill Ball Metaverse ETF (~$16), not Facebook/Meta Platforms — ticker was reassigned and Polygon stitches the wrong security's history. Verified 2026-06-10: Polygon META 2021-11-26 = $16.01 vs Alpaca $330.53; Facebook actually traded ~$330 then. Alpaca side is correct; do NOT use Polygon for META history pre-2022-06.",
+      "verified": "2026-06-10, manual cross-check of both vendors against known FB price history",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "AMD",
+      "contains": "2016-04-22",
+      "status": "verified-real-event",
+      "note": "AMD +52.3% on 2016-04-22 ($2.62 -> $3.99) is the real market reaction to the China THATIC x86 JV + Q1'16 results announced 2016-04-21 after hours. Raw and adjusted series agree exactly (no adjustment factor shift), confirming it is not a data fault.",
+      "verified": "2026-06-10, raw==adjusted agreement + historical record",
+      "addedBy": "data-integrity gate investigation"
+    }
+  ]
+}
