@@ -134,15 +134,49 @@ describe('reference comparison: pass-through wrappers must match upstream exactl
     expect(ours).toEqual(ref);
   });
 
-  it('VWAP ≡ ti.VWAP.calculate', () => {
-    const ours = indicators.calculateVWAP(candles);
-    const ref = ti.VWAP.calculate({
-      high: candles.map(c => c.high),
-      low: candles.map(c => c.low),
-      close: candles.map(c => c.close),
-      volume: candles.map(c => c.volume),
+  // VWAP is intentionally NOT a whole-window pass-through: our wrapper resets
+  // per ET session, because the engine feeds multi-day 5-min windows and a
+  // cumulative VWAP anchored to a prior day's open corrupts the mandatory
+  // `belowVwap` entry gate (see calculateVWAP's doc comment). The fixture
+  // starts at 17:13 ET and crosses ET midnight, so the old whole-window
+  // comparison against upstream's single cumulative VWAP asserted a wrong
+  // contract — that, not upstream float drift, was the ROADMAP D13 failure.
+  const etDay = ts =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(ts));
+
+  const tiVwap = seg =>
+    ti.VWAP.calculate({
+      high: seg.map(c => c.high),
+      low: seg.map(c => c.low),
+      close: seg.map(c => c.close),
+      volume: seg.map(c => c.volume),
     });
-    expect(ours).toEqual(ref);
+
+  it('VWAP within a single ET session ≡ ti.VWAP.calculate (bit-exact)', () => {
+    const firstDay = etDay(candles[0].timestamp);
+    const seg = candles.filter(c => etDay(c.timestamp) === firstDay);
+    // Fixture sanity: a real segment, and the window does span ET midnight.
+    expect(seg.length).toBeGreaterThan(10);
+    expect(seg.length).toBeLessThan(candles.length);
+    expect(indicators.calculateVWAP(seg)).toEqual(tiVwap(seg));
+  });
+
+  it('VWAP across sessions ≡ per-ET-day ti.VWAP segments concatenated (session-reset contract)', () => {
+    const ref = [];
+    let i = 0;
+    while (i < candles.length) {
+      const day = etDay(candles[i].timestamp);
+      let j = i;
+      while (j < candles.length && etDay(candles[j].timestamp) === day) j++;
+      ref.push(...tiVwap(candles.slice(i, j)));
+      i = j;
+    }
+    expect(indicators.calculateVWAP(candles)).toEqual(ref);
   });
 });
 

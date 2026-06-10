@@ -17,6 +17,9 @@ const entropyGateCore = require('./entropyGateCore');
 const trendCore = require('./trendCore');
 const walkForward = require('./walkForward');
 const significance = require('./significance');
+const anchoredVwap = require('./anchoredVwap');
+const volumeProfile = require('./volumeProfile');
+const darkPoolCore = require('./darkPoolCore');
 
 module.exports = {
   // Re-exported for `const { getEtfLeverage, isMarketOpen, calculateRSI } = require('@keo/quant-core')`
@@ -49,4 +52,16 @@ module.exports = {
   // Walk-forward OOS evaluation + multiple-testing-aware significance.
   walkForward,
   significance,
+
+  // Anchored VWAP — the one VWAP-aggregation definition (AVWAP trials +
+  // the execution benchmark's fill-vs-VWAP residuals).
+  anchoredVwap,
+
+  // Volume profile with 70% value area — the one profile implementation
+  // (research trials + the /api/volume-profile chart endpoint).
+  volumeProfile,
+
+  // The dark-pool print classifier shared by the live UW wrapper and the
+  // B6 event-study replay of data/darkpool-archive/ (audit-fix spec).
+  darkPoolCore,
 };

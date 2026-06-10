@@ -30,9 +30,13 @@ multiple-testing significance.
    `node scripts/backtests/validate-trend.js` monthly; the verdict updates
    itself. No new trials = the bar stops rising.
 2. **Execution-faithfulness monitor.** Decision faithfulness is certified;
-   execution is emulated. Monthly: diff the broker's sim ledger against the
-   backtest's expected trades over the same window; quantify the
-   intraday-vs-close residual in bps. This number is the promotion gate.
+   execution is emulated. Monthly: run
+   `node scripts/monitorExecutionFaithfulness.js` (built 2026-06-10, manifest
+   D5) to diff the broker's sim ledger against the backtest's expected trades
+   over the live window; it quantifies the intraday-vs-close residual in bps.
+   This number is the promotion gate. PRE-REGISTERED tolerance: promotion
+   discussion requires decision-match >= 95% and median |residual| <=
+   25bps/trade over >= 4 consecutive weeks.
 3. **Promotion rule (write it down before it's needed):** trend-follower goes
    sim → paper only when (a) DSR ≥ 95% on updated OOS, and (b) sim-vs-backtest
    execution drift < agreed bps for 4+ consecutive weeks. No discretionary
@@ -77,7 +81,12 @@ multiple-testing significance.
 12. Surface verdicts everywhere decisions are made: broker:status, the
     Exchange Floor TUI, and the morning brief should show each broker's
     validation verdict next to its P&L.
-13. Pre-existing `reference.test.js` VWAP failure (upstream float drift).
+13. ~~Pre-existing `reference.test.js` VWAP failure (upstream float drift).~~
+    **RESOLVED 2026-06-10**: root cause was a wrong test contract, not float
+    drift — the fixture spans ET midnight while `calculateVWAP` intentionally
+    resets per ET session (that reset guards the live `belowVwap` gate). The
+    test now asserts bit-exact parity within a single session and the
+    session-reset contract across sessions. `calculateVWAP` unchanged.
 14. ~~Gate-5 variance estimator needs a principled revision.~~ **RESOLVED
     2026-06-10** (see data/reports/gate5-revision-2026-06.md): the bar now
     uses null-noise dispersion (sd of a skill-less Sharpe at the ledger's
