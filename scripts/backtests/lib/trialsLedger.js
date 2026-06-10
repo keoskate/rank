@@ -24,7 +24,11 @@ function _load() {
 
 /**
  * Record evaluated trials. Each entry: { family, strategyId, params,
- * sharpe (annualized, in-sample full period), window, kind }.
+ * sharpe (annualized, in-sample full period), window, kind,
+ * oosFingerprint? }. oosFingerprint is optional (array of weekly compounded
+ * OOS returns) and is stored verbatim — pre-registered input for the future
+ * gate-5 effective-N study (data/reports/gate5-effectiveN-preregistration-
+ * 2026-06.md); legacy rows without it are counted as fully independent there.
  * Dedupes by (family, strategyId, paramsKey) — re-running the same variant
  * updates its row instead of inflating N.
  */
@@ -34,7 +38,13 @@ function recordTrials(entries) {
     `${e.family}|${e.strategyId}|${JSON.stringify(e.params || {})}`;
   const byKey = new Map(ledger.trials.map(t => [keyOf(t), t]));
   for (const e of entries) {
-    byKey.set(keyOf(e), { ...e, recordedAt: new Date().toISOString() });
+    const row = { ...e, recordedAt: new Date().toISOString() };
+    // Optional field: keep only well-formed fingerprints so a bad caller can
+    // never corrupt the ledger schema; absent/invalid means "not stored".
+    if (row.oosFingerprint != null && !Array.isArray(row.oosFingerprint)) {
+      delete row.oosFingerprint;
+    }
+    byKey.set(keyOf(e), row);
   }
   ledger.trials = [...byKey.values()];
   fs.mkdirSync(path.dirname(LEDGER_PATH), { recursive: true });

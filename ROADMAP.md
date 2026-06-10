@@ -100,6 +100,18 @@ multiple-testing significance.
     reach it with more time alone. Either improve the strategy (C7 breadth)
     or deliberately re-set the promotion criterion (e.g. 4/5 gates + K months
     of in-tolerance forward sim). Owner's call; must not be changed silently.
+    UPDATE 2026-06-10 night: the attribution finding (D16) reframes this —
+    a beta-dominated long book can never clear raw DSR; the criterion should
+    weigh Calmar/drawdown delta vs the passive control + forward-sim
+    tracking. Still the owner's call.
+16. **PRE-REGISTERED (2026-06-10 night, placebo-alarm finding): benchmark
+    reform of the OOS gate.** Passive same-universe EW scores OOS Sharpe
+    0.85 on the trend universe — ~95% of the flagship's Sharpe is
+    diversified drift; SPY benchmarking flattered every spec. Amendment (own
+    session, discipline rule, all verdicts re-run, before/after published):
+    the OOS gate judges against the declared passive same-universe control,
+    on incremental Sharpe AND Calmar (trend's real edge: maxDD −22.8% vs
+    −29.8%, Calmar 0.69 vs 0.45). See data/reports/overnight-2026-06-10.md.
 
 ## Operating rules (unchanged, non-negotiable)
 

@@ -43,6 +43,24 @@ function _loadCertification(name) {
   }
 }
 
+// Weekly OOS fingerprint (pre-registered 2026-06-10, manifest N5): compound
+// every 5 consecutive stitched-OOS daily returns into one weekly return, keep
+// at most the most recent 150 weeks, round to 6dp. Stored on each ledger
+// trial so the future effective-N study can correlate trials without
+// re-running sims; trials recorded before this field exists are counted as
+// fully independent there (conservative). See
+// data/reports/gate5-effectiveN-preregistration-2026-06.md.
+function _oosFingerprint(returns) {
+  if (!Array.isArray(returns)) return null;
+  const weeks = [];
+  for (let i = 0; i + 5 <= returns.length; i += 5) {
+    let acc = 1;
+    for (let j = i; j < i + 5; j++) acc *= 1 + (returns[j] || 0);
+    weeks.push(Number((acc - 1).toFixed(6)));
+  }
+  return weeks.length ? weeks.slice(-150) : null;
+}
+
 /**
  * @param {object} spec
  * @param {string} spec.family            e.g. 'trend-following'
@@ -84,6 +102,15 @@ async function validateStrategy(spec) {
   // ---------- data ----------
   log(`[data] loading ${universe.length} symbols (alpaca adjusted, ${start}+)`);
   const { bars, integrity } = await loadDailyBars(universe, { start, end });
+  // Loud failure on silent universe shrink (night-review finding): a symbol
+  // whose fetch failed would otherwise just vanish from the sim AND from
+  // gate 1, producing a wrong number for a pre-registered universe.
+  const missing = universe.filter(s => !bars[s] || !bars[s].length);
+  if (missing.length) {
+    throw new Error(
+      `universe incomplete — fetch failed for: ${missing.join(', ')} (refusing to run a silently-shrunken universe)`
+    );
+  }
   const dates = buildCalendar(bars, bars.SPY ? 'SPY' : universe[0]);
   const series = alignCloses(bars, dates);
 
@@ -210,7 +237,10 @@ async function validateStrategy(spec) {
 
   // ---------- gate 5: multiple testing (deflated Sharpe) ----------
   log('[gate 5/5] multiple-testing deflation…');
-  // record every grid point as a trial BEFORE deflating — honest N
+  // record every grid point as a trial BEFORE deflating — honest N.
+  // All grid rows of one run share the run's chosen-path OOS fingerprint:
+  // the effective-N study treats a grid as one bet by design.
+  const oosFingerprint = _oosFingerprint(wfResult.oos.returns);
   recordTrials(
     wfResult.inSample.table.map(row => ({
       family,
@@ -218,7 +248,8 @@ async function validateStrategy(spec) {
       params: row.params,
       sharpe: row.stats ? row.stats.sharpe : null,
       window: { start: dates[0], end: dates[dates.length - 1] },
-      kind: 'grid',
+      kind: spec.trialKind || 'grid',
+      oosFingerprint,
     }))
   );
   const ledger = trialStats(); // global: how many strategies have we tried
