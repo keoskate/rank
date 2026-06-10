@@ -58,8 +58,14 @@ risk:
   kellyFraction: 0.25
   maxPositions: 9
   maxPositionSizePercent: 11
+# Entropy gate DISABLED 2026-06-10: re-validation on the certified shared
+# core (clean 2016+ data, net of costs) found NO significant expectancy edge
+# from any gate variant (all p >= 0.6, n up to 5,881 trades) — see
+# data/backtests/certifications/entropy-gate-effect.json. With
+# preferred: low-entropy it was silently vetoing ~47% of entry days for
+# nothing. Re-enable only with a verdict that says otherwise.
 regime:
-  enabled: true
+  enabled: false
   entropyWindows:
     - 21
     - 63
