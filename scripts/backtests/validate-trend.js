@@ -77,7 +77,12 @@ const DEPLOYED = {
  * slots with the highest-momentum eligible names at 20% of current equity
  * (or remaining cash).
  */
-function simulateDeployed({ dates, series, bars }, params, costMultiplier) {
+function simulateDeployed(
+  { dates, series, bars },
+  params,
+  costMultiplier,
+  universe = UNIVERSE
+) {
   const { smaWindow, momLookback, momSkip, maxPositions, sizePct } = params;
 
   // Per-symbol clean closes + map from calendar index -> "bars through that
@@ -85,7 +90,7 @@ function simulateDeployed({ dates, series, bars }, params, costMultiplier) {
   // would poison the SMA).
   const clean = {};
   const upTo = {}; // upTo[sym][i] = number of completed bars at calendar day i
-  for (const sym of UNIVERSE) {
+  for (const sym of universe) {
     if (!bars[sym]) continue;
     clean[sym] = bars[sym].map(b => b.close);
     const dateIdx = new Map(bars[sym].map((b, k) => [b.date, k]));
@@ -355,7 +360,13 @@ async function main() {
   console.log(`view:                  npm run backtest:view ${instRunId}`);
 }
 
-main().catch(e => {
-  console.error(e);
-  process.exit(1);
-});
+// Exported so spec variants (e.g. validate-trend-breadth.js) run the SAME
+// portfolio engine — one implementation, no drift between spec tests.
+module.exports = { simulateDeployed, DEPLOYED, UNIVERSE, CAPITAL };
+
+if (require.main === module) {
+  main().catch(e => {
+    console.error(e);
+    process.exit(1);
+  });
+}

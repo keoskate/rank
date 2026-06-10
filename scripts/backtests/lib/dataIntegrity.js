@@ -129,13 +129,31 @@ function checkAdjustmentConsistency(adjBars, rawCloses) {
  *       adjustment conventions anchor to the actual traded price — catches
  *       wrong-scale contamination outright.
  */
-async function checkCrossSource(polygonClient, symbol, adjBars) {
+async function checkCrossSource(polygonClient, symbol, adjBars, rawCloses) {
   const overlap = adjBars.filter(b => b.date >= '2021-07-01');
   if (overlap.length < 50) {
     return {
       level: 'warn',
       issues: ['no Polygon overlap window to cross-check'],
     };
+  }
+  // Dates where the raw/adjusted factor shifts >1% are corporate actions
+  // (dividends/splits). Alpaca-adjusted vs Polygon-split-only returns
+  // legitimately diverge across them (e.g. DBC's ~4.7% annual distribution),
+  // so return windows straddling one are skipped, not flagged.
+  const factorShiftDates = new Set();
+  if (rawCloses && rawCloses.length) {
+    const rawByDate = new Map(rawCloses.map(b => [b.date, b.close]));
+    let prevRatio = null;
+    for (const b of adjBars) {
+      const raw = rawByDate.get(b.date);
+      if (raw == null) continue;
+      const ratio = raw / b.close;
+      if (prevRatio != null && Math.abs(ratio / prevRatio - 1) > 0.01) {
+        factorShiftDates.add(b.date);
+      }
+      prevRatio = ratio;
+    }
   }
   try {
     const start = overlap[0].date;
@@ -179,6 +197,10 @@ async function checkCrossSource(polygonClient, symbol, adjBars) {
       const p0 = pByDate.get(a0.date);
       const p1 = pByDate.get(a1.date);
       if (!(p0 > 0) || !(p1 > 0)) continue;
+      // skip windows straddling a corporate action (see factorShiftDates)
+      if (overlap.slice(i + 1, i + 6).some(b => factorShiftDates.has(b.date))) {
+        continue;
+      }
       checked++;
       const aRet = a1.close / a0.close - 1;
       const pRet = p1 / p0 - 1;
@@ -283,7 +305,7 @@ async function runDataIntegrityGate(bars, opts = {}) {
 
     // cross-source
     if (polygonClient) {
-      const cross = await checkCrossSource(polygonClient, sym, adj);
+      const cross = await checkCrossSource(polygonClient, sym, adj, raw);
       if (cross.level !== 'pass') add(cross.level, cross.issues);
       await sleep(150);
     } else {

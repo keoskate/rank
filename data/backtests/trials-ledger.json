@@ -1142,6 +1142,25 @@
       },
       "kind": "grid",
       "recordedAt": "2026-06-10T06:34:26.901Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-breadth23-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 252,
+        "momSkip": 21,
+        "maxPositions": 5,
+        "sizePct": 0.2,
+        "universe": "breadth23"
+      },
+      "sharpe": 0.843431506800333,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:38:19.250Z"
     }
   ]
 }
