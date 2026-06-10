@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-06-10T04:39:51.644Z",
+  "reference": "SOXX",
+  "window": {
+    "start": "2017-01-05",
+    "end": "2026-06-05"
+  },
+  "daysTested": 2367,
+  "data": {
+    "source": "alpaca",
+    "adjustment": "all"
+  },
+  "configs": [
+    {
+      "config": "low-entropy+transitionBlock",
+      "daysTested": 2367,
+      "agreement": 1,
+      "blockRate": 0.4735952682720744,
+      "transitionRate": 0.0021123785382340513,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "high-entropy+transitionBlock",
+      "daysTested": 2367,
+      "agreement": 1,
+      "blockRate": 0.9970426700464723,
+      "transitionRate": 0.0021123785382340513,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "any+transitionBlock",
+      "daysTested": 2367,
+      "agreement": 1,
+      "blockRate": 0.0021123785382340513,
+      "transitionRate": 0.0021123785382340513,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "low-entropy,noTransitionBlock",
+      "daysTested": 2367,
+      "agreement": 1,
+      "blockRate": 0.4735952682720744,
+      "transitionRate": 0.0021123785382340513,
+      "divergences": [],
+      "pass": true
+    }
+  ],
+  "certified": true
+}

@@ -1,0 +1,446 @@
+{
+  "trials": [
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "smaLen": 100
+      },
+      "sharpe": 1.0723428119109104,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "smaLen": 150
+      },
+      "sharpe": 1.0934018199462936,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "smaLen": 200
+      },
+      "sharpe": 0.9216068336934862,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "smaLen": 250
+      },
+      "sharpe": 0.7825312740493975,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "fast": 50,
+        "slow": 200
+      },
+      "sharpe": 0.7223211543835115,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "smaLen": 100
+      },
+      "sharpe": 0.9564544664065624,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "smaLen": 150
+      },
+      "sharpe": 1.06210124224621,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "smaLen": 200
+      },
+      "sharpe": 1.0701333602834617,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "smaLen": 250
+      },
+      "sharpe": 1.0145196130392233,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "index-trend-filter-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "fast": 50,
+        "slow": 200
+      },
+      "sharpe": 0.995272584929904,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:44:27.089Z"
+    },
+    {
+      "family": "xs-momentum",
+      "strategyId": "top-momentum-WF-OOS",
+      "params": {
+        "lookback": 126,
+        "skip": 21,
+        "topN": 5
+      },
+      "sharpe": 0.9799073774089431,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:49:00.708Z"
+    },
+    {
+      "family": "xs-momentum",
+      "strategyId": "top-momentum-WF-OOS",
+      "params": {
+        "lookback": 126,
+        "skip": 21,
+        "topN": 9
+      },
+      "sharpe": 1.031235954731383,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:49:00.708Z"
+    },
+    {
+      "family": "xs-momentum",
+      "strategyId": "top-momentum-WF-OOS",
+      "params": {
+        "lookback": 126,
+        "skip": 21,
+        "topN": 14
+      },
+      "sharpe": 1.122735078637018,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:49:00.708Z"
+    },
+    {
+      "family": "xs-momentum",
+      "strategyId": "top-momentum-WF-OOS",
+      "params": {
+        "lookback": 252,
+        "skip": 21,
+        "topN": 5
+      },
+      "sharpe": 1.108847370397956,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:49:00.708Z"
+    },
+    {
+      "family": "xs-momentum",
+      "strategyId": "top-momentum-WF-OOS",
+      "params": {
+        "lookback": 252,
+        "skip": 21,
+        "topN": 9
+      },
+      "sharpe": 0.985433466207121,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:49:00.708Z"
+    },
+    {
+      "family": "xs-momentum",
+      "strategyId": "top-momentum-WF-OOS",
+      "params": {
+        "lookback": 252,
+        "skip": 21,
+        "topN": 14
+      },
+      "sharpe": 1.0366632195095353,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T04:49:00.708Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 252,
+        "momSkip": 21,
+        "maxPositions": 5,
+        "sizePct": 0.2
+      },
+      "sharpe": 0.8714208228557373,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T05:10:36.818Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 150,
+        "momLookback": 126,
+        "maxPositions": 3
+      },
+      "sharpe": 0.8255018595204576,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 150,
+        "momLookback": 126,
+        "maxPositions": 5
+      },
+      "sharpe": 0.8556660805780592,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 150,
+        "momLookback": 252,
+        "maxPositions": 3
+      },
+      "sharpe": 0.7886684601227816,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 150,
+        "momLookback": 252,
+        "maxPositions": 5
+      },
+      "sharpe": 0.8211055780542147,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 126,
+        "maxPositions": 3
+      },
+      "sharpe": 0.8417395376332433,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 126,
+        "maxPositions": 5
+      },
+      "sharpe": 0.8734969622604497,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 252,
+        "maxPositions": 3
+      },
+      "sharpe": 0.8851845788460149,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 250,
+        "momLookback": 126,
+        "maxPositions": 3
+      },
+      "sharpe": 0.8653948896711543,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 250,
+        "momLookback": 126,
+        "maxPositions": 5
+      },
+      "sharpe": 0.8617551924,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 250,
+        "momLookback": 252,
+        "maxPositions": 3
+      },
+      "sharpe": 0.7909791702764896,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-WF-OOS",
+      "params": {
+        "smaWindow": 250,
+        "momLookback": 252,
+        "maxPositions": 5
+      },
+      "sharpe": 0.8667638268700986,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T05:10:37.471Z"
+    }
+  ]
+}

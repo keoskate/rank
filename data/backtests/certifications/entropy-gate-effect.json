@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-06-10T04:51:05.419Z",
+  "window": {
+    "start": "2016-01-04",
+    "end": "2026-06-07"
+  },
+  "data": "alpaca adjusted (validated path)",
+  "regimeCore": "quant-core entropyGateCore (certified vs live)",
+  "costs": "bpsPerSide round-trip per trade",
+  "harness": {
+    "signal": "5d breakout",
+    "tp": 8,
+    "sl": 4,
+    "holdBars": 10,
+    "symbols": [
+      "SOXL",
+      "SOXS",
+      "TQQQ",
+      "SQQQ",
+      "SPXL",
+      "NVDA",
+      "AMD",
+      "QQQ"
+    ],
+    "reference": "SOXX"
+  },
+  "rows": [
+    {
+      "variant": "A_none",
+      "n": 5881,
+      "expectancyNet": 0.00297657956280997,
+      "winRate": 0.44533242645808535,
+      "deltaVsBaseline": null,
+      "welchT": null,
+      "pValue": null
+    },
+    {
+      "variant": "B_low",
+      "n": 2949,
+      "expectancyNet": 0.002688651600061892,
+      "winRate": 0.4503221430993557,
+      "deltaVsBaseline": -0.0002879279627480782,
+      "welchT": -0.25035456734968276,
+      "pValue": 0.8023132639755477
+    },
+    {
+      "variant": "C_high",
+      "n": 12,
+      "expectancyNet": 0.012041664590496111,
+      "winRate": 0.5,
+      "deltaVsBaseline": 0.00906508502768614,
+      "welchT": 0.5216330478529182,
+      "pValue": 0.6019258128529232
+    },
+    {
+      "variant": "D_noTransition",
+      "n": 5308,
+      "expectancyNet": 0.002747102368980586,
+      "winRate": 0.44253956292388846,
+      "deltaVsBaseline": -0.00022947719382938403,
+      "welchT": -0.23531332858723014,
+      "pValue": 0.8139656393600407
+    },
+    {
+      "variant": "E_neutral",
+      "n": 2347,
+      "expectancyNet": 0.0027730233621136424,
+      "winRate": 0.43246697912228377,
+      "deltaVsBaseline": -0.00020355620069632775,
+      "welchT": -0.15952040000503648,
+      "pValue": 0.8732588642831407
+    }
+  ],
+  "verdict": "NO statistically significant expectancy edge from any gate variant (net of costs, certified core, 2016+ data)"
+}

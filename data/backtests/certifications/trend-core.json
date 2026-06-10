@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-06-10T05:10:30.524Z",
+  "window": {
+    "start": "2016-01-04",
+    "end": "2026-06-07"
+  },
+  "symbols": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "XLK",
+    "SMH",
+    "XLF",
+    "XLE",
+    "XLV",
+    "XLY",
+    "XLP",
+    "XLI",
+    "XLU",
+    "XLB",
+    "XLRE",
+    "XLC",
+    "EEM",
+    "EFA"
+  ],
+  "configs": [
+    {
+      "config": "deployed-defaults",
+      "comparisons": 41879,
+      "uptrendRate": 0.6749444829150648,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "sma150-mom126",
+      "comparisons": 8390,
+      "uptrendRate": 0.6365911799761621,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "sma250",
+      "comparisons": 8390,
+      "uptrendRate": 0.6973778307508939,
+      "divergences": [],
+      "pass": true
+    }
+  ],
+  "certified": true,
+  "residuals": [
+    "live may use a realtime intraday price instead of the latest close for trend-break timing",
+    "live order execution uses engine slot/sizing mechanics; backtest emulates them (see validate-trend)"
+  ],
+  "daysTested": 58659
+}
