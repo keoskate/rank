@@ -1005,6 +1005,23 @@
       },
       "kind": "grid",
       "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "soxx-overnight-fixed-auction-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "execution": "MOC+MOO auctions",
+        "costPerSideBps": 1
+      },
+      "sharpe": 1.0122235359660487,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:10:44.605Z"
     }
   ]
 }

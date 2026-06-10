@@ -120,9 +120,15 @@ function buildCandidates({ dates, bars, costMultiplier }) {
       });
     push({ leg: 'overnight' }, { leg: 'overnight' });
     push({ leg: 'intraday' }, { leg: 'intraday' });
-    push({ leg: 'overnight', trendFiltered: true }, { leg: 'overnight', filter: 'trend' });
+    push(
+      { leg: 'overnight', trendFiltered: true },
+      { leg: 'overnight', filter: 'trend' }
+    );
     for (let d = 1; d <= 5; d++) {
-      push({ leg: 'overnight', weekday: d }, { leg: 'overnight', night: `into-${WEEKDAYS[d - 1]}` });
+      push(
+        { leg: 'overnight', weekday: d },
+        { leg: 'overnight', night: `into-${WEEKDAYS[d - 1]}` }
+      );
     }
   }
   return candidates;
@@ -153,7 +159,10 @@ async function main() {
             },
             grossIntraday: statsOf(ctx.dates, gross({ leg: 'intraday' })),
             grossOvernightTrendFiltered: {
-              ...statsOf(ctx.dates, gross({ leg: 'overnight', trendFiltered: true })),
+              ...statsOf(
+                ctx.dates,
+                gross({ leg: 'overnight', trendFiltered: true })
+              ),
               ...nightStats(gross({ leg: 'overnight', trendFiltered: true })),
             },
             byWeekday: {},
