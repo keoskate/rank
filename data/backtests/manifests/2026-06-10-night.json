@@ -1,0 +1,63 @@
+{
+  "_purpose": "Pre-registration manifest for the overnight research program of 2026-06-10. Committed BEFORE any simulation in this program runs. The morning audit reconciles the trials-ledger delta and the engine-invocation sidecar against this document; results not registered here are labeled FISHING and cannot headline.",
+  "committedAt": "2026-06-10T07:30:00Z",
+  "trialBudget": 8,
+  "ledgerNBefore": 77,
+  "priorArtDisclosure": [
+    "At ~07:01Z (03:01 ET) bars for SH/PSQ/DOG/RWM/EUM/UUP/FXY/FXE/EMB/VNQ/BND/LQD/HYG were prefetched into bars-cache before this manifest existed (visible in this session's transcript; no simulations were run on them). The inverse-ETF sleeve experiment was subsequently KILLED by the design panel on single-episode grounds; the prefetch is disclosed here as prior art.",
+    "The 2016-2026 walk-forward OOS window has been used for spec selection three times (raw18 -> breadth23 -> volrank23). All results tonight computed on it carry that reuse; the pristine evidence streams are (a) the forward sim broker and (b) data arriving after 2026-06-10."
+  ],
+  "experiments": [
+    {
+      "id": "D1-ordering-fix",
+      "kind": "faithfulness-bugfix",
+      "trials": 0,
+      "spec": "Live plugin confidence map saturates: confidence = clamp(65 + rankScore*6, 65, 95) with rankScore = momentum/dailyVol (typical 10-40) pins nearly all uptrend names at 95, so the engine's candidate ordering is undefined vs the backtest's exact rankScore sort. Fix: in volAdjusted mode confidence = 65 + 30*(1 - exp(-rankScore/20)), unrounded (monotone, injective). Extend certify-trend-core.js with an ORDERING parity check (random symbol subsets x random days: sort by core rankScore == sort by plugin confidence). Deploy the fix to the live plugin tonight (bug fix, not a spec change)."
+    },
+    {
+      "id": "R1-placebo",
+      "kind": "pipeline-calibration",
+      "trials": 4,
+      "spec": "K=4 placebos through validateStrategy with the EXACT deployed spec (volrank-23, 23-ETF universe): three seeded within-symbol stationary block-shuffles (block length 21 days, seeds 101, 202, 303) of each symbol's daily returns recomposed into price paths anchored at the true first close (destroys time-series trend persistence; preserves marginal distribution and approximate vol clustering); one shuffled-rankScore placebo (real bars, eligible set's rankScores randomly permuted each refill day, seed 404). All recorded kind=placebo-control.",
+      "alarmRule": "Expected max-of-4 null OOS Sharpe at the stitched length (~1594d): E[max4] = sd*1.03 where sd = sqrt(252/1594) = 0.40 -> E[max4] ~ 0.41; alarm threshold = E[max4] + 2*sd = 1.21... conservative simplification PRE-REGISTERED: if any placebo's stitched OOS Sharpe >= 0.85 (the real spec's neighborhood), tonight's strategy headlines are VOID and the night pivots to bug-hunting. Placebo seeds are never re-rolled.",
+      "caveat": "Placebos exercise gates 3-5 only (gate 1 runs on real bars; gate 2 is a certification lookup). Stated in the report."
+    },
+    {
+      "id": "PC1-volsized-slots",
+      "kind": "strategy-spec",
+      "trials": 2,
+      "spec": "One change to the deployed volrank-23 spec: slot sizing. At each refill day, for the eligible top-N (N=maxPositions=5) by rankScore, target_j = equityNow * min(cap, (1/vol_j) / sum_k in topN (1/vol_k)) where vol_j is trendCore st.vol from decide(sym,i) (bars through i-1, the same states map already computed); bounded by available cash; positions NEVER resized after entry; exits unchanged. Primary cap=0.35 (1 trial). One in-sample sensitivity cap=0.25 (1 trial, recorded). Assertions: cash >= 0 always, gross exposure <= 100% always; ledger ties to equity (gap < $1 throws).",
+      "controls": "Head-to-head vs breadth23_volRank fixed-20% on identical dates. Plus a 10%-vol-targeted SPY control on the identical stitched OOS dates printed in extraReport (controls are not ledger trials).",
+      "deployment": "CANNOT deploy tonight regardless of result: the live engine has no per-slot sizing hook (schema exposes fixed maxPositionSizePercent only). Outcome label: research candidate pending engine sizing support + re-certification."
+    },
+    {
+      "id": "PC2-diversifier-sleeve-and-combo",
+      "kind": "strategy-spec",
+      "trials": 2,
+      "spec": "Sleeve B (1 trial): universe FROZEN as [GLD,SLV,TLT,IEF,DBC,FXE,FXY,UUP,LQD,EMB] (rule: non-equity-index asset classes — metals, treasuries, broad commodities, FX, IG/EM credit — inception <= 2010, liquid, non-decay-by-construction; HYG and VNQ excluded ex-ante for equity beta), deployed conventions otherwise: trendCore eligibility, volAdjusted ranking, maxPositions=3, inverse-vol slot sizing as in PC1 cap=0.35. Combo A+B (1 trial): ONE candidate whose daily return = wA(i)*rA(i) + wB(i)*rB(i); rA = volrank-23 deployed spec, rB = sleeve B, BOTH simulated jointly inside one buildCandidates on one buildCalendar date vector (no stored-artifact arithmetic); weights CAUSAL inverse-vol: wX(i) proportional to 1/sd(rX over days i-63..i-1), normalized, computed from returns through i-1 only; daily inter-sleeve rebalance turnover charged at 5bps on |delta w|; assert identical date vectors.",
+      "controls": "Combo judged head-to-head vs sleeve A alone on identical OOS dates (the honest control). Sleeve correlation reported.",
+      "deployment": "Sleeve B could deploy as a second sim broker (long-only, existing engine) if it clears its own gates - decision deferred to morning report. Combo CANNOT deploy (no live allocator; faithfulness not_run)."
+    },
+    {
+      "id": "N5-effectiveN-prereg",
+      "kind": "methodology-preregistration",
+      "trials": 0,
+      "spec": "Write data/reports/gate5-effectiveN-preregistration-2026-06.md freezing: the SINGLE estimator Meff = N^2 / sum_ij rho_ij^2 (Patton-Ramadorai ENC form) over per-trial OOS return-series correlations, with trials lacking stored series counted as fully independent (conservative); acceptance test = false-pass rate <= 5% on 200 synthetic all-null ledgers with matched correlation structure, run BEFORE any real-ledger DSR; if a range results, the LARGEST defensible N is used; applied to ALL strategies; full before/after table; own commit; computed in a LATER session (temporal two-key - no real-ledger Meff or DSR computed tonight). Plus additive trialsLedger field: per-trial OOS-returns fingerprint (downsampled weekly returns) stored going forward so the future study has uncontaminated inputs.",
+      "guardrail": "The morning audit greps tonight's scripts and the engine sidecar to verify no deflatedSharpe call ran with a non-ledger varTrialsSR."
+    },
+    {
+      "id": "D5-execution-monitor",
+      "kind": "infrastructure",
+      "trials": 0,
+      "spec": "Build scripts/monitorExecutionFaithfulness.js: replays simulateDeployed (deployed spec) over the broker's live window and diffs expected decisions/trades vs the trend-follower sim session's executed trade records (from the engine session state, NOT broker-ledger.json which is the tier-change log). Reports decision-match rate and per-trade implementation residual in bps (p50/p95/max). PRE-REGISTERED A3 tolerance (written into ROADMAP before the first diff is computed): promotion discussion requires decision-match >= 95% and median |residual| <= 25bps/trade over >= 4 consecutive weeks. No live window exists yet (spec deployed today); harness ships tonight, first real diff accrues with the forward test."
+    }
+  ],
+  "reportContract": {
+    "rules": [
+      "No Sharpe may be printed in the night report without its same-line verdict and DSR at the post-tonight ledger N.",
+      "The word 'profitable' is banned from the report unless a verdict is VALIDATED.",
+      "Every result carries the reused-OOS note from priorArtDisclosure[1].",
+      "If the R1 placebo alarm fires, strategy headlines are VOID and the report leads with the bug investigation."
+    ]
+  }
+}

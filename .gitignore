@@ -125,3 +125,4 @@ scripts/backtests/.overlays-bars-cache.json
 data/backtests/*
 !data/backtests/trials-ledger.json
 !data/backtests/certifications/
+!data/backtests/manifests/
