@@ -69,6 +69,11 @@ const {
   buildCalendar,
   alignCloses,
 } = require('./backtests/lib/marketData');
+const {
+  enrichFillsWithVwap,
+  summarizeAbsBps,
+  writeExecutionReport,
+} = require('./backtests/lib/executionBenchmark');
 
 const START = '2016-01-04';
 const LIVE_START = '2026-06-10'; // volrank-23 deployment date (manifest D5)
@@ -279,6 +284,24 @@ async function main() {
     }));
 
   const L = [];
+  // Machine-readable payload for the A3 promotion rule — written in BOTH
+  // branches so data/reports/execution-faithfulness/latest.json always
+  // exists (no-fills runs report nMatched 0 and break the streak honestly).
+  const jsonPayload = {
+    lastBarDate,
+    window: { start: LIVE_START, end: lastBarDate },
+    liveDays: liveDates.length,
+    decisionMatchRate: null,
+    meanJaccard: null,
+    nMatched: 0,
+    residuals: {
+      vsBacktestClose: summarizeAbsBps([]),
+      vsActualClose: summarizeAbsBps([]),
+      vsVwapToClose: summarizeAbsBps([]),
+    },
+    unmatched: { expected: expectedLive.length, actual: 0 },
+    tieOutWarnings: 0,
+  };
   L.push(
     '# Execution faithfulness — trend-follower (volrank-23 deployed spec)'
   );
@@ -343,6 +366,8 @@ async function main() {
         : `- decision-match (exact days / window days): ${exactDays}/${liveDates.length} = **${(matchRate * 100).toFixed(1)}%**; mean Jaccard ${(jSum / liveDates.length).toFixed(3)}`
     );
     L.push('');
+    jsonPayload.decisionMatchRate = matchRate;
+    jsonPayload.meanJaccard = liveDates.length ? jSum / liveDates.length : null;
 
     // ---- per-trade implementation residual ----
     const { matched, expectedUnmatched, actualUnmatched } = matchTrades(
@@ -350,31 +375,48 @@ async function main() {
       liveFills.filter(f => f.date <= lastBarDate)
     );
     const pendingFills = liveFills.filter(f => f.date > lastBarDate);
+    // Enrich with RAW-minute-bar benchmarks (executionBenchmark lib): fill
+    // vs actual 16:00 close and vs VWAP(fillTime→close). Raw adjustment is
+    // load-bearing — fills are unadjusted live prices; the adjusted
+    // backtest-close residual (kept) drifts by the dividend after ex-div.
+    const enriched = matched.length ? await enrichFillsWithVwap(matched) : [];
     L.push(
       '## Per-trade implementation residual (matched on date+symbol+side)'
     );
     L.push('');
     L.push(
-      "residual = (fill / backtest-close - 1) * 1e4 — live executes intraday, the backtest at that day's close."
+      "residual = (fill / benchmark - 1) * 1e4, side-signed (positive = worse than benchmark). Benchmarks: the backtest's adjusted close (decision parity), the actual raw 16:00 close, and raw VWAP(fill→close) — the execution-quality number."
     );
     L.push('');
-    if (matched.length) {
+    if (enriched.length) {
       L.push(
-        '| date | symbol | side | fill | backtest close | residual (bps) |'
+        '| date | symbol | side | fill | backtest close | res (bps) | actual close | res (bps) | vwap→close | res (bps) |'
       );
-      L.push('|---|---|---|---|---|---|');
-      for (const m of matched) {
+      L.push('|---|---|---|---|---|---|---|---|---|---|');
+      for (const m of enriched) {
+        const f1 = x => (x == null ? 'n/a' : x.toFixed(1));
+        const f2 = x => (x == null ? 'n/a' : x.toFixed(2));
         L.push(
-          `| ${m.date} | ${m.symbol} | ${m.side} | ${m.price} | ${m.backtestClose} | ${m.residualBps.toFixed(1)} |`
+          `| ${m.date} | ${m.symbol} | ${m.side} | ${m.price} | ${m.backtestClose} | ${m.residualBps.toFixed(1)} | ${f2(m.actualClose)} | ${f1(m.closeResidualBps)} | ${f2(m.vwapToClose)} | ${f1(m.vwapResidualBps)} |`
         );
       }
-      const abs = matched
-        .map(m => Math.abs(m.residualBps))
-        .sort((x, y) => x - y);
+      const sumBacktest = summarizeAbsBps(enriched.map(m => m.residualBps));
+      const sumClose = summarizeAbsBps(enriched.map(m => m.closeResidualBps));
+      const sumVwap = summarizeAbsBps(enriched.map(m => m.vwapResidualBps));
+      const fmt = s =>
+        s.n
+          ? `p50 ${s.p50.toFixed(1)} / p95 ${s.p95.toFixed(1)} / max ${s.max.toFixed(1)} bps (n=${s.n})`
+          : 'n/a';
       L.push('');
-      L.push(
-        `- matched trades: ${matched.length}; |residual| p50 / p95 / max: ${quantile(abs, 0.5).toFixed(1)} / ${quantile(abs, 0.95).toFixed(1)} / ${abs[abs.length - 1].toFixed(1)} bps`
-      );
+      L.push(`- |residual| vs backtest close: ${fmt(sumBacktest)}`);
+      L.push(`- |residual| vs actual close:   ${fmt(sumClose)}`);
+      L.push(`- |residual| vs VWAP(fill→close): ${fmt(sumVwap)}`);
+      jsonPayload.nMatched = enriched.length;
+      jsonPayload.residuals = {
+        vsBacktestClose: sumBacktest,
+        vsActualClose: sumClose,
+        vsVwapToClose: sumVwap,
+      };
     } else {
       L.push('- no matched trades in the window.');
     }
@@ -409,6 +451,11 @@ async function main() {
       fills,
       session.portfolio && session.portfolio.positions
     );
+    jsonPayload.unmatched = {
+      expected: expectedUnmatched.length,
+      actual: actualUnmatched.length,
+    };
+    jsonPayload.tieOutWarnings = tieOut.length;
     L.push(
       tieOut.length
         ? `- tie-out WARNING — tradingLog replay does not reproduce the engine book (log truncation or non-sim fills?): ${tieOut.join('; ')}`
@@ -435,6 +482,14 @@ async function main() {
   fs.writeFileSync(reportPath, md + '\n');
   console.log('\n' + md);
   console.log(`\nreport written: ${reportPath}`);
+
+  // Machine-readable report (dated + latest.json) — the A3 promotion-rule
+  // input. consecutiveWeeksInTolerance is computed against the dated
+  // history by the lib (pre-registered D5 tolerance).
+  const jsonReport = writeExecutionReport(jsonPayload);
+  console.log(
+    `json report: data/reports/execution-faithfulness/${lastBarDate}.json + latest.json — consecutiveWeeksInTolerance=${jsonReport.consecutiveWeeksInTolerance}`
+  );
 }
 
 main().catch(e => {

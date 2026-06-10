@@ -33,10 +33,13 @@ multiple-testing significance.
    execution is emulated. Monthly: run
    `node scripts/monitorExecutionFaithfulness.js` (built 2026-06-10, manifest
    D5) to diff the broker's sim ledger against the backtest's expected trades
-   over the live window; it quantifies the intraday-vs-close residual in bps.
-   This number is the promotion gate. PRE-REGISTERED tolerance: promotion
-   discussion requires decision-match >= 95% and median |residual| <=
-   25bps/trade over >= 4 consecutive weeks.
+   over the live window; it quantifies per-fill residuals in bps against the
+   backtest close AND (raw minute bars, lib/executionBenchmark) the actual
+   16:00 close and VWAP(fill→close). Machine-readable output:
+   `data/reports/execution-faithfulness/latest.json` (+ dated history) with
+   `consecutiveWeeksInTolerance` — this file IS the promotion-gate input.
+   PRE-REGISTERED tolerance: promotion discussion requires decision-match >=
+   95% and median |residual| <= 25bps/trade over >= 4 consecutive weeks.
 3. **Promotion rule (write it down before it's needed):** trend-follower goes
    sim → paper only when (a) DSR ≥ 95% on updated OOS, and (b) sim-vs-backtest
    execution drift < agreed bps for 4+ consecutive weeks. No discretionary
