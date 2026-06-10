@@ -225,11 +225,17 @@ async function validateStrategy(spec) {
   const moments = significance.sharpeMoments(wfResult.oos.returns);
   let mt = { status: 'fail', note: 'could not compute OOS moments' };
   if (moments) {
-    // variance of trial Sharpes: from the ledger (annualized) → per-period
-    const varDaily =
-      ledger.varAnnualizedSharpe != null
-        ? ledger.varAnnualizedSharpe / 252
-        : null;
+    // Trial variance under the NULL (all trials skill-less): the sampling
+    // noise of a zero-skill Sharpe at the ledger's median trial length.
+    // Revised 2026-06 (ROADMAP D14): the previous estimator used the
+    // empirical spread of ledger Sharpes, which deliberate anti-edge trials
+    // (cost-destroyed variants, falsification controls) inflate — a
+    // deterministically dead strategy can never be the lucky maximum, so it
+    // must not widen the bar. Empirical spread is still reported below for
+    // transparency. N stays the FULL ledger count even though trials are
+    // correlated (effective N is smaller) — deliberately conservative.
+    const medT = ledger.medianTradingDays;
+    const varDaily = medT ? significance.nullSharpeVariance(medT) : null;
     const nTrials = Math.max(ledger.n, wfResult.inSample.table.length);
     const dsr = varDaily
       ? significance.deflatedSharpe({
@@ -249,23 +255,32 @@ async function validateStrategy(spec) {
       kurt: moments.kurt,
     });
     if (dsr && dsr.dsr != null) {
+      const empSd =
+        ledger.varAnnualizedSharpe != null
+          ? Math.sqrt(ledger.varAnnualizedSharpe)
+          : null;
       mt = {
         status: dsr.dsr >= 0.95 ? 'pass' : 'fail',
         note:
-          `deflated Sharpe prob ${(dsr.dsr * 100).toFixed(1)}% vs expected-max-of-${nTrials}-trials ` +
-          `(SR* ${dsr.srStarAnnualized.toFixed(2)} ann.); PSR(0) ${(psr0 * 100).toFixed(1)}%; ` +
-          `trials ledger N=${ledger.n} across ${ledger.families.length} families`,
+          `deflated Sharpe prob ${(dsr.dsr * 100).toFixed(1)}% vs expected-max-of-${nTrials}-skill-less-trials ` +
+          `(SR* ${dsr.srStarAnnualized.toFixed(2)} ann., null-noise sd ${Math.sqrt((252 * 1) / medT).toFixed(2)} at median trial length ${medT}d); ` +
+          `PSR(0) ${(psr0 * 100).toFixed(1)}%; ledger N=${ledger.n} across ${ledger.families.length} families` +
+          (empSd != null
+            ? ` (empirical trial sd ${empSd.toFixed(2)} reported, not used — polluted by deliberate anti-edge trials)`
+            : ''),
         detail: {
           dsr: dsr.dsr,
           srStarAnnualized: dsr.srStarAnnualized,
           nTrials,
           psr0,
+          medianTrialDays: medT,
+          empiricalTrialSdAnnualized: empSd,
         },
       };
     } else {
       mt = {
         status: 'fail',
-        note: `insufficient trial history to estimate trial variance (ledger N=${ledger.n}); PSR(0)=${(psr0 * 100).toFixed(1)}% recorded, but deflation impossible — treat as unproven`,
+        note: `cannot establish the deflation bar (no trial-length data in ledger, N=${ledger.n}); PSR(0)=${(psr0 * 100).toFixed(1)}% recorded, but deflation impossible — treat as unproven`,
         detail: { psr0, nTrials: ledger.n },
       };
     }

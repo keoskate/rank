@@ -120,6 +120,21 @@ function psr({ sr, srRef = 0, T, skew = 0, kurt = 3 }) {
 const EULER_GAMMA = 0.5772156649015329;
 
 /**
+ * Sampling variance (per-period) of the Sharpe estimate of a SKILL-LESS
+ * strategy observed over nObs periods: Var(SR̂) ≈ (1 + SR²/2)/T → 1/T at
+ * SR=0. This is the dispersion selection luck operates through, and the
+ * correct trial variance for the deflated-Sharpe null. Estimating V from
+ * the empirical spread of ledger Sharpes breaks down when the ledger holds
+ * deliberate anti-edges (true SR ≪ 0): their true-mean separation widens the
+ * empirical spread, but a strategy that is deterministically dead contributes
+ * nothing to the distribution of the MAXIMUM — it cannot be the lucky best.
+ */
+function nullSharpeVariance(nObs) {
+  if (!(nObs > 1)) return null;
+  return 1 / nObs;
+}
+
+/**
  * Expected maximum Sharpe of nTrials independent null strategies whose trial
  * Sharpes have variance varTrialsSR (per-period units).
  * E[max] ≈ sqrt(var) * ((1-γ)Φ⁻¹(1-1/N) + γΦ⁻¹(1-1/(N·e)))
@@ -172,4 +187,5 @@ module.exports = {
   expectedMaxSharpe,
   deflatedSharpe,
   benjaminiHochberg,
+  nullSharpeVariance,
 };

@@ -13,8 +13,8 @@ multiple-testing significance.
 
 | Strategy | Verdict | Gates | The honest read |
 |---|---|---|---|
-| trend-following (deployed top-5 spec) | **FAILED:multipleTesting** | 4/5 | OOS Sharpe 0.82 (SPY 0.82 same window, but maxDD −18% vs −34%), survives 2x costs, faithfulness CERTIFIED, flat parameter neighborhood (Sharpe 0.79–0.89 across 11 neighbors). DSR 92.3% vs 95% bar — not yet distinguishable from best-of-28-trials luck. |
-| xs-momentum (momentum-rotator) | UNVALIDATED | 4/5* | *No risk-adjusted selection edge: OOS Sharpe 0.86 vs survivorship-matched EW-all 0.93. The extra CAGR is just extra risk. |
+| trend-following (deployed top-5 spec) | **FAILED:multipleTesting** | 4/5 | OOS Sharpe 0.82 (SPY 0.82 same window, but maxDD −18% vs −34%), survives 2x costs, faithfulness CERTIFIED, flat parameter neighborhood. DSR 57.9% vs 95% bar under the revised (D14) null-noise deflation at N=65 trials — good evidence, but not distinguishable from best-of-65 luck; see data/reports/gate5-revision-2026-06.md for what passing now requires. |
+| xs-momentum (momentum-rotator) | **FAILED:multipleTesting** | 3/5 | No risk-adjusted selection edge: OOS Sharpe 0.86 vs survivorship-matched EW-all 0.93 (extra CAGR is just extra risk). Its old gate-5 pass (95.0%) was a young-ledger artifact; DSR 62.3% under the revised bar. |
 | entropy gate | NO EDGE | — | Faithful now (certified), but zero significant expectancy improvement net of costs (p ≥ 0.6, n up to 5,881). Keep OFF. |
 | overnight drift (incl. weekday/trend variants, SOXX/SOXL) | FAILED | — | The anomaly is real in gross prices (SOXX overnight 26.5%/yr Sharpe 1.26; Tue/Wed nights carry it; SOXL intraday is negative) but untradeable: dead at standard costs, and even at best-case 1bp auction execution the fixed SOXX spec loses to simply holding SOXX on identical OOS dates (18.9%/yr Sharpe 0.88 vs 34.7%/yr Sharpe 0.97). Weekday selection didn't persist OOS. |
 | options-flow / insider / dark-pool | NO EVIDENCE | 0/5 | Never run through the pipeline. Event-based — needs the event-study harness (B3). |
@@ -75,16 +75,19 @@ multiple-testing significance.
     Exchange Floor TUI, and the morning brief should show each broker's
     validation verdict next to its P&L.
 13. Pre-existing `reference.test.js` VWAP failure (upstream float drift).
-14. **Gate-5 variance estimator needs a principled revision.** The deflation
-    bar (SR\*) uses the variance of in-sample Sharpes across ALL ledger
-    trials; deliberate controls (intraday legs, cost-destroyed SOXL variants)
-    inflate that variance, pushing SR\* to ~1.9 annualized — a bar almost
-    nothing can clear, regardless of merit (it will also hit the monthly
-    trend re-validation). Candidate fixes: family-scoped variance with global
-    N, or a robust scale estimator (MAD) immune to deliberate outliers.
-    DISCIPLINE RULE: this must be changed as its own commit, on its own
-    merits, with ALL existing verdicts re-run and a before/after table
-    published — never adjusted in the same breath as a strategy failing it.
+14. ~~Gate-5 variance estimator needs a principled revision.~~ **RESOLVED
+    2026-06-10** (see data/reports/gate5-revision-2026-06.md): the bar now
+    uses null-noise dispersion (sd of a skill-less Sharpe at the ledger's
+    median trial length, ≈0.31 ann.) instead of the empirical trial spread
+    that anti-edge controls had inflated to 0.81. SR\* dropped 1.93 → 0.74
+    ann.; all verdicts re-run; nothing flipped to pass (xs-momentum got
+    STRICTER: its young-ledger 95% pass became 62.3% fail). Follow-on (own
+    merits, not done): effective-N from trial correlation.
+15. **OPEN DECISION on the promotion rule (A3):** under the revised bar,
+    DSR ≥ 95% requires OOS Sharpe ≈1.3–1.4 — trend-following at 0.82 cannot
+    reach it with more time alone. Either improve the strategy (C7 breadth)
+    or deliberately re-set the promotion criterion (e.g. 4/5 gates + K months
+    of in-tolerance forward sim). Owner's call; must not be changed silently.
 
 ## Operating rules (unchanged, non-negotiable)
 

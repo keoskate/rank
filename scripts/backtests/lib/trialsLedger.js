@@ -61,10 +61,28 @@ function trialStats(family = null) {
     varSR =
       sharpes.reduce((a, b) => a + (b - m) ** 2, 0) / (sharpes.length - 1);
   }
+  // Median trial length in trading days (from each trial's recorded window) —
+  // sets the null-noise dispersion the deflation bar is built from.
+  const lengths = trials
+    .map(t =>
+      t.window && t.window.start && t.window.end
+        ? Math.round(
+            ((new Date(t.window.end) - new Date(t.window.start)) / 864e5) *
+              (252 / 365.25)
+          )
+        : null
+    )
+    .filter(d => Number.isFinite(d) && d > 0)
+    .sort((a, b) => a - b);
+  const medianTradingDays = lengths.length
+    ? lengths[Math.floor(lengths.length / 2)]
+    : null;
   return {
     n: trials.length,
     nWithSharpe: sharpes.length,
-    varAnnualizedSharpe: varSR,
+    varAnnualizedSharpe: varSR, // empirical spread — reporting only; polluted
+    //   by deliberate anti-edge trials, so it must NOT set the deflation bar
+    medianTradingDays,
     families: [...new Set(ledger.trials.map(t => t.family))],
   };
 }

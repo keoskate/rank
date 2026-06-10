@@ -212,6 +212,31 @@ describe('significance', () => {
     expect(Number.isFinite(m.skew)).toBe(true);
     expect(m.kurt).toBeGreaterThan(0);
   });
+
+  it('nullSharpeVariance: skill-less Sharpe scatters as 1/T (≈0.31 ann. at 10y)', () => {
+    // annualized sd = sqrt(252 * var_daily) = sqrt(252/T)
+    expect(Math.sqrt(252 * significance.nullSharpeVariance(252))).toBeCloseTo(
+      1.0,
+      10
+    );
+    expect(Math.sqrt(252 * significance.nullSharpeVariance(2625))).toBeCloseTo(
+      0.31,
+      2
+    );
+    expect(significance.nullSharpeVariance(0)).toBeNull();
+  });
+
+  it('deflation bar from null noise is immune to anti-edge pollution by construction', () => {
+    // the bar depends only on (N, T); adding deliberately-dead trials to a
+    // ledger changes neither input, while the old empirical-variance bar
+    // would have ballooned
+    const v = significance.nullSharpeVariance(2625);
+    const bar65 = significance.expectedMaxSharpe(65, v);
+    expect(bar65 * Math.sqrt(252)).toBeGreaterThan(0.5);
+    expect(bar65 * Math.sqrt(252)).toBeLessThan(1.0); // sane, clearable bar
+    // and it still rises with more trials — fishing is still priced
+    expect(significance.expectedMaxSharpe(500, v)).toBeGreaterThan(bar65);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────
