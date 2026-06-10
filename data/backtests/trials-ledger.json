@@ -1022,6 +1022,126 @@
       },
       "kind": "grid",
       "recordedAt": "2026-06-10T06:21:12.167Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "UVXY",
+        "kind": "rebalShort-always"
+      },
+      "sharpe": 0.4330132800045389,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "SVXY",
+        "kind": "long-always"
+      },
+      "sharpe": 0.47216541664784906,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "UVXY",
+        "kind": "rebalShort-spike30"
+      },
+      "sharpe": 0.5621482531431906,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "UVXY",
+        "kind": "rebalShort-spike50"
+      },
+      "sharpe": 0.16549496560029758,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "UVXY",
+        "kind": "staticShort-spike30-f0.5"
+      },
+      "sharpe": null,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "UVXY",
+        "kind": "staticShort-spike30-f1.0"
+      },
+      "sharpe": null,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "SVXY",
+        "kind": "svxyLong-spike30"
+      },
+      "sharpe": 0.5087665747263841,
+      "window": {
+        "start": "2018-03-01",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:27.046Z"
+    },
+    {
+      "family": "short-vol-spike",
+      "strategyId": "uvxy-spike-short-WF-OOS",
+      "params": {
+        "symbol": "UVIX",
+        "kind": "rebalShort-spike30-uvix"
+      },
+      "sharpe": 0.6499131781566393,
+      "window": {
+        "start": "2022-03-30",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:34:26.901Z"
     }
   ]
 }

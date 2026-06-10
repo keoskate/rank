@@ -22,6 +22,14 @@ const LEVERAGED_ETFS = new Set([
   'SPXS',
   'LABU',
   'LABD',
+  // VIX-futures ETPs: leveraged/inverse vol products with wide effective
+  // spreads, daily-rebalance decay, and stress-regime liquidity holes.
+  'UVXY',
+  'UVIX',
+  'SVXY',
+  'SVIX',
+  'VXX',
+  'VIXY',
 ]);
 
 const BPS_PER_SIDE_DEFAULT = 5; // 0.05% per side → 10bps round trip

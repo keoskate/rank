@@ -25,6 +25,62 @@
       "addedBy": "data-integrity gate investigation"
     },
     {
+      "symbol": "UVXY",
+      "contains": "2020-06-11",
+      "status": "verified-real-event",
+      "note": "UVXY +50% on 2020-06-11: post-COVID-rally crash day (SPY -5.9%, VIX +47%). Cross-verified: SVXY -17% same day, ratio -0.34 vs -0.33 theoretical (-0.5x vs 1.5x leverage).",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "UVXY",
+      "contains": "2024-08-05",
+      "status": "verified-real-event",
+      "note": "UVXY +58% on 2024-08-05: yen-carry unwind, VIX intraday ~65. Cross-verified: UVIX +84% (ratio 1.45 vs 1.33 theoretical), SVXY -21% (ratio -0.37 vs -0.33).",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "UVIX",
+      "contains": "2024-08-02",
+      "status": "verified-real-event",
+      "note": "UVIX +48% on 2024-08-02 (pre-yen-carry-unwind selloff). Ratio to UVXY +36% = 1.34 vs 1.33 theoretical.",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "UVIX",
+      "contains": "2024-08-05",
+      "status": "verified-real-event",
+      "note": "UVIX +84% on 2024-08-05 (yen-carry unwind, VIX ~65). Ratio to UVXY +58% = 1.45; SVXY -21% consistent.",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "UVIX",
+      "contains": "2024-08-06",
+      "status": "verified-real-event",
+      "note": "UVIX -41% on 2024-08-06 (vol collapse after the spike). Ratio to UVXY -28% = 1.44; SVXY +10% consistent.",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "UVIX",
+      "contains": "2025-04-03",
+      "status": "verified-real-event",
+      "note": "UVIX +49% on 2025-04-03 (tariff crash). Ratio to UVXY +37% = 1.32 vs 1.33 theoretical.",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "UVIX",
+      "contains": "2025-04-09",
+      "status": "verified-real-event",
+      "note": "UVIX -44% on 2025-04-09 (tariff-pause rally; same session SOXL +54.8% verified). Ratio to UVXY -32% = 1.39; SVXY +11% consistent.",
+      "verified": "2026-06-10, cross-instrument leverage-ratio check",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
       "symbol": "AMD",
       "contains": "2016-04-22",
       "status": "verified-real-event",
