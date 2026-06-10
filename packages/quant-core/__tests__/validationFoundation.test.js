@@ -343,3 +343,67 @@ describe('trendCore', () => {
     expect(overridden.momentum).toBeCloseTo(base.momentum, 12);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// allocatorCore — core+satellite capped weights (C8)
+// ─────────────────────────────────────────────────────────────────
+describe('allocatorCore', () => {
+  const allocatorCore = requireCjs('@keo/quant-core').allocatorCore;
+
+  function noisy(n, drift, vol, seed) {
+    const rand = seededRandom(seed);
+    return Array.from({ length: n }, () => drift + (rand() - 0.5) * 2 * vol);
+  }
+
+  it('caps the satellite and only changes weight at month starts', () => {
+    const n = 400;
+    const ds = dates(n);
+    // satellite has tiny vol → uncapped invVol share would be huge
+    const core = noisy(n, 0.0005, 0.012, 1);
+    const sat = noisy(n, 0.0002, 0.002, 2);
+    const { wSat } = allocatorCore.cappedSatelliteWeights(ds, core, sat, {
+      cap: 0.2,
+    });
+    const active = wSat.filter(w => w != null);
+    expect(Math.max(...active)).toBeLessThanOrEqual(0.2 + 1e-12);
+    // intra-month constancy: weight may change only when the month changes
+    for (let i = 1; i < n; i++) {
+      if (wSat[i] == null || wSat[i - 1] == null) continue;
+      if (ds[i].slice(0, 7) === ds[i - 1].slice(0, 7)) {
+        expect(wSat[i]).toBe(wSat[i - 1]);
+      }
+    }
+  });
+
+  it('weights are causal: day-i weight unchanged by day-i returns', () => {
+    const n = 300;
+    const ds = dates(n);
+    const core = noisy(n, 0.0005, 0.01, 3);
+    const sat = noisy(n, 0.0003, 0.008, 4);
+    const a = allocatorCore.cappedSatelliteWeights(ds, core, sat, {});
+    // find a month-start rebalance day and perturb THAT day's returns
+    const i = a.rebalanceDays[a.rebalanceDays.length - 1];
+    const core2 = core.slice();
+    const sat2 = sat.slice();
+    core2[i] = 0.5; // absurd same-day shock
+    sat2[i] = -0.5;
+    const b = allocatorCore.cappedSatelliteWeights(ds, core2, sat2, {});
+    expect(b.wSat[i]).toBe(a.wSat[i]);
+  });
+
+  it('combineWithWeights charges fees only on weight changes', () => {
+    const n = 80;
+    const core = new Array(n).fill(0.001);
+    const sat = new Array(n).fill(0.001);
+    const wFlat = new Array(n).fill(0.2);
+    const flat = allocatorCore.combineWithWeights(core, sat, wFlat, {});
+    // identical sleeve returns + constant weight → exactly the sleeve return
+    expect(flat[10]).toBeCloseTo(0.001, 12);
+    const wStep = wFlat.slice();
+    wStep[40] = 0.1; // one reallocation
+    for (let i = 41; i < n; i++) wStep[i] = 0.1;
+    const stepped = allocatorCore.combineWithWeights(core, sat, wStep, {});
+    expect(stepped[40]).toBeCloseTo(0.001 - 0.0005 * 2 * 0.1, 12);
+    expect(stepped[41]).toBeCloseTo(0.001, 12);
+  });
+});

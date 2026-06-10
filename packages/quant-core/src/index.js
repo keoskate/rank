@@ -17,6 +17,7 @@ const entropyGateCore = require('./entropyGateCore');
 const trendCore = require('./trendCore');
 const walkForward = require('./walkForward');
 const significance = require('./significance');
+const allocatorCore = require('./allocatorCore');
 const anchoredVwap = require('./anchoredVwap');
 const volumeProfile = require('./volumeProfile');
 const darkPoolCore = require('./darkPoolCore');
@@ -52,6 +53,10 @@ module.exports = {
   // Walk-forward OOS evaluation + multiple-testing-aware significance.
   walkForward,
   significance,
+
+  // Capital allocator (C8): core+satellite capped weights — shared by the
+  // backtest combiner and the future live broker-capital reallocation job.
+  allocatorCore,
 
   // Anchored VWAP — the one VWAP-aggregation definition (AVWAP trials +
   // the execution benchmark's fill-vs-VWAP residuals).
