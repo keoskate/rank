@@ -26,7 +26,12 @@
 //    history was short, which silently disabled the momentum condition.
 //    Short history now means "not eligible", in live and backtest alike.
 
-const DEFAULTS = { smaWindow: 200, momLookback: 252, momSkip: 21 };
+const DEFAULTS = {
+  smaWindow: 200,
+  momLookback: 252,
+  momSkip: 21,
+  volWindow: 63,
+};
 
 /**
  * @param {number[]} closes - daily closes, oldest → newest
@@ -34,14 +39,24 @@ const DEFAULTS = { smaWindow: 200, momLookback: 252, momSkip: 21 };
  * @param {number} [cfg.smaWindow=200]
  * @param {number} [cfg.momLookback=252]
  * @param {number} [cfg.momSkip=21]
+ * @param {number} [cfg.volWindow=63] - realized-vol window for rankScore
  * @param {number} [cfg.price] - optional realtime price override
  * @returns {{ok: boolean, uptrend: boolean, aboveSma: boolean|null,
- *            sma: number|null, momentum: number|null, price: number|null}}
+ *            sma: number|null, momentum: number|null, price: number|null,
+ *            vol: number|null, rankScore: number|null}}
+ *
+ * `rankScore` = momentum / realized vol (sd of daily returns over volWindow,
+ * per-period units — scale cancels in ranking). Raw-momentum ranking is
+ * volatility-biased: a bond trending up 10%/yr at 8% vol never outranks a
+ * sector up 30% at 35% vol, so diversifiers never make a top-N book.
+ * Vol-adjusted ranking is how institutional trend programs admit them.
+ * The eligibility decision (uptrend) is unchanged either way.
  */
 function evaluateTrend(closes, cfg = {}) {
   const smaWindow = cfg.smaWindow || DEFAULTS.smaWindow;
   const momLookback = cfg.momLookback || DEFAULTS.momLookback;
   const momSkip = cfg.momSkip ?? DEFAULTS.momSkip;
+  const volWindow = cfg.volWindow || DEFAULTS.volWindow;
 
   const n = closes ? closes.length : 0;
   const need = Math.max(smaWindow, momLookback + 1);
@@ -53,6 +68,8 @@ function evaluateTrend(closes, cfg = {}) {
       sma: null,
       momentum: null,
       price: null,
+      vol: null,
+      rankScore: null,
     };
   }
 
@@ -66,10 +83,26 @@ function evaluateTrend(closes, cfg = {}) {
   const pRecent = closes[n - 1 - momSkip];
   const momentum = pOld > 0 && pRecent > 0 ? pRecent / pOld - 1 : null;
 
+  // realized vol over the trailing volWindow completed days
+  let vol = null;
+  if (n >= volWindow + 1) {
+    const rets = [];
+    for (let k = n - volWindow; k < n; k++) {
+      if (closes[k - 1] > 0) rets.push(closes[k] / closes[k - 1] - 1);
+    }
+    if (rets.length >= 2) {
+      const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+      vol = Math.sqrt(
+        rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (rets.length - 1)
+      );
+    }
+  }
+  const rankScore = momentum != null && vol > 0 ? momentum / vol : null;
+
   const aboveSma = price > sma;
   const uptrend = aboveSma && momentum != null && momentum > 0;
 
-  return { ok: true, uptrend, aboveSma, sma, momentum, price };
+  return { ok: true, uptrend, aboveSma, sma, momentum, price, vol, rankScore };
 }
 
 module.exports = { evaluateTrend, DEFAULTS };

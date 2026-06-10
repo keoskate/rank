@@ -107,7 +107,9 @@ async function main() {
           ? core.ok &&
             core.uptrend === live.uptrend &&
             Math.abs(core.sma - live.sma200) < 1e-9 &&
-            Math.abs((core.momentum ?? -999) - (live.momentum ?? -999)) < 1e-12
+            Math.abs((core.momentum ?? -999) - (live.momentum ?? -999)) <
+              1e-12 &&
+            Math.abs((core.rankScore ?? -999) - (live.rankScore ?? -999)) < 1e-9
           : !core.ok;
         if (!same && divergences.length < 20) {
           divergences.push({

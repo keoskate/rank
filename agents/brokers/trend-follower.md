@@ -23,7 +23,14 @@ watchlist:
   - XLC
   - EEM
   - EFA
+  - GLD
+  - SLV
+  - TLT
+  - IEF
+  - DBC
 strategy: trend-following
+trend:
+  rankBy: volAdjusted
 risk:
   perTrade: 0.02
   maxDrawdown: 0.25
@@ -72,10 +79,20 @@ lagging the rip.
 # Watchlist Rationale
 
 A diversified set of index and sector ETFs — the broad market (SPY/QQQ/IWM/DIA),
-the sectors (XLK/SMH/XLF/XLE/XLV/XLY/XLP/XLI/XLU/XLB/XLRE/XLC), and international
-(EEM/EFA). Breadth matters: when leadership rotates, I rotate with it; when
-_everything_ is below trend, I hold nothing and wait in cash. ETFs, not single
-names — this is a regime engine, not a stock picker.
+the sectors (XLK/SMH/XLF/XLE/XLV/XLY/XLP/XLI/XLU/XLB/XLRE/XLC), international
+(EEM/EFA), and non-equity diversifiers (GLD/SLV/TLT/IEF/DBC). Breadth matters:
+when leadership rotates, I rotate with it; when _everything_ is below trend, I
+hold nothing and wait in cash. ETFs, not single names — this is a regime
+engine, not a stock picker.
+
+Diversifiers + vol-adjusted ranking added 2026-06-10 after five-gate
+validation: raw-momentum ranking is volatility-biased (bonds/gold never crack
+a top-5 against equity sectors), so eligible names are ranked by
+momentum / 63d vol (rankScore in the certified shared trendCore). OOS Sharpe
+progression that earned the change: 0.82 (18 ETFs, raw rank) → 0.85 (23,
+raw) → 0.89 (23, vol-adjusted), each step surviving 2x costs. Verdict still
+FAILED:multipleTesting (DSR 62.4% vs 95% bar at N=77 trials) — this is the
+best UNVALIDATED spec we have, and this sim book is its forward test.
 
 # Risk Doctrine
 

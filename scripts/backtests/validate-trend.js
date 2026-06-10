@@ -83,7 +83,16 @@ function simulateDeployed(
   costMultiplier,
   universe = UNIVERSE
 ) {
-  const { smaWindow, momLookback, momSkip, maxPositions, sizePct } = params;
+  const {
+    smaWindow,
+    momLookback,
+    momSkip,
+    maxPositions,
+    sizePct,
+    rankBy = 'momentum', // 'momentum' (deployed) | 'volAdjusted' (mom/vol63)
+  } = params;
+  const scoreOf = st =>
+    rankBy === 'volAdjusted' ? (st.rankScore ?? -Infinity) : (st.momentum ?? 0);
 
   // Per-symbol clean closes + map from calendar index -> "bars through that
   // date" length (forward-filled aligned series can hold leading nulls that
@@ -113,6 +122,7 @@ function simulateDeployed(
       smaWindow,
       momLookback,
       momSkip,
+      volWindow: params.volWindow,
     });
   };
 
@@ -171,7 +181,7 @@ function simulateDeployed(
         .filter(sym => !positions.has(sym))
         .map(sym => ({ sym, st: states.get(sym) }))
         .filter(x => x.st && x.st.ok && x.st.uptrend && px(x.sym, i) > 0)
-        .sort((a, b) => (b.st.momentum ?? 0) - (a.st.momentum ?? 0));
+        .sort((a, b) => scoreOf(b.st) - scoreOf(a.st));
       // equity right now (after sells, before buys)
       let equityNow = cash;
       for (const [sym, pos] of positions) equityNow += pos.qty * px(sym, i);

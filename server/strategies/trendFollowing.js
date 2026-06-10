@@ -84,6 +84,7 @@ function trendStateFromCloses(closes, cfg = {}, priceOverride = null) {
     smaWindow: cfg.trendSmaWindow || 200,
     momLookback: cfg.trendMomentumDays || 252, // ~12 months
     momSkip: cfg.trendMomentumSkipDays ?? 21, // skip most recent ~1 month
+    volWindow: cfg.trendVolWindow || 63,
     price: priceOverride > 0 ? priceOverride : undefined,
   });
   if (!st.ok) return null; // not enough history to judge trend
@@ -91,6 +92,8 @@ function trendStateFromCloses(closes, cfg = {}, priceOverride = null) {
     currentPrice: st.price,
     sma200: st.sma,
     momentum: st.momentum,
+    vol: st.vol,
+    rankScore: st.rankScore,
     uptrend: st.uptrend,
   };
 }
@@ -119,12 +122,15 @@ async function evaluate(session, symbol, ctx) {
         source: SLUG,
       };
     }
-    // Confidence ∝ momentum so the engine's candidate sort picks the strongest
-    // trends first (the "top N" selection). Bounded 65..95.
-    const confidence = Math.max(
-      65,
-      Math.min(95, Math.round(65 + st.momentum * 30))
-    );
+    // Confidence drives the engine's candidate sort (the "top N" selection).
+    // Default: ∝ raw momentum (the deployed broker's current spec). With
+    // cfg.trendRankBy === 'volAdjusted', confidence is ∝ the shared core's
+    // rankScore (momentum / 63d vol) so low-vol diversifiers can compete —
+    // same score the backtests rank by (certified parity). Bounded 65..95.
+    const confidence =
+      cfg.trendRankBy === 'volAdjusted' && st.rankScore != null
+        ? Math.max(65, Math.min(95, Math.round(65 + st.rankScore * 6)))
+        : Math.max(65, Math.min(95, Math.round(65 + st.momentum * 30)));
     const shouldEnter = st.uptrend;
     const reasons = [
       `${symbol} ${st.currentPrice.toFixed(2)} vs 200d SMA ${st.sma200.toFixed(2)} (${st.currentPrice > st.sma200 ? 'above' : 'below'})`,

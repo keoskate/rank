@@ -1161,6 +1161,67 @@
       },
       "kind": "grid",
       "recordedAt": "2026-06-10T06:38:19.250Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 252,
+        "momSkip": 21,
+        "maxPositions": 5,
+        "sizePct": 0.2,
+        "rankBy": "volAdjusted",
+        "volWindow": 126,
+        "universe": "breadth23"
+      },
+      "sharpe": 0.8596514910523969,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T06:48:38.382Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 252,
+        "momSkip": 21,
+        "maxPositions": 5,
+        "sizePct": 0.2,
+        "rankBy": "volAdjusted",
+        "universe": "base18"
+      },
+      "sharpe": 0.871683856269525,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "sensitivity-grid",
+      "recordedAt": "2026-06-10T06:48:38.382Z"
+    },
+    {
+      "family": "trend-following",
+      "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+      "params": {
+        "smaWindow": 200,
+        "momLookback": 252,
+        "momSkip": 21,
+        "maxPositions": 5,
+        "sizePct": 0.2,
+        "rankBy": "volAdjusted",
+        "universe": "breadth23"
+      },
+      "sharpe": 0.8731909810660788,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:48:38.449Z"
     }
   ]
 }

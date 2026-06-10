@@ -86,6 +86,10 @@ const BROKER_DEFAULTS = {
     lookbackMinutes: 120, // how far back to aggregate prints
     scanner: false, // if true, watchlist auto-refreshes from biggest dark prints
   },
+  // Trend-following plugin tunables (strategy: trend-following).
+  trend: {
+    rankBy: 'momentum', // 'momentum' | 'volAdjusted' (rankScore = mom/vol63)
+  },
 };
 
 function deepMerge(base, over) {
@@ -266,6 +270,13 @@ function validateBroker(raw, filename = '') {
     );
   }
 
+  const trend = deepMerge(BROKER_DEFAULTS.trend, raw.trend || {});
+  pushIf(
+    errs,
+    ['momentum', 'volAdjusted'].includes(trend.rankBy),
+    'trend.rankBy must be momentum|volAdjusted'
+  );
+
   const flow = deepMerge(BROKER_DEFAULTS.flow, raw.flow || {});
   pushIf(
     errs,
@@ -356,6 +367,7 @@ function validateBroker(raw, filename = '') {
       flow,
       insider,
       darkpool,
+      trend,
     },
     errors: [],
   };
@@ -439,6 +451,9 @@ function brokerToSessionConfig(broker, personaBody = '') {
       .lookbackMinutes,
     darkpoolScanner:
       (broker.darkpool || BROKER_DEFAULTS.darkpool).scanner === true,
+
+    // Trend-following plugin tunables
+    trendRankBy: (broker.trend || BROKER_DEFAULTS.trend).rankBy,
 
     // Regime
     entropyGateEnabled: broker.regime.enabled,
