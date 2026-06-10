@@ -17,8 +17,11 @@
 const axios = require('axios');
 const tradingModeManager = require('./tradingModeManager');
 
-// Rate limiting
-const RATE_LIMIT_DELAY = 100; // 100ms between requests
+// Rate limiting. Default 100ms (10 req/s) suits interactive server use;
+// bulk backfills (e.g. the minute-bar prefetch) must throttle harder — the
+// free data tier allows ~200 req/min — via ALPACA_MIN_REQUEST_INTERVAL_MS.
+const RATE_LIMIT_DELAY =
+  parseInt(process.env.ALPACA_MIN_REQUEST_INTERVAL_MS, 10) || 100;
 let lastRequestTime = 0;
 
 /**
