@@ -501,6 +501,510 @@
       },
       "kind": "grid",
       "recordedAt": "2026-06-10T05:51:32.159Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight"
+      },
+      "sharpe": -1.2964511621992714,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.887Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "intraday"
+      },
+      "sharpe": -1.4142541435727995,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.887Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight",
+        "filter": "trend"
+      },
+      "sharpe": -1.2594437125126976,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.887Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight",
+        "night": "into-Mon"
+      },
+      "sharpe": -0.6671242017033365,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.887Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight",
+        "night": "into-Tue"
+      },
+      "sharpe": -0.20668054834000169,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight",
+        "night": "into-Wed"
+      },
+      "sharpe": -0.3073240302021351,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight",
+        "night": "into-Thu"
+      },
+      "sharpe": -0.9809820901090862,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SPY",
+        "leg": "overnight",
+        "night": "into-Fri"
+      },
+      "sharpe": -0.7263077894741229,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight"
+      },
+      "sharpe": -0.8644329721805097,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "intraday"
+      },
+      "sharpe": -0.9202774426753265,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight",
+        "filter": "trend"
+      },
+      "sharpe": -0.6324809018518572,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight",
+        "night": "into-Mon"
+      },
+      "sharpe": -0.5998485620113726,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight",
+        "night": "into-Tue"
+      },
+      "sharpe": -0.06342666765262465,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight",
+        "night": "into-Wed"
+      },
+      "sharpe": 0.05313976451289989,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight",
+        "night": "into-Thu"
+      },
+      "sharpe": -0.5986152913572721,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "QQQ",
+        "leg": "overnight",
+        "night": "into-Fri"
+      },
+      "sharpe": -0.6676082571714506,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight"
+      },
+      "sharpe": 0.022383430167862407,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "intraday"
+      },
+      "sharpe": -0.6384247734834106,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "filter": "trend"
+      },
+      "sharpe": 0.3616101180023447,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "night": "into-Mon"
+      },
+      "sharpe": -0.20308118254872137,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "night": "into-Tue"
+      },
+      "sharpe": 0.3210738776153842,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "night": "into-Wed"
+      },
+      "sharpe": 0.4449986873126514,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "night": "into-Thu"
+      },
+      "sharpe": -0.16086093726195944,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXX",
+        "leg": "overnight",
+        "night": "into-Fri"
+      },
+      "sharpe": -0.3144811135919542,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight"
+      },
+      "sharpe": -0.2138633729370014,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "intraday"
+      },
+      "sharpe": -0.5920623518906537,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight",
+        "filter": "trend"
+      },
+      "sharpe": -0.08165459660216944,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight",
+        "night": "into-Mon"
+      },
+      "sharpe": -0.2597648749237891,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight",
+        "night": "into-Tue"
+      },
+      "sharpe": 0.09516220395704662,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight",
+        "night": "into-Wed"
+      },
+      "sharpe": 0.37408785727546234,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight",
+        "night": "into-Thu"
+      },
+      "sharpe": -0.23221837199563738,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
+    },
+    {
+      "family": "overnight-drift",
+      "strategyId": "overnight-variants-WF-OOS",
+      "params": {
+        "symbol": "SOXL",
+        "leg": "overnight",
+        "night": "into-Fri"
+      },
+      "sharpe": -0.4304544753161854,
+      "window": {
+        "start": "2016-01-04",
+        "end": "2026-06-05"
+      },
+      "kind": "grid",
+      "recordedAt": "2026-06-10T06:02:45.888Z"
     }
   ]
 }

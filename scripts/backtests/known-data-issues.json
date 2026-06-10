@@ -17,6 +17,14 @@
       "addedBy": "data-integrity gate investigation"
     },
     {
+      "symbol": "SOXL",
+      "contains": "2025-04-09",
+      "status": "verified-real-event",
+      "note": "SOXL +54.8% on 2025-04-09 is the real 3x-leveraged reaction to the tariff-pause mega-rally (SOXX +18.6%, SPY +10.5% same day; 54.8% = 2.95x the underlying). Raw and adjusted series agree exactly, confirming no missing adjustment.",
+      "verified": "2026-06-10, cross-checked vs 3x SOXX same-day move + raw==adjusted agreement",
+      "addedBy": "data-integrity gate investigation"
+    },
+    {
       "symbol": "AMD",
       "contains": "2016-04-22",
       "status": "verified-real-event",
