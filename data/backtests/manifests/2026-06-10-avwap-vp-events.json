@@ -1,0 +1,57 @@
+{
+  "_purpose": "Pre-registration manifest for the AVWAP / volume-profile / event-study program (day session 2026-06-10). Committed BEFORE any of these simulations run. The audit reconciles the trials-ledger delta against this document; results not registered here are labeled FISHING and cannot headline.",
+  "committedAt": "2026-06-10T09:40:00Z",
+  "trialBudget": 13,
+  "ledgerNBefore": 88,
+  "concurrencyDisclosure": "The 2026-06-10-night overnight program (manifest 2026-06-10-night.json) is mid-flight in a separate session and shares the trials ledger (N was 77 at its registration, 88 at this one). NONE of the trials below run until that program completes — the ledger is not written concurrently, and validate-trend.js (which AV trials extend) is not edited while the placebo/PC runs replay it.",
+  "priorArtDisclosure": [
+    "The 2026-06-01 insider-following audit (data/reports/audits/insider-following.md) informally explored a TP/SL/hold exit grid on overlapping recent events WITHOUT ledgering those probes. The INS grid below re-registers that exploration honestly: its 6 policies are counted as trials even though several were previewed in the audit. Any INS result therefore carries a reused-data note — the audit's event window (2026-05-12..05-26) overlaps the events this study will source.",
+    "The event-study harness (scripts/backtests/lib/eventStudy.js), the volume-profile/anchoredVwap quant-core cores, and both runner scripts were written and committed before this manifest; no simulations were run while building them (vitest unit tests on synthetic bars only).",
+    "Volume-profile minute bars 2018+ are a fresh fetch (no prior art); the daily-bar trend universe caches are shared with the trend program."
+  ],
+  "experiments": [
+    {
+      "id": "AV-avwap-overlay",
+      "kind": "strategy-spec",
+      "trials": 3,
+      "spec": "Anchored-VWAP overlay on the DEPLOYED trend volrank-23 spec via a new opt-in params.avwap branch in validate-trend.js simulateDeployed (precedent: rankBy/sizing/placebo params; defaults leave the deployed path byte-identical — proven by re-running validate-trend.js before/after the engine change and diffing stats+trades in the artifacts). AV1: entryFilter anchored at trailing-252d closing high — a candidate may only ENTER when close >= anchoredVwapSeries(bars, anchorIndex(bars,'high252'))[i] (1 trial). AV2: same filter anchored at yearStart (1 trial). AV3: exitOverlay — positions additionally EXIT when close < AVWAP anchored at their own entry bar (1 trial). All three through the full five-gate validateStrategy; faithfulness not_run (research-only; no live plugin shares the anchoredVwap core yet, so none of these can reach VALIDATED — by design).",
+      "controls": "Deployed volrank-23 head-to-head on identical OOS dates (not a ledger trial).",
+      "deferral": "Runs only after the overnight program releases validate-trend.js (see concurrencyDisclosure).",
+      "prior": "LOW. VWAP-signal evidence is SSRN-grade; the research summary expects the trend core's SMA filter to subsume most AVWAP information. Registered to measure, not to confirm."
+    },
+    {
+      "id": "VP1-value-area-acceptance",
+      "kind": "event-study",
+      "trials": 2,
+      "spec": "Universe: the 23-ETF trend universe. Window 2018-01-02 onward (pre-registered tradeoff: Alpaca minute history reaches 2016 but the one-time prefetch is hours; 2018+ leaves gate-3 room; if minute coverage gaps appear, the stated fallback is a daily-bar-approximation profile with the explicit caveat that close-binned daily profiles smear the value area). Profile: quant-core buildVolumeProfile (40 bins, 70% VA) over the prior 20 sessions' RTH minute bars, recomputed daily. EVENT at day d when close(d) > VAH_d AND close(d-1) > VAH_{d-1} AND close(d-2) <= VAH_{d-2} (cross above value and hold 2 consecutive closes). Entry next open (eventStudy harness, conservative exit walk). Exit grid (each point = 1 ledger trial): t5 = pure 5-day time exit (tp/sl 999), t10 = pure 10-day time exit. The audit-richer 'close back below VAH' exit is NOT testable in harness v1 and is explicitly deferred — not silently swapped.",
+      "gates": "Five-gate event mapping per data/reports/event-study-gates-preregistration-2026-06-10.md; faithfulness not_run (no live VP plugin).",
+      "prior": "LOW-TO-MODERATE. Practitioner-anecdotal evidence only; expected to fail gate 5. The deliverable is an honest verdict, not a pass."
+    },
+    {
+      "id": "VP2-naked-poc-revisit",
+      "kind": "event-study",
+      "trials": 2,
+      "spec": "Same universe/window/profiles as VP1, daily per-session profiles for POC tracking. EVENT at day d when (a) trendCore.evaluateTrend on closes through d is ok AND uptrend (deployed defaults), (b) an untested (naked, via quant-core nakedPocs) prior-session POC p exists below price with age <= 60 sessions, and (c) 0 < close(d) - p <= 0.25 * ATR14(d). Entry next open. Exit grid (each = 1 trial): t5 = pure 5-day time exit; tp6sl3h10 = +6% target / -3% stop / 10-day max. The plan's POC-relative stop (POC - 0.5*ATR) is per-event-variable and NOT representable in harness v1 — deferred, not approximated silently.",
+      "gates": "Same as VP1.",
+      "prior": "LOW. The 'naked POC magnet ~80% revisit' claim is uncited practitioner lore; this measures it net of costs."
+    },
+    {
+      "id": "INS-insider-exit-grid",
+      "kind": "event-study",
+      "trials": 6,
+      "spec": "First consumer of the B6 harness: scripts/backtests/validate-insider-following.js. Events: UW officer/director open-market purchases (transaction_code P), notional >= $500k, filing lag <= 21d, deduped by (ticker, date, reporter) — same sourcing as the audited script but prices via loadDailyBars (Alpaca, one data path; kills the script's Polygon dependency, ROADMAP D10). UW's insider feed is recent-only, so the event sample is whatever the feed still serves (~120 events expected); gate 3 requires >= 60 events and >= 20 test trades and will report not_run honestly if the feed has aged out. Exit grid (each = 1 ledger trial): tp8sl4h10 (the live broker's current policy — the audited mis-tuned baseline), tp10sl4h10, tp10sl8h10, tp15sl8h10, tp15sl8h5, t10 (pure 10-day time exit).",
+      "gates": "Five-gate event mapping; faithfulness not_run (insider plugin has no certified core yet — a VALIDATED verdict is impossible until certify-insider lands; the registry data/backtests/validated-sources.json is only written on full VALIDATED).",
+      "prior": "MODERATE on entry (audit: +1.8-3.8% at +1d/+3d, no-look-ahead verified); the grid tests whether ANY exit policy preserves it out-of-sample under BH correction."
+    }
+  ],
+  "reportContract": {
+    "rules": [
+      "No mean return or Sharpe is printed without its same-line gate verdict.",
+      "The word 'edge' is banned unless gate 5 passed.",
+      "INS results carry the reused-data note from priorArtDisclosure[0].",
+      "VP/AV results expected to fail are reported with the same prominence as passes — the verdict scoreboard is the deliverable.",
+      "Ledger delta after all runs must equal exactly 13; any excess is FISHING."
+    ]
+  },
+  "planDeviation": "The approved implementation plan nominally budgeted 5 trials for AVWAP+VP, counting one trial per strategy idea. This manifest counts one trial per exit-grid point (the honest unit — every grid point is a draw), giving AV 3 + VP 4 + INS 6 = 13. Registered here before any run; the deviation is an undercount correction, not added search space."
+}
