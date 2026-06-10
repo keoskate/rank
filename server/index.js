@@ -1183,6 +1183,57 @@ server.listen(PORT, () => {
   setInterval(maybeCaptureFlow, 15 * 60 * 1000);
   maybeCaptureFlow();
 
+  // --- Dark-pool forward capture (point-in-time archive) --------------------
+  // UW dark-pool prints are recent-only (~500-print window, no history); the
+  // 2026-06-01 audit found a near-close fetch reaches back only to ~15:40 ET
+  // on liquid names. Merged 15-min captures during RTH are the only way to
+  // build an honest point-in-time dataset → data/darkpool-archive/<ET-date>/.
+  // The B6 event-study needs >= 60 archived days; a day the server is down
+  // during RTH is lost forever (cron fallback: scripts/capture-darkpool.js).
+  const darkPoolArchive = require('./darkPoolArchive');
+  function darkPoolSessionWatchlists() {
+    try {
+      const sessions =
+        aiTradingEngine.getAllUserSessions(brokerBridge.BROKER_USER_ID) || [];
+      return sessions
+        .filter(s => (s.config || {}).strategyKey === 'dark-pool')
+        .flatMap(s => s.config.watchlist || []);
+    } catch {
+      return [];
+    }
+  }
+  function maybeCaptureDarkPool() {
+    const { minutes, isWeekend } = nowEastern();
+    // 9:35am (575) … 4:05pm (965) ET on weekdays.
+    if (isWeekend || minutes < 575 || minutes > 965) return;
+    darkPoolArchive
+      .captureOnce(darkPoolSessionWatchlists())
+      .then(r => {
+        if (r.captured) {
+          const capped = r.cappedSymbols.length
+            ? ` (cap hit: ${r.cappedSymbols.join(', ')})`
+            : '';
+          console.log(`🕳️  Dark-pool snapshot: ${r.captured} symbols${capped}`);
+        }
+      })
+      .catch(err => console.error('[darkpool-archive] failed:', err.message));
+  }
+  setInterval(maybeCaptureDarkPool, 15 * 60 * 1000);
+  maybeCaptureDarkPool();
+  // Finalize today's archive once after the close (idempotent, restart-safe).
+  function maybeFinalizeDarkPool() {
+    const { dateStr, minutes, isWeekend } = nowEastern();
+    if (isWeekend || minutes < 16 * 60 + 15) return;
+    darkPoolArchive
+      .finalizeDay(dateStr)
+      .then(r => {
+        if (r.finalized) console.log(`🕳️  Dark-pool archive finalized ${dateStr}`);
+      })
+      .catch(err => console.error('[darkpool-finalize] failed:', err.message));
+  }
+  setInterval(maybeFinalizeDarkPool, 5 * 60 * 1000);
+  maybeFinalizeDarkPool();
+
   // --- Signal scanners: feed-driven watchlists ------------------------------
   // A fixed watchlist misses the signal — insiders buy obscure names, flow and
   // dark-pool concentrate wherever the action is today. Scanner brokers refresh
