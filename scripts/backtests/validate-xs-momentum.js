@@ -211,6 +211,7 @@ async function main() {
     description:
       'Cross-sectional 12-1 momentum, monthly top-N of a frozen 45-name large-cap universe. Benchmark is EW-ALL of the SAME universe (survivorship-matched) — the verdict measures selection edge only.',
     universe: ALL,
+    controlUniverse: UNIVERSE, // D16: EW of the 45 tradables (SPY is calendar/benchmark only)
     start: START,
     buildCandidates: ctx => {
       const { candidates, ewReturns } = buildAll(ctx);

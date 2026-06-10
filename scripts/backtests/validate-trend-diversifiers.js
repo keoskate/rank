@@ -73,6 +73,7 @@ async function main() {
     // SPY is loaded for the calendar + benchmark only — it is never traded:
     // the simulation universe below is SLEEVE_B alone.
     universe: [...SLEEVE_B, 'SPY'],
+    controlUniverse: SLEEVE_B, // D16: passive control over the SIM universe (SPY is calendar-only)
     start: START,
     buildCandidates: ctx => {
       const sim = simulateDeployed(ctx, SPEC, ctx.costMultiplier, SLEEVE_B);

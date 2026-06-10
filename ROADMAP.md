@@ -110,15 +110,18 @@ multiple-testing significance.
     a beta-dominated long book can never clear raw DSR; the criterion should
     weigh Calmar/drawdown delta vs the passive control + forward-sim
     tracking. Still the owner's call.
-16. **PRE-REGISTERED (2026-06-10 night, placebo-alarm finding): benchmark
-    reform of the OOS gate.** Passive same-universe EW scores OOS Sharpe
-    0.85 on the trend universe — ~95% of the flagship's Sharpe is
-    diversified drift; SPY benchmarking flattered every spec. Amendment (own
-    session, discipline rule, all verdicts re-run, before/after published):
-    the OOS gate judges against the declared passive same-universe control,
-    on incremental Sharpe AND Calmar (trend's real edge: maxDD −22.8% vs
-    −29.8%, Calmar 0.69 vs 0.45). See data/reports/overnight-2026-06-10.md.
-
+16. ~~PRE-REGISTERED: benchmark reform of the OOS gate.~~ **EXECUTED
+    2026-06-10** (data/reports/gate3-benchmark-reform-2026-06.md): gate 3 now
+    judges every strategy against its passive same-universe EW control on
+    incremental Sharpe OR Calmar, on identical stitched OOS dates. All active
+    verdicts re-run: 3 stricter (diversifier sleeve, combo, overnight-SOXX
+    now FAILED:outOfSample), 0 more lenient; deployed trend's real edge is
+    now gate-visible (ΔCalmar +0.23 vs control).
+17. **NEW (secondary-channel finding): third-vendor integrity leg.** Alpaca
+    daily closes deviate 269-321bps from official prints on COVID
+    circuit-breaker days (SPY 2020-03-13, GLD 2020-03-17), invisible to the
+    Polygon cross-check (blind pre-2021-07). Add a Yahoo-based cross-source
+    leg covering 2016-2021 and record affected dates in known-data-issues.
 ## Operating rules (unchanged, non-negotiable)
 
 - One data path (`lib/marketData`), one artifact (`run.json`), one stats

@@ -196,12 +196,76 @@ async function validateStrategy(spec) {
   }
   const oosSharpe = wfResult.oos.stats.sharpe;
   const isSharpe = wfResult.inSample.stats.sharpe;
+
+  // ---- D16 BENCHMARK REFORM (gate-3, 2026-06-10, rule frozen before any
+  // re-run; see data/reports/gate3-benchmark-reform-2026-06.md) ----
+  // The 2026-06-10 placebo alarm proved passive same-universe EW earns ~0.85
+  // Sharpe on liquid long universes: SPY benchmarking flattered every spec.
+  // Gate 3 now constructs a PASSIVE CONTROL — equal-weight monthly-rebalanced
+  // buy-and-hold of the declared sim universe, 2bps/month — evaluated on the
+  // IDENTICAL stitched OOS dates, and passes iff:
+  //   (a) OOS Sharpe > 0, AND
+  //   (b) the strategy beats the control on incremental Sharpe OR
+  //       incremental Calmar (both deltas recorded).
+  // Repackaged beta fails; a genuine risk-dimension improvement counts.
+  // The control is deterministic from the universe — NOT a ledger trial.
+  const ctrlUniverse = (spec.controlUniverse || universe).filter(
+    s => series[s]
+  );
+  const ctrlReturns = new Array(dates.length).fill(null);
+  {
+    const w = 1 / ctrlUniverse.length;
+    let rebalMonth = '';
+    for (let i = 260; i < dates.length; i++) {
+      let r = 0;
+      let cnt = 0;
+      for (const sym of ctrlUniverse) {
+        const px = series[sym];
+        if (px[i] != null && px[i - 1] != null) {
+          r += w * (px[i] / px[i - 1] - 1);
+          cnt++;
+        }
+      }
+      if (!cnt) continue;
+      const m = dates[i].slice(0, 7);
+      if (m !== rebalMonth) {
+        rebalMonth = m;
+        r -= 0.0002; // 2bps/month rebalance cost (control convention)
+      }
+      ctrlReturns[i] = r;
+    }
+  }
+  const ctrlIdx = new Map(dates.map((d, i) => [d, i]));
+  const ctrlOosEq = [1];
+  for (const d of wfResult.oos.dates) {
+    const i = ctrlIdx.get(d);
+    const r = i != null && ctrlReturns[i] != null ? ctrlReturns[i] : 0;
+    ctrlOosEq.push(ctrlOosEq[ctrlOosEq.length - 1] * (1 + r));
+  }
+  const ctrlStats = equityStats.statsFromEquity(
+    wfResult.oos.dates,
+    ctrlOosEq.slice(1)
+  );
+  const dSharpe = oosSharpe - (ctrlStats ? ctrlStats.sharpe : 0);
+  const dCalmar =
+    wfResult.oos.stats.calmar - (ctrlStats ? ctrlStats.calmar : 0);
+  const beatsControl = dSharpe > 0 || dCalmar > 0;
+
   gates.outOfSample = {
-    status: oosSharpe > 0 ? 'pass' : 'fail',
+    status: oosSharpe > 0 && beatsControl ? 'pass' : 'fail',
     note:
       `stitched OOS over ${wfResult.folds.length} folds: Sharpe ${oosSharpe.toFixed(2)} ` +
       `(in-sample best ${isSharpe.toFixed(2)} → haircut ${(isSharpe - oosSharpe).toFixed(2)}); ` +
+      `vs passive EW-${ctrlUniverse.length} control on identical OOS dates: ` +
+      `ΔSharpe ${dSharpe >= 0 ? '+' : ''}${dSharpe.toFixed(2)}, ΔCalmar ${dCalmar >= 0 ? '+' : ''}${dCalmar.toFixed(2)} ` +
+      `(control Sharpe ${ctrlStats ? ctrlStats.sharpe.toFixed(2) : 'n/a'}, Calmar ${ctrlStats ? ctrlStats.calmar.toFixed(2) : 'n/a'}); ` +
       `params chosen ${wfResult.paramStability.distinctChosen} distinct across ${wfResult.paramStability.folds} folds`,
+    detail: {
+      controlUniverseSize: ctrlUniverse.length,
+      controlOosStats: ctrlStats,
+      deltaSharpe: dSharpe,
+      deltaCalmar: dCalmar,
+    },
   };
   log(
     `        ${gates.outOfSample.status.toUpperCase()} — ${gates.outOfSample.note}`

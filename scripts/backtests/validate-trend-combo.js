@@ -141,6 +141,7 @@ async function main() {
     description:
       'PC2 combo: sleeve A (deployed volrank-23 trend spec) + sleeve B (frozen 10-ETF non-equity diversifier sleeve) combined by causal inverse-vol risk parity (63d sleeve vols through i-1, warmup wA=0.7), allocator turnover charged at 5bps per side. Both sleeves simulated jointly on one calendar. One candidate. Research-only: no live allocator exists.',
     universe: COMBO_UNIVERSE,
+    controlUniverse: COMBO_UNIVERSE, // D16: EW of the full joint sim universe (SPY is tradable in sleeve A)
     start: START,
     buildCandidates: ctx => {
       const simA = simulateDeployed(

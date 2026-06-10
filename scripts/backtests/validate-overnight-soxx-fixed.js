@@ -67,6 +67,7 @@ async function main() {
     description:
       'SOXX overnight, every night, FIXED spec (no selection). COST-CONDITIONAL: assumes auction execution (MOC+MOO) at 1bp/side; standard 5bps/side result in extra.costComparison. Benchmark is SOXX buy & hold on identical OOS dates.',
     universe: UNIVERSE,
+    controlUniverse: ['SOXX'], // D16: the investable passive expression — B&H of the traded underlying
     start: START,
     buildCandidates: ctx => {
       if (ctx.costMultiplier === 1 && !costComparison) {

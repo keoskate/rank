@@ -211,6 +211,7 @@ async function main() {
     description:
       'Short leveraged VIX ETPs after a 30%+ spike off the 20d low, hold until a fresh 10d low ("duration is the hedge"); SVXY-long as the zero-infra implementation. Net of 15bps/side + 8%/yr borrow while short. Window 2018-03+ (post-deleverage instruments).',
     universe: UNIVERSE,
+    controlUniverse: ['SVXY'], // D16: investable passive short-vol expression (EW incl. long-UVXY would be a trivially-losing control)
     start: START,
     buildCandidates: ctx => {
       const candidates = buildCandidates(ctx);
