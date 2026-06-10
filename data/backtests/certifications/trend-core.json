@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T06:47:45.743Z",
+  "generatedAt": "2026-06-10T07:21:04.645Z",
   "window": {
     "start": "2016-01-04",
     "end": "2026-06-07"
@@ -52,5 +52,10 @@
     "live may use a realtime intraday price instead of the latest close for trend-break timing",
     "live order execution uses engine slot/sizing mechanics; backtest emulates them (see validate-trend)"
   ],
-  "daysTested": 58659
+  "daysTested": 58659,
+  "ordering": {
+    "comparisons": 204,
+    "mismatches": [],
+    "pass": true
+  }
 }

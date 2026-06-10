@@ -99,6 +99,26 @@ function trendStateFromCloses(closes, cfg = {}, priceOverride = null) {
 }
 
 /**
+ * Confidence drives the engine's candidate sort (the "top N" selection).
+ * Pure and exported so certify-trend-core.js certifies ORDERING parity
+ * against the exact map the engine uses.
+ *
+ * Default mode: ∝ raw momentum (legacy spec, rounded — preserved verbatim).
+ * volAdjusted mode: a MONOTONE INJECTIVE map of the shared core's rankScore
+ * so the engine's ordering equals the backtest's exact rankScore sort.
+ * BUG FIXED 2026-06-10 (manifest D1): the previous map 65+rankScore*6
+ * clamped at 95 — rankScore is momentum/DAILY-vol (typical 10-40), so nearly
+ * every uptrend name pinned at 95 and live ordering was undefined. The new
+ * map saturates only asymptotically and is NOT rounded.
+ */
+function confidenceFromState(st, cfg = {}) {
+  if (cfg.trendRankBy === 'volAdjusted' && st.rankScore != null) {
+    return 65 + 30 * (1 - Math.exp(-Math.max(0, st.rankScore) / 20));
+  }
+  return Math.max(65, Math.min(95, Math.round(65 + st.momentum * 30)));
+}
+
+/**
  * Compute the trend state for a symbol from daily closes.
  * @returns {object|null} { currentPrice, sma200, momentum, uptrend }
  */
@@ -122,15 +142,7 @@ async function evaluate(session, symbol, ctx) {
         source: SLUG,
       };
     }
-    // Confidence drives the engine's candidate sort (the "top N" selection).
-    // Default: ∝ raw momentum (the deployed broker's current spec). With
-    // cfg.trendRankBy === 'volAdjusted', confidence is ∝ the shared core's
-    // rankScore (momentum / 63d vol) so low-vol diversifiers can compete —
-    // same score the backtests rank by (certified parity). Bounded 65..95.
-    const confidence =
-      cfg.trendRankBy === 'volAdjusted' && st.rankScore != null
-        ? Math.max(65, Math.min(95, Math.round(65 + st.rankScore * 6)))
-        : Math.max(65, Math.min(95, Math.round(65 + st.momentum * 30)));
+    const confidence = confidenceFromState(st, cfg);
     const shouldEnter = st.uptrend;
     const reasons = [
       `${symbol} ${st.currentPrice.toFixed(2)} vs 200d SMA ${st.sma200.toFixed(2)} (${st.currentPrice > st.sma200 ? 'above' : 'below'})`,
@@ -229,6 +241,7 @@ async function evaluateExit(session, symbol, position, _ctx) {
 module.exports = {
   slug: SLUG,
   trendStateFromCloses, // exported for faithfulness certification
+  confidenceFromState, // exported for ordering-parity certification
   mutableFields: [], // trend params are not self-mutable (regime-rule, not tunable)
   // Disable the engine's intraday risk exits — the trend exit governs. (The
   // dispatcher routes exits to evaluateExit above, but set these so any

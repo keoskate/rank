@@ -77,12 +77,50 @@ const DEPLOYED = {
  * slots with the highest-momentum eligible names at 20% of current equity
  * (or remaining cash).
  */
+// Anti-fishing sidecar (manifest R0): every 1x-cost invocation of the engine
+// is logged with a params+universe+window hash. The morning audit diffs this
+// log against the trials ledger — params computed but never recorded as a
+// trial = caught fishing. (Catches only callers of THIS engine; a copied
+// engine is invisible — narrowing the hole, not closing it.)
+function _logEngineInvocation(params, universe, dates) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const crypto = require('crypto');
+    const entry = {
+      hash: crypto
+        .createHash('sha1')
+        .update(
+          JSON.stringify({
+            params,
+            universe: [...universe].sort(),
+            window: [dates[0], dates[dates.length - 1]],
+          })
+        )
+        .digest('hex')
+        .slice(0, 12),
+      params,
+      universe: universe.length,
+      window: [dates[0], dates[dates.length - 1]],
+      at: new Date().toISOString(),
+    };
+    const p = path.join(
+      __dirname,
+      '../../data/backtests/engine-invocations.log'
+    );
+    fs.appendFileSync(p, JSON.stringify(entry) + '\n');
+  } catch (e) {
+    /* sidecar must never break a run */
+  }
+}
+
 function simulateDeployed(
   { dates, series, bars },
   params,
   costMultiplier,
   universe = UNIVERSE
 ) {
+  if (costMultiplier === 1) _logEngineInvocation(params, universe, dates);
   const {
     smaWindow,
     momLookback,
@@ -90,9 +128,24 @@ function simulateDeployed(
     maxPositions,
     sizePct,
     rankBy = 'momentum', // 'momentum' (deployed) | 'volAdjusted' (mom/vol63)
+    sizing = 'fixed', // 'fixed' (20% slots) | 'invVol' (manifest PC1)
+    sizeCap = 0.35, // per-slot cap for invVol sizing
   } = params;
-  const scoreOf = st =>
-    rankBy === 'volAdjusted' ? (st.rankScore ?? -Infinity) : (st.momentum ?? 0);
+  // 'placeboShuffle' (manifest R1): deterministic seeded pseudo-random
+  // ranking among ELIGIBLE names — isolates whether the ranking stage adds
+  // value over a random pick of trend-eligible names. Never deployable.
+  const placeboHash = (sym, date) => {
+    let h = params.placeboSeed || 404;
+    const s = sym + date;
+    for (let c = 0; c < s.length; c++) h = (h * 31 + s.charCodeAt(c)) >>> 0;
+    return h / 4294967296;
+  };
+  const scoreOf = (st, sym, date) =>
+    rankBy === 'placeboShuffle'
+      ? placeboHash(sym, date)
+      : rankBy === 'volAdjusted'
+        ? (st.rankScore ?? -Infinity)
+        : (st.momentum ?? 0);
 
   // Per-symbol clean closes + map from calendar index -> "bars through that
   // date" length (forward-filled aligned series can hold leading nulls that
@@ -181,13 +234,46 @@ function simulateDeployed(
         .filter(sym => !positions.has(sym))
         .map(sym => ({ sym, st: states.get(sym) }))
         .filter(x => x.st && x.st.ok && x.st.uptrend && px(x.sym, i) > 0)
-        .sort((a, b) => scoreOf(b.st) - scoreOf(a.st));
+        .sort(
+          (a, b) => scoreOf(b.st, b.sym, date) - scoreOf(a.st, a.sym, date)
+        );
       // equity right now (after sells, before buys)
       let equityNow = cash;
       for (const [sym, pos] of positions) equityNow += pos.qty * px(sym, i);
+
+      // Manifest PC1 (pre-registered formula): for invVol sizing, weights are
+      // normalized 1/vol over the WOULD-BE top-N book (current holdings +
+      // best fills), capped per slot, funded from cash only (gross <= 100%
+      // by construction), entries never resized later. Vol comes exclusively
+      // from trendCore st.vol in the day's states map (bars through i-1).
+      let invVolShare = null;
+      if (sizing === 'invVol') {
+        const wouldBe = [
+          ...[...positions.keys()],
+          ...eligible
+            .slice(0, Math.max(0, maxPositions - positions.size))
+            .map(c => c.sym),
+        ];
+        let denom = 0;
+        const inv = new Map();
+        for (const sym of wouldBe) {
+          const st = states.get(sym);
+          if (st && st.ok && st.vol > 0) {
+            inv.set(sym, 1 / st.vol);
+            denom += 1 / st.vol;
+          }
+        }
+        invVolShare = sym =>
+          denom > 0 && inv.has(sym) ? inv.get(sym) / denom : 1 / maxPositions;
+      }
+
       for (const cand of eligible) {
         if (positions.size >= maxPositions) break;
-        const target = Math.min(sizePct * equityNow, cash);
+        const share =
+          sizing === 'invVol'
+            ? Math.min(sizeCap, invVolShare(cand.sym))
+            : sizePct;
+        const target = Math.min(share * equityNow, cash);
         if (target < 1) break;
         const price = px(cand.sym, i);
         const cost = target * (bpsPerSide(cand.sym) / 10000) * costMultiplier;
@@ -214,9 +300,15 @@ function simulateDeployed(
       }
     }
 
-    // 4) mark to market
+    // 4) mark to market (+ manifest assertions: no negative cash, no leverage)
+    if (cash < -1e-6) {
+      throw new Error(`negative cash ${cash} at ${date} — sizing bug`);
+    }
     let equity = cash;
     for (const [sym, pos] of positions) equity += pos.qty * px(sym, i);
+    if (equity - cash > equity * (1 + 1e-9)) {
+      throw new Error(`gross exposure > 100% at ${date} — sizing bug`);
+    }
     returns[i] = equity / prevEquity - 1;
     prevEquity = equity;
     eq.push(equity / CAPITAL);

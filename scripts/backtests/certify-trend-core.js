@@ -145,6 +145,49 @@ async function main() {
     );
   }
 
+  // ---- ORDERING parity (manifest D1): the engine ranks candidates by the
+  // plugin's confidence; the backtest ranks by core rankScore. For sampled
+  // days across the watchlist, the two orderings must be identical (the old
+  // saturating confidence map failed exactly this).
+  const ordering = { comparisons: 0, mismatches: [] };
+  const availSyms = SYMBOLS.filter(s => bars[s] && bars[s].length > 300);
+  const maxLen = Math.max(...availSyms.map(s => bars[s].length));
+  for (let t = 300; t < maxLen; t += 11) {
+    const scored = [];
+    for (const sym of availSyms) {
+      const series = bars[sym];
+      if (t >= series.length) continue;
+      const closes = series.slice(0, t).map(b => b.close);
+      const core = trendCore.evaluateTrend(closes, {});
+      if (!core.ok || !core.uptrend || core.rankScore == null) continue;
+      scored.push({
+        sym,
+        rankScore: core.rankScore,
+        conf: livePlugin.confidenceFromState(core, {
+          trendRankBy: 'volAdjusted',
+        }),
+      });
+    }
+    if (scored.length < 2) continue;
+    ordering.comparisons++;
+    const byScore = [...scored]
+      .sort((a, b) => b.rankScore - a.rankScore)
+      .map(x => x.sym);
+    const byConf = [...scored].sort((a, b) => b.conf - a.conf).map(x => x.sym);
+    if (
+      byScore.join(',') !== byConf.join(',') &&
+      ordering.mismatches.length < 10
+    ) {
+      ordering.mismatches.push({ t, byScore, byConf });
+    }
+  }
+  ordering.pass = ordering.mismatches.length === 0;
+  report.ordering = ordering;
+  if (!ordering.pass) report.certified = false;
+  console.log(
+    `  ${ordering.pass ? '✓' : '✗'} ordering-parity       ${ordering.comparisons} ranked-day comparisons (core rankScore sort == plugin confidence sort)`
+  );
+
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(report, null, 2));
   console.log(
