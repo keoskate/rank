@@ -30,7 +30,7 @@
 
 require('dotenv').config();
 const { bpsPerSide } = require('../../server/risk/transactionCost');
-const { trendCore, equityStats } = require('@keo/quant-core');
+const { trendCore, equityStats, anchoredVwap } = require('@keo/quant-core');
 const { validateStrategy } = require('./lib/validateStrategy');
 const { writeRunArtifact } = require('./lib/runArtifact');
 const { recordTrials } = require('./lib/trialsLedger');
@@ -130,6 +130,10 @@ function simulateDeployed(
     rankBy = 'momentum', // 'momentum' (deployed) | 'volAdjusted' (mom/vol63)
     sizing = 'fixed', // 'fixed' (20% slots) | 'invVol' (manifest PC1)
     sizeCap = 0.35, // per-slot cap for invVol sizing
+    // Anchored-VWAP overlay (manifest 2026-06-10-avwap-vp-events AV1-3):
+    // {anchor:'high252'|'yearStart', mode:'entryFilter'|'exitOverlay'}.
+    // null (deployed default) leaves this engine's behavior byte-identical.
+    avwap = null,
   } = params;
   // 'placeboShuffle' (manifest R1): deterministic seeded pseudo-random
   // ranking among ELIGIBLE names — isolates whether the ranking stage adds
@@ -179,6 +183,22 @@ function simulateDeployed(
     });
   };
 
+  // AV entry filter: candidate may enter only when yesterday's close sits at
+  // or above the anchored VWAP (anchor resolved on bars through i-1; the
+  // quant-core anchoredVwap definition — daily bars fall back to HLC/3).
+  // Missing volume data leaves the filter inert rather than silently veto.
+  const avwapEntryOk = (sym, i) => {
+    if (!avwap || avwap.mode !== 'entryFilter') return true;
+    const n = upTo[sym][i - 1];
+    if (!n) return false;
+    const hist = bars[sym].slice(0, n);
+    const aIdx = anchoredVwap.anchorIndex(hist, avwap.anchor);
+    if (aIdx < 0) return false;
+    const v = anchoredVwap.vwapBetween(hist, aIdx, n - 1);
+    if (v == null) return true;
+    return clean[sym][n - 1] >= v;
+  };
+
   const positions = new Map(); // sym -> { qty, basis, entryDate, entryPrice }
   let cash = CAPITAL;
   const trades = [];
@@ -197,11 +217,31 @@ function simulateDeployed(
     const states = new Map();
     for (const sym of syms) states.set(sym, decide(sym, i));
 
-    // 2) exits at today's close: trend broken
+    // 2) exits at today's close: trend broken (or, under the AV3 overlay,
+    //    close fell below the position's entry-anchored VWAP)
     for (const [sym, pos] of [...positions]) {
       const st = states.get(sym);
       if (!st || !st.ok) continue; // no data -> hold (engine backstop analog)
-      if (st.uptrend) continue;
+      let exitReason = null;
+      if (!st.uptrend) {
+        exitReason =
+          st.aboveSma === false
+            ? 'trend break: below SMA'
+            : 'trend break: momentum <= 0';
+      } else if (
+        avwap &&
+        avwap.mode === 'exitOverlay' &&
+        pos.entryBarIdx != null
+      ) {
+        const n = upTo[sym][i - 1];
+        if (n > pos.entryBarIdx) {
+          const v = anchoredVwap.vwapBetween(bars[sym], pos.entryBarIdx, n - 1);
+          if (v != null && clean[sym][n - 1] < v) {
+            exitReason = 'avwap break: close < entry-anchored VWAP';
+          }
+        }
+      }
+      if (!exitReason) continue;
       const price = px(sym, i);
       if (!(price > 0)) continue;
       const gross = pos.qty * price;
@@ -220,10 +260,7 @@ function simulateDeployed(
         holdingDays: Math.round(
           (new Date(date) - new Date(pos.entryDate)) / 864e5
         ),
-        reason:
-          st.aboveSma === false
-            ? 'trend break: below SMA'
-            : 'trend break: momentum <= 0',
+        reason: exitReason,
       });
       positions.delete(sym);
     }
@@ -234,6 +271,7 @@ function simulateDeployed(
         .filter(sym => !positions.has(sym))
         .map(sym => ({ sym, st: states.get(sym) }))
         .filter(x => x.st && x.st.ok && x.st.uptrend && px(x.sym, i) > 0)
+        .filter(x => avwapEntryOk(x.sym, i))
         .sort(
           (a, b) => scoreOf(b.st, b.sym, date) - scoreOf(a.st, a.sym, date)
         );
@@ -285,6 +323,9 @@ function simulateDeployed(
           basis: target,
           entryDate: date,
           entryPrice: price,
+          // bar index of the entry day (latest completed bar on/before it) —
+          // the AV3 exit overlay anchors each position's VWAP here.
+          entryBarIdx: upTo[cand.sym][i] - 1,
         });
         trades.push({
           date,
