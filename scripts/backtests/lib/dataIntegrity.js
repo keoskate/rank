@@ -240,6 +240,141 @@ async function checkCrossSource(polygonClient, symbol, adjBars, rawCloses) {
   }
 }
 
+// ---- D17 (2026-06-12): THIRD-VENDOR leg — Yahoo Finance adjclose ----
+// The Polygon cross-check is blind before ~2021-07 (its overlap floor), and
+// the secondary-channel validation proved that blindness hid real faults:
+// Alpaca's closes deviate 269-321bps from official prints on COVID
+// circuit-breaker days (SPY 2020-03-13, GLD 2020-03-17). This leg covers
+// the FULL window with the same two checks (terminal-level + sampled 5-day
+// returns, corporate-action windows skipped). Yahoo adjclose is
+// split+dividend adjusted — the SAME basis as our Alpaca bars — so levels
+// and returns are directly comparable (unlike the Polygon leg).
+const YAHOO_CACHE_DIR = path.join(
+  __dirname,
+  '../../../data/backtests/bars-cache-yahoo'
+);
+
+function _yahooFetchAdj(symbol, startDate, endDate) {
+  fs.mkdirSync(YAHOO_CACHE_DIR, { recursive: true });
+  const cp = path.join(
+    YAHOO_CACHE_DIR,
+    `${symbol}_${startDate}_${endDate}.json`
+  );
+  if (fs.existsSync(cp)) {
+    return Promise.resolve(JSON.parse(fs.readFileSync(cp, 'utf8')));
+  }
+  const https = require('https');
+  const p1 = Math.floor(new Date(startDate).getTime() / 1000);
+  const p2 = Math.floor(new Date(endDate).getTime() / 1000) + 86400;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d`;
+  return new Promise(resolve => {
+    https
+      .get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+        let d = '';
+        res.on('data', c => (d += c));
+        res.on('end', () => {
+          try {
+            const r = JSON.parse(d).chart.result[0];
+            const ts = r.timestamp;
+            const adj = r.indicators.adjclose[0].adjclose;
+            const out = [];
+            for (let i = 0; i < ts.length; i++) {
+              if (adj[i] == null) continue;
+              out.push({
+                date: new Date(ts[i] * 1000).toISOString().slice(0, 10),
+                close: adj[i],
+              });
+            }
+            fs.writeFileSync(cp, JSON.stringify(out));
+            resolve(out);
+          } catch (e) {
+            resolve(null); // soft-fail: leg degrades to warn, never crashes
+          }
+        });
+      })
+      .on('error', () => resolve(null));
+  });
+}
+
+async function checkCrossSourceYahoo(symbol, adjBars, rawCloses) {
+  const yBars = await _yahooFetchAdj(
+    symbol,
+    adjBars[0].date,
+    adjBars[adjBars.length - 1].date
+  );
+  if (!yBars || yBars.length < 50) {
+    return { level: 'warn', issues: ['Yahoo third-vendor check unavailable'] };
+  }
+  const yByDate = new Map(yBars.map(b => [b.date, b.close]));
+  const issues = [];
+
+  // corporate-action windows: skip return comparisons straddling factor
+  // shifts (same convention as the Polygon leg)
+  const factorShiftDates = new Set();
+  if (rawCloses && rawCloses.length) {
+    const rawByDate = new Map(rawCloses.map(b => [b.date, b.close]));
+    let prevRatio = null;
+    for (const b of adjBars) {
+      const raw = rawByDate.get(b.date);
+      if (raw == null) continue;
+      const ratio = raw / b.close;
+      if (prevRatio != null && Math.abs(ratio / prevRatio - 1) > 0.01) {
+        factorShiftDates.add(b.date);
+      }
+      prevRatio = ratio;
+    }
+  }
+
+  // (a) terminal level (both vendors dividend-adjusted → directly comparable)
+  for (let i = adjBars.length - 1; i >= 0; i--) {
+    const y = yByDate.get(adjBars[i].date);
+    if (y > 0) {
+      const diff = Math.abs(y - adjBars[i].close) / adjBars[i].close;
+      if (diff > 0.02) {
+        issues.push(
+          `yahoo LEVEL mismatch at ${adjBars[i].date}: alpaca ${adjBars[i].close} vs yahoo ${y} (${(diff * 100).toFixed(1)}%)`
+        );
+      }
+      break;
+    }
+  }
+
+  // (b) EVERY daily return across the FULL window (this is the leg that
+  // sees 2016-2021, where Polygon cannot). Both series are dividend+split
+  // adjusted, so daily returns should agree to bps; a sampled check would
+  // miss single-day close faults (SPY 2020-03-13 class) ~95% of the time,
+  // which is the exact fault class D17 exists to catch. Windows touching a
+  // corporate action are skipped (vendor adjustment-timing differences).
+  const DAILY_TOL = 0.01;
+  const mismatches = [];
+  for (let i = 1; i < adjBars.length; i++) {
+    const a0 = adjBars[i - 1];
+    const a1 = adjBars[i];
+    const y0 = yByDate.get(a0.date);
+    const y1 = yByDate.get(a1.date);
+    if (!(y0 > 0) || !(y1 > 0)) continue;
+    if (factorShiftDates.has(a0.date) || factorShiftDates.has(a1.date)) {
+      continue;
+    }
+    const aRet = a1.close / a0.close - 1;
+    const yRet = y1 / y0 - 1;
+    if (Math.abs(aRet - yRet) > DAILY_TOL) {
+      mismatches.push(
+        `yahoo RETURN mismatch ${a0.date}->${a1.date}: alpaca ${(aRet * 100).toFixed(2)}% vs yahoo ${(yRet * 100).toFixed(2)}%`
+      );
+    }
+  }
+  if (mismatches.length > 12) {
+    // pervasive disagreement = basis mismatch, not isolated bad prints
+    issues.push(
+      `yahoo RETURN mismatch on ${mismatches.length} days (basis mismatch?) — first: ${mismatches[0]}`
+    );
+  } else {
+    issues.push(...mismatches);
+  }
+  return { level: issues.length ? 'fail' : 'pass', issues };
+}
+
 /** Frozen-series check: N+ consecutive identical closes. */
 function checkStaleRuns(adjBars, maxRun = 6) {
   let run = 1;
@@ -322,7 +457,7 @@ async function runDataIntegrityGate(bars, opts = {}) {
     const stale = checkStaleRuns(adj);
     if (stale.level !== 'pass') add(stale.level, stale.issues);
 
-    // cross-source
+    // cross-source (Polygon: 2021-07+ overlap only)
     if (polygonClient) {
       const cross = await checkCrossSource(polygonClient, sym, adj, raw);
       if (cross.level !== 'pass') add(cross.level, cross.issues);
@@ -330,6 +465,11 @@ async function runDataIntegrityGate(bars, opts = {}) {
     } else {
       add('warn', ['cross-source check skipped (no POLYGON_API_KEY)']);
     }
+
+    // third-vendor leg (D17, Yahoo: full window incl. 2016-2021)
+    const yahoo = await checkCrossSourceYahoo(sym, adj, raw);
+    if (yahoo.level !== 'pass') add(yahoo.level, yahoo.issues);
+    await sleep(400); // be polite to the unauthenticated endpoint
 
     // apply documented waivers: FAIL -> WARN, never hidden
     applyWaivers(sym, findings, knownIssues);
@@ -363,5 +503,6 @@ module.exports = {
   runDataIntegrityGate,
   checkAdjustmentConsistency,
   checkStaleRuns,
+  checkCrossSourceYahoo,
   applyWaivers,
 };

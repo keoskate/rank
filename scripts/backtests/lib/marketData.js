@@ -144,6 +144,55 @@ function round4(x) {
  *   integrity: { source, adjustment, checkedAt, symbols: {sym: {ok, issues}},
  *                failures: [sym] }
  */
+const CORRECTIONS_PATH = path.join(__dirname, '../known-data-corrections.json');
+let _corrections = null;
+function _loadCorrections() {
+  if (_corrections) return _corrections;
+  try {
+    _corrections = JSON.parse(
+      fs.readFileSync(CORRECTIONS_PATH, 'utf8')
+    ).corrections;
+  } catch (e) {
+    _corrections = [];
+  }
+  return _corrections;
+}
+
+/**
+ * Apply evidence-backed vendor-fault corrections (known-data-corrections.json)
+ * to a freshly loaded series, in place. The cache stays vendor-pure; the
+ * correction is applied at load time so EVERY consumer sees the same fixed
+ * data. The integrity gate's third-vendor leg regression-tests the result.
+ * Disable with BACKTEST_DATA_CORRECTIONS=off (for reproducing uncorrected
+ * results, e.g. sensitivity runs).
+ */
+function applyKnownCorrections(symbol, series, quiet = false) {
+  if (process.env.BACKTEST_DATA_CORRECTIONS === 'off') return [];
+  const applied = [];
+  for (const c of _loadCorrections()) {
+    if (c.symbol !== symbol) continue;
+    if (c.action === 'scale-before') {
+      let n = 0;
+      for (const b of series) {
+        if (b.date >= c.exDate) break;
+        for (const f of ['open', 'high', 'low', 'close']) {
+          if (b[f] != null) b[f] *= c.factor;
+        }
+        n++;
+      }
+      if (n) {
+        applied.push(`scale-before ${c.exDate} x${c.factor} (${n} bars)`);
+        if (!quiet) {
+          console.log(
+            `  ✚ ${symbol}: known-data correction applied — scale x${c.factor.toFixed(6)} before ${c.exDate} (${n} bars)`
+          );
+        }
+      }
+    }
+  }
+  return applied;
+}
+
 async function loadDailyBars(symbols, { start, end, quiet = false } = {}) {
   if (!start) throw new Error('loadDailyBars: start is required');
   const safeEnd = maxSafeEnd();
@@ -185,6 +234,9 @@ async function loadDailyBars(symbols, { start, end, quiet = false } = {}) {
       if (!quiet) console.warn(`  ✗ ${sym}: fetch failed/empty`);
       continue;
     }
+    const applied = applyKnownCorrections(sym, series, quiet);
+    if (applied.length) integrity.corrections = integrity.corrections || {};
+    if (applied.length) integrity.corrections[sym] = applied;
     const issues = checkBarsSanity(sym, series, start);
     integrity.symbols[sym] = {
       ok: issues.length === 0,
@@ -531,6 +583,7 @@ module.exports = {
   loadMinuteBars,
   buildCalendar,
   alignCloses,
+  applyKnownCorrections,
   checkBarsSanity,
   checkMinuteBarsSanity,
   etInfo,

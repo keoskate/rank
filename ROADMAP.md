@@ -9,7 +9,17 @@ VALIDATED label — and the label means all five gates: data-integrity,
 backtest==live faithfulness, walk-forward OOS, 2x-cost survival,
 multiple-testing significance.
 
-## Scoreboard (as of 2026-06-10)
+## Scoreboard (as of 2026-06-12; D17 re-runs)
+
+D17 (2026-06-12) re-ran the three verdicts its data corrections + gate-1
+Yahoo leg could touch. **No conclusion flipped**: trend volrank-23 OOS 0.88
+(window drift, books byte-identical at fixed window), DSR 58.8% at N=107;
+xs-momentum unchanged (ΔSharpe vs control −0.06, still no selection edge);
+capped MF retest near-tie identical (ΔSharpe −0.01/ΔCalmar +0.02) even after
+fixing DBMF's missed −8.2% distribution — but its verdict label is now
+**FAILED:dataIntegrity** (DBMF early-era prints two-vendor-unresolvable,
+KMLM stale at Alpaca, Polygon sides with Yahoo 11/11) which supersedes
+FAILED:outOfSample as the honest reason MF wrappers are untestable today.
 
 | Strategy | Verdict | Gates | The honest read |
 |---|---|---|---|
@@ -124,11 +134,34 @@ multiple-testing significance.
     verdicts re-run: 3 stricter (diversifier sleeve, combo, overnight-SOXX
     now FAILED:outOfSample), 0 more lenient; deployed trend's real edge is
     now gate-visible (ΔCalmar +0.23 vs control).
-17. **NEW (secondary-channel finding): third-vendor integrity leg.** Alpaca
-    daily closes deviate 269-321bps from official prints on COVID
-    circuit-breaker days (SPY 2020-03-13, GLD 2020-03-17), invisible to the
-    Polygon cross-check (blind pre-2021-07). Add a Yahoo-based cross-source
-    leg covering 2016-2021 and record affected dates in known-data-issues.
+17. ~~NEW (secondary-channel finding): third-vendor integrity leg.~~
+    **EXECUTED 2026-06-12** (data/reports/d17-third-vendor-2026-06.md):
+    gate 1 now has a Yahoo adjclose leg comparing EVERY daily return over the
+    full window (both vendors dividend-adjusted, so directly comparable —
+    a sampled check would miss single-day close faults ~95% of the time).
+    Findings: (a) the COVID close-print fault is a CLASS, not two days —
+    22 verified one-day transient deviations (0.5–7.2%) across 15 symbols in
+    2020-03-09..03-19, all waived-but-visible in known-data-issues.json with
+    per-day attribution (the original SPY 03-13 / GLD 03-17 flags were the
+    RETURNS off bad 03-12 / 03-16 CLOSES); (b) **XLF: Alpaca's adjusted
+    series is missing the XLRE spinoff distribution (ex 2016-09-19)** — a
+    phantom −18.28% day where the economic return was +0.64%. Fixed via a
+    new evidence-backed corrections layer (known-data-corrections.json,
+    applied in loadDailyBars, BACKTEST_DATA_CORRECTIONS=off to disable);
+    the Yahoo leg regression-tests it (post-correction the two vendors agree
+    to <0.01%). Materiality: ZERO — corrected vs uncorrected trade books are
+    byte-identical (sha256 over 357 trades; first XLF selection 2022-01-25,
+    five years after the fault), so no published verdict moves.
+    EXPANDED same day across all active universes (53-symbol survey): the
+    spinoff gap is SYSTEMIC (also PFE/Viatris 2020-11-17, MRK/Organon
+    2021-06-03, IBM/Kyndryl 2021-11-04 — all corrected) plus DBMF's missed
+    2019-12-27 distribution (−8.2%, corrected); ~57 COVID-class transient
+    bad closes waived with per-day attribution; KMLM = stale Alpaca prints
+    (Polygon sides with Yahoo 11/11, 0.00% prints on real −1% days) and
+    early-DBMF (2019-05..2021-06) = two-vendor-unresolvable — both keep
+    gate-1 FAIL unwaived. All three touchable verdicts re-run, none flipped
+    (see scoreboard header).
+
 ## Operating rules (unchanged, non-negotiable)
 
 - One data path (`lib/marketData`), one artifact (`run.json`), one stats

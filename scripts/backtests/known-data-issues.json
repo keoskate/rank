@@ -5,7 +5,18 @@
     "stay visible in every artifact. Every entry must say what was verified and",
     "how. Do NOT add a waiver to make a backtest pass; add it because you",
     "checked the underlying data and documented why the flag is a false alarm",
-    "(or which vendor is wrong)."
+    "(or which vendor is wrong).",
+    "",
+    "COVID-2020 close-print class (D17, verified 2026-06-12 via",
+    "scripts/backtests/diagnose-vendor-closes.js): during the circuit-breaker",
+    "stretch 2020-03-09..2020-03-19 Alpaca's daily closes are consolidated-tape",
+    "last trades that deviate from official closing-auction prints by 0.5-7.2%",
+    "on specific days, reverting to vendor agreement the NEXT session (one-day",
+    "transient level-ratio deviation vs Yahoo, which matches the official",
+    "record — spot-verified for SPY and GLD against official prints",
+    "2026-06-10). Each entry below waives the two daily-return findings that",
+    "straddle the bad close. Cumulative-return impact ~0 (transient), but",
+    "single-day returns sampled on these dates are unreliable."
   ],
   "issues": [
     {
@@ -87,6 +98,502 @@
       "note": "AMD +52.3% on 2016-04-22 ($2.62 -> $3.99) is the real market reaction to the China THATIC x86 JV + Q1'16 results announced 2016-04-21 after hours. Raw and adjusted series agree exactly (no adjustment factor shift), confirming it is not a data fault.",
       "verified": "2026-06-10, raw==adjusted agreement + historical record",
       "addedBy": "data-integrity gate investigation"
+    },
+    {
+      "symbol": "SPY",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca SPY close 2020-03-12 deviates z=+2.87% vs Yahoo/official, transient. Note this is the corrected attribution of the originally-flagged '2020-03-13 return off 269bps' — the RETURN on 03-13 was wrong because the 03-12 CLOSE was bad.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js one-day level-ratio transient; official-print agreement w/ Yahoo verified 2026-06-10",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SPY",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca SPY close 2020-03-18 deviates z=-1.79% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "IWM",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca IWM close 2020-03-16 deviates z=+1.82% vs Yahoo (smaller residuals persist through 03-18), transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "DIA",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca DIA close 2020-03-16 deviates z=+2.28% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLK",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLK close 2020-03-18 deviates z=-2.87% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLF",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLF close 2020-03-09 deviates z=+1.69% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLF",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLF close 2020-03-12 deviates z=+3.66% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLF",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLF close 2020-03-16 deviates z=-2.04% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLE",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLE close 2020-03-12 deviates z=+5.62% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLV",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLV close 2020-03-16 deviates z=+1.30% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLY",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLY close 2020-03-16 deviates z=+2.46% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLP",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLP close 2020-03-16 deviates z=-2.47% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLP",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLP close 2020-03-18 deviates z=-1.51% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLU",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLU close 2020-03-16 deviates z=+2.08% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLB",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLB close 2020-03-12 deviates z=+2.07% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLB",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLB close 2020-03-16 deviates z=-2.36% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XLRE",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XLRE close 2020-03-16 deviates z=+7.19% vs Yahoo, transient — the largest deviation in the class (XLRE was the most halt-disrupted sector that session).",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "EEM",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca EEM close 2020-03-16 deviates z=+1.20% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "EFA",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca EFA close 2020-03-16 deviates z=-2.01% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "GLD",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca GLD close 2020-03-12 deviates z=+1.79% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "GLD",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca GLD close 2020-03-16 deviates z=-2.88% vs Yahoo/official, transient. Corrected attribution of the originally-flagged '2020-03-17 return off 321bps' — the RETURN on 03-17 was wrong because the 03-16 CLOSE was bad.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js; official-print agreement w/ Yahoo verified 2026-06-10",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SLV",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca SLV close 2020-03-16 deviates z=-1.33% vs Yahoo, transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "MSFT",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca MSFT close 2020-03-18 deviates z=+2.28% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "INTC",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca INTC close 2020-03-18 deviates z=+2.43% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "IBM",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca IBM close 2020-03-16 deviates z=-2.23% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "IBM",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca IBM close 2020-03-18 deviates z=-0.53% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "WMT",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca WMT close 2020-03-18 deviates z=+2.72% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "NKE",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca NKE close 2020-03-09 deviates z=-2.43% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "NKE",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca NKE close 2020-03-12 deviates z=+3.27% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "TGT",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca TGT close 2020-03-09 deviates z=-3.04% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "TGT",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca TGT close 2020-03-18 deviates z=+0.60% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "BAC",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca BAC close 2020-03-12 deviates z=+1.80% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "BAC",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca BAC close 2020-03-16 deviates z=-2.58% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "BAC",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca BAC close 2020-03-18 deviates z=-4.22% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "GS",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca GS close 2020-03-12 deviates z=+5.91% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "MS",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca MS close 2020-03-09 deviates z=-1.04% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "MA",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca MA close 2020-03-18 deviates z=-5.30% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "AXP",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca AXP close 2020-03-12 deviates z=+3.02% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "PFE",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca PFE close 2020-03-09 deviates z=-1.53% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "PFE",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca PFE close 2020-03-16 deviates z=-0.66% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "MRK",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca MRK close 2020-03-12 deviates z=+2.60% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "ABBV",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca ABBV close 2020-03-09 deviates z=-1.49% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "LLY",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca LLY close 2020-03-18 deviates z=-3.49% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "BA",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca BA close 2020-03-18 deviates z=-5.15% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "GE",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca GE close 2020-03-12 deviates z=+2.35% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "GE",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca GE close 2020-03-16 deviates z=+4.36% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "XOM",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca XOM close 2020-03-12 deviates z=+5.53% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "CVX",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca CVX close 2020-03-09 deviates z=+1.07% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "CVX",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca CVX close 2020-03-16 deviates z=+8.52% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "PG",
+      "contains": "2020-03-12",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca PG close 2020-03-12 deviates z=+3.09% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "DIS",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca DIS close 2020-03-09 deviates z=+4.42% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "DIS",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca DIS close 2020-03-18 deviates z=-7.28% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SOXL",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca SOXL close 2020-03-16 deviates z=+12.55% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SOXL",
+      "contains": "2020-03-18",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca SOXL close 2020-03-18 deviates z=-2.86% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "UVXY",
+      "contains": "2020-03-16",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca UVXY close 2020-03-16 deviates z=-11.72% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SVXY",
+      "contains": "2020-03-09",
+      "status": "known-vendor-deviation",
+      "note": "COVID close-print class (see _readme): Alpaca SVXY close 2020-03-09 deviates z=-5.01% vs Yahoo, one-day transient.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SOXL",
+      "contains": "2021-03-09",
+      "status": "known-vendor-deviation",
+      "note": "Alpaca SOXL close 2021-03-09 deviates z=+1.94% vs Yahoo, one-day transient (semi-vol week after the 2021-03-02 15:1 split; same close-print fault class as the COVID entries, different date).",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "UVXY",
+      "contains": "2018-06-27",
+      "status": "known-vendor-deviation",
+      "note": "Alpaca UVXY close 2018-06-27 deviates z=-1.52% vs Yahoo, one-day transient close-print disagreement (no third vendor reaches this date; zero cumulative impact either way).",
+      "verified": "2026-06-12, diagnose-vendor-closes.js",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "UVXY",
+      "contains": "2016-06-24",
+      "status": "verified-real-event",
+      "note": "UVXY +43.7% on 2016-06-24 is the real Brexit shock (SPY -3.6%). Cross-instrument: SVXY -26.4% same day, ratio -1.65 vs -2.0 theoretical (2x/-1x epoch, path effects).",
+      "verified": "2026-06-12, cross-instrument leverage-ratio check + historical record",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "UVXY",
+      "contains": "2018-02-05",
+      "status": "verified-real-event",
+      "note": "UVXY +66.7% on 2018-02-05 is Volmageddon day 1 (SPY -4.1%, XIV terminated). Cross-instrument: SVXY -31.9%, ratio -2.09 vs -2.0 theoretical.",
+      "verified": "2026-06-12, cross-instrument leverage-ratio check + historical record",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "UVXY",
+      "contains": "2018-02-08",
+      "status": "verified-real-event",
+      "note": "UVXY +50.3% on 2018-02-08 is the Volmageddon-week continuation crash (SPY -3.7%). Cross-instrument: SVXY -22.1%, ratio -2.27.",
+      "verified": "2026-06-12, cross-instrument leverage-ratio check + historical record",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "SVXY",
+      "contains": "2018-02-06",
+      "status": "verified-real-event",
+      "note": "SVXY -83.0% close-to-close into 2018-02-06 is the documented Volmageddon NAV collapse (the after-hours 2018-02-05 VIX-futures spike printed into the 02-06 close; XIV terminated the same event; SVXY ~$71.80 -> ~$11.34 matches the historical record).",
+      "verified": "2026-06-12, cross-instrument leverage-ratio check + historical record",
+      "addedBy": "D17 third-vendor investigation"
     }
   ]
 }

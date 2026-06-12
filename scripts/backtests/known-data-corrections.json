@@ -1,0 +1,59 @@
+{
+  "_readme": [
+    "Evidence-backed corrections applied to vendor bars at load time",
+    "(scripts/backtests/lib/marketData.js). Unlike waivers (which only",
+    "downgrade gate findings), a correction CHANGES the data every backtest",
+    "sees — so the bar is higher: each entry must be a verified vendor fault",
+    "with the correct value established from an independent source, and the",
+    "data-integrity gate's third-vendor leg must confirm agreement after the",
+    "correction (it is the regression test). Disable with",
+    "BACKTEST_DATA_CORRECTIONS=off to reproduce uncorrected results."
+  ],
+  "corrections": [
+    {
+      "symbol": "XLF",
+      "action": "scale-before",
+      "exDate": "2016-09-19",
+      "factor": 0.8119942254794335,
+      "note": "Alpaca's 'all'-adjusted XLF series is missing the XLRE real-estate spinoff distribution (ex 2016-09-19, ~0.139146 XLRE shares per XLF share, ~18.3% of price): it shows a fake -18.28% close-to-close day where the economic, distribution-inclusive return was +0.64%. Scaling all pre-ex-date closes by this factor reproduces Yahoo's adjusted series to <0.01% (19.80*k = 16.077 vs Yahoo 16.0778). Without it, every backtest including XLF books a phantom -18% day and ~12 months of distorted momentum/vol.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js: permanent -18.76% level-ratio step across 2016-09-19; vendors agree exactly after the date and are +23.15% apart before; factor derived so the ex-date return matches Yahoo (+0.64%)",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "PFE",
+      "action": "scale-before",
+      "exDate": "2020-11-17",
+      "factor": 0.9486955547554996,
+      "note": "Alpaca's adjusted PFE series is missing the Viatris spinoff distribution (ex 2020-11-17, 0.124079 VTRS per PFE share ~5.1% of price): fake -3.46% day where the economic return was +1.76%. Part of a systemic Alpaca pattern: spinoff share distributions are not adjusted (also XLF/XLRE 2016, MRK/Organon 2021, IBM/Kyndryl 2021).",
+      "verified": "2026-06-12, diagnose-vendor-closes.js: permanent -5.12% level-ratio step at the ex-date; factor from single-day vendor parity",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "MRK",
+      "action": "scale-before",
+      "exDate": "2021-06-03",
+      "factor": 0.954266884646985,
+      "note": "Alpaca's adjusted MRK series is missing the Organon spinoff distribution (ex 2021-06-03, 0.1 OGN per MRK share ~4.6% of price): fake -2.58% day where the economic return was +2.09%. Same systemic spinoff-adjustment gap as XLF/PFE/IBM.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js: permanent -4.58% level-ratio step at the ex-date; factor from single-day vendor parity",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "IBM",
+      "action": "scale-before",
+      "exDate": "2021-11-04",
+      "factor": 0.955964703427572,
+      "note": "Alpaca's adjusted IBM series is missing the Kyndryl spinoff distribution (ex 2021-11-04, 1 KD per 5 IBM shares ~4.4% of price): fake -4.95% day where the economic return was -0.57%. Same systemic spinoff-adjustment gap as XLF/PFE/MRK.",
+      "verified": "2026-06-12, diagnose-vendor-closes.js: permanent -4.40% level-ratio step at the ex-date; factor from single-day vendor parity",
+      "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "DBMF",
+      "action": "scale-before",
+      "exDate": "2019-12-27",
+      "factor": 0.9189142397180506,
+      "note": "Alpaca's adjusted DBMF series is missing the fund's first annual distribution ($2.29 ex 2019-12-27, ~8.2% of ~$28 price). Verified against Yahoo's dividend records: Alpaca applied every later DBMF distribution (2021-12-30 through 2025-12-30 raw/adj shifts all match Yahoo's events) but has NO adjustment at 2019-12-27. Factor from 15d median vendor level-ratio each side of the ex-date (robust to this fund's early-period print noise). NOTE: DBMF's 2019-05..2021-06 era also has chronic ~1% close-print disagreement between vendors with no third-vendor tiebreak available (Polygon floors 2021-07; post-2021-07 the vendors agree perfectly) — early-DBMF backtest results carry that uncertainty regardless of this correction.",
+      "verified": "2026-06-12, Yahoo events=div audit + diagnose-vendor-closes.js permanent -8.1% step; post-2021-07 three-vendor agreement is exact",
+      "addedBy": "D17 third-vendor investigation"
+    }
+  ]
+}
