@@ -1166,6 +1166,13 @@ function getGlobalPositionExposure() {
 
   for (const [sid, session] of sessions) {
     if (session.status !== 'running') continue; // Only running sessions have synced positions; paused sessions have stale data
+    // Exclude SIMULATION sessions: their positions are VIRTUAL (separate $100k
+    // pools), not on the shared real Alpaca account this cross-session exposure
+    // logic guards. Including them summed sim market value into the real
+    // account's exposure check (~$237k of sim positions / $80k paper equity =
+    // 292%), which wrongly tripped the total-exposure cap and froze the paper
+    // account flat — blocking every real entry. Real (paper/live) sessions only.
+    if (session.config.simulationMode) continue;
     for (const [symbol, position] of session.portfolio.positions) {
       const upper = symbol.toUpperCase();
       heldSymbols.add(upper);
