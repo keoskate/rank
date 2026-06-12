@@ -102,8 +102,12 @@ multiple-testing significance.
     median trial length, ≈0.31 ann.) instead of the empirical trial spread
     that anti-edge controls had inflated to 0.81. SR\* dropped 1.93 → 0.74
     ann.; all verdicts re-run; nothing flipped to pass (xs-momentum got
-    STRICTER: its young-ledger 95% pass became 62.3% fail). Follow-on (own
-    merits, not done): effective-N from trial correlation.
+    STRICTER: its young-ledger 95% pass became 62.3% fail). Follow-on EXECUTED 2026-06-12: the pre-registered
+    effective-N correction was ABANDONED — its own acceptance test failed
+    (9.5% false-pass on synthetic null ledgers vs the 5% threshold; the
+    estimator under-counts selection pressure under realistic correlation).
+    Gate 5 keeps full ledger N permanently; no alternative estimator may be
+    tried (estimator-shopping ban). See gate5-effectiveN-result-2026-06.md.
 15. **OPEN DECISION on the promotion rule (A3):** under the revised bar,
     DSR ≥ 95% requires OOS Sharpe ≈1.3–1.4 — trend-following at 0.82 cannot
     reach it with more time alone. Either improve the strategy (C7 breadth)
