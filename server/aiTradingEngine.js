@@ -707,8 +707,16 @@ if (!process.env.AI_ENGINE_DRY_RUN) {
  * @returns {string} 'paper' or 'live'
  */
 function getSessionTradingMode(session) {
-  // paperTradeOnly: true = paper mode, false = live mode
-  // Default to paper for safety
+  // 'live' (real money) requires an EXPLICIT opt-in. The `tradingMode` field —
+  // set by tier transitions (transitionToPaperTier => 'paper') and brokerSchema
+  // — is authoritative. The legacy `paperTradeOnly` flag is only a fallback.
+  // BUG THIS FIXES: brokerSchema sets paperTradeOnly=false for non-paper-tier
+  // brokers, which the old `paperTradeOnly === false ? 'live'` read as LIVE — so
+  // promoting a broker to PAPER routed it at the real-money account (it synced
+  // the near-empty live account, $1.1k, not the $75k paper account). Default to
+  // paper for safety; only ever return 'live' when tradingMode is explicitly set.
+  if (session.config.tradingMode === 'live') return 'live';
+  if (session.config.tradingMode === 'paper') return 'paper';
   return session.config.paperTradeOnly === false ? 'live' : 'paper';
 }
 
