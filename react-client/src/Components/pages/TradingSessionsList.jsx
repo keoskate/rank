@@ -33,11 +33,27 @@ const TradingSessionsList = () => {
 
   const fetchSessions = async () => {
     try {
-      const res = await fetch('/api/ai/sessions/default_user');
-      const data = await res.json();
-      if (res.ok) {
-        setSessions(data.sessions || []);
+      // default_user = the hand-built experiment sessions (EXP-B, etc.).
+      // 'brokers' = the broker-exchange agents (trend/momentum/insider/...) —
+      // same session shape, just a different userId, so they render identically.
+      const [userRes, brokerRes] = await Promise.all([
+        fetch('/api/ai/sessions/default_user'),
+        fetch('/api/ai/sessions/brokers').catch(() => null),
+      ]);
+      const userData = await userRes.json();
+      const userSessions = userRes.ok ? userData.sessions || [] : [];
+      let brokerSessions = [];
+      if (brokerRes && brokerRes.ok) {
+        const brokerData = await brokerRes.json();
+        brokerSessions = (brokerData.sessions || []).map(s => ({
+          ...s,
+          isBroker: true,
+          tier:
+            s.config?.tier ||
+            (s.config?.simulationMode === false ? 'paper' : 'simulated'),
+        }));
       }
+      setSessions([...userSessions, ...brokerSessions]);
     } catch (err) {
       console.error('Failed to fetch sessions:', err);
       setError('Failed to load sessions');
@@ -519,9 +535,15 @@ const TradingSessionsList = () => {
             <h2 style={{ marginTop: 0, color: theme.colors.gray900 }}>
               Clone Session
             </h2>
-            <p style={{ color: theme.colors.gray600, marginBottom: theme.spacing.lg }}>
-              Create a copy of "<strong>{cloneModalSession.name}</strong>" with all its
-              configuration. The clone will start paused so you can review settings.
+            <p
+              style={{
+                color: theme.colors.gray600,
+                marginBottom: theme.spacing.lg,
+              }}
+            >
+              Create a copy of "<strong>{cloneModalSession.name}</strong>" with
+              all its configuration. The clone will start paused so you can
+              review settings.
             </p>
 
             {/* Clone Name */}
@@ -574,7 +596,9 @@ const TradingSessionsList = () => {
                     border: `2px solid ${clonePaperTrading ? theme.colors.primary : theme.colors.gray300}`,
                     borderRadius: theme.borderRadius.md,
                     cursor: 'pointer',
-                    backgroundColor: clonePaperTrading ? `${theme.colors.primary}10` : 'transparent',
+                    backgroundColor: clonePaperTrading
+                      ? `${theme.colors.primary}10`
+                      : 'transparent',
                   }}
                 >
                   <input
@@ -584,10 +608,17 @@ const TradingSessionsList = () => {
                     onChange={() => setClonePaperTrading(true)}
                   />
                   <div>
-                    <div style={{ fontWeight: theme.typography.fontWeight.medium }}>
+                    <div
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
                       Paper Trading
                     </div>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.gray500,
+                      }}
+                    >
                       Simulated trades, no real money
                     </div>
                   </div>
@@ -602,7 +633,9 @@ const TradingSessionsList = () => {
                     border: `2px solid ${!clonePaperTrading ? theme.colors.warning : theme.colors.gray300}`,
                     borderRadius: theme.borderRadius.md,
                     cursor: 'pointer',
-                    backgroundColor: !clonePaperTrading ? `${theme.colors.warning}10` : 'transparent',
+                    backgroundColor: !clonePaperTrading
+                      ? `${theme.colors.warning}10`
+                      : 'transparent',
                   }}
                 >
                   <input
@@ -612,10 +645,17 @@ const TradingSessionsList = () => {
                     onChange={() => setClonePaperTrading(false)}
                   />
                   <div>
-                    <div style={{ fontWeight: theme.typography.fontWeight.medium }}>
+                    <div
+                      style={{ fontWeight: theme.typography.fontWeight.medium }}
+                    >
                       Live Trading
                     </div>
-                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.warning }}>
+                    <div
+                      style={{
+                        fontSize: theme.typography.fontSize.xs,
+                        color: theme.colors.warning,
+                      }}
+                    >
                       Real money, real trades
                     </div>
                   </div>
@@ -634,10 +674,22 @@ const TradingSessionsList = () => {
                   marginBottom: theme.spacing.lg,
                 }}
               >
-                <p style={{ margin: 0, color: theme.colors.warning, fontWeight: theme.typography.fontWeight.medium }}>
+                <p
+                  style={{
+                    margin: 0,
+                    color: theme.colors.warning,
+                    fontWeight: theme.typography.fontWeight.medium,
+                  }}
+                >
                   ⚠️ Live Trading Warning
                 </p>
-                <p style={{ margin: '8px 0 0', color: theme.colors.gray700, fontSize: theme.typography.fontSize.sm }}>
+                <p
+                  style={{
+                    margin: '8px 0 0',
+                    color: theme.colors.gray700,
+                    fontSize: theme.typography.fontSize.sm,
+                  }}
+                >
                   This session will use real money when auto-trading is enabled.
                   Make sure you review all settings before resuming.
                 </p>
@@ -645,7 +697,13 @@ const TradingSessionsList = () => {
             )}
 
             {/* Buttons */}
-            <div style={{ display: 'flex', gap: theme.spacing.md, justifyContent: 'flex-end' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: theme.spacing.md,
+                justifyContent: 'flex-end',
+              }}
+            >
               <Button variant="secondary" onClick={closeCloneModal}>
                 Cancel
               </Button>
@@ -742,6 +800,51 @@ const SessionCard = ({
             >
               {session.status}
             </span>
+            {session.isBroker && (
+              <>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor: '#374151',
+                    color: 'white',
+                    fontSize: theme.typography.fontSize.xs,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Exchange
+                </span>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor:
+                      session.tier === 'paper' ? '#2563eb' : '#6b7280',
+                    color: 'white',
+                    fontSize: theme.typography.fontSize.xs,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {session.tier === 'paper' ? 'Paper' : 'Sim'}
+                </span>
+                <span
+                  title="No strategy has cleared the 5-gate validation — this is an unvalidated forward test, not proven edge"
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: theme.borderRadius.sm,
+                    backgroundColor: '#b91c1c',
+                    color: 'white',
+                    fontSize: theme.typography.fontSize.xs,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Unvalidated
+                </span>
+              </>
+            )}
           </div>
 
           {/* Last Activity */}
@@ -800,14 +903,21 @@ const SessionCard = ({
                   }}
                 >
                   <span>
-                    {trade.side.toUpperCase()} {trade.quantity} {trade.symbol} @ ${trade.price?.toFixed(2)}
+                    {trade.side.toUpperCase()} {trade.quantity} {trade.symbol} @
+                    ${trade.price?.toFixed(2)}
                   </span>
                   {trade.side === 'sell' && trade.pnl != null && (
-                    <span style={{
-                      color: trade.pnl >= 0 ? theme.colors.success : theme.colors.error,
-                      fontWeight: theme.typography.fontWeight.medium,
-                    }}>
-                      {trade.pnl >= 0 ? '+' : ''}{formatCurrency(trade.pnl)}
+                    <span
+                      style={{
+                        color:
+                          trade.pnl >= 0
+                            ? theme.colors.success
+                            : theme.colors.error,
+                        fontWeight: theme.typography.fontWeight.medium,
+                      }}
+                    >
+                      {trade.pnl >= 0 ? '+' : ''}
+                      {formatCurrency(trade.pnl)}
                     </span>
                   )}
                 </div>
@@ -842,12 +952,20 @@ const SessionCard = ({
                   <span style={{ color: theme.colors.gray700 }}>
                     {pos.quantity} {pos.symbol} @ ${pos.averageCost?.toFixed(2)}
                   </span>
-                  <span style={{
-                    color: (pos.unrealizedPnL || 0) >= 0 ? theme.colors.success : theme.colors.error,
-                    fontWeight: theme.typography.fontWeight.medium,
-                  }}>
-                    {(pos.unrealizedPnL || 0) >= 0 ? '+' : ''}{formatCurrency(pos.unrealizedPnL || 0)}
-                    {pos.unrealizedPnLPercent ? ` (${pos.unrealizedPnLPercent >= 0 ? '+' : ''}${pos.unrealizedPnLPercent.toFixed(1)}%)` : ''}
+                  <span
+                    style={{
+                      color:
+                        (pos.unrealizedPnL || 0) >= 0
+                          ? theme.colors.success
+                          : theme.colors.error,
+                      fontWeight: theme.typography.fontWeight.medium,
+                    }}
+                  >
+                    {(pos.unrealizedPnL || 0) >= 0 ? '+' : ''}
+                    {formatCurrency(pos.unrealizedPnL || 0)}
+                    {pos.unrealizedPnLPercent
+                      ? ` (${pos.unrealizedPnLPercent >= 0 ? '+' : ''}${pos.unrealizedPnLPercent.toFixed(1)}%)`
+                      : ''}
                   </span>
                 </div>
               ))}
@@ -873,7 +991,8 @@ const SessionCard = ({
                   </strong>
                   {(session.positionCount || 0) > 0 && (
                     <span style={{ color: '#d97706' }}>
-                      {' '}({session.positionCount} open)
+                      {' '}
+                      ({session.positionCount} open)
                     </span>
                   )}
                 </span>
@@ -897,21 +1016,29 @@ const SessionCard = ({
                 <span
                   style={{
                     color:
-                      (session.stats.totalPnLWithUnrealized || session.stats.totalPnL || 0) >= 0
+                      (session.stats.totalPnLWithUnrealized ||
+                        session.stats.totalPnL ||
+                        0) >= 0
                         ? theme.colors.success
                         : theme.colors.error,
                   }}
                 >
                   P&L:{' '}
-                  <strong>
-                    {formatCurrency(session.stats.totalPnL || 0)}
-                  </strong>
+                  <strong>{formatCurrency(session.stats.totalPnL || 0)}</strong>
                   {(session.stats.unrealizedPnL || 0) !== 0 && (
-                    <span style={{
-                      color: (session.stats.unrealizedPnL || 0) >= 0 ? theme.colors.success : theme.colors.error,
-                      fontSize: theme.typography.fontSize.xs,
-                    }}>
-                      {' '}({(session.stats.unrealizedPnL || 0) >= 0 ? '+' : ''}{formatCurrency(session.stats.unrealizedPnL || 0)} unrealized)
+                    <span
+                      style={{
+                        color:
+                          (session.stats.unrealizedPnL || 0) >= 0
+                            ? theme.colors.success
+                            : theme.colors.error,
+                        fontSize: theme.typography.fontSize.xs,
+                      }}
+                    >
+                      {' '}
+                      ({(session.stats.unrealizedPnL || 0) >= 0 ? '+' : ''}
+                      {formatCurrency(session.stats.unrealizedPnL || 0)}{' '}
+                      unrealized)
                     </span>
                   )}
                 </span>
