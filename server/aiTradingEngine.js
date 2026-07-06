@@ -767,6 +767,16 @@ const DEFAULT_CONFIG = {
   // Daily profit target - pause session after hitting +N% day (null = disabled)
   // When hit: closes open positions and pauses session until next trading day
   dailyProfitTargetPercent: null,
+  // Portfolio drawdown circuit breaker (opt-in, halt-only; null = disabled).
+  // When set, a session whose equity falls this % below its high-water mark
+  // (peakValue) is paused via triggerCircuitBreaker — entries blocked, exits
+  // still allowed, no liquidation. Armed per-broker via risk.maxPortfolioDrawdown.
+  maxPortfolioDrawdownPercent: null,
+  // Winner-trim / partial profit-take (opt-in; null = disabled). When set, the
+  // trend/momentum plugins trim a winner once after unrealized P&L >= this %.
+  // partialExitPercent is the trim fraction (0..100) the executors size with.
+  trimAtProfitPercent: null,
+  partialExitPercent: 50,
   // Risk management - stop losses execute even when autoTrade is off
   allowStopLossExit: true, // CRITICAL: Allow stop loss to execute regardless of autoTrade
   // Semiconductor Strategy Settings
@@ -2886,6 +2896,36 @@ async function analyzeAndTrade(sessionId) {
   // CRITICAL: Sync portfolio from Alpaca before analyzing
   // This ensures we know about all positions for stop loss checks
   await syncPortfolio(sessionId);
+
+  // --- Portfolio drawdown circuit breaker (opt-in, HALT-ONLY) ---
+  // After syncPortfolio, sim (markToMarket) and paper/live (Alpaca) converge on
+  // the same fields and session.stats.peakValue has just been re-maxed on both
+  // paths. Only runs when armed (maxPortfolioDrawdownPercent set); pauses the
+  // session via the existing circuit breaker — no liquidation.
+  const portDDLimit = session.config.maxPortfolioDrawdownPercent;
+  if (
+    portDDLimit != null &&
+    portDDLimit > 0 &&
+    !session.circuitBreakerTriggered
+  ) {
+    const peak = session.stats?.peakValue || 0;
+    const positionsValue = [
+      ...(session.portfolio?.positions?.values() || []),
+    ].reduce((v, p) => v + (parseFloat(p.marketValue) || 0), 0);
+    const currentValue =
+      (parseFloat(session.portfolio?.cash) || 0) + positionsValue;
+    if (peak > 0 && currentValue > 0) {
+      const ddPct = ((peak - currentValue) / peak) * 100;
+      if (ddPct >= portDDLimit) {
+        triggerCircuitBreaker(
+          sessionId,
+          `Portfolio drawdown ${ddPct.toFixed(1)}% >= limit ${portDDLimit}% ` +
+            `(equity $${currentValue.toFixed(0)} vs peak $${peak.toFixed(0)})`
+        );
+        return; // halt this tick; tradingTick reschedules at 60s while paused
+      }
+    }
+  }
 
   const { watchlist, maxPositions, minConfidence } = session.config;
 

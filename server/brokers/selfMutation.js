@@ -43,6 +43,9 @@ const MUTABLE_FIELDS = new Set([
   'risk.kellyFraction',
   'risk.maxPositions',
   'risk.maxPositionSizePercent',
+  'risk.maxPortfolioDrawdown',
+  'risk.trimAtProfitPercent',
+  'risk.trimFraction',
   'regime.enabled',
   // regime.entropyWindows omitted — array values aren't supported by the
   // structured-output schema in this version; the LLM proposes scalars only

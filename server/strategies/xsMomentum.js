@@ -27,6 +27,7 @@ const tradingLogger = require('../tradingLogger');
 const websocketServer = require('../websocketServer');
 const alpacaStream = require('../alpacaStreamClient');
 const polygonClient = require('../polygonClient');
+const { trimCore } = require('@keo/quant-core');
 
 const SLUG = 'cross-sectional-momentum';
 
@@ -197,6 +198,34 @@ async function evaluateExit(session, symbol, position, ctx) {
     const closes = await _dailyCloses(symbol);
     const currentPrice = await _price(symbol, closes);
     if (stillIn) {
+      // Still in the quintile — but if armed, trim a winner once. NOTE: disabled
+      // by default (trimAtProfitPercent: null) and intentionally left off on the
+      // momentum broker until a dollar-ledger momentum backtest validates it —
+      // an intramonth trim is unvalidated against this factor (see plan).
+      const trim = trimCore.evaluateTrim(
+        {
+          unrealizedPnLPercent: position.unrealizedPnLPercent || 0,
+          partialExitDone: position.partialExitDone,
+        },
+        { trimAtProfitPercent: (session.config || {}).trimAtProfitPercent }
+      );
+      if (trim) {
+        return {
+          shouldExit: true,
+          partialExit: true, // EXECUTABLE flag (not isPartialExit, which is metadata)
+          symbol,
+          action: 'SELL',
+          confidence: 100,
+          exitReason: `Trim winner at +${trim.pnlPercent.toFixed(1)}% (≥ ${trim.threshold}%)`,
+          reasons: [
+            `TRIM: +${trim.pnlPercent.toFixed(1)}% profit, trimming once`,
+          ],
+          currentPrice,
+          pnlPercent: position.unrealizedPnLPercent || 0,
+          isPartialExit: true,
+          source: SLUG,
+        };
+      }
       return { shouldExit: false, reason: 'still top quintile', currentPrice };
     }
     return {

@@ -23,7 +23,7 @@ const tradingLogger = require('../tradingLogger');
 const websocketServer = require('../websocketServer');
 const alpacaStream = require('../alpacaStreamClient');
 const alpacaClient = require('../alpacaClient');
-const { trendCore } = require('@keo/quant-core');
+const { trendCore, trimCore } = require('@keo/quant-core');
 
 const SLUG = 'trend-following';
 
@@ -214,6 +214,32 @@ async function evaluateExit(session, symbol, position, _ctx) {
   const shouldExit = !st.uptrend; // exit if not (above SMA AND momentum>0)
   const pnlPercent = position.unrealizedPnLPercent || 0;
   if (!shouldExit) {
+    // Trend still intact — but if armed, trim a winner once (partial profit-take).
+    // Full trend-break exit above always takes priority; this only fires while held.
+    const trim = trimCore.evaluateTrim(
+      {
+        unrealizedPnLPercent: pnlPercent,
+        partialExitDone: position.partialExitDone,
+      },
+      { trimAtProfitPercent: cfg.trimAtProfitPercent }
+    );
+    if (trim) {
+      return {
+        shouldExit: true, // signalEvaluator requires a boolean shouldExit
+        partialExit: true, // EXECUTABLE flag the executors size from (not isPartialExit)
+        symbol,
+        action: 'SELL',
+        confidence: 100,
+        exitReason: `Trim winner at +${trim.pnlPercent.toFixed(1)}% (≥ ${trim.threshold}%)`,
+        reasons: [
+          `TRIM: +${trim.pnlPercent.toFixed(1)}% profit, trimming once while trend holds`,
+        ],
+        currentPrice: st.currentPrice,
+        pnlPercent,
+        isPartialExit: true,
+        source: SLUG,
+      };
+    }
     return {
       shouldExit: false,
       reason: 'trend intact',

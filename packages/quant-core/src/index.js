@@ -15,6 +15,7 @@ const shannonEntropy = require('./shannonEntropy');
 const equityStats = require('./equityStats');
 const entropyGateCore = require('./entropyGateCore');
 const trendCore = require('./trendCore');
+const trimCore = require('./trimCore');
 const walkForward = require('./walkForward');
 const significance = require('./significance');
 const allocatorCore = require('./allocatorCore');
@@ -49,6 +50,10 @@ module.exports = {
   // The trend-following decision (SMA + 12-1 momentum) shared by the live
   // trendFollowing plugin and backtests — same faithfulness contract.
   trendCore,
+
+  // The winner-trim (partial profit-take) decision shared by the live
+  // trend/momentum plugins and the backtest trim overlay.
+  trimCore,
 
   // Walk-forward OOS evaluation + multiple-testing-aware significance.
   walkForward,

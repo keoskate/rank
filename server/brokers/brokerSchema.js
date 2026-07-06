@@ -42,6 +42,16 @@ const BROKER_DEFAULTS = {
     kellyFraction: 0.25,
     maxPositions: 3,
     maxPositionSizePercent: 15,
+    // Portfolio drawdown circuit breaker (opt-in; null = disabled). When set,
+    // a broker whose equity falls this fraction from its high-water mark is
+    // halted (paused, new entries blocked, exits allowed — no liquidation).
+    maxPortfolioDrawdown: null,
+    // Winner-trim / partial profit-take (opt-in; null = disabled). When set,
+    // a winning position is trimmed once after unrealized P&L >= this percent.
+    trimAtProfitPercent: null,
+    // Fraction of a position to sell on a winner-trim (0,1). Maps to the
+    // executors' partialExitPercent sizing.
+    trimFraction: 0.5,
   },
   regime: {
     enabled: false,
@@ -220,6 +230,27 @@ function validateBroker(raw, filename = '') {
     errs,
     risk.maxPositionSizePercent > 0 && risk.maxPositionSizePercent <= 100,
     'risk.maxPositionSizePercent must be in (0, 100]'
+  );
+  pushIf(
+    errs,
+    risk.maxPortfolioDrawdown === null ||
+      (typeof risk.maxPortfolioDrawdown === 'number' &&
+        risk.maxPortfolioDrawdown > 0 &&
+        risk.maxPortfolioDrawdown <= 0.5),
+    'risk.maxPortfolioDrawdown must be null or in (0, 0.5]'
+  );
+  pushIf(
+    errs,
+    risk.trimAtProfitPercent === null ||
+      (typeof risk.trimAtProfitPercent === 'number' &&
+        risk.trimAtProfitPercent > 0 &&
+        risk.trimAtProfitPercent <= 500),
+    'risk.trimAtProfitPercent must be null or in (0, 500]'
+  );
+  pushIf(
+    errs,
+    risk.trimFraction > 0 && risk.trimFraction < 1,
+    'risk.trimFraction must be in (0, 1)'
   );
 
   const regime = deepMerge(BROKER_DEFAULTS.regime, raw.regime || {});
@@ -451,6 +482,16 @@ function brokerToSessionConfig(broker, personaBody = '') {
     kellyFraction: broker.risk.kellyFraction,
     maxPositions: broker.risk.maxPositions,
     maxPositionSizePercent: broker.risk.maxPositionSizePercent,
+    // Portfolio drawdown circuit breaker (opt-in). null = disabled; guard the
+    // null*100 trap so a disabled breaker stays null, not 0.
+    maxPortfolioDrawdownPercent:
+      broker.risk.maxPortfolioDrawdown == null
+        ? null
+        : broker.risk.maxPortfolioDrawdown * 100,
+    // Winner-trim (opt-in). trimAtProfitPercent is already percent units.
+    // trimFraction → the executors' partialExitPercent sizing (0..100).
+    trimAtProfitPercent: broker.risk.trimAtProfitPercent ?? null,
+    partialExitPercent: (broker.risk.trimFraction ?? 0.5) * 100,
 
     // Strategy → entry style mapping. strategyKey drives strategy-plugin
     // dispatch (see server/strategies/index.js resolve()); entryStrategy is the

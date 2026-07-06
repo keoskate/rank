@@ -30,7 +30,12 @@
 
 require('dotenv').config();
 const { bpsPerSide } = require('../../server/risk/transactionCost');
-const { trendCore, equityStats, anchoredVwap } = require('@keo/quant-core');
+const {
+  trendCore,
+  trimCore,
+  equityStats,
+  anchoredVwap,
+} = require('@keo/quant-core');
 const { validateStrategy } = require('./lib/validateStrategy');
 const { writeRunArtifact } = require('./lib/runArtifact');
 const { recordTrials } = require('./lib/trialsLedger');
@@ -134,6 +139,10 @@ function simulateDeployed(
     // {anchor:'high252'|'yearStart', mode:'entryFilter'|'exitOverlay'}.
     // null (deployed default) leaves this engine's behavior byte-identical.
     avwap = null,
+    // Winner-trim overlay (shared quant-core trimCore — same decision the live
+    // plugins call). {trimAtProfitPercent, trimFraction}. null (deployed
+    // default) leaves this engine's behavior byte-identical.
+    trim = null,
   } = params;
   // 'placeboShuffle' (manifest R1): deterministic seeded pseudo-random
   // ranking among ELIGIBLE names — isolates whether the ranking stage adds
@@ -241,7 +250,50 @@ function simulateDeployed(
           }
         }
       }
-      if (!exitReason) continue;
+      if (!exitReason) {
+        // Trend intact — apply the winner-trim overlay once (shared trimCore).
+        // Same decision the live plugin makes; sizing mirrors the executor
+        // (trim a fraction, reduce qty/basis, bank proceeds), capped to one
+        // trim per position via pos.partialExitDone.
+        if (trim && trim.trimAtProfitPercent != null) {
+          const price = px(sym, i);
+          if (price > 0 && pos.partialExitDone !== true) {
+            const pnlPct =
+              pos.entryPrice > 0 ? (price / pos.entryPrice - 1) * 100 : 0;
+            const t = trimCore.evaluateTrim(
+              { unrealizedPnLPercent: pnlPct, partialExitDone: false },
+              { trimAtProfitPercent: trim.trimAtProfitPercent }
+            );
+            if (t) {
+              const frac = trim.trimFraction != null ? trim.trimFraction : 0.5;
+              const exitQty = pos.qty * frac;
+              const gross = exitQty * price;
+              const cost = gross * (bpsPerSide(sym) / 10000) * costMultiplier;
+              const proceeds = gross - cost;
+              const sliceBasis = pos.basis * frac;
+              cash += proceeds;
+              trades.push({
+                date,
+                symbol: sym,
+                side: 'sell',
+                price,
+                qty: exitQty,
+                notional: gross,
+                pnl: proceeds - sliceBasis,
+                pnlPct: sliceBasis > 0 ? proceeds / sliceBasis - 1 : null,
+                holdingDays: Math.round(
+                  (new Date(date) - new Date(pos.entryDate)) / 864e5
+                ),
+                reason: `trim winner +${pnlPct.toFixed(1)}% (≥ ${t.threshold}%)`,
+              });
+              pos.qty -= exitQty;
+              pos.basis -= sliceBasis;
+              pos.partialExitDone = true;
+            }
+          }
+        }
+        continue;
+      }
       const price = px(sym, i);
       if (!(price > 0)) continue;
       const gross = pos.qty * price;
@@ -459,6 +511,63 @@ async function main() {
     }))
   );
 
+  // ---- winner-trim A/B (in-sample, full period — overlay marginal effect) ----
+  // We are NOT selecting params here: same fixed deployed spec, measured with
+  // and without the trim overlay. The question is whether the overlay degrades
+  // the fixed rule's risk-adjusted return, so the full-period in-sample delta
+  // (Sharpe/Calmar/maxDD) is the right test — same altitude as the sensitivity
+  // grid above. Every trim config is recorded as a ledger trial.
+  console.log(
+    '\n[trim A/B] winner-trim overlay vs deployed (full-period, in-sample)'
+  );
+  const TRIM_CFG = { trimAtProfitPercent: 25, trimFraction: 0.5 };
+  const offStats = equityStats.statsFromEquity(stash.sim.eqDates, stash.sim.eq);
+  const trimSim = simulateDeployed(ctx, { ...DEPLOYED, trim: TRIM_CFG }, 1);
+  // ledger must tie for the trim variant too
+  {
+    const realized = trimSim.trades.reduce((a, t) => a + (t.pnl || 0), 0);
+    const unreal = trimSim.openPositions.reduce(
+      (a, p) => a + p.unrealizedPnl,
+      0
+    );
+    const equityPnl = trimSim.eq[trimSim.eq.length - 1] * CAPITAL - CAPITAL;
+    const gap = equityPnl - (realized + unreal);
+    if (Math.abs(gap) > 1) {
+      throw new Error(
+        `trim-variant ledger does not tie (gap ${gap.toFixed(2)}) — fix before trusting the A/B`
+      );
+    }
+  }
+  const onStats = equityStats.statsFromEquity(trimSim.eqDates, trimSim.eq);
+  const trimCount = trimSim.trades.filter(t =>
+    /^trim winner/.test(t.reason || '')
+  ).length;
+  const fmt = s =>
+    `Sharpe ${s.sharpe.toFixed(2)}  CAGR ${(s.cagr * 100).toFixed(1)}%  maxDD ${(s.maxDD * 100).toFixed(1)}%  Calmar ${s.calmar.toFixed(2)}`;
+  console.log(`  OFF (deployed):        ${fmt(offStats)}`);
+  console.log(
+    `  ON  (+${TRIM_CFG.trimAtProfitPercent}%/${TRIM_CFG.trimFraction}): ${fmt(onStats)}  [${trimCount} trims]`
+  );
+  console.log(
+    `  Δ Sharpe ${(onStats.sharpe - offStats.sharpe).toFixed(2)}  Δ CAGR ${((onStats.cagr - offStats.cagr) * 100).toFixed(1)}%  Δ maxDD ${((onStats.maxDD - offStats.maxDD) * 100).toFixed(1)}%  Δ Calmar ${(onStats.calmar - offStats.calmar).toFixed(2)}`
+  );
+  const trimVerdict =
+    onStats.sharpe >= offStats.sharpe - 0.05 &&
+    onStats.calmar >= offStats.calmar - 0.05
+      ? 'OK — overlay does not materially degrade risk-adjusted return'
+      : 'DEGRADES — overlay hurts Sharpe/Calmar; do NOT deploy';
+  console.log(`  verdict: ${trimVerdict}`);
+  recordTrials([
+    {
+      family: 'trend-following',
+      strategyId: 'deployed-top5-WF-OOS',
+      params: { ...TRIM_CFG, overlay: 'winner-trim' },
+      sharpe: onStats.sharpe,
+      window: { start: START, end: ctx.dates[ctx.dates.length - 1] },
+      kind: 'trim-ab',
+    },
+  ]);
+
   // ---- instrumented full-period artifact (the watchable one) ----
   const { sim } = stash;
   const tradedSymbols = [...new Set(sim.trades.map(t => t.symbol))];
@@ -497,7 +606,16 @@ async function main() {
       `Companion verdict artifact: ${result.runId}`,
       'IN-SAMPLE full period — gates intentionally left not_run here; the five-gate verdict is in the companion artifact.',
     ],
-    extra: { sensitivity },
+    extra: {
+      sensitivity,
+      trimAB: {
+        config: TRIM_CFG,
+        off: offStats,
+        on: onStats,
+        trimCount,
+        verdict: trimVerdict,
+      },
+    },
   });
   console.log(`\ninstrumented artifact: ${instRunId}`);
   console.log(`view:                  npm run backtest:view ${instRunId}`);
