@@ -476,32 +476,13 @@ async function simulatedExit(session, symbol, decision) {
     session.stats.consecutiveLosses =
       (session.stats.consecutiveLosses || 0) + 1;
 
-    // CRITICAL: check the consecutive-losses circuit breaker after every losing
-    // exit. Without this, simulated brokers can bleed indefinitely on bad days
-    // (we hit -$1,634 on 2026-05-27 because this was missing — the same check
-    // exists in orderExecutor.js for live trades but the sim path forked away
-    // from it). Trips immediately, halting any further entries this session.
-    const lossLimit =
-      session.config.maxConsecutiveLosses ||
-      session.config.consecutiveLossLimit ||
-      3;
-    if (
-      session.stats.consecutiveLosses >= lossLimit &&
-      ctx &&
-      typeof ctx.triggerCircuitBreaker === 'function'
-    ) {
-      try {
-        ctx.triggerCircuitBreaker(
-          sessionId,
-          `Consecutive loss limit reached (${session.stats.consecutiveLosses}/${lossLimit})`
-        );
-      } catch (err) {
-        tradingLogger.logError('[Sim] circuit breaker call failed', {
-          sessionId,
-          error: err.message,
-        });
-      }
-    }
+    // The consecutive-losses limit is enforced by the entry-risk gate in
+    // analyzeAndTrade (soft halt: blocks new entries but keeps exits + stops
+    // flowing, so open positions aren't stranded). We only track the streak
+    // here; a winning exit resets it. This replaced a hard triggerCircuitBreaker
+    // that paused the whole session (added after the -$1,634 day on 2026-05-27,
+    // when the check was missing entirely) — the gate covers the same failure
+    // mode without freezing exits.
   }
   const closedTrades = (session.stats.wins || 0) + (session.stats.losses || 0);
   session.stats.winRate =

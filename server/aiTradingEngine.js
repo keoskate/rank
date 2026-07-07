@@ -270,6 +270,21 @@ function isDST(date) {
   return date >= marDST && date < novDST;
 }
 
+/**
+ * Calendar day key in US Eastern time (YYYY-MM-DD).
+ * Day-based risk resets (daily profit target, daily loss limit) must roll at ET
+ * midnight — NOT UTC midnight, which is 7-8pm ET and can land inside an
+ * after-hours session, resetting the day's P&L mid-session.
+ * @param {Date} [date] - defaults to now
+ * @returns {string} e.g. "2026-07-07"
+ */
+function etDayKey(date = new Date()) {
+  const offsetHours = isDST(date) ? 4 : 5; // EDT = UTC-4, EST = UTC-5
+  return new Date(date.getTime() - offsetHours * 3600 * 1000)
+    .toISOString()
+    .split('T')[0];
+}
+
 // Global position size limits - prevents any single position from dominating portfolio
 const GLOBAL_MAX_POSITION_PERCENT = 25; // No single position > 25% of portfolio
 const GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT = 65; // Total across all sessions < 65% of portfolio
@@ -2839,12 +2854,16 @@ async function analyzeAndTrade(sessionId) {
   if (!session) return;
 
   // --- Daily profit target (Phase 4) ---
-  // Reset day-tracking when the calendar day changes.
-  const todayKey = new Date().toISOString().split('T')[0];
+  // Reset day-tracking when the ET calendar day changes.
+  const todayKey = etDayKey();
   if (session.lastDailyResetDate !== todayKey) {
     session.lastDailyResetDate = todayKey;
     session.dailyStartPnL = session.stats?.totalPnL || 0;
     session.dailyTargetHit = false;
+    // Day-start equity is captured lazily post-sync (see the entry-risk gate),
+    // so the daily-loss % uses a stable base rather than the ever-resynced
+    // portfolio.initialValue.
+    session.dailyStartEquity = null;
   }
 
   const dailyTarget = session.config.dailyProfitTargetPercent;
@@ -2897,35 +2916,77 @@ async function analyzeAndTrade(sessionId) {
   // This ensures we know about all positions for stop loss checks
   await syncPortfolio(sessionId);
 
-  // --- Portfolio drawdown circuit breaker (opt-in, HALT-ONLY) ---
+  // --- Entry risk gate (opt-in soft halts) -----------------------------------
+  // Block NEW entries when a risk limit trips, but keep exits + fast-path stops
+  // flowing (session stays 'running'). No pause, no liquidation — the opposite
+  // of triggerCircuitBreaker, which freezes the whole tick (including exits) and
+  // would strand open positions with no stop-loss coverage. Each condition is
+  // recomputed every tick, so entries auto-resume when it clears (drawdown
+  // recovers, the ET day rolls over, or a win resets the loss streak).
+  //
   // After syncPortfolio, sim (markToMarket) and paper/live (Alpaca) converge on
-  // the same fields and session.stats.peakValue has just been re-maxed on both
-  // paths. Only runs when armed (maxPortfolioDrawdownPercent set); pauses the
-  // session via the existing circuit breaker — no liquidation.
+  // the same fields and session.stats.peakValue has just been re-maxed on both.
+  let entriesHalted = false;
+  let entryHaltReason = null;
+
+  const positionsValue = [
+    ...(session.portfolio?.positions?.values() || []),
+  ].reduce((v, p) => v + (parseFloat(p.marketValue) || 0), 0);
+  const currentEquity =
+    (parseFloat(session.portfolio?.cash) || 0) + positionsValue;
+  // Capture day-start equity once per ET day (post-sync) as a stable %-base,
+  // rather than portfolio.initialValue which is re-synced to current equity.
+  if (session.dailyStartEquity == null && currentEquity > 0) {
+    session.dailyStartEquity = currentEquity;
+  }
+
+  // 1. Portfolio drawdown vs high-water mark (opt-in; null = off)
   const portDDLimit = session.config.maxPortfolioDrawdownPercent;
-  if (
-    portDDLimit != null &&
-    portDDLimit > 0 &&
-    !session.circuitBreakerTriggered
-  ) {
+  if (portDDLimit != null && portDDLimit > 0) {
     const peak = session.stats?.peakValue || 0;
-    const positionsValue = [
-      ...(session.portfolio?.positions?.values() || []),
-    ].reduce((v, p) => v + (parseFloat(p.marketValue) || 0), 0);
-    const currentValue =
-      (parseFloat(session.portfolio?.cash) || 0) + positionsValue;
-    if (peak > 0 && currentValue > 0) {
-      const ddPct = ((peak - currentValue) / peak) * 100;
+    if (peak > 0 && currentEquity > 0) {
+      const ddPct = ((peak - currentEquity) / peak) * 100;
       if (ddPct >= portDDLimit) {
-        triggerCircuitBreaker(
-          sessionId,
+        entriesHalted = true;
+        entryHaltReason =
           `Portfolio drawdown ${ddPct.toFixed(1)}% >= limit ${portDDLimit}% ` +
-            `(equity $${currentValue.toFixed(0)} vs peak $${peak.toFixed(0)})`
-        );
-        return; // halt this tick; tradingTick reschedules at 60s while paused
+          `(equity $${currentEquity.toFixed(0)} vs peak $${peak.toFixed(0)})`;
       }
     }
   }
+
+  // 2. Daily loss limit — realized day P&L vs day-start equity (opt-in; null = off)
+  const dailyLossLimit = session.config.dailyLossLimitPercent;
+  if (!entriesHalted && dailyLossLimit != null && dailyLossLimit > 0) {
+    const todayPnL =
+      (session.stats?.totalPnL || 0) - (session.dailyStartPnL || 0);
+    const base =
+      session.dailyStartEquity || session.portfolio?.initialValue || 100000;
+    const dayLossPct = (todayPnL / base) * 100;
+    if (dayLossPct <= -dailyLossLimit) {
+      entriesHalted = true;
+      entryHaltReason =
+        `Daily loss ${dayLossPct.toFixed(2)}% <= -${dailyLossLimit}% ` +
+        `(day P&L $${todayPnL.toFixed(0)} on $${base.toFixed(0)})`;
+    }
+  }
+
+  // 3. Consecutive losses (opt-in; null = off). Auto-clears when a winning exit
+  //    resets session.stats.consecutiveLosses in the executor.
+  const rawLossLimit =
+    session.config.maxConsecutiveLosses ?? session.config.consecutiveLossLimit;
+  const consecLossLimit = rawLossLimit == null ? null : rawLossLimit;
+  if (
+    !entriesHalted &&
+    consecLossLimit != null &&
+    consecLossLimit > 0 &&
+    (session.stats?.consecutiveLosses || 0) >= consecLossLimit
+  ) {
+    entriesHalted = true;
+    entryHaltReason = `Consecutive losses ${session.stats.consecutiveLosses} >= limit ${consecLossLimit}`;
+  }
+
+  setEntriesHalted(sessionId, entriesHalted, entryHaltReason);
 
   const { watchlist, maxPositions, minConfidence } = session.config;
 
@@ -3244,8 +3305,9 @@ async function analyzeAndTrade(sessionId) {
     }
   }
 
-  // Then, look for entry opportunities if we have capacity
-  if (currentPositions.length < maxPositions) {
+  // Then, look for entry opportunities if we have capacity (unless a risk gate
+  // has halted new entries — exits above still ran this tick).
+  if (!entriesHalted && currentPositions.length < maxPositions) {
     // For crypto sessions, normalize position symbols for comparison
     // Alpaca returns positions like "BTCUSD" but watchlist may have "BTC"
     const sessionAssetType = session.config.assetType || 'stocks';
@@ -3559,11 +3621,6 @@ function triggerCircuitBreaker(sessionId, reason) {
     sessionName: session.name,
     reason,
     action: 'Trading paused',
-    value: session.stats.consecutiveLosses,
-    threshold:
-      session.config.maxConsecutiveLosses ||
-      session.config.consecutiveLossLimit ||
-      3,
   });
 
   websocketServer.sendAlert(session.userId, {
@@ -3574,6 +3631,54 @@ function triggerCircuitBreaker(sessionId, reason) {
     actionRequired: true,
   });
 
+  saveSessions();
+}
+
+/**
+ * Soft entry halt — blocks NEW entries while letting exits + fast-path stops
+ * keep running (unlike triggerCircuitBreaker, which pauses the whole session and
+ * would freeze stop-losses). Recomputed every tick by the entry-risk gate in
+ * analyzeAndTrade; this only persists the surfaced state and emits a single
+ * alert on each transition, so a risk trip never spams per-tick.
+ * @param {string} sessionId
+ * @param {boolean} halted
+ * @param {?string} reason
+ */
+function setEntriesHalted(sessionId, halted, reason) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  const was = !!session.entriesHalted;
+  session.entriesHalted = halted;
+  session.entriesHaltReason = halted ? reason : null;
+  if (halted === was) return; // no transition — stay quiet
+
+  if (halted) {
+    tradingLogger.logRisk('Entries halted', {
+      sessionId,
+      sessionName: session.name,
+      reason,
+      action: 'Blocking new entries; exits + stops still active',
+    });
+    websocketServer.sendAlert(session.userId, {
+      type: 'warning',
+      title: 'Entries Halted',
+      message: `[${session.name}] ${reason}. New entries blocked; exits still active.`,
+      severity: 'high',
+      actionRequired: false,
+    });
+  } else {
+    tradingLogger.logRisk('Entries resumed', {
+      sessionId,
+      sessionName: session.name,
+      action: 'Risk gate cleared; entries re-enabled',
+    });
+    websocketServer.sendAlert(session.userId, {
+      type: 'info',
+      title: 'Entries Resumed',
+      message: `[${session.name}] Risk gate cleared; entries re-enabled.`,
+      severity: 'low',
+    });
+  }
   saveSessions();
 }
 

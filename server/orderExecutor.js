@@ -51,6 +51,13 @@ async function executeEntry(sessionId, symbol, decision) {
     return;
   }
 
+  // Defense-in-depth: never open a NEW position while the entry-risk gate has
+  // halted entries (analyzeAndTrade already gates the scan, but any other caller
+  // of executeEntry must respect the halt too). Exits are unaffected.
+  if (session.entriesHalted) {
+    return;
+  }
+
   // SIMULATION MODE: route through the simulated executor which actually mutates
   // session.portfolio.cash/positions and tracks P&L. Used by broker agents.
   if (session.config.simulationMode) {
@@ -1056,18 +1063,12 @@ async function executeExit(sessionId, symbol, decision) {
       } else {
         session.stats.losses++;
         session.stats.consecutiveLosses++;
-
-        // Check circuit breaker (support both field names for backwards compatibility)
-        const consecutiveLimit =
-          session.config.maxConsecutiveLosses ||
-          session.config.consecutiveLossLimit ||
-          3;
-        if (session.stats.consecutiveLosses >= consecutiveLimit) {
-          ctx.triggerCircuitBreaker(
-            sessionId,
-            'Consecutive loss limit reached'
-          );
-        }
+        // Consecutive-loss AND daily-loss limits are enforced by the entry-risk
+        // gate in analyzeAndTrade (soft halt: blocks new entries, keeps exits +
+        // stops flowing). We only track the streak here; a winning exit resets
+        // it. The previous inline checks hard-paused the session (freezing
+        // stop-losses) and the daily-loss one was buggy — cumulative (not daily)
+        // P&L over a re-synced initialValue, with a -null === -0 false-halt trap.
       }
       session.stats.totalTrades = session.stats.wins + session.stats.losses;
       session.stats.totalPnL += pnl;
@@ -1081,13 +1082,6 @@ async function executeExit(sessionId, symbol, decision) {
               )
             )
           : 0;
-
-      // Check daily loss limit
-      const dailyPnLPercent =
-        (session.stats.totalPnL / session.portfolio.initialValue) * 100;
-      if (dailyPnLPercent <= -session.config.dailyLossLimitPercent) {
-        ctx.triggerCircuitBreaker(sessionId, 'Daily loss limit reached');
-      }
 
       // Send notification with actual fill price
       websocketServer.sendTradeExecution(session.userId, {
