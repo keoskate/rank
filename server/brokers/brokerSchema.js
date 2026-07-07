@@ -44,8 +44,15 @@ const BROKER_DEFAULTS = {
     maxPositionSizePercent: 15,
     // Portfolio drawdown circuit breaker (opt-in; null = disabled). When set,
     // a broker whose equity falls this fraction from its high-water mark is
-    // halted (paused, new entries blocked, exits allowed — no liquidation).
+    // halted (new entries blocked, exits + stops still flow — no liquidation).
     maxPortfolioDrawdown: null,
+    // Daily loss limit (opt-in; null = disabled). Fraction of day-start equity;
+    // realized day P&L below -this halts new entries until the next ET day
+    // (exits keep flowing). e.g. 0.05 = 5%.
+    dailyLossLimit: null,
+    // Consecutive-loss limit (opt-in; null = disabled). New entries halt once
+    // the losing streak reaches this count; a winning exit resets it.
+    maxConsecutiveLosses: null,
     // Winner-trim / partial profit-take (opt-in; null = disabled). When set,
     // a winning position is trimmed once after unrealized P&L >= this percent.
     trimAtProfitPercent: null,
@@ -238,6 +245,22 @@ function validateBroker(raw, filename = '') {
         risk.maxPortfolioDrawdown > 0 &&
         risk.maxPortfolioDrawdown <= 0.5),
     'risk.maxPortfolioDrawdown must be null or in (0, 0.5]'
+  );
+  pushIf(
+    errs,
+    risk.dailyLossLimit === null ||
+      (typeof risk.dailyLossLimit === 'number' &&
+        risk.dailyLossLimit > 0 &&
+        risk.dailyLossLimit <= 0.5),
+    'risk.dailyLossLimit must be null or in (0, 0.5]'
+  );
+  pushIf(
+    errs,
+    risk.maxConsecutiveLosses === null ||
+      (Number.isInteger(risk.maxConsecutiveLosses) &&
+        risk.maxConsecutiveLosses >= 1 &&
+        risk.maxConsecutiveLosses <= 50),
+    'risk.maxConsecutiveLosses must be null or int 1..50'
   );
   pushIf(
     errs,
@@ -509,6 +532,13 @@ function brokerToSessionConfig(broker, personaBody = '') {
       broker.risk.maxPortfolioDrawdown == null
         ? null
         : broker.risk.maxPortfolioDrawdown * 100,
+    // Daily loss + consecutive-loss soft-halt limits (opt-in; null = disabled).
+    // dailyLossLimit is a fraction → percent; maxConsecutiveLosses is a count.
+    dailyLossLimitPercent:
+      broker.risk.dailyLossLimit == null
+        ? null
+        : broker.risk.dailyLossLimit * 100,
+    maxConsecutiveLosses: broker.risk.maxConsecutiveLosses ?? null,
     // Winner-trim (opt-in). trimAtProfitPercent is already percent units.
     // trimFraction → the executors' partialExitPercent sizing (0..100).
     trimAtProfitPercent: broker.risk.trimAtProfitPercent ?? null,
