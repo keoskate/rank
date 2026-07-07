@@ -2,7 +2,7 @@
 // Validates broker frontmatter and translates it into a session-engine config.
 // The .md frontmatter is the source of truth for a broker's personality + knobs.
 
-const ALLOWED_TIERS = ['simulated', 'paper'];
+const ALLOWED_TIERS = ['simulated', 'paper', 'live'];
 const ALLOWED_SIZING = ['fixed', 'fractional-kelly', 'confidence-scaled'];
 const ALLOWED_REGIMES = ['low-entropy', 'high-entropy', 'any'];
 const ALLOWED_LLM_ROLES = ['advisor', 'gate'];
@@ -437,11 +437,20 @@ function validateBroker(raw, filename = '') {
  * The effective capital this broker should start with given its tier:
  * - simulated → broker.capital (the persona's stated virtual stake)
  * - paper → broker.paperAllocation, OR 20% of capital if unset
+ * - live → liveAllocation/paperAllocation ceiling; the AUTHORITATIVE live equity
+ *   is seeded from the real Alpaca account by transitionToLiveTier, not here.
  * Used by the bridge when transitioning between tiers.
  */
 function effectiveCapital(broker) {
   if (broker.tier === 'paper') {
     return broker.paperAllocation ?? Math.round(broker.capital * 0.2);
+  }
+  if (broker.tier === 'live') {
+    return (
+      broker.liveAllocation ??
+      broker.paperAllocation ??
+      Math.round(broker.capital * 0.2)
+    );
   }
   return broker.capital;
 }
@@ -451,10 +460,18 @@ function effectiveCapital(broker) {
  * The engine remains the source of truth for runtime; this is the bridge.
  */
 function brokerToSessionConfig(broker, personaBody = '') {
-  // BROKER_PAPER_TRADING=off forces every broker back to simulation regardless
-  // of declared tier. Safety kill-switch for days you don't trust the system.
+  // Resolve the effective tier FAIL-CLOSED so real money never happens by
+  // accident:
+  //  1. BROKER_PAPER_TRADING=off forces sim regardless of declared tier — the
+  //     "days you don't trust the system" kill switch; wins over everything.
+  //  2. A broker that declares tier:live runs on the PAPER Alpaca account unless
+  //     live is EXPLICITLY unlocked (ALLOW_LIVE_TIER=1) and not killed
+  //     (LIVE_TRADING!=off). Absent that, live silently downgrades to paper.
   const killSwitch = process.env.BROKER_PAPER_TRADING === 'off';
-  const effectiveTier = killSwitch ? 'simulated' : broker.tier;
+  const liveUnlocked =
+    process.env.ALLOW_LIVE_TIER === '1' && process.env.LIVE_TRADING !== 'off';
+  let effectiveTier = killSwitch ? 'simulated' : broker.tier;
+  if (effectiveTier === 'live' && !liveUnlocked) effectiveTier = 'paper';
   const cap = effectiveCapital({ ...broker, tier: effectiveTier });
 
   const config = {
@@ -467,7 +484,11 @@ function brokerToSessionConfig(broker, personaBody = '') {
     // false → real Alpaca via tradingMode.
     simulationMode: effectiveTier === 'simulated',
     paperTradeOnly: effectiveTier === 'paper',
-    tradingMode: effectiveTier === 'paper' ? 'paper' : 'paper', // both stay on paper Alpaca; live tier doesn't exist yet
+    // getSessionTradingMode treats tradingMode as authoritative (paperTradeOnly
+    // is only a legacy fallback), so live→'live' routes to the real-money Alpaca
+    // account; sim ignores this (simulationMode routing wins); everything else
+    // → paper Alpaca.
+    tradingMode: effectiveTier === 'live' ? 'live' : 'paper',
     initialCapital: cap,
     allocatedCapital: cap,
     paperAllocation: broker.paperAllocation,

@@ -541,6 +541,18 @@ function evaluateBroker(broker, session, ledger) {
     };
   }
 
+  // LIVE brokers are human-managed — the machine never promotes to, demotes
+  // from, or fires a real-money session. Live risk is handled at runtime (equity
+  // floor, LIVE_TRADING kill switch, and the soft drawdown/daily-loss/
+  // consec-loss entry gates). Leave it alone.
+  if (tier === 'live') {
+    return {
+      action: 'hold',
+      reason: 'live — human-managed, machine holds',
+      metrics,
+    };
+  }
+
   return { action: 'hold', reason: 'unknown tier', metrics };
 }
 

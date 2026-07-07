@@ -289,6 +289,12 @@ function etDayKey(date = new Date()) {
 const GLOBAL_MAX_POSITION_PERCENT = 25; // No single position > 25% of portfolio
 const GLOBAL_MAX_TOTAL_EXPOSURE_PERCENT = 65; // Total across all sessions < 65% of portfolio
 
+// Minimum real-money equity to route a session live. Set low for the small
+// initial pilot but ENFORCED: transitionToLiveTier refuses below it and
+// syncPortfolio auto-halts a live session that draws under it. Override via
+// LIVE_MIN_EQUITY.
+const LIVE_MIN_EQUITY_FLOOR = Number(process.env.LIVE_MIN_EQUITY || 500);
+
 /**
  * Detect asset type from watchlist symbols
  * If any symbol in the watchlist is a crypto symbol, return 'crypto'
@@ -2380,6 +2386,18 @@ async function startTradingLoop(sessionId) {
       return;
     }
 
+    // LIVE kill switch — LIVE_TRADING=off halts real-money sessions immediately
+    // and independently of the BROKER_PAPER_TRADING sim switch. We PAUSE (never
+    // reroute): silently moving a live session to the paper account would desync
+    // its real positions. Deliberate operator action; resume manually.
+    if (
+      process.env.LIVE_TRADING === 'off' &&
+      getSessionTradingMode(currentSession) === 'live'
+    ) {
+      triggerCircuitBreaker(sessionId, 'LIVE_TRADING kill switch is off');
+      return;
+    }
+
     try {
       // FIX 6a: STALE LEVERAGED POSITION GUARD
       // Force-exit any leveraged ETF positions from a previous trading day
@@ -2767,6 +2785,21 @@ async function syncPortfolio(sessionId) {
       parseFloat(account.portfolio_value)
     );
 
+    // LIVE equity floor — auto-halt a real-money session that draws below the
+    // minimum. Reuses the already-fetched account (no extra API call). Pause,
+    // don't reroute. analyzeAndTrade bails right after syncPortfolio when this
+    // trips, so no orders go out this tick.
+    if (
+      tradingMode === 'live' &&
+      parseFloat(account.portfolio_value) < LIVE_MIN_EQUITY_FLOOR
+    ) {
+      triggerCircuitBreaker(
+        sessionId,
+        `Live equity $${parseFloat(account.portfolio_value).toFixed(0)} < floor $${LIVE_MIN_EQUITY_FLOOR}`
+      );
+      return;
+    }
+
     // Update positions (preserve entryTime and highWaterMark from existing positions if available)
     // Note: alpacaClient.getPositions() returns camelCase fields (quantity, avgEntryPrice, etc.)
     // Filter to watchlist symbols only (unless manageAllPositions) to prevent cross-session contamination
@@ -2915,6 +2948,10 @@ async function analyzeAndTrade(sessionId) {
   // CRITICAL: Sync portfolio from Alpaca before analyzing
   // This ensures we know about all positions for stop loss checks
   await syncPortfolio(sessionId);
+
+  // Bail if syncPortfolio tripped a hard circuit breaker this tick (LIVE equity
+  // floor / kill switch) — no trading on a halted session.
+  if (session.circuitBreakerTriggered) return;
 
   // --- Entry risk gate (opt-in soft halts) -----------------------------------
   // Block NEW entries when a risk limit trips, but keep exits + fast-path stops
@@ -3940,6 +3977,95 @@ function transitionToPaperTier(sessionId, paperAllocation) {
 }
 
 /**
+ * Promote: paper → live (REAL MONEY). FAIL-CLOSED: refuses unless
+ *  - live is unlocked (ALLOW_LIVE_TIER=1) and not killed (LIVE_TRADING!=off),
+ *  - all soft risk rails are armed (daily-loss + consecutive-loss + portfolio
+ *    drawdown) so the session can't run real money unguarded, and
+ *  - the real Alpaca live account clears LIVE_MIN_EQUITY_FLOOR.
+ * Seeds the session from the REAL account (cash/equity), not a virtual
+ * allocation; positions reconcile on the next syncPortfolio. Stats history is
+ * preserved; peak/drawdown reset to the live baseline. Human-in-the-loop only —
+ * the tier-eval machine never calls this.
+ * @returns {Promise<{ok:true,liveEquity:number,liveCash:number,previousPnL:number}|{error:string}>}
+ */
+async function transitionToLiveTier(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'no session' };
+
+  if (process.env.ALLOW_LIVE_TIER !== '1') {
+    return { error: 'live tier locked (set ALLOW_LIVE_TIER=1 to enable)' };
+  }
+  if (process.env.LIVE_TRADING === 'off') {
+    return { error: 'LIVE_TRADING kill switch is off' };
+  }
+
+  // Every soft risk rail must be armed before real money flows.
+  const c = session.config;
+  const missing = [];
+  if (c.dailyLossLimitPercent == null) missing.push('dailyLossLimitPercent');
+  if ((c.maxConsecutiveLosses ?? c.consecutiveLossLimit) == null) {
+    missing.push('maxConsecutiveLosses');
+  }
+  if (c.maxPortfolioDrawdownPercent == null) {
+    missing.push('maxPortfolioDrawdownPercent');
+  }
+  if (missing.length) {
+    return { error: `arm risk rails before live: ${missing.join(', ')}` };
+  }
+
+  // The real live account must exist and clear the floor.
+  let account;
+  try {
+    account = await alpacaClient.getAccount('live');
+  } catch (err) {
+    return { error: `live account fetch failed: ${err.message}` };
+  }
+  const liveEquity = parseFloat(account?.portfolio_value) || 0;
+  const liveCash = parseFloat(account?.cash) || 0;
+  if (liveEquity < LIVE_MIN_EQUITY_FLOOR) {
+    return {
+      error: `live equity $${liveEquity.toFixed(0)} < floor $${LIVE_MIN_EQUITY_FLOOR}`,
+    };
+  }
+
+  const previousPnL = session.stats?.totalPnL || 0;
+  // Seed from the REAL account. Positions reconcile on the next syncPortfolio;
+  // start with the real cash and an empty local position map.
+  session.portfolio = {
+    cash: liveCash,
+    positions: new Map(),
+    initialValue: liveEquity,
+  };
+  session.config.simulationMode = false;
+  session.config.tradingMode = 'live';
+  session.config.paperTradeOnly = false;
+  session.config.allocatedCapital = liveEquity;
+  session.config.initialCapital = liveEquity;
+  session.config.tier = 'live';
+  session.circuitBreakerTriggered = false;
+  session.tradingLog = session.tradingLog || [];
+  session.tradingLog.push({
+    tradeId: `tier-promote-live-${Date.now()}`,
+    side: 'meta',
+    symbol: 'TIER',
+    timestamp: new Date().toISOString(),
+    note: `promoted → LIVE real money (equity=$${liveEquity.toFixed(2)}, prior PnL=$${previousPnL.toFixed(2)})`,
+  });
+  if (session.stats) {
+    session.stats.peakValue = liveEquity;
+    session.stats.maxDrawdown = 0;
+  }
+  tradingLogger.logRisk('TIER → LIVE (real money)', {
+    sessionId,
+    sessionName: session.name,
+    liveEquity,
+    floor: LIVE_MIN_EQUITY_FLOOR,
+  });
+  saveSessions();
+  return { ok: true, liveEquity, liveCash, previousPnL };
+}
+
+/**
  * Demote: paper → simulated. Closes any open real positions (panic sell)
  * before resetting to a fresh simulated capital pool. Stats history preserved.
  */
@@ -4474,6 +4600,7 @@ module.exports = {
   manualSimExit,
   seedSyntheticTradeHistory,
   transitionToPaperTier,
+  transitionToLiveTier,
   transitionToSimulatedTier,
   manualOverride,
   getDailySummary,
