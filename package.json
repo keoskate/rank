@@ -24,6 +24,7 @@
     "floor:kill": "bash scripts/exchange-floor-kill.sh",
     "broker:reset": "curl -s -X POST http://localhost:8080/api/brokers/reset-all -H 'Content-Type: application/json' -d '{}' | (command -v jq >/dev/null && jq || cat)",
     "broker:status": "node scripts/broker-status.js",
+    "live:readiness": "node scripts/live-readiness.js",
     "brief": "node scripts/morning-brief.js",
     "daily": "node scripts/daily-summary.js",
     "trend": "node scripts/daily-summary.js --trend",
