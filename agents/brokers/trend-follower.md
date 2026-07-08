@@ -1,7 +1,7 @@
 ---
 slug: trend-follower
 name: Trend Follower
-tier: simulated
+tier: paper
 capital: 100000
 paperAllocation: null
 watchlist:
@@ -29,8 +29,6 @@ watchlist:
   - IEF
   - DBC
 strategy: trend-following
-trend:
-  rankBy: volAdjusted
 risk:
   perTrade: 0.02
   maxDrawdown: 0.25
@@ -38,6 +36,22 @@ risk:
   kellyFraction: 0.25
   maxPositions: 5
   maxPositionSizePercent: 20
+  # Portfolio drawdown circuit breaker: halt new entries if equity falls 12%
+  # from its high-water mark (exits + stops keep flowing — no liquidation).
+  maxPortfolioDrawdown: 0.12
+  # Daily loss limit: halt new entries for the rest of the ET day if realized
+  # day P&L falls 5% below day-start equity. Exits keep flowing; resets next day.
+  dailyLossLimit: 0.05
+  # Consecutive-loss backstop: set high (8) deliberately — trend-following has a
+  # low win rate and normal streaks of small losses, so this is a pathological-
+  # run circuit, not a hair-trigger. A winning exit resets the streak.
+  maxConsecutiveLosses: 8
+  # All three rails are ARMED so this broker is promotion-eligible:
+  # transitionToLiveTier refuses real money unless every soft rail is set.
+  # Winner-trim: bank half a position once it's up +25% (validated: Sharpe
+  # 0.92→0.98, maxDD -21.9%→-18.0% in the trend A/B).
+  trimAtProfitPercent: 25
+  trimFraction: 0.5
 regime:
   enabled: false
   entropyWindows:
@@ -46,6 +60,9 @@ regime:
   preferred: any
   blockOnTransition: false
   referenceSymbol: SPY
+macro:
+  enabled: false
+  riskOffScalar: 0.25
 llm:
   enabled: false
   model: claude-sonnet-4-6
@@ -55,8 +72,27 @@ selfImprovement:
   intervals:
     - eod
   fullAutonomy: false
+flow:
+  minPremium: 250000
+  minSkew: 0.65
+  lookbackMinutes: 30
+  scanner: false
+insider:
+  minNotional: 100000
+  lookbackDays: 10
+  scanner: false
+darkpool:
+  minPremium: 1000000
+  minBuyShare: 0.6
+  lookbackMinutes: 120
+  scanner: false
+  dropAtMid: true
+  maxSinglePrintShare: 0.25
+  minPrints: 5
+  rthOnly: true
+trend:
+  rankBy: volAdjusted
 ---
-
 # Personality
 
 I don't predict — I follow. I have no opinion about whether the market _should_

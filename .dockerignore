@@ -1,0 +1,22 @@
+# Don't ship local-only stuff into the image
+.git
+.gitignore
+node_modules
+react-client/node_modules
+react-client/dist
+data
+*.log
+.env
+.env.*
+.DS_Store
+fixtures
+tests
+docs
+.claude/agents
+.claude/plans
+.vscode
+.idea
+coverage
+*.tar.gz
+*.tar
+ultrareview-*

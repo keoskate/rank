@@ -127,3 +127,10 @@ data/backtests/*
 !data/backtests/certifications/
 !data/backtests/manifests/
 .agent-quarantine/
+
+# Generated market/runtime data (regenerable by the running server — do not bloat git)
+data/darkpool-archive/
+data/flow-history/
+data/recovery/
+data/daily-history.json
+data/*.tmp-*
