@@ -1,0 +1,41 @@
+{
+  "lastBarDate": "2026-06-05",
+  "window": {
+    "start": "2026-06-10",
+    "end": "2026-06-05"
+  },
+  "liveDays": 0,
+  "decisionMatchRate": null,
+  "meanJaccard": null,
+  "nMatched": 0,
+  "residuals": {
+    "vsBacktestClose": {
+      "p50": null,
+      "p95": null,
+      "max": null,
+      "n": 0
+    },
+    "vsActualClose": {
+      "p50": null,
+      "p95": null,
+      "max": null,
+      "n": 0
+    },
+    "vsVwapToClose": {
+      "p50": null,
+      "p95": null,
+      "max": null,
+      "n": 0
+    }
+  },
+  "unmatched": {
+    "expected": 0,
+    "actual": 0
+  },
+  "tieOutWarnings": 0,
+  "consecutiveWeeksInTolerance": 0,
+  "tolerance": {
+    "minDecisionMatchRate": 0.95,
+    "maxMedianAbsResidualBps": 25
+  }
+}

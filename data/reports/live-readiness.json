@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-07-07T22:49:05.021Z",
+  "strategy": "trend-follower (deployed volrank-23)",
+  "bar": {
+    "dsr": 0.95,
+    "weeksInTolerance": 4
+  },
+  "gates": {
+    "dsr": {
+      "pass": false,
+      "status": "fail",
+      "dsr": 0.565881458845655,
+      "bar": 0.95,
+      "note": "deflated-Sharpe prob 56.6% vs 95.0% bar (N=125 trials)",
+      "source": "trend-following__deployed-top5-WF-OOS__20260625-161258",
+      "asOf": "2026-06-25T16:12:58.304Z"
+    },
+    "otherBacktestGates": {
+      "dataIntegrity": "pass",
+      "faithfulness": "pass",
+      "outOfSample": "pass",
+      "realisticCosts": "pass"
+    },
+    "faithfulness": {
+      "pass": false,
+      "status": "fail",
+      "consecutiveWeeksInTolerance": 0,
+      "bar": 4,
+      "decisionMatchRate": null,
+      "medianResidualBps": null,
+      "liveDays": 0,
+      "note": "0/4 consecutive weeks in tolerance (no matched live fills yet)",
+      "asOf": "2026-06-09"
+    }
+  },
+  "ready": false
+}
