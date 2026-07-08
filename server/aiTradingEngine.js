@@ -3010,9 +3010,8 @@ async function analyzeAndTrade(sessionId) {
 
   // 3. Consecutive losses (opt-in; null = off). Auto-clears when a winning exit
   //    resets session.stats.consecutiveLosses in the executor.
-  const rawLossLimit =
-    session.config.maxConsecutiveLosses ?? session.config.consecutiveLossLimit;
-  const consecLossLimit = rawLossLimit == null ? null : rawLossLimit;
+  const consecLossLimit =
+    session.config.maxConsecutiveLosses ?? session.config.consecutiveLossLimit ?? null;
   if (
     !entriesHalted &&
     consecLossLimit != null &&
