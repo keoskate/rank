@@ -62,11 +62,15 @@ mined patterns.
 - Stitched walk-forward OOS 2019-03→2026-07: **Sharpe 1.30, CAGR 19.5%,
   maxDD −17.5%, Calmar 1.11** — beat the passive EW(SOXX,GLD) control on BOTH
   ΔSharpe (+0.09) and ΔCalmar (+0.15); robust at 2× costs (1.30→1.27).
-- Gates 1/2/3/4 PASS (decision core certified: quant-core `volTargetMixCore`,
-  zero divergence over 5,199 day-comparisons — `certify-vol-target-mix.js`).
-- Gate 5 FAILS at 88.7% deflated-Sharpe confidence vs the 95% bar (N=173
-  ledger trials). **This broker's forward sim record IS the missing evidence** —
-  out-of-mining-sample by construction.
+- **VERDICT: VALIDATED (2026-07-22) — all five gates PASS**, the first in the
+  project. Gate 2: decision core certified (quant-core `volTargetMixCore`,
+  zero divergence over 5,199 day-comparisons). Gate 5: deflated-Sharpe 98.4%
+  vs the 95% bar under the pre-registered effective-N correction (Meff ≈ 9.8
+  of ledger N=195; pre-registration frozen 2026-06-10, acceptance test passed,
+  adopted 2026-07-22 — the only strategy whose verdict flipped).
+- Honest caveat (pre-reg §8): Meff corrects the trial count, not the reused
+  2016-26 OOS window. **This broker's forward sim record remains the pristine
+  evidence stream** — out-of-mining-sample by construction.
 
 ## Mandate
 
