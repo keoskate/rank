@@ -564,11 +564,53 @@ async function simulatedExit(session, symbol, decision) {
 }
 
 /**
+ * Guard against desynced "ghost" positions. In a simulationMode session the sim
+ * executor is the ONLY writer of positions and always stamps `simulated: true`
+ * (see simulatedEntry). A position lacking that flag was injected by a non-sim
+ * path — syncPortfolio rebuilding the Map from Alpaca, or a paper→sim
+ * transition/seed — WITHOUT ever debiting sim cash. Left in place, markToMarket
+ * prices it against live quotes and mints phantom unrealized P&L (the Crypto
+ * -$23k incident). Quarantine each: pull it from the active Map and stash it on
+ * session.portfolio.quarantinedPositions for audit. Non-destructive (nothing is
+ * discarded) and only ever touches simulationMode sessions.
+ * @returns {number} count quarantined
+ */
+function reconcileSimPositions(session) {
+  if (!session.config || !session.config.simulationMode) return 0;
+  if (!session.portfolio || !session.portfolio.positions) return 0;
+  const ghosts = [];
+  for (const [symbol, pos] of session.portfolio.positions) {
+    if (pos && pos.simulated !== true) ghosts.push([symbol, pos]);
+  }
+  if (ghosts.length === 0) return 0;
+  session.portfolio.quarantinedPositions =
+    session.portfolio.quarantinedPositions || [];
+  for (const [symbol, pos] of ghosts) {
+    session.portfolio.positions.delete(symbol);
+    session.portfolio.quarantinedPositions.push({
+      ...pos,
+      quarantinedAt: _now(),
+      reason:
+        'desync: non-simulated position in a simulationMode session — no sim cash backing',
+    });
+    tradingLogger.logError('[Sim] Quarantined ghost position (desync guard)', {
+      sessionId: session.sessionId,
+      sessionName: session.name,
+      symbol,
+      phantomUnrealizedPnL: pos.unrealizedPnL || 0,
+    });
+  }
+  return ghosts.length;
+}
+
+/**
  * Refresh unrealized P&L on all simulated positions. Called from syncPortfolio
  * in place of the Alpaca call when simulationMode is on.
  */
 async function markToMarket(session) {
   if (!session.portfolio || !session.portfolio.positions) return;
+  // Drop desynced ghost positions before pricing — never mint phantom P&L.
+  reconcileSimPositions(session);
   const assetType = session.config.assetType || 'stocks';
   let unrealized = 0;
   for (const [symbol, pos] of session.portfolio.positions) {
@@ -604,4 +646,5 @@ module.exports = {
   simulatedEntry,
   simulatedExit,
   markToMarket,
+  reconcileSimPositions,
 };

@@ -718,8 +718,32 @@ function loadSessions() {
 // Load sessions on module initialization.
 // Skipped in dry-run mode so requiring the engine from a CLI harness doesn't
 // restore live sessions or start their trading loops.
+function writeIntegrityReport(summary) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dir = path.join(__dirname, '../data/reports/integrity');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'latest.json'), JSON.stringify(summary, null, 2));
+  } catch (e) {
+    /* integrity reporting is best-effort */
+  }
+}
+
 if (!process.env.AI_ENGINE_DRY_RUN) {
   loadSessions();
+  // Integrity layer — continuous reconciliation so tracked state can't silently
+  // drift from reality: quarantines ghost positions, fires declared stops on
+  // unmanaged (paused) positions, and flags P&L divergence. Independent of the
+  // per-session tick loops. Disable stop auto-fire with INTEGRITY_AUTOFIRE=off.
+  const integrity = require('./integrity/reconcile');
+  integrity.init({
+    getSessions: () => [...sessions.values()],
+    simulatedExecutor,
+    tradingLogger,
+    saveReport: writeIntegrityReport,
+  });
+  integrity.startIntegrityLoop(60000);
 }
 
 /**
@@ -2779,7 +2803,14 @@ async function syncPortfolio(sessionId) {
     );
 
     session.portfolio.cash = parseFloat(account.cash);
-    session.portfolio.initialValue = parseFloat(account.portfolio_value);
+    // initialValue is the P&L baseline denominator — seed ONCE, never overwrite.
+    // Overwriting it every tick with the shared account's equity made per-broker
+    // P&L% a moving target and mis-attributed the whole account's drawdown to a
+    // single broker (the −$20-display vs −28%-real bug). transitionToPaperTier
+    // seeds the correct per-broker baseline; don't clobber it here.
+    if (!session.portfolio.initialValue) {
+      session.portfolio.initialValue = parseFloat(account.portfolio_value);
+    }
     session.stats.peakValue = Math.max(
       session.stats.peakValue,
       parseFloat(account.portfolio_value)
