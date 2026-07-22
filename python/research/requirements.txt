@@ -1,0 +1,10 @@
+# Python research layer — Phase 1 (GBDT cross-sectional ranker).
+# Install into an isolated env, e.g.:
+#   python3 -m venv python/research/.venv
+#   python/research/.venv/bin/pip install -r python/research/requirements.txt
+#
+# Phase 2 (Kronos features) adds torch + transformers in a separate extras file
+# so the light GBDT path never pulls a multi-GB deep-learning stack.
+numpy>=1.24
+pandas>=2.0
+lightgbm>=4.0

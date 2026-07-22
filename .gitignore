@@ -134,3 +134,12 @@ data/flow-history/
 data/recovery/
 data/daily-history.json
 data/*.tmp-*
+
+# Python research layer (Phase 1 GBDT ranker; Phase 2 Kronos) — venv is ~240MB
+python/research/.venv/
+__pycache__/
+*.pyc
+
+# Regenerable rank-score caches: exported bars + OOS scores + certs
+# (rebuild with: npm run rank:export && npm run rank:scores)
+data/rank-cache/
