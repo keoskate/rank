@@ -1,7 +1,9 @@
 /**
  * Scanner-results persistence.
- * Writes scan-<ISO>.json + latest.json into data/scanner-results/.
- * Prunes to last MAX_KEEP files.
+ * Writes <kind>-<ISO>.json + <kind>-latest.json into data/scanner-results/.
+ * kind defaults to 'scan' (stock scanner), whose files keep their original
+ * names (scan-*.json + latest.json) for back-compat; the options scanner
+ * uses kind 'options-scan'. Prunes each kind to last MAX_KEEP files.
  */
 
 const fs = require('fs');
@@ -16,24 +18,33 @@ function _ensureDir() {
   }
 }
 
-function _safeFilename(iso) {
-  return `scan-${iso.replace(/[:.]/g, '-')}.json`;
+function _safeFilename(iso, kind) {
+  return `${kind}-${iso.replace(/[:.]/g, '-')}.json`;
 }
 
-function saveScan(scanResult) {
+function _latestFilename(kind) {
+  return kind === 'scan' ? 'latest.json' : `${kind}-latest.json`;
+}
+
+function saveScan(scanResult, kind = 'scan') {
   _ensureDir();
   const iso = scanResult.generatedAt || new Date().toISOString();
-  const filename = _safeFilename(iso);
+  const filename = _safeFilename(iso, kind);
   const filepath = path.join(RESULTS_DIR, filename);
   fs.writeFileSync(filepath, JSON.stringify(scanResult, null, 2));
-  fs.writeFileSync(path.join(RESULTS_DIR, 'latest.json'), JSON.stringify(scanResult, null, 2));
-  _prune();
+  fs.writeFileSync(path.join(RESULTS_DIR, _latestFilename(kind)), JSON.stringify(scanResult, null, 2));
+  _prune(kind);
   return filepath;
 }
 
-function _prune() {
-  const files = fs.readdirSync(RESULTS_DIR)
-    .filter(f => f.startsWith('scan-') && f.endsWith('.json'))
+function _historyFiles(kind) {
+  return fs.readdirSync(RESULTS_DIR)
+    .filter(f => f.startsWith(`${kind}-`) && f.endsWith('.json'))
+    .filter(f => f !== _latestFilename(kind));
+}
+
+function _prune(kind) {
+  const files = _historyFiles(kind)
     .map(f => ({ name: f, path: path.join(RESULTS_DIR, f), mtime: fs.statSync(path.join(RESULTS_DIR, f)).mtime }))
     .sort((a, b) => b.mtime - a.mtime); // newest first
   if (files.length <= MAX_KEEP) return;
@@ -42,9 +53,9 @@ function _prune() {
   }
 }
 
-function loadLatest() {
+function loadLatest(kind = 'scan') {
   _ensureDir();
-  const latestPath = path.join(RESULTS_DIR, 'latest.json');
+  const latestPath = path.join(RESULTS_DIR, _latestFilename(kind));
   if (!fs.existsSync(latestPath)) return null;
   try {
     return JSON.parse(fs.readFileSync(latestPath, 'utf8'));
@@ -53,10 +64,9 @@ function loadLatest() {
   }
 }
 
-function listHistory(limit = 10) {
+function listHistory(limit = 10, kind = 'scan') {
   _ensureDir();
-  const files = fs.readdirSync(RESULTS_DIR)
-    .filter(f => f.startsWith('scan-') && f.endsWith('.json'))
+  const files = _historyFiles(kind)
     .map(f => ({ name: f, mtime: fs.statSync(path.join(RESULTS_DIR, f)).mtime }))
     .sort((a, b) => b.mtime - a.mtime)
     .slice(0, limit);

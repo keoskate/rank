@@ -545,6 +545,46 @@ async function getTopDarkPoolTickers(opts = {}) {
     .map(([t]) => t);
 }
 
+// ---------------------------------------------------------------------------
+// Earnings + IV context (options scanner)
+// ---------------------------------------------------------------------------
+
+/**
+ * Earnings history + upcoming report for a ticker, newest first — the FIRST
+ * element is the next upcoming report when one is scheduled.
+ * Each row: { report_date, report_time: 'premarket'|'postmarket'|'unknown',
+ *   expected_move (dollar move the market prices in), is_date_estimate, ... }
+ * @returns {Array} rows, or [] on error/no-key.
+ */
+async function getEarnings(symbol, ttlMs = 6 * 60 * 60 * 1000) {
+  if (!symbol) return [];
+  const res = await makeRequest(
+    `/api/earnings/${symbol.toUpperCase()}`,
+    ttlMs
+  );
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+/**
+ * 1-year IV rank + realized volatility for a ticker.
+ * @returns {{ ivRank1y: number|null, realizedVol: number|null }}
+ */
+async function getIvRank(symbol, ttlMs = 15 * 60 * 1000) {
+  if (!symbol) return { ivRank1y: null, realizedVol: null };
+  const res = await makeRequest(
+    `/api/stock/${symbol.toUpperCase()}/iv-rank`,
+    ttlMs
+  );
+  const row = Array.isArray(res.data) ? res.data[0] : res.data;
+  if (!row || res.error) return { ivRank1y: null, realizedVol: null };
+  const rank = parseFloat(row.iv_rank_1y);
+  const vol = parseFloat(row.volatility);
+  return {
+    ivRank1y: Number.isFinite(rank) ? rank : null,
+    realizedVol: Number.isFinite(vol) ? vol : null,
+  };
+}
+
 const clearCache = () => cache.clear();
 
 module.exports = {
@@ -560,5 +600,7 @@ module.exports = {
   getDarkPoolPrints,
   analyzeDarkPool,
   getTopDarkPoolTickers,
+  getEarnings,
+  getIvRank,
   clearCache,
 };

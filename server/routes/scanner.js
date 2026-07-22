@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { runScan } = require('../scanner/scanRunner');
+const { runOptionsScan } = require('../scanner/optionsScanRunner');
 const scanStore = require('../scanner/scanStore');
 
 module.exports = function () {
@@ -24,6 +25,46 @@ module.exports = function () {
     try {
       const latest = scanStore.loadLatest();
       if (!latest) return res.status(404).json({ error: 'No scans yet' });
+      res.json(latest);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/api/scanner/options/scan', async (req, res) => {
+    try {
+      const {
+        symbols, horizonDays, minProbability, maxUnderlyings,
+        dteMin, dteMax, maxSpreadPct, minOpenInterest, minDelta, maxDebit,
+        earningsMode, maxResults, reuseStockScan,
+      } = req.body || {};
+      const num = v => (Number.isFinite(+v) ? +v : undefined);
+      const result = await runOptionsScan({
+        symbols: Array.isArray(symbols) ? symbols : undefined,
+        horizonDays: num(horizonDays),
+        minProbability: num(minProbability),
+        maxUnderlyings: num(maxUnderlyings),
+        dteMin: num(dteMin),
+        dteMax: num(dteMax),
+        maxSpreadPct: num(maxSpreadPct),
+        minOpenInterest: num(minOpenInterest),
+        minDelta: num(minDelta),
+        maxDebit: num(maxDebit) ?? null,
+        earningsMode: ['all', 'exclude', 'only'].includes(earningsMode) ? earningsMode : undefined,
+        maxResults: num(maxResults),
+        reuseStockScan: reuseStockScan !== false,
+      });
+      res.json(result);
+    } catch (err) {
+      console.error('Scanner /options/scan error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/api/scanner/options/last', (req, res) => {
+    try {
+      const latest = scanStore.loadLatest('options-scan');
+      if (!latest) return res.status(404).json({ error: 'No options scans yet' });
       res.json(latest);
     } catch (err) {
       res.status(500).json({ error: err.message });

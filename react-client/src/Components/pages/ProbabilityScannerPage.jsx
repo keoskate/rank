@@ -1,12 +1,26 @@
-import { useCallback, useMemo, memo } from 'react';
+import { useCallback, useMemo, memo, lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import theme from '../../theme';
 import useScanner from '../../hooks/useScanner';
 import ScanControls from '../scanner/ScanControls';
 import OpportunityTable from '../scanner/OpportunityTable';
 import { getAllStockLists } from '../../config/stockLists';
 
+const OptionsScannerTab = lazy(() => import('../scanner/OptionsScannerTab'));
+
+const TABS = [
+  { key: 'stocks', label: 'Stocks' },
+  { key: 'options', label: 'Options' },
+];
+
 const ProbabilityScannerPage = () => {
   const { scan, loading, error, runScan } = useScanner();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'options' ? 'options' : 'stocks';
+
+  const handleTabChange = useCallback(tab => {
+    setSearchParams(tab === 'stocks' ? {} : { tab }, { replace: true });
+  }, [setSearchParams]);
 
   const universeSymbols = useMemo(() => {
     try {
@@ -58,49 +72,88 @@ const ProbabilityScannerPage = () => {
           color: theme.colors.gray600,
           marginTop: 4,
         }}>
-          Ranks all stocks across your rank lists by probability × R:R. Calibrated 40–85% (no false 95% confidence).
+          {activeTab === 'options'
+            ? 'Expresses the stock scanner’s directional edge through long calls/puts. Ranked by expected ROI net of spread + theta; most contracts get filtered — that’s the point.'
+            : 'Ranks all stocks across your rank lists by probability × R:R. Calibrated 40–85% (no false 95% confidence).'}
         </div>
       </div>
 
-      <ScanControls
-        onScan={handleScan}
-        loading={loading}
-        generatedAt={scan?.generatedAt}
-        scannedSymbols={scan?.scannedSymbols}
-        elapsedMs={scan?.elapsedMs}
-      />
+      <div style={{ display: 'flex', gap: 2, alignSelf: 'flex-start', border: `1px solid ${theme.colors.ruler}`, borderRadius: theme.borderRadius.xs, background: theme.colors.paper, padding: 2 }}>
+        {TABS.map(t => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => handleTabChange(t.key)}
+              style={{
+                padding: '8px 20px',
+                fontSize: '0.8rem',
+                fontWeight: active ? 700 : 500,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: active ? '#fff' : theme.colors.gray600,
+                background: active ? theme.colors.charcoal : 'transparent',
+                border: 'none',
+                borderRadius: theme.borderRadius.xs,
+                cursor: 'pointer',
+                transition: theme.transitions?.fast || 'all 0.15s ease',
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
 
-      {error && (
-        <div style={{
-          padding: theme.spacing.sm,
-          background: theme.colors.errorLight,
-          color: theme.colors.errorDark,
-          border: `1px solid ${theme.colors.error}`,
-          borderRadius: theme.borderRadius.xs,
-          fontSize: '0.85rem',
-        }}>
-          Scan error: {error}
-        </div>
-      )}
+      {activeTab === 'options' ? (
+        <Suspense fallback={<div style={{ padding: theme.spacing.xl, textAlign: 'center', color: theme.colors.gray500 }}>Loading…</div>}>
+          <OptionsScannerTab universeSymbols={universeSymbols} />
+        </Suspense>
+      ) : (
+        <>
+          <ScanControls
+            onScan={handleScan}
+            loading={loading}
+            generatedAt={scan?.generatedAt}
+            scannedSymbols={scan?.scannedSymbols}
+            elapsedMs={scan?.elapsedMs}
+          />
 
-      {scan && (
-        <div style={{
-          display: 'flex',
-          gap: theme.spacing.lg,
-          fontSize: '0.75rem',
-          color: theme.colors.gray600,
-          fontFamily: theme.typography.fontFamilyMono,
-        }}>
-          <span><strong style={{ color: theme.colors.charcoal }}>{opportunities.length}</strong> opportunities</span>
-          <span><strong style={{ color: theme.colors.charcoal }}>{scan.scannedSymbols}</strong> scanned</span>
-          {scan.errors?.length > 0 && (
-            <span style={{ color: theme.colors.errorMuted }}>{scan.errors.length} errored</span>
+          {error && (
+            <div style={{
+              padding: theme.spacing.sm,
+              background: theme.colors.errorLight,
+              color: theme.colors.errorDark,
+              border: `1px solid ${theme.colors.error}`,
+              borderRadius: theme.borderRadius.xs,
+              fontSize: '0.85rem',
+            }}>
+              Scan error: {error}
+            </div>
           )}
-          <span style={{ marginLeft: 'auto' }}>horizon: {scan.horizonDays}d · min p: {(scan.minProbability * 100).toFixed(0)}%</span>
-        </div>
-      )}
 
-      <OpportunityTable opportunities={opportunities} loading={loading} />
+          {scan && (
+            <div style={{
+              display: 'flex',
+              gap: theme.spacing.lg,
+              fontSize: '0.75rem',
+              color: theme.colors.gray600,
+              fontFamily: theme.typography.fontFamilyMono,
+            }}>
+              <span><strong style={{ color: theme.colors.charcoal }}>{opportunities.length}</strong> opportunities</span>
+              <span><strong style={{ color: theme.colors.charcoal }}>{scan.scannedSymbols}</strong> scanned</span>
+              {scan.errors?.length > 0 && (
+                <span style={{ color: theme.colors.errorMuted }}>{scan.errors.length} errored</span>
+              )}
+              <span style={{ marginLeft: 'auto' }}>horizon: {scan.horizonDays}d · min p: {(scan.minProbability * 100).toFixed(0)}%</span>
+            </div>
+          )}
+
+          <OpportunityTable opportunities={opportunities} loading={loading} />
+        </>
+      )}
     </div>
   );
 };

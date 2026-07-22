@@ -211,7 +211,7 @@ Changes to these files should be validated with `build-validator` and reviewed c
 ## Development Notes
 
 - Uses legacy Node.js OpenSSL provider for compatibility (`NODE_OPTIONS=--openssl-legacy-provider`)
-- No test framework currently configured
+- Tests: vitest (`npm test`), suites in `server/__tests__/`
 - React 19 with babel-plugin-react-compiler
 - Webpack 5 with source maps and path aliases
 - Express server handles SPA routing with catch-all route serving index.html
