@@ -113,7 +113,8 @@ async function fetchOne(symbol, start, end) {
         start,
         end,
         10000,
-        ADJUSTMENT
+        ADJUSTMENT,
+        'sip' // full-depth feed — IEX floors at ~1500d; end is clamped days back, so the recent-SIP gate never applies here
       );
       return (raw || [])
         .filter(b => b && b.timestamp && b.close > 0)
@@ -345,7 +346,8 @@ async function fetchMinuteMonth(symbol, fetchStart, fetchEnd, adjustment) {
         fetchStart,
         fetchEnd,
         100000,
-        adjustment
+        adjustment,
+        'sip' // same rationale as the daily path
       );
       return (raw || [])
         .filter(b => b && b.timestamp && b.close > 0)
