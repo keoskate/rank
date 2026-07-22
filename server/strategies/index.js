@@ -17,6 +17,7 @@ const insiderFollowing = require('./insiderFollowing');
 const darkPool = require('./darkPool');
 const trendFollowing = require('./trendFollowing');
 const xsMomentum = require('./xsMomentum');
+const volTargetMix = require('./volTargetMix');
 
 const DEFAULT_SLUG = 'technical-indicators';
 
@@ -28,6 +29,7 @@ const registry = {
   [darkPool.slug]: darkPool,
   [trendFollowing.slug]: trendFollowing,
   [xsMomentum.slug]: xsMomentum,
+  [volTargetMix.slug]: volTargetMix,
 };
 
 // Frontmatter `strategy` value → plugin slug. Strategy values not listed here
@@ -40,6 +42,7 @@ const PLUGIN_BY_STRATEGY = {
   'dark-pool': 'dark-pool',
   'trend-following': 'trend-following',
   'cross-sectional-momentum': 'cross-sectional-momentum',
+  'vol-target-mix': 'vol-target-mix',
 };
 
 /**

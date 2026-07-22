@@ -22,6 +22,7 @@ const ALLOWED_STRATEGIES = [
   'dark-pool',
   'trend-following',
   'cross-sectional-momentum',
+  'vol-target-mix',
 ];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
@@ -111,6 +112,18 @@ const BROKER_DEFAULTS = {
   // Trend-following plugin tunables (strategy: trend-following).
   trend: {
     rankBy: 'momentum', // 'momentum' | 'volAdjusted' (rankScore = mom/vol63)
+  },
+  // Vol-targeted mix plugin tunables (strategy: vol-target-mix). The decision
+  // params (mixW/targetVol/volWindow) feed quant-core volTargetMixCore — the
+  // certified shared core; enter/exit weights are execution hysteresis only.
+  voltarget: {
+    pairA: 'SOXX',
+    pairB: 'GLD',
+    mixW: 0.5, // weight of pairA at each monthly reset
+    targetVol: 0.12, // annualized vol target (WF-favored value)
+    volWindow: 20, // trailing days for realized-vol estimate
+    enterAboveWeight: 0.2, // enter a leg when target weight >= this
+    exitBelowWeight: 0.15, // exit a leg when target weight < this
   },
 };
 
@@ -416,6 +429,38 @@ function validateBroker(raw, filename = '') {
     'darkpool.rthOnly must be a boolean'
   );
 
+  const voltarget = deepMerge(BROKER_DEFAULTS.voltarget, raw.voltarget || {});
+  pushIf(
+    errs,
+    typeof voltarget.mixW === 'number' &&
+      voltarget.mixW > 0 &&
+      voltarget.mixW < 1,
+    'voltarget.mixW must be in (0, 1)'
+  );
+  pushIf(
+    errs,
+    typeof voltarget.targetVol === 'number' &&
+      voltarget.targetVol >= 0.05 &&
+      voltarget.targetVol <= 0.6,
+    'voltarget.targetVol must be in [0.05, 0.6]'
+  );
+  pushIf(
+    errs,
+    Number.isInteger(voltarget.volWindow) &&
+      voltarget.volWindow >= 5 &&
+      voltarget.volWindow <= 252,
+    'voltarget.volWindow must be int 5..252'
+  );
+  pushIf(
+    errs,
+    typeof voltarget.enterAboveWeight === 'number' &&
+      typeof voltarget.exitBelowWeight === 'number' &&
+      voltarget.exitBelowWeight >= 0 &&
+      voltarget.exitBelowWeight < voltarget.enterAboveWeight &&
+      voltarget.enterAboveWeight <= 1,
+    'voltarget weights must satisfy 0 <= exitBelowWeight < enterAboveWeight <= 1'
+  );
+
   const selfImprovement = deepMerge(
     BROKER_DEFAULTS.selfImprovement,
     raw.selfImprovement || {}
@@ -451,6 +496,7 @@ function validateBroker(raw, filename = '') {
       insider,
       darkpool,
       trend,
+      voltarget,
     },
     errors: [],
   };
@@ -583,6 +629,11 @@ function brokerToSessionConfig(broker, personaBody = '') {
 
     // Trend-following plugin tunables
     trendRankBy: (broker.trend || BROKER_DEFAULTS.trend).rankBy,
+
+    // Vol-targeted mix plugin tunables (strategy: vol-target-mix). Passed as a
+    // block — the plugin translates it via execParams()/volTargetStateFromCloses,
+    // certified against the shared quant-core volTargetMixCore.
+    voltarget: broker.voltarget || BROKER_DEFAULTS.voltarget,
 
     // Regime
     entropyGateEnabled: broker.regime.enabled,

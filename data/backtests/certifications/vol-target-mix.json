@@ -1,0 +1,93 @@
+{
+  "generatedAt": "2026-07-21T20:58:10.221Z",
+  "window": {
+    "start": "2016-01-04",
+    "end": "2026-07-18"
+  },
+  "symbols": [
+    "SOXX",
+    "GLD"
+  ],
+  "daysAligned": 2649,
+  "configs": [
+    {
+      "config": "deployed-50-12",
+      "params": {
+        "mixW": 0.5,
+        "targetVol": 0.12,
+        "volWindow": 20
+      },
+      "comparisons": 2599,
+      "scaledShare": 0.7106579453636014,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "w50-tv16",
+      "params": {
+        "mixW": 0.5,
+        "targetVol": 0.16,
+        "volWindow": 20
+      },
+      "comparisons": 520,
+      "scaledShare": 0.4846153846153846,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "w50-tv20",
+      "params": {
+        "mixW": 0.5,
+        "targetVol": 0.2,
+        "volWindow": 20
+      },
+      "comparisons": 520,
+      "scaledShare": 0.29423076923076924,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "w60-tv12",
+      "params": {
+        "mixW": 0.6,
+        "targetVol": 0.12,
+        "volWindow": 20
+      },
+      "comparisons": 520,
+      "scaledShare": 0.7846153846153846,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "w60-tv16",
+      "params": {
+        "mixW": 0.6,
+        "targetVol": 0.16,
+        "volWindow": 20
+      },
+      "comparisons": 520,
+      "scaledShare": 0.5692307692307692,
+      "divergences": [],
+      "pass": true
+    },
+    {
+      "config": "w60-tv20",
+      "params": {
+        "mixW": 0.6,
+        "targetVol": 0.2,
+        "volWindow": 20
+      },
+      "comparisons": 520,
+      "scaledShare": 0.3942307692307692,
+      "divergences": [],
+      "pass": true
+    }
+  ],
+  "certified": true,
+  "residuals": [
+    "live discretizes continuous target weights into whole positions (enterAboveWeight/exitBelowWeight hysteresis) — execution, not decision",
+    "engine slot/sizing mechanics; backtest applies the scalar to close-to-close mix returns",
+    "live decides intraday from bars through yesterday; backtest timing is close-to-close (same information set)"
+  ],
+  "daysTested": 5199
+}
