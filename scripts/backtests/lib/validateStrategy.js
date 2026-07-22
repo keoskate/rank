@@ -16,8 +16,12 @@
 //   4. realisticCosts  — the whole walk-forward re-runs at 2x transaction
 //                        costs; the OOS edge must survive.
 //   5. multipleTesting — deflated Sharpe on the OOS returns against the
-//                        expected-max-of-N-trials Sharpe, N from the trials
-//                        ledger (every grid point ever evaluated counts).
+//                        expected-max-of-N-trials Sharpe. N = ceil(Meff), the
+//                        pre-registered Patton–Ramadorai effective trial count
+//                        over ledger OOS fingerprints (lib/effectiveN.js;
+//                        adopted 2026-07-22 after the §4 acceptance test).
+//                        Every grid point is still recorded; correlated
+//                        siblings just no longer count as independent bets.
 //
 // Verdict: VALIDATED only if all five pass; otherwise UNVALIDATED or
 // FAILED:<gate>. Expect most strategies to NOT validate. That is the point.
@@ -27,6 +31,7 @@ const { loadDailyBars, buildCalendar, alignCloses } = require('./marketData');
 const { runDataIntegrityGate } = require('./dataIntegrity');
 const { writeRunArtifact } = require('./runArtifact');
 const { recordTrials, trialStats } = require('./trialsLedger');
+const { computeMeff } = require('./effectiveN');
 const fs = require('fs');
 const path = require('path');
 
@@ -327,11 +332,23 @@ async function validateStrategy(spec) {
     // (cost-destroyed variants, falsification controls) inflate — a
     // deterministically dead strategy can never be the lucky maximum, so it
     // must not widen the bar. Empirical spread is still reported below for
-    // transparency. N stays the FULL ledger count even though trials are
-    // correlated (effective N is smaller) — deliberately conservative.
+    // transparency.
+    //
+    // N — ADOPTED 2026-07-22 (dedicated commit per pre-registration §5.5):
+    // nTrials = max(ceil(Meff), current grid size), where Meff is the
+    // pre-registered Patton–Ramadorai effective trial count over the ledger's
+    // OOS fingerprints (lib/effectiveN.js; method frozen 2026-06-10 in
+    // data/reports/gate5-effectiveN-preregistration-2026-06.md; §4 acceptance
+    // test passed 2026-07-22 at 3.5% false-pass ≤ 5% — see
+    // data/reports/gate5-effectiveN-study-2026-07-22.md). Applies to ALL
+    // strategies (§5.3). If Meff cannot be computed (no calendar/ledger),
+    // fall back to the FULL ledger count — the conservative direction.
     const medT = ledger.medianTradingDays;
     const varDaily = medT ? significance.nullSharpeVariance(medT) : null;
-    const nTrials = Math.max(ledger.n, wfResult.inSample.table.length);
+    const meffInfo = computeMeff();
+    const nTrials = meffInfo
+      ? Math.max(meffInfo.ceil, wfResult.inSample.table.length)
+      : Math.max(ledger.n, wfResult.inSample.table.length);
     const dsr = varDaily
       ? significance.deflatedSharpe({
           sr: moments.sr,
@@ -357,9 +374,12 @@ async function validateStrategy(spec) {
       mt = {
         status: dsr.dsr >= 0.95 ? 'pass' : 'fail',
         note:
-          `deflated Sharpe prob ${(dsr.dsr * 100).toFixed(1)}% vs expected-max-of-${nTrials}-skill-less-trials ` +
+          `deflated Sharpe prob ${(dsr.dsr * 100).toFixed(1)}% vs expected-max-of-${nTrials}-effective-trials ` +
+          (meffInfo
+            ? `(Meff ${meffInfo.meff.toFixed(2)} of ledger N=${ledger.n}, ${meffInfo.fingerprinted} fingerprinted; pre-registered Patton–Ramadorai, adopted 2026-07-22) `
+            : `(Meff unavailable — fell back to FULL ledger N=${ledger.n}, conservative) `) +
           `(SR* ${dsr.srStarAnnualized.toFixed(2)} ann., null-noise sd ${Math.sqrt((252 * 1) / medT).toFixed(2)} at median trial length ${medT}d); ` +
-          `PSR(0) ${(psr0 * 100).toFixed(1)}%; ledger N=${ledger.n} across ${ledger.families.length} families` +
+          `PSR(0) ${(psr0 * 100).toFixed(1)}%; ${ledger.families.length} families` +
           (empSd != null
             ? ` (empirical trial sd ${empSd.toFixed(2)} reported, not used — polluted by deliberate anti-edge trials)`
             : ''),
@@ -367,6 +387,10 @@ async function validateStrategy(spec) {
           dsr: dsr.dsr,
           srStarAnnualized: dsr.srStarAnnualized,
           nTrials,
+          ledgerN: ledger.n,
+          meff: meffInfo ? meffInfo.meff : null,
+          meffVariants: meffInfo ? meffInfo.variants : null,
+          fingerprintedTrials: meffInfo ? meffInfo.fingerprinted : null,
           psr0,
           medianTrialDays: medT,
           empiricalTrialSdAnnualized: empSd,

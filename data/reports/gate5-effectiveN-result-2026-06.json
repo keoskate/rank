@@ -1,0 +1,127 @@
+{
+  "executedAt": "2026-07-22T08:40:39.560Z",
+  "preRegistration": "data/reports/gate5-effectiveN-preregistration-2026-06.md",
+  "acceptance": {
+    "falsePasses": 8,
+    "rate": 0.04,
+    "threshold": 0.05,
+    "generator": "common-factor lambda=0.5 (conservative-high cross-correlation)",
+    "seeds": "1..200 (x7919, frozen LCG)"
+  },
+  "ledger": {
+    "N": 195,
+    "fingerprinted": 157,
+    "groups": 41,
+    "legacyIndependent": 38
+  },
+  "meff": {
+    "variants": [
+      9.783134106269616,
+      9.783134106269616,
+      9.783134106269616
+    ],
+    "value": 9.783134106269616,
+    "ceil": 10
+  },
+  "table": [
+    {
+      "strategy": "vol-target-soxx-gld-mix-WF-OOS",
+      "oosSharpe": 1.3044293697888454,
+      "dsrBefore": 0.8841321843873445,
+      "dsrAfter": 0.9848727381696255,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": true
+    },
+    {
+      "strategy": "deployed-top5-breadth23-volrank-WF-OOS",
+      "oosSharpe": 0.8816194219874194,
+      "dsrBefore": 0.5268182044091224,
+      "dsrAfter": 0.8270742970178366,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "deployed-top5-breadth23-volsize-WF-OOS",
+      "oosSharpe": 0.749716746517977,
+      "dsrBefore": 0.401493826369652,
+      "dsrAfter": 0.7358631675388007,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "top-momentum-WF-OOS",
+      "oosSharpe": 0.8703031935827753,
+      "dsrBefore": 0.5166977326892292,
+      "dsrAfter": 0.829768901596122,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "overnight-variants-WF-OOS",
+      "oosSharpe": -0.2874531790686495,
+      "dsrBefore": 0.0016860948156233327,
+      "dsrAfter": 0.023241244615038528,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "soxx-overnight-fixed-auction-WF-OOS",
+      "oosSharpe": 0.8781426331014089,
+      "dsrBefore": 0.5242970570434753,
+      "dsrAfter": 0.8329157711309627,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "uvxy-spike-short-WF-OOS",
+      "oosSharpe": 0.6349075475144732,
+      "dsrBefore": 0.31486832684730887,
+      "dsrAfter": 0.6275328832268106,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "diversifier-sleeve-WF-OOS",
+      "oosSharpe": 0.5172489697309992,
+      "dsrBefore": 0.2123760826781014,
+      "dsrAfter": 0.5282381693517795,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "combo-A-B-riskparity-WF-OOS",
+      "oosSharpe": 0.7185239112899072,
+      "dsrBefore": 0.3768149569055905,
+      "dsrAfter": 0.7045265515382213,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "mf-sleeve-capped-WF-OOS",
+      "oosSharpe": 0.7565902065051175,
+      "dsrBefore": 0.42738207262622735,
+      "dsrAfter": 0.6944500711976278,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    },
+    {
+      "strategy": "vrp-sleeve-capped-WF-OOS",
+      "oosSharpe": 0.9164439441804352,
+      "dsrBefore": 0.5600182922808468,
+      "dsrAfter": 0.8482891877910171,
+      "srStarBefore": 0.853486319649661,
+      "srStarAfter": 0.48740746325621626,
+      "verdictFlips": false
+    }
+  ]
+}

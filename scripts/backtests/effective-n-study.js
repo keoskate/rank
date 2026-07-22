@@ -30,97 +30,36 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { significance } = require('@keo/quant-core');
+// The §2 estimator lives in lib/effectiveN.js — the SAME definition gate 5
+// consumes (one-definition rule; adopted 2026-07-22). This script keeps only
+// what the study adds on top: the §4 acceptance test and the §5.4 report.
+const {
+  meffOf: libMeffOf,
+  rhoPair: libRhoPair,
+  nyseCalendar,
+  makeCalIndex,
+  MIN_WEEKS,
+  MATCH_TOL,
+} = require('./lib/effectiveN');
 
 const ROOT = path.join(__dirname, '../..');
 const LEDGER = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'data/backtests/trials-ledger.json'), 'utf8')
 );
 
-// NYSE trading-day calendar from the SPY cache (the repo's master calendar).
-function nyseCalendar() {
-  const dir = path.join(ROOT, 'data/backtests/bars-cache');
-  const f = fs
-    .readdirSync(dir)
-    .filter(x => x.startsWith('SPY_2016-01-04_') && x.endsWith('_all.json'))
-    .sort()
-    .pop();
-  return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')).map(
-    b => b.date
-  );
-}
 const CAL = nyseCalendar();
-const CAL_IDX = new Map(CAL.map((d, i) => [d, i]));
-function calIdxOnOrBefore(date) {
-  if (CAL_IDX.has(date)) return CAL_IDX.get(date);
-  for (let i = CAL.length - 1; i >= 0; i--) if (CAL[i] <= date) return i;
-  return -1;
-}
+const calIdxOnOrBefore = makeCalIndex(CAL);
 
-// ---- §2: pairwise rho on aligned weekly fingerprints ----
-const MIN_WEEKS = 26;
-const MATCH_TOL = 2; // trading days
-
-function weekEndIndices(trial, anchorShift) {
-  const K = trial.fp.length;
-  const anchor = calIdxOnOrBefore(trial.end) - anchorShift;
-  const ends = new Array(K);
-  for (let i = 0; i < K; i++) ends[i] = anchor - 5 * (K - 1 - i);
-  return ends;
-}
-
-function pearson(xs, ys) {
-  const n = xs.length;
-  const mx = xs.reduce((a, b) => a + b, 0) / n;
-  const my = ys.reduce((a, b) => a + b, 0) / n;
-  let num = 0;
-  let dx = 0;
-  let dy = 0;
-  for (let i = 0; i < n; i++) {
-    num += (xs[i] - mx) * (ys[i] - my);
-    dx += (xs[i] - mx) ** 2;
-    dy += (ys[i] - my) ** 2;
-  }
-  return dx > 0 && dy > 0 ? num / Math.sqrt(dx * dy) : 0;
-}
-
+// Thin local adapters preserving this script's original call shapes.
 function rhoPair(a, b, shiftA = 0, shiftB = 0) {
-  const endsA = weekEndIndices(a, shiftA);
-  const endsB = weekEndIndices(b, shiftB);
-  // match greedily: both step in 5-day increments, so a single relative
-  // offset governs all matches
-  const xs = [];
-  const ys = [];
-  let j = 0;
-  for (let i = 0; i < endsA.length; i++) {
-    while (j < endsB.length && endsB[j] < endsA[i] - MATCH_TOL) j++;
-    if (j < endsB.length && Math.abs(endsB[j] - endsA[i]) <= MATCH_TOL) {
-      xs.push(a.fp[i]);
-      ys.push(b.fp[j]);
-      j++;
-    }
-  }
-  if (xs.length < MIN_WEEKS) return 0;
-  return pearson(xs, ys);
+  // lib signature takes equal shifts per §5.2 variants; the study only ever
+  // calls with shiftA === shiftB, matching the pre-registered variants.
+  return libRhoPair(a, b, shiftA, shiftB, calIdxOnOrBefore);
 }
 
 function meffOf(trials, shiftFn) {
-  // Sum over ALL ordered pairs incl. diagonal. Legacy (no fp): rho=0 vs all,
-  // rho_ii=1 -> contributes exactly 1.
-  const N = trials.length;
-  let sum = N; // diagonal
-  const withFp = trials.filter(t => t.fp);
-  for (let i = 0; i < withFp.length; i++) {
-    for (let j = i + 1; j < withFp.length; j++) {
-      const r = rhoPair(
-        withFp[i],
-        withFp[j],
-        shiftFn(withFp[i]),
-        shiftFn(withFp[j])
-      );
-      sum += 2 * r * r; // ordered pairs (i,j) and (j,i)
-    }
-  }
-  return (N * N) / sum;
+  const shift = shiftFn({ fp: null, end: null }) || 0;
+  return libMeffOf(trials, shift, calIdxOnOrBefore);
 }
 
 // ---- frozen LCG (repo convention) ----
@@ -288,6 +227,7 @@ async function main() {
     fs.readFileSync(path.join(ROOT, 'data/backtests/runs/index.json'), 'utf8')
   );
   const targets = [
+    'vol-target-soxx-gld-mix-WF-OOS', // champion — must appear first per §5.4
     'deployed-top5-breadth23-volrank-WF-OOS',
     'deployed-top5-breadth23-volsize-WF-OOS',
     'top-momentum-WF-OOS',
@@ -370,10 +310,185 @@ async function main() {
     path.join(ROOT, 'data/reports/gate5-effectiveN-result-2026-06.json'),
     JSON.stringify(report, null, 2)
   );
+
+  // ---- Markdown study report (required output) ----
+  const champion = rows.find(
+    r => r.strategy === 'vol-target-soxx-gld-mix-WF-OOS'
+  );
+  const structureGroups = groupStructure(realTrials);
+  const nFingerprinted = realTrials.filter(t => t.fp).length;
+  const nLegacy = realTrials.filter(t => !t.fp).length;
+  const N = realTrials.length;
+
+  // Pairwise correlation stats from the real-ledger computation
+  // Recompute with stats collection for the report
+  const pairRhos = [];
+  const withFp = realTrials.filter(t => t.fp);
+  for (let i = 0; i < withFp.length; i++) {
+    for (let j = i + 1; j < withFp.length; j++) {
+      // Use variant 0 (anchor shift 0) for stats — actual Meff used max variant
+      const r = rhoPair(withFp[i], withFp[j], 0, 0);
+      if (r !== 0) pairRhos.push(r); // non-zero means had >=26 weeks overlap
+    }
+  }
+  const meanRho = pairRhos.length
+    ? pairRhos.reduce((a, b) => a + b, 0) / pairRhos.length
+    : 0;
+  const sortedRho = [...pairRhos].sort((a, b) => a - b);
+  const medianRho = sortedRho.length
+    ? sortedRho[Math.floor(sortedRho.length / 2)]
+    : 0;
+  const totalCanonicalPairs = (withFp.length * (withFp.length - 1)) / 2;
+  const skippedPairs = totalCanonicalPairs - pairRhos.length;
+
+  const tableLines = rows
+    .map(
+      r =>
+        `| ${r.strategy.padEnd(48)} | ${r.oosSharpe.toFixed(3)} | ${(r.dsrBefore * 100).toFixed(1)}% | ${(r.dsrAfter * 100).toFixed(1)}% | ${r.dsrBefore < 0.95 ? 'FAIL' : 'PASS'} → ${r.dsrAfter < 0.95 ? 'FAIL' : 'PASS'}${r.verdictFlips ? ' ***' : ''} |`
+    )
+    .join('\n');
+
+  const dsrNote = champion
+    ? `DSR at raw N=${N}: **${(champion.dsrBefore * 100).toFixed(2)}%** (SR* ann. ${champion.srStarBefore.toFixed(4)}) — **${champion.dsrBefore >= 0.95 ? 'PASS' : 'FAIL'}**
+DSR at Meff ceil=${nEff}: **${(champion.dsrAfter * 100).toFixed(2)}%** (SR* ann. ${champion.srStarAfter.toFixed(4)}) — **${champion.dsrAfter >= 0.95 ? 'PASS' : 'FAIL'}**`
+    : '(champion not found in run index)';
+
+  const flipCount = rows.filter(r => r.verdictFlips).length;
+  const adoptionText =
+    acc.rate <= 0.05
+      ? champion && champion.verdictFlips
+        ? `The champion (vol-target-soxx-gld-mix-WF-OOS) **flips from FAIL to PASS** under ceil(Meff)=${nEff}. Adoption is methodologically warranted. Per §5: apply in a dedicated commit, applies to ALL strategies (no per-strategy exceptions). ${flipCount} strategy/strategies flip verdict.`
+        : `The acceptance test passes. ceil(Meff)=${nEff} is a valid corrected bar. The champion does **not** flip verdict (DSR ${champion ? (champion.dsrAfter * 100).toFixed(2) : '?'}% < 95%). ${flipCount > 0 ? flipCount + ' other strateg' + (flipCount === 1 ? 'y flips' : 'ies flip') + ' verdict.' : 'No verdicts flip.'} Adoption lowers the bar legitimately but does not change the champion's outcome — user may still choose to adopt for correctness.`
+      : `Acceptance test FAILED — Meff is abandoned per §4. Gate 5 retains full N=${N}. No further action.`;
+
+  const mdReport = `# Gate 5 effective-N study
+**Generated:** 2026-07-22
+**Script:** scripts/backtests/effective-n-study.js
+**Pre-registration:** data/reports/gate5-effectiveN-preregistration-2026-06.md (FROZEN 2026-06-10, temporal two-key §5.1)
+
+---
+
+## Method (binding — citing pre-registration §2)
+
+Single frozen estimator (no substitution permitted):
+
+\`\`\`
+Meff = N² / Σ_ij ρ̂²_ij   (Patton–Ramadorai form)
+\`\`\`
+
+Sum over ALL ordered pairs (i,j) including diagonal (ρ̂_ii = 1).
+Input series: each trial's \`oosFingerprint\` (weekly compounded OOS returns, ≤150 weeks).
+Week alignment: NYSE trading-day calendar anchored at \`window.end\`, stepping back 5 NYSE days per week. Overlap tolerance: ≤${MATCH_TOL} trading days. Minimum overlap: **${MIN_WEEKS} weeks** (§2.4) — short-overlap pairs set to ρ̂=0.
+Grid siblings (same run, same strategyId): share fingerprint → ρ̂=1 by design (§2 known approximation).
+Legacy trials (no fingerprint): ρ̂=0 off-diagonal, ρ̂_ii=1 (§2.5, conservative).
+Alignment ambiguity (§5.2): tried anchor shifts 0/1/2 NYSE days → take variant giving LARGEST Meff (harder bar).
+
+---
+
+## 1. Fingerprint coverage
+
+| Metric | Value |
+|--------|-------|
+| Total ledger trials (N) | **${N}** |
+| Trials with oosFingerprint | **${nFingerprinted}** (${((nFingerprinted / N) * 100).toFixed(1)}%) |
+| Legacy trials (no fingerprint) | **${nLegacy}** (${((nLegacy / N) * 100).toFixed(1)}%) |
+| Distinct fingerprint groups (K) | **${structureGroups.length}** |
+
+${nLegacy} pre-2026-06-10 legacy rows carry no fingerprint and are counted fully independent (conservative per §2.5). This keeps Meff denominator from shrinking relative to the full N.
+
+---
+
+## 2. Pairwise correlation distribution
+
+${withFp.length} fingerprinted trials → ${totalCanonicalPairs} canonical pairwise comparisons.
+
+| Metric | Value |
+|--------|-------|
+| Pairs with ≥${MIN_WEEKS}-week overlap (used) | **${pairRhos.length}** |
+| Pairs set to ρ̂=0 (short overlap or no overlap) | **${skippedPairs}** |
+| Mean ρ̂ (used pairs) | **${meanRho.toFixed(4)}** |
+| Median ρ̂ (used pairs) | **${medianRho.toFixed(4)}** |
+
+---
+
+## 3. Effective-N (Meff)
+
+Alignment variants (anchor shifts 0/1/2 NYSE days): ${variants.map(v => v.toFixed(2)).join(' / ')}
+→ Meff = **${meff.toFixed(4)}** (taking largest per §5.2)
+→ ceil(Meff) = **${nEff}**
+→ Reduction from full N: **${N - nEff}** fewer trials (${(((N - nEff) / N) * 100).toFixed(1)}%)
+
+The modest reduction reflects that ${nLegacy} legacy rows (${((nLegacy / N) * 100).toFixed(1)}% of N) are forced fully independent — they inflate the denominator Σρ̂² by exactly 1 each regardless of actual correlation structure. As fingerprint coverage grows, Meff will diverge further from N.
+
+---
+
+## 4. Acceptance test (pre-registration §4)
+
+200 synthetic all-null ledgers. Same group structure (${structureGroups.length} groups with same sizes), same ${nLegacy} legacy-independent trials. Common-factor generator (λ=0.5 loading): cross-group weekly correlation ≈0.5 — **the most conservative setting** (maximises false-pass rate, hardest version of the test). Within-group ρ̂=1 (shared fingerprint per grid block). LCG seeds 1..200 × 7919 (frozen).
+
+| Metric | Value |
+|--------|-------|
+| Synthetic ledgers | 200 |
+| False passes (DSR ≥ 0.95 on null best trial) | **${acc.falsePasses}** |
+| False-pass rate | **${(acc.rate * 100).toFixed(1)}%** |
+| Threshold | ≤ 5% |
+| **Acceptance verdict** | **${acc.rate <= 0.05 ? 'PASS' : 'FAIL'}** |
+
+${
+  acc.rate <= 0.05
+    ? 'The estimator controls Type I error at the required rate. Meff adoption is statistically warranted per the pre-registration.'
+    : 'FAILED — Meff is abandoned per §4. Gate 5 retains full N=' +
+      N +
+      '. No second estimator may be evaluated.'
+}
+
+---
+
+## 5. Champion DSR table (full before/after per §5.4)
+
+${dsrNote}
+
+### All scoreboard strategies (full N=${N} vs ceil(Meff)=${nEff})
+
+| Strategy | OOS Sharpe (ann.) | DSR raw N=${N} | DSR Meff=${nEff} | Verdict |
+|----------|-----------------:|---------------|----------------|---------|
+${tableLines}
+
+*** = verdict flips from FAIL to PASS under Meff.
+
+---
+
+## RECOMMENDATION
+
+${adoptionText}
+
+---
+
+## Honest caveats (pre-registration §8)
+
+1. **Reused OOS window**: 2016–2026 walk-forward window reused multiple times. Meff corrects trial *count* only — cannot undo window reuse. Pristine evidence: forward-sim broker + data post-2026-06-10.
+2. **Young fingerprint coverage**: ${nFingerprinted}/${N} trials fingerprinted; early Meff values sit close to full N by design. Estimate will improve as more fingerprinted trials accumulate.
+3. **Weekly downsampling**: discards intraweek correlation; frozen to keep stored rows small and damp daily-alignment noise.
+4. **Grid-block approximation**: within-run siblings set to ρ̂=1 (may overstate intra-grid correlation for orthogonal grids).
+5. **Acceptance test generator**: λ=0.5 common factor is intentionally maximally conservative — real between-group correlations are lower on average (mean ρ̂=${meanRho.toFixed(3)}), so the acceptance test sees a harder problem than reality.
+
+---
+
+*Binding pre-registration: data/reports/gate5-effectiveN-preregistration-2026-06.md*
+*JSON artifact: data/reports/gate5-effectiveN-result-2026-06.json*
+`;
+
+  const MD_PATH = path.join(
+    ROOT,
+    'data/reports/gate5-effectiveN-study-2026-07-22.md'
+  );
+  fs.writeFileSync(MD_PATH, mdReport);
+
   console.log(
     `\nSR* (annualized): ${rows[0] ? rows[0].srStarBefore.toFixed(2) : '?'} → ${rows[0] ? rows[0].srStarAfter.toFixed(2) : '?'}`
   );
   console.log('wrote data/reports/gate5-effectiveN-result-2026-06.json');
+  console.log('wrote data/reports/gate5-effectiveN-study-2026-07-22.md');
   console.log(
     '\nADOPTION (per §5): if accepted, validateStrategy gate 5 should use nTrials = max(ceil(Meff), grid size) going forward — apply in the SAME dedicated commit as this result.'
   );
