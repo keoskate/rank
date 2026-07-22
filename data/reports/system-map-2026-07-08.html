@@ -1,0 +1,1898 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Map — 2026-07-08T20:41:07.782Z</title>
+<style>
+  :root {
+    --bg:#17140f; --panel:#211d16; --panel2:#2a251c; --line:#3a3325;
+    --ink:#e9ddc4; --muted:#9b9078; --gold:#c9a24b; --green:#7bb37b; --red:#cf7b6f; --orange:#d9a05b;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:13px; line-height:1.5; }
+  header { padding:18px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#211d16,#17140f); }
+  header h1 { margin:0; font-size:19px; letter-spacing:.5px; color:var(--gold); }
+  header .sub { color:var(--muted); font-size:12px; margin-top:4px; }
+  nav { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:2px; padding:8px 18px;
+    background:var(--bg); border-bottom:1px solid var(--line); }
+  .tabbtn { background:transparent; color:var(--muted); border:1px solid transparent; border-radius:6px;
+    padding:6px 12px; font:inherit; cursor:pointer; }
+  .tabbtn:hover { color:var(--ink); }
+  .tabbtn.active { color:var(--bg); background:var(--gold); border-color:var(--gold); font-weight:600; }
+  main { padding:18px 22px; max-width:1200px; margin:0 auto; }
+  .tabpanel.hidden { display:none; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media(max-width:720px){ .grid2{grid-template-columns:1fr;} }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+  .card h3 { margin:0 0 10px; font-size:14px; color:var(--gold); }
+  .card h4 { margin:0 0 6px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .broker-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+  .broker-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:8px; }
+  .broker-grid > div { min-width:0; }
+  @media(max-width:720px){ .broker-grid{grid-template-columns:1fr;} }
+  dl.kv { display:grid; grid-template-columns:auto 1fr; gap:3px 12px; margin:0; }
+  dl.kv dt { color:var(--muted); }
+  dl.kv dd { margin:0; text-align:right; min-width:0; overflow-wrap:anywhere; word-break:break-word; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th,td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  td:not(:first-child), th:not(:first-child) { text-align:right; }
+  .chip { display:inline-block; padding:1px 8px; border-radius:20px; font-size:11px; border:1px solid var(--line); }
+  .chip.pass { color:var(--green); border-color:var(--green); }
+  .chip.fail { color:var(--red); border-color:var(--red); }
+  .chip.gold { color:var(--gold); border-color:var(--gold); }
+  .chip.muted { color:var(--muted); }
+  .chip.neutral { color:var(--ink); }
+  .chiprow .tally { color:var(--muted); margin:0 8px 0 2px; font-size:11px; }
+  .callout { border-radius:10px; padding:10px 14px; margin:0 0 14px; border:1px solid var(--orange); background:rgba(217,160,91,.08); }
+  .callout.warn strong { color:var(--orange); }
+  .muted { color:var(--muted); }
+  .small { font-size:11.5px; }
+  code { background:var(--panel2); padding:1px 5px; border-radius:4px; color:var(--gold); font-size:12px; }
+  pre { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:12px; overflow:auto; font-size:11.5px; }
+  pre.persona { max-height:220px; }
+  details summary { cursor:pointer; color:var(--muted); margin-top:8px; }
+  .gaterow { display:grid; grid-template-columns:78px 1fr auto; align-items:center; gap:8px; margin:3px 0; font-size:11.5px; }
+  .gaterow .gl { color:var(--muted); }
+  .gaterow .gbar { height:6px; background:var(--panel2); border-radius:4px; overflow:hidden; }
+  .gaterow .gfill { display:block; height:100%; background:var(--muted); }
+  .gaterow.ok .gfill { background:var(--green); }
+  .gaterow.no .gfill { background:var(--red); }
+  .promo { border-top:1px solid var(--line); padding-top:8px; }
+  .broker.invalid { border-color:var(--red); }
+  footer { color:var(--muted); text-align:center; padding:20px; font-size:11px; }
+</style>
+</head><body>
+<header>
+  <h1>⬖ System Map</h1>
+  <div class="sub">Generated 2026-07-08T20:41:07.782Z · git eb3a4f2 · offline / config-only · 5 brokers</div>
+</header>
+<nav><button class="tabbtn active" data-tab="overview" onclick="showTab('overview')">Overview</button><button class="tabbtn " data-tab="brokers" onclick="showTab('brokers')">Brokers</button><button class="tabbtn " data-tab="gates" onclick="showTab('gates')">Gates</button><button class="tabbtn " data-tab="signals" onclick="showTab('signals')">Signals</button><button class="tabbtn " data-tab="exits" onclick="showTab('exits')">Exits</button><button class="tabbtn " data-tab="evals" onclick="showTab('evals')">Evals</button><button class="tabbtn " data-tab="promotion" onclick="showTab('promotion')">Promotion</button><button class="tabbtn " data-tab="raw" onclick="showTab('raw')">Raw JSON</button></nav>
+<main>
+  
+  <section class="tabpanel" id="tab-overview">
+    <div class="grid">
+      <div class="card">
+        <h3>Snapshot</h3>
+        <dl class="kv"><dt>generated</dt><dd>2026-07-08T20:41:07.782Z</dd><dt>git</dt><dd><span class="chip muted">eb3a4f2</span></dd><dt>mode</dt><dd><span class="chip muted">offline / config-only</span></dd><dt>brokers</dt><dd>5</dd></dl>
+      </div>
+      <div class="card">
+        <h3>Broker tiers</h3>
+        <p><span class="chip muted">4 simulated</span> <span class="chip gold">1 paper</span></p>
+        <h3 style="margin-top:14px">Semiconductor sentiment</h3>
+        <p><span class="muted">not fetched (offline snapshot)</span></p>
+        <h3 style="margin-top:14px">Macro gate</h3>
+        <p><span class="chip muted">inert</span> FRED_API_KEY not set — macro gate inert</p>
+      </div>
+      <div class="card">
+        <h3>Backtest verdicts <span class="muted">(75 runs)</span></h3>
+        <p class="chiprow"><span class="chip fail">FAILED:dataIntegrity</span><span class="tally">×9</span> <span class="chip fail">FAILED:outOfSample</span><span class="tally">×11</span> <span class="chip muted">UNVALIDATED</span><span class="tally">×19</span> <span class="chip fail">FAILED:multipleTesting</span><span class="tally">×36</span></p>
+        <p class="muted small">A strategy is VALIDATED only by clearing all five gates. Most fail — that's the point.</p>
+      </div>
+    </div>
+    <div class="callout warn">
+      <strong>Config drift watch.</strong> Header comments in evaluateExit() still say stop-loss 40 / EOD 50 — the LIVE code uses 100 and a 70/95 trigger. This map reflects the code.
+    </div>
+    <p class="muted small">This page is generated by <code>npm run system-map</code>. Every value is read from source (exported constants, .md frontmatter, session state, run artifacts) — re-run to refresh.</p>
+  </section>
+  <section class="tabpanel hidden" id="tab-brokers"><div class="card broker">
+        <div class="broker-head">
+          <h3>Flow Hunter <span class="muted small">flow-hunter</span></h3>
+          <div><span class="chip muted">simulated</span> <span class="chip neutral">options-flow</span></div>
+        </div>
+        <div class="broker-grid">
+          <div>
+            <h4>Config</h4>
+            <dl class="kv"><dt>capital</dt><dd>$100000</dd><dt>effective</dt><dd>$100000</dd><dt>watchlist</dt><dd>NVDA, AMD, SMCI, TSLA, AAPL, PLTR, META</dd><dt>risk/trade</dt><dd>2.00%</dd><dt>max drawdown</dt><dd>15%</dd><dt>sizing</dt><dd>confidence-scaled</dd><dt>kelly frac</dt><dd>0.25</dd><dt>max positions</dt><dd>3</dd><dt>max pos size</dt><dd>15%</dd><dt>daily-loss rail</dt><dd>5.0%</dd><dt>cons-loss rail</dt><dd><span class="muted">off</span></dd><dt>regime gate</dt><dd><span class="chip muted">off</span></dd><dt>macro gate</dt><dd><span class="chip muted">off</span></dd><dt>plugins</dt><dd><code>flow</code>: {&quot;minPremium&quot;:500000,&quot;minSkew&quot;:0.7,&quot;lookbackMinutes&quot;:30,&quot;scanner&quot;:true}<br><code>insider</code>: {&quot;minNotional&quot;:100000,&quot;lookbackDays&quot;:10,&quot;scanner&quot;:false}<br><code>darkpool</code>: {&quot;minPremium&quot;:1000000,&quot;minBuyShare&quot;:0.6,&quot;lookbackMinutes&quot;:120,&quot;scanner&quot;:false,&quot;dropAtMid&quot;:true,&quot;maxSinglePrintShare&quot;:0.25,&quot;minPrints&quot;:5,&quot;rthOnly&quot;:true}<br><code>trend</code>: {&quot;rankBy&quot;:&quot;momentum&quot;}</dd></dl>
+            <h4 style="margin-top:12px">Exit tunables</h4>
+            <dl class="kv"><dt>stop loss</dt><dd>1%</dd><dt>take profit</dt><dd>2%</dd><dt>trailing</dt><dd><span class="muted">off</span></dd><dt>RSI overbought</dt><dd>70</dd><dt>EOD exit</dt><dd>15min</dd><dt>min profit exit</dt><dd>0.5 × leverage</dd><dt>dampening</dt><dd>0.4</dd></dl>
+          </div>
+          <div>
+            <h4>Live</h4>
+            <dl class="kv"><dt>status</dt><dd><span class="chip pass">running</span></dd><dt>trades</dt><dd>9 (2W / 7L)</dd><dt>win rate</dt><dd>22%</dd><dt>total P&amp;L</dt><dd>$-1118.24</dd><dt>max DD</dt><dd>1.63%</dd><dt>cons. losses</dt><dd>0</dd><dt>sharpe</dt><dd>-22.04</dd><dt>positions</dt><dd>×, ×</dd></dl>
+            <h4 style="margin-top:12px">Promotion status</h4>
+            
+        <div class="promo">
+          <p><span class="chip muted">hold</span> <span class="muted small">sim — not yet promoted</span></p>
+          
+          <div class="gaterow no">
+    <span class="gl">Sharpe</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">-22.04 / 1.5 ✗</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Win rate</span>
+    <span class="gbar"><span class="gfill" style="width:42.30769230769231%"></span></span>
+    <span class="gv">22% / 52% ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Max DD</span>
+    <span class="gbar"><span class="gfill" style="width:10.866666666666665%"></span></span>
+    <span class="gv">1.63% / 15% ✓</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Trades</span>
+    <span class="gbar"><span class="gfill" style="width:9%"></span></span>
+    <span class="gv">9 / 100 ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Days</span>
+    <span class="gbar"><span class="gfill" style="width:100%"></span></span>
+    <span class="gv">36.19 / 20 ✓</span>
+  </div>
+          <p class="small">Edge gate: <span class="chip fail">fail</span> <span class="muted">options-flow: only 9/50 source trades</span></p>
+        </div>
+          </div>
+        </div>
+        <details><summary>persona</summary><pre class="persona"># Personality
+
+I don't read charts. I read the bets. When the smart money pays up for calls —
+real size, on the ask, sweeping the chain — I follow. RSI is what everyone else
+is staring at; I'm watching where the premium is actually going. I'd rather be
+right about _who's positioning_ than clever about a squiggly line.</pre></details>
+      </div><div class="card broker">
+        <div class="broker-head">
+          <h3>Insider Tracker <span class="muted small">insider-tracker</span></h3>
+          <div><span class="chip muted">simulated</span> <span class="chip neutral">insider-following</span></div>
+        </div>
+        <div class="broker-grid">
+          <div>
+            <h4>Config</h4>
+            <dl class="kv"><dt>capital</dt><dd>$100000</dd><dt>effective</dt><dd>$100000</dd><dt>watchlist</dt><dd>NVDA, AMD, SMCI, OXY, KMI, WFC, PLTR, MU</dd><dt>risk/trade</dt><dd>2.00%</dd><dt>max drawdown</dt><dd>15%</dd><dt>sizing</dt><dd>confidence-scaled</dd><dt>kelly frac</dt><dd>0.25</dd><dt>max positions</dt><dd>3</dd><dt>max pos size</dt><dd>15%</dd><dt>daily-loss rail</dt><dd>5.0%</dd><dt>cons-loss rail</dt><dd><span class="muted">off</span></dd><dt>regime gate</dt><dd><span class="chip muted">off</span></dd><dt>macro gate</dt><dd><span class="chip muted">off</span></dd><dt>plugins</dt><dd><code>flow</code>: {&quot;minPremium&quot;:250000,&quot;minSkew&quot;:0.65,&quot;lookbackMinutes&quot;:30,&quot;scanner&quot;:false}<br><code>insider</code>: {&quot;minNotional&quot;:500000,&quot;lookbackDays&quot;:10,&quot;scanner&quot;:true}<br><code>darkpool</code>: {&quot;minPremium&quot;:1000000,&quot;minBuyShare&quot;:0.6,&quot;lookbackMinutes&quot;:120,&quot;scanner&quot;:false,&quot;dropAtMid&quot;:true,&quot;maxSinglePrintShare&quot;:0.25,&quot;minPrints&quot;:5,&quot;rthOnly&quot;:true}<br><code>trend</code>: {&quot;rankBy&quot;:&quot;momentum&quot;}</dd></dl>
+            <h4 style="margin-top:12px">Exit tunables</h4>
+            <dl class="kv"><dt>stop loss</dt><dd>8%</dd><dt>take profit</dt><dd>10%</dd><dt>trailing</dt><dd><span class="muted">off</span></dd><dt>RSI overbought</dt><dd>70</dd><dt>EOD exit</dt><dd><span class="muted">off</span></dd><dt>min profit exit</dt><dd>0.5 × leverage</dd><dt>dampening</dt><dd>0.4</dd></dl>
+          </div>
+          <div>
+            <h4>Live</h4>
+            <dl class="kv"><dt>status</dt><dd><span class="chip pass">running</span></dd><dt>trades</dt><dd>6 (4W / 2L)</dd><dt>win rate</dt><dd>67%</dd><dt>total P&amp;L</dt><dd>$-1545.5</dd><dt>max DD</dt><dd>3.18%</dd><dt>cons. losses</dt><dd>1</dd><dt>sharpe</dt><dd>-11.54</dd><dt>positions</dt><dd>×, ×, ×</dd></dl>
+            <h4 style="margin-top:12px">Promotion status</h4>
+            
+        <div class="promo">
+          <p><span class="chip muted">hold</span> <span class="muted small">sim — not yet promoted</span></p>
+          
+          <div class="gaterow no">
+    <span class="gl">Sharpe</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">-11.54 / 1.5 ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Win rate</span>
+    <span class="gbar"><span class="gfill" style="width:100%"></span></span>
+    <span class="gv">67% / 52% ✓</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Max DD</span>
+    <span class="gbar"><span class="gfill" style="width:21.200000000000003%"></span></span>
+    <span class="gv">3.18% / 15% ✓</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Trades</span>
+    <span class="gbar"><span class="gfill" style="width:6%"></span></span>
+    <span class="gv">6 / 100 ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Days</span>
+    <span class="gbar"><span class="gfill" style="width:100%"></span></span>
+    <span class="gv">36.19 / 20 ✓</span>
+  </div>
+          <p class="small">Edge gate: <span class="chip fail">fail</span> <span class="muted">insider-following: only 6/50 source trades</span></p>
+        </div>
+          </div>
+        </div>
+        <details><summary>persona</summary><pre class="persona"># Personality
+
+I follow the people who know the company best — the ones legally required to
+tell you when they buy their own stock. When an officer or director puts real
+money into open-market shares, they're betting on something they can see from
+the inside. I don't chase rumors; I chase signatures on Form 4s.</pre></details>
+      </div><div class="card broker">
+        <div class="broker-head">
+          <h3>Momentum Rotator <span class="muted small">momentum-rotator</span></h3>
+          <div><span class="chip muted">simulated</span> <span class="chip neutral">cross-sectional-momentum</span></div>
+        </div>
+        <div class="broker-grid">
+          <div>
+            <h4>Config</h4>
+            <dl class="kv"><dt>capital</dt><dd>$100000</dd><dt>effective</dt><dd>$100000</dd><dt>watchlist</dt><dd>AAPL, MSFT, NVDA, AMD, AVGO, ORCL, CRM, ADBE, CSCO, QCOM, TXN, INTC, AMAT, MU, GOOGL, META, NFLX, DIS, CMCSA, TMUS, AMZN, TSLA, HD, MCD, NKE, COST, WMT, LOW, JPM, BAC, WFC, GS, MS, AXP, SCHW, UNH, JNJ, LLY, ABBV, MRK, PFE, XOM, CVX, CAT, BA</dd><dt>risk/trade</dt><dd>2.00%</dd><dt>max drawdown</dt><dd>25%</dd><dt>sizing</dt><dd>fixed</dd><dt>kelly frac</dt><dd>0.25</dd><dt>max positions</dt><dd>9</dd><dt>max pos size</dt><dd>11%</dd><dt>daily-loss rail</dt><dd>5.0%</dd><dt>cons-loss rail</dt><dd><span class="muted">off</span></dd><dt>regime gate</dt><dd><span class="chip muted">off</span></dd><dt>macro gate</dt><dd><span class="chip muted">off</span></dd><dt>plugins</dt><dd><code>flow</code>: {&quot;minPremium&quot;:250000,&quot;minSkew&quot;:0.65,&quot;lookbackMinutes&quot;:30,&quot;scanner&quot;:false}<br><code>insider</code>: {&quot;minNotional&quot;:100000,&quot;lookbackDays&quot;:10,&quot;scanner&quot;:false}<br><code>darkpool</code>: {&quot;minPremium&quot;:1000000,&quot;minBuyShare&quot;:0.6,&quot;lookbackMinutes&quot;:120,&quot;scanner&quot;:false,&quot;dropAtMid&quot;:true,&quot;maxSinglePrintShare&quot;:0.25,&quot;minPrints&quot;:5,&quot;rthOnly&quot;:true}<br><code>trend</code>: {&quot;rankBy&quot;:&quot;momentum&quot;}</dd></dl>
+            <h4 style="margin-top:12px">Exit tunables</h4>
+            <dl class="kv"><dt>stop loss</dt><dd>1%</dd><dt>take profit</dt><dd>2%</dd><dt>trailing</dt><dd><span class="muted">off</span></dd><dt>RSI overbought</dt><dd>70</dd><dt>EOD exit</dt><dd><span class="muted">off</span></dd><dt>min profit exit</dt><dd>0.5 × leverage</dd><dt>dampening</dt><dd>0.4</dd></dl>
+          </div>
+          <div>
+            <h4>Live</h4>
+            <dl class="kv"><dt>status</dt><dd><span class="chip pass">running</span></dd><dt>trades</dt><dd>7 (2W / 5L)</dd><dt>win rate</dt><dd>29%</dd><dt>total P&amp;L</dt><dd>$-1031.8</dd><dt>max DD</dt><dd>10.96%</dd><dt>cons. losses</dt><dd>0</dd><dt>sharpe</dt><dd>-4.94</dd><dt>positions</dt><dd>×, ×, ×, ×, ×, ×, ×, ×</dd></dl>
+            <h4 style="margin-top:12px">Promotion status</h4>
+            
+        <div class="promo">
+          <p><span class="chip muted">hold</span> <span class="muted small">sim — not yet promoted</span></p>
+          
+          <div class="gaterow no">
+    <span class="gl">Sharpe</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">-4.94 / 1.5 ✗</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Win rate</span>
+    <span class="gbar"><span class="gfill" style="width:55.769230769230774%"></span></span>
+    <span class="gv">29% / 52% ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Max DD</span>
+    <span class="gbar"><span class="gfill" style="width:73.06666666666666%"></span></span>
+    <span class="gv">10.96% / 15% ✓</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Trades</span>
+    <span class="gbar"><span class="gfill" style="width:7.000000000000001%"></span></span>
+    <span class="gv">7 / 100 ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Days</span>
+    <span class="gbar"><span class="gfill" style="width:100%"></span></span>
+    <span class="gv">35.53 / 20 ✓</span>
+  </div>
+          <p class="small">Edge gate: <span class="chip fail">fail</span> <span class="muted">cross-sectional-momentum: only 7/50 source trades</span></p>
+        </div>
+          </div>
+        </div>
+        <details><summary>persona</summary><pre class="persona"># Personality
+
+I own the strongest, full stop. Every month I rank the field by who's been
+winning over the last six months, buy the top fifth, and hold them — no
+second-guessing, no stops, no staring at the screen between rebalances. Winners
+keep winning longer than people expect; my whole job is to keep riding them and</pre></details>
+      </div><div class="card broker">
+        <div class="broker-head">
+          <h3>Trend Follower <span class="muted small">trend-follower</span></h3>
+          <div><span class="chip gold">paper</span> <span class="chip neutral">trend-following</span></div>
+        </div>
+        <div class="broker-grid">
+          <div>
+            <h4>Config</h4>
+            <dl class="kv"><dt>capital</dt><dd>$100000</dd><dt>effective</dt><dd>$20000</dd><dt>watchlist</dt><dd>SPY, QQQ, IWM, DIA, XLK, SMH, XLF, XLE, XLV, XLY, XLP, XLI, XLU, XLB, XLRE, XLC, EEM, EFA, GLD, SLV, TLT, IEF, DBC</dd><dt>risk/trade</dt><dd>2.00%</dd><dt>max drawdown</dt><dd>25%</dd><dt>sizing</dt><dd>fixed</dd><dt>kelly frac</dt><dd>0.25</dd><dt>max positions</dt><dd>5</dd><dt>max pos size</dt><dd>20%</dd><dt>daily-loss rail</dt><dd>5.0%</dd><dt>cons-loss rail</dt><dd>8</dd><dt>regime gate</dt><dd><span class="chip muted">off</span></dd><dt>macro gate</dt><dd><span class="chip muted">off</span></dd><dt>plugins</dt><dd><code>flow</code>: {&quot;minPremium&quot;:250000,&quot;minSkew&quot;:0.65,&quot;lookbackMinutes&quot;:30,&quot;scanner&quot;:false}<br><code>insider</code>: {&quot;minNotional&quot;:100000,&quot;lookbackDays&quot;:10,&quot;scanner&quot;:false}<br><code>darkpool</code>: {&quot;minPremium&quot;:1000000,&quot;minBuyShare&quot;:0.6,&quot;lookbackMinutes&quot;:120,&quot;scanner&quot;:false,&quot;dropAtMid&quot;:true,&quot;maxSinglePrintShare&quot;:0.25,&quot;minPrints&quot;:5,&quot;rthOnly&quot;:true}<br><code>trend</code>: {&quot;rankBy&quot;:&quot;volAdjusted&quot;}</dd></dl>
+            <h4 style="margin-top:12px">Exit tunables</h4>
+            <dl class="kv"><dt>stop loss</dt><dd>1%</dd><dt>take profit</dt><dd>2%</dd><dt>trailing</dt><dd><span class="muted">off</span></dd><dt>RSI overbought</dt><dd>70</dd><dt>EOD exit</dt><dd><span class="muted">off</span></dd><dt>min profit exit</dt><dd>0.5 × leverage</dd><dt>dampening</dt><dd>0.4</dd></dl>
+          </div>
+          <div>
+            <h4>Live</h4>
+            <dl class="kv"><dt>status</dt><dd><span class="chip pass">running</span></dd><dt>trades</dt><dd>1 (0W / 1L)</dd><dt>win rate</dt><dd>0%</dd><dt>total P&amp;L</dt><dd>$-13.55</dd><dt>max DD</dt><dd>0%</dd><dt>cons. losses</dt><dd>1</dd><dt>sharpe</dt><dd><span class="muted">n/a (&lt;2 days)</span></dd><dt>positions</dt><dd>×, ×, ×, ×, ×</dd></dl>
+            <h4 style="margin-top:12px">Promotion status</h4>
+            
+        <div class="promo">
+          <p><span class="chip muted">hold</span> <span class="muted small">paper — performing within tolerance</span></p>
+          <p class="muted small">paper-tier — evaluated against DEMOTE/FIRE, not promotion bars.</p>
+          <p class="small">Edge gate: <span class="chip fail">fail</span> <span class="muted">trend-following: only 1/50 source trades</span></p>
+        </div>
+          </div>
+        </div>
+        <details><summary>persona</summary><pre class="persona"># Personality
+
+I don't predict — I follow. I have no opinion about whether the market _should_
+go up; I only ask whether it _is_ going up, right now, in front of me. When a
+thing is above its 200-day line and climbing, I own it. When it rolls over, I'm
+out — to cash, no arguing, no averaging down, no &quot;it'll come back.&quot; Boring on</pre></details>
+      </div><div class="card broker">
+        <div class="broker-head">
+          <h3>Volume Hunter <span class="muted small">volume-hunter</span></h3>
+          <div><span class="chip muted">simulated</span> <span class="chip neutral">dark-pool</span></div>
+        </div>
+        <div class="broker-grid">
+          <div>
+            <h4>Config</h4>
+            <dl class="kv"><dt>capital</dt><dd>$100000</dd><dt>effective</dt><dd>$100000</dd><dt>watchlist</dt><dd>NVDA, AMD, TSLA, AAPL, META, MSFT, AMZN, PLTR</dd><dt>risk/trade</dt><dd>2.00%</dd><dt>max drawdown</dt><dd>15%</dd><dt>sizing</dt><dd>confidence-scaled</dd><dt>kelly frac</dt><dd>0.25</dd><dt>max positions</dt><dd>3</dd><dt>max pos size</dt><dd>15%</dd><dt>daily-loss rail</dt><dd>5.0%</dd><dt>cons-loss rail</dt><dd><span class="muted">off</span></dd><dt>regime gate</dt><dd><span class="chip muted">off</span></dd><dt>macro gate</dt><dd><span class="chip muted">off</span></dd><dt>plugins</dt><dd><code>flow</code>: {&quot;minPremium&quot;:250000,&quot;minSkew&quot;:0.65,&quot;lookbackMinutes&quot;:30,&quot;scanner&quot;:false}<br><code>insider</code>: {&quot;minNotional&quot;:100000,&quot;lookbackDays&quot;:10,&quot;scanner&quot;:false}<br><code>darkpool</code>: {&quot;minPremium&quot;:5000000,&quot;minBuyShare&quot;:0.62,&quot;lookbackMinutes&quot;:120,&quot;scanner&quot;:true,&quot;dropAtMid&quot;:true,&quot;maxSinglePrintShare&quot;:0.25,&quot;minPrints&quot;:5,&quot;rthOnly&quot;:true}<br><code>trend</code>: {&quot;rankBy&quot;:&quot;momentum&quot;}</dd></dl>
+            <h4 style="margin-top:12px">Exit tunables</h4>
+            <dl class="kv"><dt>stop loss</dt><dd>4%</dd><dt>take profit</dt><dd>6%</dd><dt>trailing</dt><dd><span class="muted">off</span></dd><dt>RSI overbought</dt><dd>70</dd><dt>EOD exit</dt><dd><span class="muted">off</span></dd><dt>min profit exit</dt><dd>0.5 × leverage</dd><dt>dampening</dt><dd>0.4</dd></dl>
+          </div>
+          <div>
+            <h4>Live</h4>
+            <dl class="kv"><dt>status</dt><dd><span class="chip muted">paused</span></dd><dt>trades</dt><dd>0 (0W / 0L)</dd><dt>win rate</dt><dd>0%</dd><dt>total P&amp;L</dt><dd>$0</dd><dt>max DD</dt><dd>0%</dd><dt>cons. losses</dt><dd>0</dd><dt>sharpe</dt><dd><span class="muted">n/a (&lt;2 days)</span></dd></dl>
+            <h4 style="margin-top:12px">Promotion status</h4>
+            
+        <div class="promo">
+          <p><span class="chip muted">hold</span> <span class="muted small">sim — not yet promoted</span></p>
+          
+          <div class="gaterow no">
+    <span class="gl">Sharpe</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">— / 1.5 ✗</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Win rate</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">0% / 52% ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Max DD</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">0% / 15% ✓</span>
+  </div>
+          <div class="gaterow no">
+    <span class="gl">Trades</span>
+    <span class="gbar"><span class="gfill" style="width:0%"></span></span>
+    <span class="gv">0 / 100 ✗</span>
+  </div>
+          <div class="gaterow ok">
+    <span class="gl">Days</span>
+    <span class="gbar"><span class="gfill" style="width:100%"></span></span>
+    <span class="gv">36.19 / 20 ✓</span>
+  </div>
+          <p class="small">Edge gate: <span class="chip fail">fail</span> <span class="muted">dark-pool: only 4/50 source trades</span></p>
+        </div>
+          </div>
+        </div>
+        <details><summary>persona</summary><pre class="persona"># Personality
+
+I watch the trades nobody's supposed to see. When institutions move real size,
+they don't do it on the lit exchange where everyone's watching — they cross it
+in the dark pool. I read those prints. When the big blocks are lifting offers,
+quietly, in size, I follow the elephants' footprints.</pre></details>
+      </div></section>
+  <section class="tabpanel hidden" id="tab-gates">
+    <div class="grid">
+      <div class="card">
+        <h3>Entropy gate <span class="chip fail">OFF</span></h3>
+        <p class="muted small">OFF — no edge (validated 2026-06, p≥0.6, n=5,881)</p>
+        <p class="small">Certified faithful to @keo/quant-core entropyGateCore but kept off — zero edge.</p>
+        <dl class="kv"><dt>default windows</dt><dd>21, 63, 252</dd><dt>preferred</dt><dd>any</dd><dt>block on transition</dt><dd>yes</dd><dt>enabled brokers</dt><dd>—</dd></dl>
+      </div>
+      <div class="card">
+        <h3>Macro regime gate</h3>
+        <p class="small">Per-broker opt-in (config.macroGateEnabled) AND FRED_API_KEY. Scales size; never a standalone return series.</p>
+        <dl class="kv"><dt>risk-off scalar</dt><dd>×0.25</dd><dt>deep inversion</dt><dd>-0.5</dd><dt>HY spike mult</dt><dd>×1.25</dd><dt>series</dt><dd>T10Y2Y · BAMLH0A0HYM2</dd><dt>live</dt><dd><span class="chip muted">inert</span> FRED_API_KEY not set — macro gate inert</dd><dt>enabled brokers</dt><dd>—</dd></dl>
+      </div>
+      <div class="card">
+        <h3>Kelly sizing</h3>
+        <p class="small">Fractional Kelly f* = (p·b − q)/b, clamped to a fractional multiple. Blends a Bayesian prior until real history accrues.</p>
+        <dl class="kv"><dt>min trades (empirical)</dt><dd>20</dd><dt>min losses (payoff)</dt><dd>5</dd><dt>max win rate</dt><dd>0.95</dd><dt>prior win rate</dt><dd>0.51</dd><dt>prior payoff</dt><dd>1</dd><dt>rolling window</dt><dd>100</dd><dt>fallbacks</dt><dd>mult 0.25, max 25%, min 0.5%</dd></dl>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Risk rails <span class="muted small">(per-broker opt-in)</span></h3>
+      <p class="small">Daily-loss + consecutive-loss halts are per-broker opt-in via frontmatter. Soft halts on new entries; exits/stops stay active.</p>
+      <table><thead><tr><th>broker</th><th>daily-loss</th><th>cons-loss limit</th><th>cons-loss now</th><th>portfolio DD</th></tr></thead><tbody><tr><td>flow-hunter</td><td>5.0%</td><td><span class="muted">off</span></td><td>0</td><td><span class="muted">off</span></td></tr><tr><td>insider-tracker</td><td>5.0%</td><td><span class="muted">off</span></td><td>1</td><td><span class="muted">off</span></td></tr><tr><td>momentum-rotator</td><td>5.0%</td><td><span class="muted">off</span></td><td>0</td><td><span class="muted">off</span></td></tr><tr><td>trend-follower</td><td>5.0%</td><td>8</td><td>1</td><td>12%</td></tr><tr><td>volume-hunter</td><td>5.0%</td><td><span class="muted">off</span></td><td>0</td><td><span class="muted">off</span></td></tr></tbody></table>
+    </div>
+  </section>
+  <section class="tabpanel hidden" id="tab-signals">
+    <div class="card">
+      <h3>Semiconductor sentiment <span class="muted small">SOXX → SOXL/SOXS</span></h3>
+      <p class="small">SOXX-based volatility-adaptive direction → routes SOXL (long) / SOXS (short).</p>
+      <div class="grid2">
+        <div>
+          <h4>Live reading</h4>
+          <p class="muted small">not fetched (offline snapshot)</p>
+        </div>
+        <div>
+          <h4>Thresholds <span class="muted small">(live config)</span></h4>
+          <dl class="kv"><dt>min conf to trade</dt><dd>55%</dd><dt>high confidence</dt><dd>75%</dd><dt>switch confidence</dt><dd>70%</dd><dt>base entry</dt><dd>0.35%</dd><dt>base exit</dt><dd>0.2%</dd><dt>vol multiplier</dt><dd>×1.2</dd><dt>clamp</dt><dd>0.15%–1.5%</dd><dt>cache TTL</dt><dd>30s</dd></dl>
+        </div>
+      </div>
+      <h4 style="margin-top:12px">Confidence weights <span class="muted small">(base 50, eff. threshold ×0.7)</span></h4>
+      <table><thead><tr><th>signal</th><th>points</th><th>weight</th><th>note</th></tr></thead><tbody><tr><td>intradayDirection</td><td>+15</td><td>30%</td><td><span class="muted small">move from open beyond effective threshold</span></td></tr><tr><td>rollingMomentum</td><td>+12</td><td>25%</td><td><span class="muted small">recent 75-min direction</span></td></tr><tr><td>reversal</td><td>+12</td><td>25%</td><td><span class="muted small">position within intraday range (drop-from-high / rise-from-low)</span></td></tr><tr><td>strongMove</td><td>+10</td><td>20%</td><td><span class="muted small">+5 for building momentum</span></td></tr><tr><td>technicalTrend</td><td>+8</td><td>±</td><td><span class="muted small">-5 when short-term trend conflicts</span></td></tr><tr><td>volumeConfirm</td><td>+5</td><td>±</td><td><span class="muted small">-3 on low volume</span></td></tr></tbody></table>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Strategies</h3>
+        <table><thead><tr><th>strategy</th><th>brokers using</th></tr></thead><tbody><tr><td><code>momentum-breakout</code></td><td><span class="muted">—</span></td></tr><tr><td><code>mean-reversion</code></td><td><span class="muted">—</span></td></tr><tr><td><code>entropy-adaptive</code></td><td><span class="muted">—</span></td></tr><tr><td><code>medallion-ensemble</code></td><td><span class="muted">—</span></td></tr><tr><td><code>llm-gated</code></td><td><span class="muted">—</span></td></tr><tr><td><code>balanced</code></td><td><span class="muted">—</span></td></tr><tr><td><code>conservative</code></td><td><span class="muted">—</span></td></tr><tr><td><code>aggressive</code></td><td><span class="muted">—</span></td></tr><tr><td><code>options-flow</code></td><td>flow-hunter</td></tr><tr><td><code>insider-following</code></td><td>insider-tracker</td></tr><tr><td><code>dark-pool</code></td><td>volume-hunter</td></tr><tr><td><code>trend-following</code></td><td>trend-follower</td></tr><tr><td><code>cross-sectional-momentum</code></td><td>momentum-rotator</td></tr></tbody></table>
+      </div>
+      <div class="card">
+        <h3>Technical indicators</h3>
+        <p class="small">Indicators feeding entry/exit confidence (getAllIndicators).</p>
+        <table><thead><tr><th>indicator</th><th>use</th></tr></thead><tbody><tr><td><code>rsi</code></td><td><span class="muted small">overbought/oversold; RSI&gt;rsiOverbought adds exit pressure</span></td></tr><tr><td><code>adx</code></td><td><span class="muted small">trend strength; gates exit dampening</span></td></tr><tr><td><code>macd</code></td><td><span class="muted small">reduced weight — removed from exits (low 5-min accuracy)</span></td></tr><tr><td><code>volumeRatio</code></td><td><span class="muted small">confirmation; low-volume-on-advance = distribution</span></td></tr><tr><td><code>trend</code></td><td><span class="muted small">short/medium-term classification</span></td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+  <section class="tabpanel hidden" id="tab-exits">
+    <div class="callout warn"><strong>Drift:</strong> Header comments in evaluateExit() still say stop-loss 40 / EOD 50 — the LIVE code uses 100 and a 70/95 trigger. This map reflects the code.</div>
+    <div class="card">
+      <h3>Exit score model</h3>
+      <p class="small">Additive exit score; a position exits when it clears the trigger. Critical weights (stop/TP/trailing/EOD) are never dampened.</p>
+      <dl class="kv"><dt>trigger (base)</dt><dd>≥ 70</dd><dt>trigger (tiny profit)</dt><dd>≥ 95</dd><dt>dampening</dt><dd><code>max(0.2, base * (1 - min(pnl/takeProfit, 2) * 0.3))</code></dd><dt>dampening applies</dt><dd>pnl&gt;0 AND ADX trending AND regime-aligned AND base&lt;1.0</dd></dl>
+      <h4 style="margin-top:12px">Weights</h4>
+      <table><thead><tr><th>signal</th><th>points</th><th>class</th><th>note</th></tr></thead><tbody><tr><td>partialExit</td><td>+100</td><td><span class="chip gold">critical</span></td><td><span class="muted small">first TP hit w/ partial exits enabled — forces the partial</span></td></tr><tr><td>takeProfit</td><td>+30</td><td><span class="chip gold">critical</span></td><td><span class="muted small">TP reached; needs confirmation</span></td></tr><tr><td>takeProfitScalp</td><td>+100</td><td><span class="chip gold">critical</span></td><td><span class="muted small">aggressive scalp (TP &lt; 0.5%) — immediate</span></td></tr><tr><td>stopLoss</td><td>+100</td><td><span class="chip gold">critical</span></td><td><span class="muted small">hard stop — non-negotiable</span></td></tr><tr><td>trailingStop</td><td>+35</td><td><span class="chip gold">critical</span></td><td><span class="muted small">locks in % of gains after min-profit</span></td></tr><tr><td>eodForce</td><td>+100</td><td><span class="chip gold">critical</span></td><td><span class="muted small">within exitBeforeCloseMinutes of close</span></td></tr><tr><td>eodApproach</td><td>+50</td><td><span class="chip gold">critical</span></td><td><span class="muted small">within 30 min of close</span></td></tr><tr><td>rsiOverbought</td><td>+20</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">RSI &gt; rsiOverbought</span></td></tr><tr><td>volumeDistribution</td><td>+10</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">low volume on advance</span></td></tr><tr><td>counterTrend</td><td>+10</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">counter-trend position in hostile regime</span></td></tr><tr><td>counterTrendLosing</td><td>+10</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">counter-trend AND losing</span></td></tr><tr><td>counterTrendQuickProfit</td><td>+15</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">counter-trend AND +0.5%</span></td></tr><tr><td>aiHoldOversold</td><td>-20</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">oversold w/ volume support — reduces pressure</span></td></tr><tr><td>aiHoldTrend</td><td>-15</td><td><span class="chip muted">dampenable</span></td><td><span class="muted small">ADX trend still bullish — reduces pressure</span></td></tr></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Per-broker exit tunables</h3>
+      <table><thead><tr><th>broker</th><th>stop</th><th>TP</th><th>trailing</th><th>RSI OB</th><th>EOD</th><th>dampen</th></tr></thead><tbody><tr><td>flow-hunter</td><td>1%</td><td>2%</td><td><span class="muted">off</span></td><td>70</td><td>15m</td><td>0.4</td></tr><tr><td>insider-tracker</td><td>8%</td><td>10%</td><td><span class="muted">off</span></td><td>70</td><td><span class="muted">off</span></td><td>0.4</td></tr><tr><td>momentum-rotator</td><td>1%</td><td>2%</td><td><span class="muted">off</span></td><td>70</td><td><span class="muted">off</span></td><td>0.4</td></tr><tr><td>trend-follower</td><td>1%</td><td>2%</td><td><span class="muted">off</span></td><td>70</td><td><span class="muted">off</span></td><td>0.4</td></tr><tr><td>volume-hunter</td><td>4%</td><td>6%</td><td><span class="muted">off</span></td><td>70</td><td><span class="muted">off</span></td><td>0.4</td></tr></tbody></table>
+    </div>
+  </section>
+  <section class="tabpanel hidden" id="tab-evals">
+    <div class="card">
+      <h3>The five validation gates</h3>
+      <p class="muted small">A strategy is VALIDATED only by clearing all five, in order.</p>
+      <table><thead><tr><th>gate</th><th>checks</th></tr></thead><tbody><tr><td>1. <code>dataIntegrity</code></td><td><span class="muted small">raw vs adjusted alignment, cross-source consistency, structural faults</span></td></tr><tr><td>2. <code>faithfulness</code></td><td><span class="muted small">live plugin certified against @keo/quant-core shared core, &lt;30 days old</span></td></tr><tr><td>3. <code>outOfSample</code></td><td><span class="muted small">walk-forward OOS Sharpe &gt; 0 AND beats passive EW-N control</span></td></tr><tr><td>4. <code>realisticCosts</code></td><td><span class="muted small">OOS Sharpe still &gt; 0 at 2× transaction costs</span></td></tr><tr><td>5. <code>multipleTesting</code></td><td><span class="muted small">deflated Sharpe ≥ 95% vs expected max-of-N trials</span></td></tr></tbody></table>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Verdict tally <span class="muted small">(75 runs)</span></h3>
+        <p class="chiprow"><span class="chip fail">FAILED:dataIntegrity</span><span class="tally">×9</span> <span class="chip fail">FAILED:outOfSample</span><span class="tally">×11</span> <span class="chip muted">UNVALIDATED</span><span class="tally">×19</span> <span class="chip fail">FAILED:multipleTesting</span><span class="tally">×36</span></p>
+      </div>
+      <div class="card">
+        <h3>Event-source validation</h3>
+        <dl class="kv"><dt>requires validation</dt><dd>dark-pool, options-flow, insider-following</dd><dt>max age</dt><dd>90 days</dd><dt>dark-pool archive min</dt><dd>60 days</dd><dt>validated registry</dt><dd><span class="muted">empty — none validated yet</span></dd></dl>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Faithfulness certifications</h3>
+      <table><thead><tr><th>cert</th><th>generated</th><th>age</th></tr></thead><tbody><tr><td><code>entropy-gate-effect</code></td><td>2026-06-10</td><td>28.66d <span class="chip pass">fresh</span></td></tr><tr><td><code>entropy-gate</code></td><td>2026-06-10</td><td>28.5d <span class="chip pass">fresh</span></td></tr><tr><td><code>trend-core</code></td><td>2026-06-10</td><td>28.5d <span class="chip pass">fresh</span></td></tr></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Recent runs <span class="muted small">(latest 25)</span></h3>
+      <table><thead><tr><th>strategy</th><th>verdict</th><th>sharpe</th><th>maxDD</th><th>date</th></tr></thead><tbody><tr><td><span class="small">cross-sectional-rank/gbdt-topN-diverseEtf-WF-OOS</span></td><td><span class="chip fail">FAILED:dataIntegrity</span></td><td>1.13</td><td>-0.2</td><td><span class="muted small">2026-07-08</span></td></tr><tr><td><span class="small">cross-sectional-rank/gbdt-topN-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>1.11</td><td>-0.34</td><td><span class="muted small">2026-07-08</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-instrumented</span></td><td><span class="chip muted">UNVALIDATED</span></td><td>0.92</td><td>-0.22</td><td><span class="muted small">2026-06-25</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.88</td><td>-0.22</td><td><span class="muted small">2026-06-25</span></td></tr><tr><td><span class="small">leveraged-momentum/soxl-momentum-3sig-WF-OOS</span></td><td><span class="chip fail">FAILED:dataIntegrity</span></td><td>0.57</td><td>-0.39</td><td><span class="muted small">2026-06-15</span></td></tr><tr><td><span class="small">trend-following/mf-sleeve-capped-WF-OOS</span></td><td><span class="chip fail">FAILED:dataIntegrity</span></td><td>0.76</td><td>-0.19</td><td><span class="muted small">2026-06-12</span></td></tr><tr><td><span class="small">xs-momentum/top-momentum-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.87</td><td>-0.34</td><td><span class="muted small">2026-06-12</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-breadth23-volrank-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.88</td><td>-0.23</td><td><span class="muted small">2026-06-12</span></td></tr><tr><td><span class="small">trend-following/vrp-sleeve-capped-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.92</td><td>-0.19</td><td><span class="muted small">2026-06-11</span></td></tr><tr><td><span class="small">trend-following/mf-sleeve-capped-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>0.76</td><td>-0.19</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/mf-sleeve-combo-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>0.69</td><td>-0.15</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">volume-profile/vp2-naked-poc-revisit</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.56</td><td>-0.11</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">volume-profile/vp1-value-area-acceptance</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.61</td><td>-0.19</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">short-vol-spike/uvxy-spike-short-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.63</td><td>-0.53</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">overnight-drift/soxx-overnight-fixed-auction-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>0.88</td><td>-0.41</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">overnight-drift/overnight-variants-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>-0.29</td><td>-0.27</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">xs-momentum/top-momentum-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.86</td><td>-0.34</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/combo-A-B-riskparity-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>0.72</td><td>-0.23</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/diversifier-sleeve-WF-OOS</span></td><td><span class="chip fail">FAILED:outOfSample</span></td><td>0.52</td><td>-0.24</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-breadth23-volsize-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.75</td><td>-0.21</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-breadth23-volrank-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.89</td><td>-0.23</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-breadth23-volrank-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.89</td><td>-0.23</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-breadth23-volrank-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.89</td><td>-0.23</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-volrank23-av3-exit-entryanchor-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.51</td><td>-0.28</td><td><span class="muted small">2026-06-10</span></td></tr><tr><td><span class="small">trend-following/deployed-top5-volrank23-av2-entry-yearstart-WF-OOS</span></td><td><span class="chip fail">FAILED:multipleTesting</span></td><td>0.77</td><td>-0.25</td><td><span class="muted small">2026-06-10</span></td></tr></tbody></table>
+    </div>
+  </section>
+  <section class="tabpanel hidden" id="tab-promotion">
+    <p class="small">Survival mechanics. A sim broker graduates to paper only when aggregate stats AND its signal source clear the bars below.</p>
+    <div class="grid">
+      <div class="card"><h3>Promote (sim → paper)</h3><table><thead><tr><th>param</th><th>value</th></tr></thead><tbody><tr><td><code>minSharpe</code></td><td>1.5</td></tr><tr><td><code>minWinRate</code></td><td>0.52</td></tr><tr><td><code>maxDrawdownPct</code></td><td>15</td></tr><tr><td><code>minTrades</code></td><td>100</td></tr><tr><td><code>minDays</code></td><td>20</td></tr></tbody></table></div>
+      <div class="card"><h3>Edge gate</h3><table><thead><tr><th>param</th><th>value</th></tr></thead><tbody><tr><td><code>minTrades</code></td><td>50</td></tr><tr><td><code>minExpectancyPct</code></td><td>0.15</td></tr><tr><td><code>requireSignificant</code></td><td>true</td></tr></tbody></table></div>
+      <div class="card"><h3>Demote (paper → sim)</h3><table><thead><tr><th>param</th><th>value</th></tr></thead><tbody><tr><td><code>maxDrawdownPct</code></td><td>20</td></tr><tr><td><code>minSharpe</code></td><td>0.5</td></tr><tr><td><code>minDays</code></td><td>10</td></tr></tbody></table></div>
+      <div class="card"><h3>Fire</h3><table><thead><tr><th>param</th><th>value</th></tr></thead><tbody><tr><td><code>maxDrawdownPct</code></td><td>30</td></tr><tr><td><code>demotionsIn30Days</code></td><td>2</td></tr><tr><td><code>minTrades</code></td><td>30</td></tr><tr><td><code>minDays</code></td><td>10</td></tr></tbody></table></div>
+      <div class="card"><h3>Auto-defund (proven loser)</h3><table><thead><tr><th>param</th><th>value</th></tr></thead><tbody><tr><td><code>minTrades</code></td><td>12</td></tr><tr><td><code>cooldownHours</code></td><td>24</td></tr></tbody></table></div>
+      <div class="card"><h3>Tiers &amp; breeding</h3>
+        <p><span class="chip muted">simulated</span> <span class="chip muted">paper</span> <span class="chip muted">live</span></p>
+        <p class="small" style="margin-top:8px">On fire (and breed enabled): clone the top-Sharpe survivor, jitter perTrade/kellyFraction/maxPositionSizePercent ±20–25%, child starts simulated.</p>
+      </div>
+    </div>
+  </section>
+  <section class="tabpanel hidden" id="tab-raw">
+    <div class="card"><h3>Full manifest (source of every value on this page)</h3><pre>{
+  &quot;meta&quot;: {
+    &quot;generatedAt&quot;: &quot;2026-07-08T20:41:07.782Z&quot;,
+    &quot;gitSha&quot;: &quot;eb3a4f2&quot;,
+    &quot;live&quot;: false,
+    &quot;offline&quot;: true,
+    &quot;brokerCount&quot;: 5,
+    &quot;note&quot;: &quot;System Map — a point-in-time snapshot of every config &amp; IP, read from source. Re-run to refresh.&quot;
+  },
+  &quot;brokers&quot;: [
+    {
+      &quot;slug&quot;: &quot;flow-hunter&quot;,
+      &quot;name&quot;: &quot;Flow Hunter&quot;,
+      &quot;tier&quot;: &quot;simulated&quot;,
+      &quot;strategy&quot;: &quot;options-flow&quot;,
+      &quot;capital&quot;: 100000,
+      &quot;effectiveCapital&quot;: 100000,
+      &quot;watchlist&quot;: [
+        &quot;NVDA&quot;,
+        &quot;AMD&quot;,
+        &quot;SMCI&quot;,
+        &quot;TSLA&quot;,
+        &quot;AAPL&quot;,
+        &quot;PLTR&quot;,
+        &quot;META&quot;
+      ],
+      &quot;risk&quot;: {
+        &quot;perTrade&quot;: 0.02,
+        &quot;maxDrawdown&quot;: 0.15,
+        &quot;sizing&quot;: &quot;confidence-scaled&quot;,
+        &quot;kellyFraction&quot;: 0.25,
+        &quot;maxPositions&quot;: 3,
+        &quot;maxPositionSizePercent&quot;: 15,
+        &quot;maxPortfolioDrawdown&quot;: null,
+        &quot;dailyLossLimit&quot;: 0.05,
+        &quot;maxConsecutiveLosses&quot;: null,
+        &quot;trimAtProfitPercent&quot;: null,
+        &quot;trimFraction&quot;: 0.5
+      },
+      &quot;regime&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;entropyWindows&quot;: [
+          21,
+          63
+        ],
+        &quot;preferred&quot;: &quot;any&quot;,
+        &quot;blockOnTransition&quot;: false,
+        &quot;referenceSymbol&quot;: &quot;SPY&quot;
+      },
+      &quot;macro&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;riskOffScalar&quot;: 0.25
+      },
+      &quot;llm&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;model&quot;: &quot;claude-sonnet-4-6&quot;,
+        &quot;callBudget&quot;: 50,
+        &quot;role&quot;: &quot;advisor&quot;
+      },
+      &quot;plugins&quot;: {
+        &quot;flow&quot;: {
+          &quot;minPremium&quot;: 500000,
+          &quot;minSkew&quot;: 0.7,
+          &quot;lookbackMinutes&quot;: 30,
+          &quot;scanner&quot;: true
+        },
+        &quot;insider&quot;: {
+          &quot;minNotional&quot;: 100000,
+          &quot;lookbackDays&quot;: 10,
+          &quot;scanner&quot;: false
+        },
+        &quot;darkpool&quot;: {
+          &quot;minPremium&quot;: 1000000,
+          &quot;minBuyShare&quot;: 0.6,
+          &quot;lookbackMinutes&quot;: 120,
+          &quot;scanner&quot;: false,
+          &quot;dropAtMid&quot;: true,
+          &quot;maxSinglePrintShare&quot;: 0.25,
+          &quot;minPrints&quot;: 5,
+          &quot;rthOnly&quot;: true
+        },
+        &quot;trend&quot;: {
+          &quot;rankBy&quot;: &quot;momentum&quot;
+        }
+      },
+      &quot;personaExcerpt&quot;: &quot;# Personality\n\nI don't read charts. I read the bets. When the smart money pays up for calls —\nreal size, on the ask, sweeping the chain — I follow. RSI is what everyone else\nis staring at; I'm watching where the premium is actually going. I'd rather be\nright about _who's positioning_ than clever about a squiggly line.&quot;,
+      &quot;exitTunables&quot;: {
+        &quot;stopLossPercent&quot;: 1,
+        &quot;takeProfitPercent&quot;: 2,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      &quot;live&quot;: {
+        &quot;status&quot;: &quot;running&quot;,
+        &quot;cash&quot;: 78183.01,
+        &quot;positions&quot;: [
+          {},
+          {}
+        ],
+        &quot;stats&quot;: {
+          &quot;totalTrades&quot;: 9,
+          &quot;wins&quot;: 2,
+          &quot;losses&quot;: 7,
+          &quot;winRate&quot;: 22.2,
+          &quot;totalPnL&quot;: -1118.24,
+          &quot;maxDrawdown&quot;: 1.63,
+          &quot;consecutiveLosses&quot;: 0,
+          &quot;sharpe&quot;: -22.04
+        }
+      },
+      &quot;promotion&quot;: {
+        &quot;action&quot;: &quot;hold&quot;,
+        &quot;reason&quot;: &quot;sim — not yet promoted&quot;,
+        &quot;metrics&quot;: {
+          &quot;sharpe&quot;: -22.04,
+          &quot;winRate&quot;: 0.22,
+          &quot;maxDD&quot;: 1.63,
+          &quot;totalTrades&quot;: 9,
+          &quot;days&quot;: 36.19
+        },
+        &quot;edge&quot;: {
+          &quot;pass&quot;: false,
+          &quot;source&quot;: &quot;options-flow&quot;,
+          &quot;reason&quot;: &quot;options-flow: only 9/50 source trades&quot;,
+          &quot;trades&quot;: 9,
+          &quot;expectancyPct&quot;: -1.09,
+          &quot;expectancyLowerCB&quot;: -2.03
+        }
+      }
+    },
+    {
+      &quot;slug&quot;: &quot;insider-tracker&quot;,
+      &quot;name&quot;: &quot;Insider Tracker&quot;,
+      &quot;tier&quot;: &quot;simulated&quot;,
+      &quot;strategy&quot;: &quot;insider-following&quot;,
+      &quot;capital&quot;: 100000,
+      &quot;effectiveCapital&quot;: 100000,
+      &quot;watchlist&quot;: [
+        &quot;NVDA&quot;,
+        &quot;AMD&quot;,
+        &quot;SMCI&quot;,
+        &quot;OXY&quot;,
+        &quot;KMI&quot;,
+        &quot;WFC&quot;,
+        &quot;PLTR&quot;,
+        &quot;MU&quot;
+      ],
+      &quot;risk&quot;: {
+        &quot;perTrade&quot;: 0.02,
+        &quot;maxDrawdown&quot;: 0.15,
+        &quot;sizing&quot;: &quot;confidence-scaled&quot;,
+        &quot;kellyFraction&quot;: 0.25,
+        &quot;maxPositions&quot;: 3,
+        &quot;maxPositionSizePercent&quot;: 15,
+        &quot;maxPortfolioDrawdown&quot;: null,
+        &quot;dailyLossLimit&quot;: 0.05,
+        &quot;maxConsecutiveLosses&quot;: null,
+        &quot;trimAtProfitPercent&quot;: null,
+        &quot;trimFraction&quot;: 0.5
+      },
+      &quot;regime&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;entropyWindows&quot;: [
+          21,
+          63
+        ],
+        &quot;preferred&quot;: &quot;any&quot;,
+        &quot;blockOnTransition&quot;: false,
+        &quot;referenceSymbol&quot;: &quot;SPY&quot;
+      },
+      &quot;macro&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;riskOffScalar&quot;: 0.25
+      },
+      &quot;llm&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;model&quot;: &quot;claude-sonnet-4-6&quot;,
+        &quot;callBudget&quot;: 50,
+        &quot;role&quot;: &quot;advisor&quot;
+      },
+      &quot;plugins&quot;: {
+        &quot;flow&quot;: {
+          &quot;minPremium&quot;: 250000,
+          &quot;minSkew&quot;: 0.65,
+          &quot;lookbackMinutes&quot;: 30,
+          &quot;scanner&quot;: false
+        },
+        &quot;insider&quot;: {
+          &quot;minNotional&quot;: 500000,
+          &quot;lookbackDays&quot;: 10,
+          &quot;scanner&quot;: true
+        },
+        &quot;darkpool&quot;: {
+          &quot;minPremium&quot;: 1000000,
+          &quot;minBuyShare&quot;: 0.6,
+          &quot;lookbackMinutes&quot;: 120,
+          &quot;scanner&quot;: false,
+          &quot;dropAtMid&quot;: true,
+          &quot;maxSinglePrintShare&quot;: 0.25,
+          &quot;minPrints&quot;: 5,
+          &quot;rthOnly&quot;: true
+        },
+        &quot;trend&quot;: {
+          &quot;rankBy&quot;: &quot;momentum&quot;
+        }
+      },
+      &quot;personaExcerpt&quot;: &quot;# Personality\n\nI follow the people who know the company best — the ones legally required to\ntell you when they buy their own stock. When an officer or director puts real\nmoney into open-market shares, they're betting on something they can see from\nthe inside. I don't chase rumors; I chase signatures on Form 4s.&quot;,
+      &quot;exitTunables&quot;: {
+        &quot;stopLossPercent&quot;: 8,
+        &quot;takeProfitPercent&quot;: 10,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      &quot;live&quot;: {
+        &quot;status&quot;: &quot;running&quot;,
+        &quot;cash&quot;: 56083.52,
+        &quot;positions&quot;: [
+          {},
+          {},
+          {}
+        ],
+        &quot;stats&quot;: {
+          &quot;totalTrades&quot;: 6,
+          &quot;wins&quot;: 4,
+          &quot;losses&quot;: 2,
+          &quot;winRate&quot;: 66.7,
+          &quot;totalPnL&quot;: -1545.5,
+          &quot;maxDrawdown&quot;: 3.18,
+          &quot;consecutiveLosses&quot;: 1,
+          &quot;sharpe&quot;: -11.54
+        }
+      },
+      &quot;promotion&quot;: {
+        &quot;action&quot;: &quot;hold&quot;,
+        &quot;reason&quot;: &quot;sim — not yet promoted&quot;,
+        &quot;metrics&quot;: {
+          &quot;sharpe&quot;: -11.54,
+          &quot;winRate&quot;: 0.67,
+          &quot;maxDD&quot;: 3.18,
+          &quot;totalTrades&quot;: 6,
+          &quot;days&quot;: 36.19
+        },
+        &quot;edge&quot;: {
+          &quot;pass&quot;: false,
+          &quot;source&quot;: &quot;insider-following&quot;,
+          &quot;reason&quot;: &quot;insider-following: only 6/50 source trades&quot;,
+          &quot;trades&quot;: 6,
+          &quot;expectancyPct&quot;: -1.67,
+          &quot;expectancyLowerCB&quot;: -4.71
+        }
+      }
+    },
+    {
+      &quot;slug&quot;: &quot;momentum-rotator&quot;,
+      &quot;name&quot;: &quot;Momentum Rotator&quot;,
+      &quot;tier&quot;: &quot;simulated&quot;,
+      &quot;strategy&quot;: &quot;cross-sectional-momentum&quot;,
+      &quot;capital&quot;: 100000,
+      &quot;effectiveCapital&quot;: 100000,
+      &quot;watchlist&quot;: [
+        &quot;AAPL&quot;,
+        &quot;MSFT&quot;,
+        &quot;NVDA&quot;,
+        &quot;AMD&quot;,
+        &quot;AVGO&quot;,
+        &quot;ORCL&quot;,
+        &quot;CRM&quot;,
+        &quot;ADBE&quot;,
+        &quot;CSCO&quot;,
+        &quot;QCOM&quot;,
+        &quot;TXN&quot;,
+        &quot;INTC&quot;,
+        &quot;AMAT&quot;,
+        &quot;MU&quot;,
+        &quot;GOOGL&quot;,
+        &quot;META&quot;,
+        &quot;NFLX&quot;,
+        &quot;DIS&quot;,
+        &quot;CMCSA&quot;,
+        &quot;TMUS&quot;,
+        &quot;AMZN&quot;,
+        &quot;TSLA&quot;,
+        &quot;HD&quot;,
+        &quot;MCD&quot;,
+        &quot;NKE&quot;,
+        &quot;COST&quot;,
+        &quot;WMT&quot;,
+        &quot;LOW&quot;,
+        &quot;JPM&quot;,
+        &quot;BAC&quot;,
+        &quot;WFC&quot;,
+        &quot;GS&quot;,
+        &quot;MS&quot;,
+        &quot;AXP&quot;,
+        &quot;SCHW&quot;,
+        &quot;UNH&quot;,
+        &quot;JNJ&quot;,
+        &quot;LLY&quot;,
+        &quot;ABBV&quot;,
+        &quot;MRK&quot;,
+        &quot;PFE&quot;,
+        &quot;XOM&quot;,
+        &quot;CVX&quot;,
+        &quot;CAT&quot;,
+        &quot;BA&quot;
+      ],
+      &quot;risk&quot;: {
+        &quot;perTrade&quot;: 0.02,
+        &quot;maxDrawdown&quot;: 0.25,
+        &quot;sizing&quot;: &quot;fixed&quot;,
+        &quot;kellyFraction&quot;: 0.25,
+        &quot;maxPositions&quot;: 9,
+        &quot;maxPositionSizePercent&quot;: 11,
+        &quot;maxPortfolioDrawdown&quot;: null,
+        &quot;dailyLossLimit&quot;: 0.05,
+        &quot;maxConsecutiveLosses&quot;: null,
+        &quot;trimAtProfitPercent&quot;: null,
+        &quot;trimFraction&quot;: 0.5
+      },
+      &quot;regime&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;entropyWindows&quot;: [
+          21,
+          63
+        ],
+        &quot;preferred&quot;: &quot;low-entropy&quot;,
+        &quot;blockOnTransition&quot;: false,
+        &quot;referenceSymbol&quot;: &quot;SPY&quot;
+      },
+      &quot;macro&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;riskOffScalar&quot;: 0.25
+      },
+      &quot;llm&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;model&quot;: &quot;claude-sonnet-4-6&quot;,
+        &quot;callBudget&quot;: 50,
+        &quot;role&quot;: &quot;advisor&quot;
+      },
+      &quot;plugins&quot;: {
+        &quot;flow&quot;: {
+          &quot;minPremium&quot;: 250000,
+          &quot;minSkew&quot;: 0.65,
+          &quot;lookbackMinutes&quot;: 30,
+          &quot;scanner&quot;: false
+        },
+        &quot;insider&quot;: {
+          &quot;minNotional&quot;: 100000,
+          &quot;lookbackDays&quot;: 10,
+          &quot;scanner&quot;: false
+        },
+        &quot;darkpool&quot;: {
+          &quot;minPremium&quot;: 1000000,
+          &quot;minBuyShare&quot;: 0.6,
+          &quot;lookbackMinutes&quot;: 120,
+          &quot;scanner&quot;: false,
+          &quot;dropAtMid&quot;: true,
+          &quot;maxSinglePrintShare&quot;: 0.25,
+          &quot;minPrints&quot;: 5,
+          &quot;rthOnly&quot;: true
+        },
+        &quot;trend&quot;: {
+          &quot;rankBy&quot;: &quot;momentum&quot;
+        }
+      },
+      &quot;personaExcerpt&quot;: &quot;# Personality\n\nI own the strongest, full stop. Every month I rank the field by who's been\nwinning over the last six months, buy the top fifth, and hold them — no\nsecond-guessing, no stops, no staring at the screen between rebalances. Winners\nkeep winning longer than people expect; my whole job is to keep riding them and&quot;,
+      &quot;exitTunables&quot;: {
+        &quot;stopLossPercent&quot;: 1,
+        &quot;takeProfitPercent&quot;: 2,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      &quot;live&quot;: {
+        &quot;status&quot;: &quot;running&quot;,
+        &quot;cash&quot;: 12025.3,
+        &quot;positions&quot;: [
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        &quot;stats&quot;: {
+          &quot;totalTrades&quot;: 7,
+          &quot;wins&quot;: 2,
+          &quot;losses&quot;: 5,
+          &quot;winRate&quot;: 28.6,
+          &quot;totalPnL&quot;: -1031.8,
+          &quot;maxDrawdown&quot;: 10.96,
+          &quot;consecutiveLosses&quot;: 0,
+          &quot;sharpe&quot;: -4.94
+        }
+      },
+      &quot;promotion&quot;: {
+        &quot;action&quot;: &quot;hold&quot;,
+        &quot;reason&quot;: &quot;sim — not yet promoted&quot;,
+        &quot;metrics&quot;: {
+          &quot;sharpe&quot;: -4.94,
+          &quot;winRate&quot;: 0.29,
+          &quot;maxDD&quot;: 10.96,
+          &quot;totalTrades&quot;: 7,
+          &quot;days&quot;: 35.53
+        },
+        &quot;edge&quot;: {
+          &quot;pass&quot;: false,
+          &quot;source&quot;: &quot;cross-sectional-momentum&quot;,
+          &quot;reason&quot;: &quot;cross-sectional-momentum: only 7/50 source trades&quot;,
+          &quot;trades&quot;: 7,
+          &quot;expectancyPct&quot;: -1.29,
+          &quot;expectancyLowerCB&quot;: -4.32
+        }
+      }
+    },
+    {
+      &quot;slug&quot;: &quot;trend-follower&quot;,
+      &quot;name&quot;: &quot;Trend Follower&quot;,
+      &quot;tier&quot;: &quot;paper&quot;,
+      &quot;strategy&quot;: &quot;trend-following&quot;,
+      &quot;capital&quot;: 100000,
+      &quot;effectiveCapital&quot;: 20000,
+      &quot;watchlist&quot;: [
+        &quot;SPY&quot;,
+        &quot;QQQ&quot;,
+        &quot;IWM&quot;,
+        &quot;DIA&quot;,
+        &quot;XLK&quot;,
+        &quot;SMH&quot;,
+        &quot;XLF&quot;,
+        &quot;XLE&quot;,
+        &quot;XLV&quot;,
+        &quot;XLY&quot;,
+        &quot;XLP&quot;,
+        &quot;XLI&quot;,
+        &quot;XLU&quot;,
+        &quot;XLB&quot;,
+        &quot;XLRE&quot;,
+        &quot;XLC&quot;,
+        &quot;EEM&quot;,
+        &quot;EFA&quot;,
+        &quot;GLD&quot;,
+        &quot;SLV&quot;,
+        &quot;TLT&quot;,
+        &quot;IEF&quot;,
+        &quot;DBC&quot;
+      ],
+      &quot;risk&quot;: {
+        &quot;perTrade&quot;: 0.02,
+        &quot;maxDrawdown&quot;: 0.25,
+        &quot;sizing&quot;: &quot;fixed&quot;,
+        &quot;kellyFraction&quot;: 0.25,
+        &quot;maxPositions&quot;: 5,
+        &quot;maxPositionSizePercent&quot;: 20,
+        &quot;maxPortfolioDrawdown&quot;: 0.12,
+        &quot;dailyLossLimit&quot;: 0.05,
+        &quot;maxConsecutiveLosses&quot;: 8,
+        &quot;trimAtProfitPercent&quot;: 25,
+        &quot;trimFraction&quot;: 0.5
+      },
+      &quot;regime&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;entropyWindows&quot;: [
+          21,
+          63
+        ],
+        &quot;preferred&quot;: &quot;any&quot;,
+        &quot;blockOnTransition&quot;: false,
+        &quot;referenceSymbol&quot;: &quot;SPY&quot;
+      },
+      &quot;macro&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;riskOffScalar&quot;: 0.25
+      },
+      &quot;llm&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;model&quot;: &quot;claude-sonnet-4-6&quot;,
+        &quot;callBudget&quot;: 50,
+        &quot;role&quot;: &quot;advisor&quot;
+      },
+      &quot;plugins&quot;: {
+        &quot;flow&quot;: {
+          &quot;minPremium&quot;: 250000,
+          &quot;minSkew&quot;: 0.65,
+          &quot;lookbackMinutes&quot;: 30,
+          &quot;scanner&quot;: false
+        },
+        &quot;insider&quot;: {
+          &quot;minNotional&quot;: 100000,
+          &quot;lookbackDays&quot;: 10,
+          &quot;scanner&quot;: false
+        },
+        &quot;darkpool&quot;: {
+          &quot;minPremium&quot;: 1000000,
+          &quot;minBuyShare&quot;: 0.6,
+          &quot;lookbackMinutes&quot;: 120,
+          &quot;scanner&quot;: false,
+          &quot;dropAtMid&quot;: true,
+          &quot;maxSinglePrintShare&quot;: 0.25,
+          &quot;minPrints&quot;: 5,
+          &quot;rthOnly&quot;: true
+        },
+        &quot;trend&quot;: {
+          &quot;rankBy&quot;: &quot;volAdjusted&quot;
+        }
+      },
+      &quot;personaExcerpt&quot;: &quot;# Personality\n\nI don't predict — I follow. I have no opinion about whether the market _should_\ngo up; I only ask whether it _is_ going up, right now, in front of me. When a\nthing is above its 200-day line and climbing, I own it. When it rolls over, I'm\nout — to cash, no arguing, no averaging down, no \&quot;it'll come back.\&quot; Boring on&quot;,
+      &quot;exitTunables&quot;: {
+        &quot;stopLossPercent&quot;: 1,
+        &quot;takeProfitPercent&quot;: 2,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      &quot;live&quot;: {
+        &quot;status&quot;: &quot;running&quot;,
+        &quot;cash&quot;: 75464.16,
+        &quot;positions&quot;: [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        &quot;stats&quot;: {
+          &quot;totalTrades&quot;: 1,
+          &quot;wins&quot;: 0,
+          &quot;losses&quot;: 1,
+          &quot;winRate&quot;: 0,
+          &quot;totalPnL&quot;: -13.55,
+          &quot;maxDrawdown&quot;: 0,
+          &quot;consecutiveLosses&quot;: 1,
+          &quot;sharpe&quot;: null
+        }
+      },
+      &quot;promotion&quot;: {
+        &quot;action&quot;: &quot;hold&quot;,
+        &quot;reason&quot;: &quot;paper — performing within tolerance&quot;,
+        &quot;metrics&quot;: {
+          &quot;sharpe&quot;: null,
+          &quot;winRate&quot;: 0,
+          &quot;maxDD&quot;: 0,
+          &quot;totalTrades&quot;: 1,
+          &quot;days&quot;: 35.53
+        },
+        &quot;edge&quot;: {
+          &quot;pass&quot;: false,
+          &quot;source&quot;: &quot;trend-following&quot;,
+          &quot;reason&quot;: &quot;trend-following: only 1/50 source trades&quot;,
+          &quot;trades&quot;: 1,
+          &quot;expectancyPct&quot;: null,
+          &quot;expectancyLowerCB&quot;: null
+        }
+      }
+    },
+    {
+      &quot;slug&quot;: &quot;volume-hunter&quot;,
+      &quot;name&quot;: &quot;Volume Hunter&quot;,
+      &quot;tier&quot;: &quot;simulated&quot;,
+      &quot;strategy&quot;: &quot;dark-pool&quot;,
+      &quot;capital&quot;: 100000,
+      &quot;effectiveCapital&quot;: 100000,
+      &quot;watchlist&quot;: [
+        &quot;NVDA&quot;,
+        &quot;AMD&quot;,
+        &quot;TSLA&quot;,
+        &quot;AAPL&quot;,
+        &quot;META&quot;,
+        &quot;MSFT&quot;,
+        &quot;AMZN&quot;,
+        &quot;PLTR&quot;
+      ],
+      &quot;risk&quot;: {
+        &quot;perTrade&quot;: 0.02,
+        &quot;maxDrawdown&quot;: 0.15,
+        &quot;sizing&quot;: &quot;confidence-scaled&quot;,
+        &quot;kellyFraction&quot;: 0.25,
+        &quot;maxPositions&quot;: 3,
+        &quot;maxPositionSizePercent&quot;: 15,
+        &quot;maxPortfolioDrawdown&quot;: null,
+        &quot;dailyLossLimit&quot;: 0.05,
+        &quot;maxConsecutiveLosses&quot;: null,
+        &quot;trimAtProfitPercent&quot;: null,
+        &quot;trimFraction&quot;: 0.5
+      },
+      &quot;regime&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;entropyWindows&quot;: [
+          21,
+          63
+        ],
+        &quot;preferred&quot;: &quot;any&quot;,
+        &quot;blockOnTransition&quot;: false,
+        &quot;referenceSymbol&quot;: &quot;SPY&quot;
+      },
+      &quot;macro&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;riskOffScalar&quot;: 0.25
+      },
+      &quot;llm&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;model&quot;: &quot;claude-sonnet-4-6&quot;,
+        &quot;callBudget&quot;: 50,
+        &quot;role&quot;: &quot;advisor&quot;
+      },
+      &quot;plugins&quot;: {
+        &quot;flow&quot;: {
+          &quot;minPremium&quot;: 250000,
+          &quot;minSkew&quot;: 0.65,
+          &quot;lookbackMinutes&quot;: 30,
+          &quot;scanner&quot;: false
+        },
+        &quot;insider&quot;: {
+          &quot;minNotional&quot;: 100000,
+          &quot;lookbackDays&quot;: 10,
+          &quot;scanner&quot;: false
+        },
+        &quot;darkpool&quot;: {
+          &quot;minPremium&quot;: 5000000,
+          &quot;minBuyShare&quot;: 0.62,
+          &quot;lookbackMinutes&quot;: 120,
+          &quot;scanner&quot;: true,
+          &quot;dropAtMid&quot;: true,
+          &quot;maxSinglePrintShare&quot;: 0.25,
+          &quot;minPrints&quot;: 5,
+          &quot;rthOnly&quot;: true
+        },
+        &quot;trend&quot;: {
+          &quot;rankBy&quot;: &quot;momentum&quot;
+        }
+      },
+      &quot;personaExcerpt&quot;: &quot;# Personality\n\nI watch the trades nobody's supposed to see. When institutions move real size,\nthey don't do it on the lit exchange where everyone's watching — they cross it\nin the dark pool. I read those prints. When the big blocks are lifting offers,\nquietly, in size, I follow the elephants' footprints.&quot;,
+      &quot;exitTunables&quot;: {
+        &quot;stopLossPercent&quot;: 4,
+        &quot;takeProfitPercent&quot;: 6,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      &quot;live&quot;: {
+        &quot;status&quot;: &quot;paused&quot;,
+        &quot;cash&quot;: 100000,
+        &quot;positions&quot;: [],
+        &quot;stats&quot;: {
+          &quot;totalTrades&quot;: 0,
+          &quot;wins&quot;: 0,
+          &quot;losses&quot;: 0,
+          &quot;winRate&quot;: 0,
+          &quot;totalPnL&quot;: 0,
+          &quot;maxDrawdown&quot;: 0,
+          &quot;consecutiveLosses&quot;: 0,
+          &quot;sharpe&quot;: null
+        }
+      },
+      &quot;promotion&quot;: {
+        &quot;action&quot;: &quot;hold&quot;,
+        &quot;reason&quot;: &quot;sim — not yet promoted&quot;,
+        &quot;metrics&quot;: {
+          &quot;sharpe&quot;: null,
+          &quot;winRate&quot;: 0,
+          &quot;maxDD&quot;: 0,
+          &quot;totalTrades&quot;: 0,
+          &quot;days&quot;: 36.19
+        },
+        &quot;edge&quot;: {
+          &quot;pass&quot;: false,
+          &quot;source&quot;: &quot;dark-pool&quot;,
+          &quot;reason&quot;: &quot;dark-pool: only 4/50 source trades&quot;,
+          &quot;trades&quot;: 4,
+          &quot;expectancyPct&quot;: -1.35,
+          &quot;expectancyLowerCB&quot;: -2.79
+        }
+      }
+    }
+  ],
+  &quot;gates&quot;: {
+    &quot;entropy&quot;: {
+      &quot;status&quot;: &quot;OFF — no edge (validated 2026-06, p≥0.6, n=5,881)&quot;,
+      &quot;note&quot;: &quot;Certified faithful to @keo/quant-core entropyGateCore but kept off — zero edge.&quot;,
+      &quot;defaults&quot;: {
+        &quot;enabled&quot;: false,
+        &quot;entropyWindows&quot;: [
+          21,
+          63,
+          252
+        ],
+        &quot;preferred&quot;: &quot;any&quot;,
+        &quot;blockOnTransition&quot;: true,
+        &quot;referenceSymbol&quot;: null
+      },
+      &quot;enabledBrokers&quot;: []
+    },
+    &quot;macro&quot;: {
+      &quot;note&quot;: &quot;Per-broker opt-in (config.macroGateEnabled) AND FRED_API_KEY. Scales size; never a standalone return series.&quot;,
+      &quot;riskOffScalarDefault&quot;: 0.25,
+      &quot;DEEP_INVERSION&quot;: -0.5,
+      &quot;HY_SPIKE_MULT&quot;: 1.25,
+      &quot;series&quot;: {
+        &quot;curveSlope&quot;: &quot;T10Y2Y&quot;,
+        &quot;hySpread&quot;: &quot;BAMLH0A0HYM2&quot;
+      },
+      &quot;live&quot;: {
+        &quot;state&quot;: &quot;inert&quot;,
+        &quot;reason&quot;: &quot;FRED_API_KEY not set — macro gate inert&quot;
+      },
+      &quot;enabledBrokers&quot;: []
+    },
+    &quot;kelly&quot;: {
+      &quot;note&quot;: &quot;Fractional Kelly f* = (p·b − q)/b, clamped to a fractional multiple. Blends a Bayesian prior until real history accrues.&quot;,
+      &quot;MIN_TRADES_FOR_EMPIRICAL&quot;: 20,
+      &quot;MIN_LOSSES_FOR_PAYOFF&quot;: 5,
+      &quot;MAX_WIN_RATE&quot;: 0.95,
+      &quot;PRIOR_WIN_RATE&quot;: 0.51,
+      &quot;PRIOR_PAYOFF_RATIO&quot;: 1,
+      &quot;ROLLING_WINDOW&quot;: 100,
+      &quot;fallbacks&quot;: {
+        &quot;fractionMult&quot;: 0.25,
+        &quot;maxPercent&quot;: 25,
+        &quot;minPercent&quot;: 0.5
+      }
+    },
+    &quot;rails&quot;: {
+      &quot;note&quot;: &quot;Daily-loss + consecutive-loss halts are per-broker opt-in via frontmatter. Soft halts on new entries; exits/stops stay active.&quot;,
+      &quot;brokers&quot;: [
+        {
+          &quot;slug&quot;: &quot;flow-hunter&quot;,
+          &quot;dailyLossLimit&quot;: 0.05,
+          &quot;maxConsecutiveLosses&quot;: null,
+          &quot;maxPortfolioDrawdown&quot;: null,
+          &quot;currentConsecutiveLosses&quot;: 0
+        },
+        {
+          &quot;slug&quot;: &quot;insider-tracker&quot;,
+          &quot;dailyLossLimit&quot;: 0.05,
+          &quot;maxConsecutiveLosses&quot;: null,
+          &quot;maxPortfolioDrawdown&quot;: null,
+          &quot;currentConsecutiveLosses&quot;: 1
+        },
+        {
+          &quot;slug&quot;: &quot;momentum-rotator&quot;,
+          &quot;dailyLossLimit&quot;: 0.05,
+          &quot;maxConsecutiveLosses&quot;: null,
+          &quot;maxPortfolioDrawdown&quot;: null,
+          &quot;currentConsecutiveLosses&quot;: 0
+        },
+        {
+          &quot;slug&quot;: &quot;trend-follower&quot;,
+          &quot;dailyLossLimit&quot;: 0.05,
+          &quot;maxConsecutiveLosses&quot;: 8,
+          &quot;maxPortfolioDrawdown&quot;: 0.12,
+          &quot;currentConsecutiveLosses&quot;: 1
+        },
+        {
+          &quot;slug&quot;: &quot;volume-hunter&quot;,
+          &quot;dailyLossLimit&quot;: 0.05,
+          &quot;maxConsecutiveLosses&quot;: null,
+          &quot;maxPortfolioDrawdown&quot;: null,
+          &quot;currentConsecutiveLosses&quot;: 0
+        }
+      ]
+    }
+  },
+  &quot;signals&quot;: {
+    &quot;semiconductor&quot;: {
+      &quot;note&quot;: &quot;SOXX-based volatility-adaptive direction → routes SOXL (long) / SOXS (short).&quot;,
+      &quot;config&quot;: {
+        &quot;minConfidenceToTrade&quot;: 55,
+        &quot;highConfidence&quot;: 75,
+        &quot;switchConfidence&quot;: 70,
+        &quot;baseEntryThreshold&quot;: 0.35,
+        &quot;baseExitThreshold&quot;: 0.2,
+        &quot;volatilityMultiplier&quot;: 1.2,
+        &quot;minThreshold&quot;: 0.15,
+        &quot;maxThreshold&quot;: 1.5
+      },
+      &quot;cacheTTLms&quot;: 30000,
+      &quot;model&quot;: {
+        &quot;baseConfidence&quot;: 50,
+        &quot;effectiveThresholdMult&quot;: 0.7,
+        &quot;signals&quot;: [
+          {
+            &quot;key&quot;: &quot;intradayDirection&quot;,
+            &quot;points&quot;: 15,
+            &quot;weightLabel&quot;: &quot;30%&quot;,
+            &quot;note&quot;: &quot;move from open beyond effective threshold&quot;
+          },
+          {
+            &quot;key&quot;: &quot;rollingMomentum&quot;,
+            &quot;points&quot;: 12,
+            &quot;weightLabel&quot;: &quot;25%&quot;,
+            &quot;note&quot;: &quot;recent 75-min direction&quot;
+          },
+          {
+            &quot;key&quot;: &quot;reversal&quot;,
+            &quot;points&quot;: 12,
+            &quot;weightLabel&quot;: &quot;25%&quot;,
+            &quot;note&quot;: &quot;position within intraday range (drop-from-high / rise-from-low)&quot;
+          },
+          {
+            &quot;key&quot;: &quot;strongMove&quot;,
+            &quot;points&quot;: 10,
+            &quot;weightLabel&quot;: &quot;20%&quot;,
+            &quot;note&quot;: &quot;+5 for building momentum&quot;
+          },
+          {
+            &quot;key&quot;: &quot;technicalTrend&quot;,
+            &quot;points&quot;: 8,
+            &quot;weightLabel&quot;: &quot;±&quot;,
+            &quot;note&quot;: &quot;-5 when short-term trend conflicts&quot;
+          },
+          {
+            &quot;key&quot;: &quot;volumeConfirm&quot;,
+            &quot;points&quot;: 5,
+            &quot;weightLabel&quot;: &quot;±&quot;,
+            &quot;note&quot;: &quot;-3 on low volume&quot;
+          }
+        ]
+      },
+      &quot;live&quot;: {
+        &quot;available&quot;: false,
+        &quot;reason&quot;: &quot;not fetched (offline snapshot)&quot;
+      }
+    },
+    &quot;strategies&quot;: {
+      &quot;allowed&quot;: [
+        &quot;momentum-breakout&quot;,
+        &quot;mean-reversion&quot;,
+        &quot;entropy-adaptive&quot;,
+        &quot;medallion-ensemble&quot;,
+        &quot;llm-gated&quot;,
+        &quot;balanced&quot;,
+        &quot;conservative&quot;,
+        &quot;aggressive&quot;,
+        &quot;options-flow&quot;,
+        &quot;insider-following&quot;,
+        &quot;dark-pool&quot;,
+        &quot;trend-following&quot;,
+        &quot;cross-sectional-momentum&quot;
+      ],
+      &quot;inUse&quot;: {
+        &quot;options-flow&quot;: [
+          &quot;flow-hunter&quot;
+        ],
+        &quot;insider-following&quot;: [
+          &quot;insider-tracker&quot;
+        ],
+        &quot;cross-sectional-momentum&quot;: [
+          &quot;momentum-rotator&quot;
+        ],
+        &quot;trend-following&quot;: [
+          &quot;trend-follower&quot;
+        ],
+        &quot;dark-pool&quot;: [
+          &quot;volume-hunter&quot;
+        ]
+      }
+    },
+    &quot;technicals&quot;: {
+      &quot;note&quot;: &quot;Indicators feeding entry/exit confidence (getAllIndicators).&quot;,
+      &quot;indicators&quot;: [
+        {
+          &quot;key&quot;: &quot;rsi&quot;,
+          &quot;use&quot;: &quot;overbought/oversold; RSI&gt;rsiOverbought adds exit pressure&quot;
+        },
+        {
+          &quot;key&quot;: &quot;adx&quot;,
+          &quot;use&quot;: &quot;trend strength; gates exit dampening&quot;
+        },
+        {
+          &quot;key&quot;: &quot;macd&quot;,
+          &quot;use&quot;: &quot;reduced weight — removed from exits (low 5-min accuracy)&quot;
+        },
+        {
+          &quot;key&quot;: &quot;volumeRatio&quot;,
+          &quot;use&quot;: &quot;confirmation; low-volume-on-advance = distribution&quot;
+        },
+        {
+          &quot;key&quot;: &quot;trend&quot;,
+          &quot;use&quot;: &quot;short/medium-term classification&quot;
+        }
+      ]
+    }
+  },
+  &quot;exits&quot;: {
+    &quot;note&quot;: &quot;Additive exit score; a position exits when it clears the trigger. Critical weights (stop/TP/trailing/EOD) are never dampened.&quot;,
+    &quot;model&quot;: {
+      &quot;trigger&quot;: {
+        &quot;base&quot;: 70,
+        &quot;tinyProfit&quot;: 95
+      },
+      &quot;weights&quot;: [
+        {
+          &quot;key&quot;: &quot;partialExit&quot;,
+          &quot;points&quot;: 100,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;first TP hit w/ partial exits enabled — forces the partial&quot;
+        },
+        {
+          &quot;key&quot;: &quot;takeProfit&quot;,
+          &quot;points&quot;: 30,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;TP reached; needs confirmation&quot;
+        },
+        {
+          &quot;key&quot;: &quot;takeProfitScalp&quot;,
+          &quot;points&quot;: 100,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;aggressive scalp (TP &lt; 0.5%) — immediate&quot;
+        },
+        {
+          &quot;key&quot;: &quot;stopLoss&quot;,
+          &quot;points&quot;: 100,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;hard stop — non-negotiable&quot;
+        },
+        {
+          &quot;key&quot;: &quot;trailingStop&quot;,
+          &quot;points&quot;: 35,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;locks in % of gains after min-profit&quot;
+        },
+        {
+          &quot;key&quot;: &quot;eodForce&quot;,
+          &quot;points&quot;: 100,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;within exitBeforeCloseMinutes of close&quot;
+        },
+        {
+          &quot;key&quot;: &quot;eodApproach&quot;,
+          &quot;points&quot;: 50,
+          &quot;critical&quot;: true,
+          &quot;note&quot;: &quot;within 30 min of close&quot;
+        },
+        {
+          &quot;key&quot;: &quot;rsiOverbought&quot;,
+          &quot;points&quot;: 20,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;RSI &gt; rsiOverbought&quot;
+        },
+        {
+          &quot;key&quot;: &quot;volumeDistribution&quot;,
+          &quot;points&quot;: 10,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;low volume on advance&quot;
+        },
+        {
+          &quot;key&quot;: &quot;counterTrend&quot;,
+          &quot;points&quot;: 10,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;counter-trend position in hostile regime&quot;
+        },
+        {
+          &quot;key&quot;: &quot;counterTrendLosing&quot;,
+          &quot;points&quot;: 10,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;counter-trend AND losing&quot;
+        },
+        {
+          &quot;key&quot;: &quot;counterTrendQuickProfit&quot;,
+          &quot;points&quot;: 15,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;counter-trend AND +0.5%&quot;
+        },
+        {
+          &quot;key&quot;: &quot;aiHoldOversold&quot;,
+          &quot;points&quot;: -20,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;oversold w/ volume support — reduces pressure&quot;
+        },
+        {
+          &quot;key&quot;: &quot;aiHoldTrend&quot;,
+          &quot;points&quot;: -15,
+          &quot;critical&quot;: false,
+          &quot;note&quot;: &quot;ADX trend still bullish — reduces pressure&quot;
+        }
+      ],
+      &quot;dampening&quot;: {
+        &quot;baseFactorDefault&quot;: 0.4,
+        &quot;floor&quot;: 0.2,
+        &quot;formula&quot;: &quot;max(0.2, base * (1 - min(pnl/takeProfit, 2) * 0.3))&quot;,
+        &quot;appliesWhen&quot;: &quot;pnl&gt;0 AND ADX trending AND regime-aligned AND base&lt;1.0&quot;
+      },
+      &quot;tunables&quot;: [
+        {
+          &quot;key&quot;: &quot;stopLossPercent&quot;,
+          &quot;note&quot;: &quot;× leverage for leveraged ETFs&quot;
+        },
+        {
+          &quot;key&quot;: &quot;takeProfitPercent&quot;,
+          &quot;default&quot;: 2,
+          &quot;note&quot;: &quot;× leverage&quot;
+        },
+        {
+          &quot;key&quot;: &quot;trailingStopPercent&quot;,
+          &quot;note&quot;: &quot;0 = disabled; % of gains to lock in&quot;
+        },
+        {
+          &quot;key&quot;: &quot;trailingStopMinProfitPercent&quot;,
+          &quot;default&quot;: 2
+        },
+        {
+          &quot;key&quot;: &quot;rsiOverbought&quot;,
+          &quot;default&quot;: 70
+        },
+        {
+          &quot;key&quot;: &quot;exitBeforeCloseMinutes&quot;,
+          &quot;default&quot;: 15,
+          &quot;note&quot;: &quot;max(cfg, 30) for leveraged ETFs&quot;
+        },
+        {
+          &quot;key&quot;: &quot;minProfitForExitPercent&quot;,
+          &quot;default&quot;: &quot;0.5 × leverage&quot;
+        },
+        {
+          &quot;key&quot;: &quot;trendDampeningFactor&quot;,
+          &quot;default&quot;: 0.4
+        }
+      ]
+    },
+    &quot;driftWarning&quot;: &quot;Header comments in evaluateExit() still say stop-loss 40 / EOD 50 — the LIVE code uses 100 and a 70/95 trigger. This map reflects the code.&quot;,
+    &quot;perBrokerTunables&quot;: [
+      {
+        &quot;slug&quot;: &quot;flow-hunter&quot;,
+        &quot;stopLossPercent&quot;: 1,
+        &quot;takeProfitPercent&quot;: 2,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      {
+        &quot;slug&quot;: &quot;insider-tracker&quot;,
+        &quot;stopLossPercent&quot;: 8,
+        &quot;takeProfitPercent&quot;: 10,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      {
+        &quot;slug&quot;: &quot;momentum-rotator&quot;,
+        &quot;stopLossPercent&quot;: 1,
+        &quot;takeProfitPercent&quot;: 2,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      {
+        &quot;slug&quot;: &quot;trend-follower&quot;,
+        &quot;stopLossPercent&quot;: 1,
+        &quot;takeProfitPercent&quot;: 2,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      },
+      {
+        &quot;slug&quot;: &quot;volume-hunter&quot;,
+        &quot;stopLossPercent&quot;: 4,
+        &quot;takeProfitPercent&quot;: 6,
+        &quot;trailingStopPercent&quot;: 0,
+        &quot;trailingStopMinProfitPercent&quot;: 2,
+        &quot;rsiOverbought&quot;: 70,
+        &quot;exitBeforeClose&quot;: false,
+        &quot;exitBeforeCloseMinutes&quot;: 15,
+        &quot;minProfitForExitPercent&quot;: &quot;0.5 × leverage&quot;,
+        &quot;trendDampeningFactor&quot;: 0.4
+      }
+    ]
+  },
+  &quot;evals&quot;: {
+    &quot;fiveGates&quot;: [
+      {
+        &quot;key&quot;: &quot;dataIntegrity&quot;,
+        &quot;checks&quot;: &quot;raw vs adjusted alignment, cross-source consistency, structural faults&quot;
+      },
+      {
+        &quot;key&quot;: &quot;faithfulness&quot;,
+        &quot;checks&quot;: &quot;live plugin certified against @keo/quant-core shared core, &lt;30 days old&quot;
+      },
+      {
+        &quot;key&quot;: &quot;outOfSample&quot;,
+        &quot;checks&quot;: &quot;walk-forward OOS Sharpe &gt; 0 AND beats passive EW-N control&quot;
+      },
+      {
+        &quot;key&quot;: &quot;realisticCosts&quot;,
+        &quot;checks&quot;: &quot;OOS Sharpe still &gt; 0 at 2× transaction costs&quot;
+      },
+      {
+        &quot;key&quot;: &quot;multipleTesting&quot;,
+        &quot;checks&quot;: &quot;deflated Sharpe ≥ 95% vs expected max-of-N trials&quot;
+      }
+    ],
+    &quot;verdictTally&quot;: {
+      &quot;FAILED:dataIntegrity&quot;: 9,
+      &quot;FAILED:outOfSample&quot;: 11,
+      &quot;UNVALIDATED&quot;: 19,
+      &quot;FAILED:multipleTesting&quot;: 36
+    },
+    &quot;totalRuns&quot;: 75,
+    &quot;recentRuns&quot;: [
+      {
+        &quot;runId&quot;: &quot;cross-sectional-rank__gbdt-topN-diverseEtf-WF-OOS__20260708-203147&quot;,
+        &quot;family&quot;: &quot;cross-sectional-rank&quot;,
+        &quot;strategyId&quot;: &quot;gbdt-topN-diverseEtf-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:dataIntegrity&quot;,
+        &quot;sharpe&quot;: 1.13,
+        &quot;maxDD&quot;: -0.2,
+        &quot;generatedAt&quot;: &quot;2026-07-08T20:31:47.641Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;cross-sectional-rank__gbdt-topN-WF-OOS__20260708-200437&quot;,
+        &quot;family&quot;: &quot;cross-sectional-rank&quot;,
+        &quot;strategyId&quot;: &quot;gbdt-topN-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: 1.11,
+        &quot;maxDD&quot;: -0.34,
+        &quot;generatedAt&quot;: &quot;2026-07-08T20:04:37.143Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-instrumented__20260625-161258&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-instrumented&quot;,
+        &quot;verdict&quot;: &quot;UNVALIDATED&quot;,
+        &quot;sharpe&quot;: 0.92,
+        &quot;maxDD&quot;: -0.22,
+        &quot;generatedAt&quot;: &quot;2026-06-25T16:12:58.903Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-WF-OOS__20260625-161258&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.88,
+        &quot;maxDD&quot;: -0.22,
+        &quot;generatedAt&quot;: &quot;2026-06-25T16:12:58.304Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;leveraged-momentum__soxl-momentum-3sig-WF-OOS__20260615-182655&quot;,
+        &quot;family&quot;: &quot;leveraged-momentum&quot;,
+        &quot;strategyId&quot;: &quot;soxl-momentum-3sig-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:dataIntegrity&quot;,
+        &quot;sharpe&quot;: 0.57,
+        &quot;maxDD&quot;: -0.39,
+        &quot;generatedAt&quot;: &quot;2026-06-15T18:26:55.564Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__mf-sleeve-capped-WF-OOS__20260612-162207&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;mf-sleeve-capped-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:dataIntegrity&quot;,
+        &quot;sharpe&quot;: 0.76,
+        &quot;maxDD&quot;: -0.19,
+        &quot;generatedAt&quot;: &quot;2026-06-12T16:22:07.299Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;xs-momentum__top-momentum-WF-OOS__20260612-162144&quot;,
+        &quot;family&quot;: &quot;xs-momentum&quot;,
+        &quot;strategyId&quot;: &quot;top-momentum-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.87,
+        &quot;maxDD&quot;: -0.34,
+        &quot;generatedAt&quot;: &quot;2026-06-12T16:21:44.223Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260612-162103&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-breadth23-volrank-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.88,
+        &quot;maxDD&quot;: -0.23,
+        &quot;generatedAt&quot;: &quot;2026-06-12T16:21:03.706Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__vrp-sleeve-capped-WF-OOS__20260611-164433&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;vrp-sleeve-capped-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.92,
+        &quot;maxDD&quot;: -0.19,
+        &quot;generatedAt&quot;: &quot;2026-06-11T16:44:33.199Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__mf-sleeve-capped-WF-OOS__20260610-192523&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;mf-sleeve-capped-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: 0.76,
+        &quot;maxDD&quot;: -0.19,
+        &quot;generatedAt&quot;: &quot;2026-06-10T19:25:23.030Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__mf-sleeve-combo-WF-OOS__20260610-184701&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;mf-sleeve-combo-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: 0.69,
+        &quot;maxDD&quot;: -0.15,
+        &quot;generatedAt&quot;: &quot;2026-06-10T18:47:01.518Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;volume-profile__vp2-naked-poc-revisit__20260610-114416&quot;,
+        &quot;family&quot;: &quot;volume-profile&quot;,
+        &quot;strategyId&quot;: &quot;vp2-naked-poc-revisit&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.56,
+        &quot;maxDD&quot;: -0.11,
+        &quot;generatedAt&quot;: &quot;2026-06-10T11:44:16.274Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;volume-profile__vp1-value-area-acceptance__20260610-114407&quot;,
+        &quot;family&quot;: &quot;volume-profile&quot;,
+        &quot;strategyId&quot;: &quot;vp1-value-area-acceptance&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.61,
+        &quot;maxDD&quot;: -0.19,
+        &quot;generatedAt&quot;: &quot;2026-06-10T11:44:07.433Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;short-vol-spike__uvxy-spike-short-WF-OOS__20260610-092957&quot;,
+        &quot;family&quot;: &quot;short-vol-spike&quot;,
+        &quot;strategyId&quot;: &quot;uvxy-spike-short-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.63,
+        &quot;maxDD&quot;: -0.53,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:57.509Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;overnight-drift__soxx-overnight-fixed-auction-WF-OOS__20260610-092955&quot;,
+        &quot;family&quot;: &quot;overnight-drift&quot;,
+        &quot;strategyId&quot;: &quot;soxx-overnight-fixed-auction-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: 0.88,
+        &quot;maxDD&quot;: -0.41,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:55.389Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;overnight-drift__overnight-variants-WF-OOS__20260610-092954&quot;,
+        &quot;family&quot;: &quot;overnight-drift&quot;,
+        &quot;strategyId&quot;: &quot;overnight-variants-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: -0.29,
+        &quot;maxDD&quot;: -0.27,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:54.679Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;xs-momentum__top-momentum-WF-OOS__20260610-092952&quot;,
+        &quot;family&quot;: &quot;xs-momentum&quot;,
+        &quot;strategyId&quot;: &quot;top-momentum-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.86,
+        &quot;maxDD&quot;: -0.34,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:52.508Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__combo-A-B-riskparity-WF-OOS__20260610-092940&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;combo-A-B-riskparity-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: 0.72,
+        &quot;maxDD&quot;: -0.23,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:40.659Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__diversifier-sleeve-WF-OOS__20260610-092933&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;diversifier-sleeve-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:outOfSample&quot;,
+        &quot;sharpe&quot;: 0.52,
+        &quot;maxDD&quot;: -0.24,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:33.243Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-breadth23-volsize-WF-OOS__20260610-092930&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-breadth23-volsize-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.75,
+        &quot;maxDD&quot;: -0.21,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:30.011Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260610-092923&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-breadth23-volrank-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.89,
+        &quot;maxDD&quot;: -0.23,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:29:23.758Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260610-092859&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-breadth23-volrank-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.89,
+        &quot;maxDD&quot;: -0.23,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:28:59.484Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260610-092852&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-breadth23-volrank-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.89,
+        &quot;maxDD&quot;: -0.23,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:28:52.119Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-volrank23-av3-exit-entryanchor-WF-OOS__20260610-091943&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-volrank23-av3-exit-entryanchor-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.51,
+        &quot;maxDD&quot;: -0.28,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:19:43.255Z&quot;
+      },
+      {
+        &quot;runId&quot;: &quot;trend-following__deployed-top5-volrank23-av2-entry-yearstart-WF-OOS__20260610-091937&quot;,
+        &quot;family&quot;: &quot;trend-following&quot;,
+        &quot;strategyId&quot;: &quot;deployed-top5-volrank23-av2-entry-yearstart-WF-OOS&quot;,
+        &quot;verdict&quot;: &quot;FAILED:multipleTesting&quot;,
+        &quot;sharpe&quot;: 0.77,
+        &quot;maxDD&quot;: -0.25,
+        &quot;generatedAt&quot;: &quot;2026-06-10T09:19:37.823Z&quot;
+      }
+    ],
+    &quot;validatedSources&quot;: {
+      &quot;registry&quot;: {},
+      &quot;maxAgeDays&quot;: 90,
+      &quot;requiresEventValidation&quot;: [
+        &quot;dark-pool&quot;,
+        &quot;options-flow&quot;,
+        &quot;insider-following&quot;
+      ],
+      &quot;eventStudyMinArchiveDays&quot;: 60
+    },
+    &quot;certifications&quot;: [
+      {
+        &quot;name&quot;: &quot;entropy-gate-effect&quot;,
+        &quot;generatedAt&quot;: &quot;2026-06-10T04:51:05.419Z&quot;,
+        &quot;ageDays&quot;: 28.66
+      },
+      {
+        &quot;name&quot;: &quot;entropy-gate&quot;,
+        &quot;generatedAt&quot;: &quot;2026-06-10T08:36:55.169Z&quot;,
+        &quot;ageDays&quot;: 28.5
+      },
+      {
+        &quot;name&quot;: &quot;trend-core&quot;,
+        &quot;generatedAt&quot;: &quot;2026-06-10T08:36:54.708Z&quot;,
+        &quot;ageDays&quot;: 28.5
+      }
+    ]
+  },
+  &quot;promotion&quot;: {
+    &quot;note&quot;: &quot;Survival mechanics. A sim broker graduates to paper only when aggregate stats AND its signal source clear the bars below.&quot;,
+    &quot;PROMOTE&quot;: {
+      &quot;minSharpe&quot;: 1.5,
+      &quot;minWinRate&quot;: 0.52,
+      &quot;maxDrawdownPct&quot;: 15,
+      &quot;minTrades&quot;: 100,
+      &quot;minDays&quot;: 20
+    },
+    &quot;EDGE_GATE&quot;: {
+      &quot;minTrades&quot;: 50,
+      &quot;minExpectancyPct&quot;: 0.15,
+      &quot;requireSignificant&quot;: true
+    },
+    &quot;DEMOTE&quot;: {
+      &quot;maxDrawdownPct&quot;: 20,
+      &quot;minSharpe&quot;: 0.5,
+      &quot;minDays&quot;: 10
+    },
+    &quot;FIRE&quot;: {
+      &quot;maxDrawdownPct&quot;: 30,
+      &quot;demotionsIn30Days&quot;: 2,
+      &quot;minTrades&quot;: 30,
+      &quot;minDays&quot;: 10
+    },
+    &quot;DEFUND&quot;: {
+      &quot;minTrades&quot;: 12,
+      &quot;cooldownHours&quot;: 24
+    },
+    &quot;tiers&quot;: [
+      &quot;simulated&quot;,
+      &quot;paper&quot;,
+      &quot;live&quot;
+    ],
+    &quot;breeding&quot;: &quot;On fire (and breed enabled): clone the top-Sharpe survivor, jitter perTrade/kellyFraction/maxPositionSizePercent ±20–25%, child starts simulated.&quot;
+  }
+}</pre></div>
+  </section>
+</main>
+<footer>Reflect, don't transcribe — every value read from source at generation time. Re-run <code>npm run system-map</code> to refresh.</footer>
+<script>
+  function showTab(id){
+    document.querySelectorAll('.tabpanel').forEach(function(p){ p.classList.toggle('hidden', p.id !== 'tab-'+id); });
+    document.querySelectorAll('.tabbtn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === id); });
+    if (history.replaceState) history.replaceState(null,'','#'+id);
+  }
+  var h = (location.hash || '').replace('#','');
+  if (h) showTab(h);
+</script>
+</body></html>

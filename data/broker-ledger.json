@@ -190,6 +190,84 @@
         "stopReason": "end_turn"
       },
       "timestamp": "2026-06-01T18:09:22.925Z"
+    },
+    {
+      "slug": "flow-hunter",
+      "action": "defund",
+      "from": "simulated",
+      "to": "paused",
+      "reason": "options-flow: proven-negative edge — 12 trades, expectancy -1.983%/trade (95% upper bound -0.820% < 0)",
+      "metrics": {
+        "sharpe": -24.455297150401112,
+        "winRate": 0.16666666666666666,
+        "maxDD": 2.787666639446114,
+        "totalTrades": 12,
+        "days": 37.05599946759259,
+        "edge": {
+          "pass": false,
+          "source": "options-flow",
+          "reason": "options-flow: only 12/50 source trades",
+          "trades": 12,
+          "expectancyPct": -1.9834491807511447,
+          "expectancyUsd": -234.21835353333356,
+          "expectancyLowerCB": -3.146426517986409,
+          "expectancyUpperCB": -0.8204718435158806,
+          "bySource": {
+            "options-flow": {
+              "trades": 12,
+              "totalPnL": -2810.6202424000026,
+              "wins": 2,
+              "losses": 10,
+              "winRate": 0.16666666666666666,
+              "expectancyUsd": -234.21835353333356,
+              "expectancyPct": -1.9834491807511447,
+              "expectancyStdev": 2.4565071172471242,
+              "expectancyLowerCB": -3.146426517986409,
+              "expectancyUpperCB": -0.8204718435158806
+            }
+          }
+        }
+      },
+      "timestamp": "2026-07-09T17:27:55.075Z"
+    },
+    {
+      "slug": "flow-hunter",
+      "action": "defund",
+      "from": "simulated",
+      "to": "paused",
+      "reason": "options-flow: proven-negative edge — 15 trades, expectancy -2.991%/trade (95% upper bound -1.577% < 0)",
+      "metrics": {
+        "sharpe": -24.638585025260824,
+        "winRate": 0.13333333333333333,
+        "maxDD": 6.0109298813314815,
+        "totalTrades": 15,
+        "days": 44.05601494212963,
+        "edge": {
+          "pass": false,
+          "source": "options-flow",
+          "reason": "options-flow: only 15/50 source trades",
+          "trades": 15,
+          "expectancyPct": -2.9912010009570382,
+          "expectancyUsd": -379.51727432000007,
+          "expectancyLowerCB": -4.4049206830815875,
+          "expectancyUpperCB": -1.5774813188324888,
+          "bySource": {
+            "options-flow": {
+              "trades": 15,
+              "totalPnL": -5692.759114800001,
+              "wins": 2,
+              "losses": 13,
+              "winRate": 0.13333333333333333,
+              "expectancyUsd": -379.51727432000007,
+              "expectancyPct": -2.9912010009570382,
+              "expectancyStdev": 3.3386053567524536,
+              "expectancyLowerCB": -4.4049206830815875,
+              "expectancyUpperCB": -1.5774813188324888
+            }
+          }
+        }
+      },
+      "timestamp": "2026-07-16T17:27:56.412Z"
     }
   ]
 }

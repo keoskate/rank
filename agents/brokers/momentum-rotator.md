@@ -58,6 +58,7 @@ risk:
   kellyFraction: 0.25
   maxPositions: 9
   maxPositionSizePercent: 11
+  dailyLossLimit: 0.05 # circuit breaker: halt NEW entries if day's loss > 5% of day-start equity; exits/rebalances keep flowing
 # Entropy gate DISABLED 2026-06-10: re-validation on the certified shared
 # core (clean 2016+ data, net of costs) found NO significant expectancy edge
 # from any gate variant (all p >= 0.6, n up to 5,881 trades) — see

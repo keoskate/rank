@@ -20,6 +20,7 @@ risk:
   kellyFraction: 0.25
   maxPositions: 3
   maxPositionSizePercent: 15
+  dailyLossLimit: 0.05 # circuit breaker: halt NEW entries if day's loss > 5% of day-start equity; exits/stops keep flowing
 regime:
   enabled: false
   entropyWindows:

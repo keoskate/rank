@@ -1,0 +1,1429 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-14T14:48:50.089Z",
+    "gitSha": "eb3a4f2",
+    "live": true,
+    "offline": false,
+    "brokerCount": 5,
+    "note": "System Map — a point-in-time snapshot of every config & IP, read from source. Re-run to refresh."
+  },
+  "brokers": [
+    {
+      "slug": "flow-hunter",
+      "name": "Flow Hunter",
+      "tier": "simulated",
+      "strategy": "options-flow",
+      "capital": 100000,
+      "effectiveCapital": 100000,
+      "watchlist": [
+        "NVDA",
+        "AMD",
+        "SMCI",
+        "TSLA",
+        "AAPL",
+        "PLTR",
+        "META"
+      ],
+      "risk": {
+        "perTrade": 0.02,
+        "maxDrawdown": 0.15,
+        "sizing": "confidence-scaled",
+        "kellyFraction": 0.25,
+        "maxPositions": 3,
+        "maxPositionSizePercent": 15,
+        "maxPortfolioDrawdown": null,
+        "dailyLossLimit": 0.05,
+        "maxConsecutiveLosses": null,
+        "trimAtProfitPercent": null,
+        "trimFraction": 0.5
+      },
+      "regime": {
+        "enabled": false,
+        "entropyWindows": [
+          21,
+          63
+        ],
+        "preferred": "any",
+        "blockOnTransition": false,
+        "referenceSymbol": "SPY"
+      },
+      "macro": {
+        "enabled": false,
+        "riskOffScalar": 0.25
+      },
+      "llm": {
+        "enabled": false,
+        "model": "claude-sonnet-4-6",
+        "callBudget": 50,
+        "role": "advisor"
+      },
+      "plugins": {
+        "flow": {
+          "minPremium": 500000,
+          "minSkew": 0.7,
+          "lookbackMinutes": 30,
+          "scanner": true
+        },
+        "insider": {
+          "minNotional": 100000,
+          "lookbackDays": 10,
+          "scanner": false
+        },
+        "darkpool": {
+          "minPremium": 1000000,
+          "minBuyShare": 0.6,
+          "lookbackMinutes": 120,
+          "scanner": false,
+          "dropAtMid": true,
+          "maxSinglePrintShare": 0.25,
+          "minPrints": 5,
+          "rthOnly": true
+        },
+        "trend": {
+          "rankBy": "momentum"
+        }
+      },
+      "personaExcerpt": "# Personality\n\nI don't read charts. I read the bets. When the smart money pays up for calls —\nreal size, on the ask, sweeping the chain — I follow. RSI is what everyone else\nis staring at; I'm watching where the premium is actually going. I'd rather be\nright about _who's positioning_ than clever about a squiggly line.",
+      "exitTunables": {
+        "stopLossPercent": 1,
+        "takeProfitPercent": 2,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      "live": {
+        "status": "paused",
+        "cash": 58102.91,
+        "positions": [
+          {},
+          {},
+          {}
+        ],
+        "stats": {
+          "totalTrades": 12,
+          "wins": 2,
+          "losses": 10,
+          "winRate": 16.67,
+          "totalPnL": -2810.62,
+          "maxDrawdown": 2.79,
+          "consecutiveLosses": 3,
+          "sharpe": -24.46
+        }
+      },
+      "promotion": {
+        "action": "hold",
+        "reason": "sim — not yet promoted",
+        "metrics": {
+          "sharpe": -24.46,
+          "winRate": 0.17,
+          "maxDD": 2.79,
+          "totalTrades": 12,
+          "days": 41.95
+        },
+        "edge": {
+          "pass": false,
+          "source": "options-flow",
+          "reason": "options-flow: only 12/50 source trades",
+          "trades": 12,
+          "expectancyPct": -1.98,
+          "expectancyLowerCB": -3.15
+        }
+      }
+    },
+    {
+      "slug": "insider-tracker",
+      "name": "Insider Tracker",
+      "tier": "simulated",
+      "strategy": "insider-following",
+      "capital": 100000,
+      "effectiveCapital": 100000,
+      "watchlist": [
+        "NVDA",
+        "AMD",
+        "SMCI",
+        "OXY",
+        "KMI",
+        "WFC",
+        "PLTR",
+        "MU"
+      ],
+      "risk": {
+        "perTrade": 0.02,
+        "maxDrawdown": 0.15,
+        "sizing": "confidence-scaled",
+        "kellyFraction": 0.25,
+        "maxPositions": 3,
+        "maxPositionSizePercent": 15,
+        "maxPortfolioDrawdown": null,
+        "dailyLossLimit": 0.05,
+        "maxConsecutiveLosses": null,
+        "trimAtProfitPercent": null,
+        "trimFraction": 0.5
+      },
+      "regime": {
+        "enabled": false,
+        "entropyWindows": [
+          21,
+          63
+        ],
+        "preferred": "any",
+        "blockOnTransition": false,
+        "referenceSymbol": "SPY"
+      },
+      "macro": {
+        "enabled": false,
+        "riskOffScalar": 0.25
+      },
+      "llm": {
+        "enabled": false,
+        "model": "claude-sonnet-4-6",
+        "callBudget": 50,
+        "role": "advisor"
+      },
+      "plugins": {
+        "flow": {
+          "minPremium": 250000,
+          "minSkew": 0.65,
+          "lookbackMinutes": 30,
+          "scanner": false
+        },
+        "insider": {
+          "minNotional": 500000,
+          "lookbackDays": 10,
+          "scanner": true
+        },
+        "darkpool": {
+          "minPremium": 1000000,
+          "minBuyShare": 0.6,
+          "lookbackMinutes": 120,
+          "scanner": false,
+          "dropAtMid": true,
+          "maxSinglePrintShare": 0.25,
+          "minPrints": 5,
+          "rthOnly": true
+        },
+        "trend": {
+          "rankBy": "momentum"
+        }
+      },
+      "personaExcerpt": "# Personality\n\nI follow the people who know the company best — the ones legally required to\ntell you when they buy their own stock. When an officer or director puts real\nmoney into open-market shares, they're betting on something they can see from\nthe inside. I don't chase rumors; I chase signatures on Form 4s.",
+      "exitTunables": {
+        "stopLossPercent": 8,
+        "takeProfitPercent": 10,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      "live": {
+        "status": "running",
+        "cash": 56083.52,
+        "positions": [
+          {},
+          {},
+          {}
+        ],
+        "stats": {
+          "totalTrades": 6,
+          "wins": 4,
+          "losses": 2,
+          "winRate": 66.7,
+          "totalPnL": -1545.5,
+          "maxDrawdown": 3.24,
+          "consecutiveLosses": 1,
+          "sharpe": -11.54
+        }
+      },
+      "promotion": {
+        "action": "hold",
+        "reason": "sim — not yet promoted",
+        "metrics": {
+          "sharpe": -11.54,
+          "winRate": 0.67,
+          "maxDD": 3.24,
+          "totalTrades": 6,
+          "days": 41.95
+        },
+        "edge": {
+          "pass": false,
+          "source": "insider-following",
+          "reason": "insider-following: only 6/50 source trades",
+          "trades": 6,
+          "expectancyPct": -1.67,
+          "expectancyLowerCB": -4.71
+        }
+      }
+    },
+    {
+      "slug": "momentum-rotator",
+      "name": "Momentum Rotator",
+      "tier": "simulated",
+      "strategy": "cross-sectional-momentum",
+      "capital": 100000,
+      "effectiveCapital": 100000,
+      "watchlist": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "AMD",
+        "AVGO",
+        "ORCL",
+        "CRM",
+        "ADBE",
+        "CSCO",
+        "QCOM",
+        "TXN",
+        "INTC",
+        "AMAT",
+        "MU",
+        "GOOGL",
+        "META",
+        "NFLX",
+        "DIS",
+        "CMCSA",
+        "TMUS",
+        "AMZN",
+        "TSLA",
+        "HD",
+        "MCD",
+        "NKE",
+        "COST",
+        "WMT",
+        "LOW",
+        "JPM",
+        "BAC",
+        "WFC",
+        "GS",
+        "MS",
+        "AXP",
+        "SCHW",
+        "UNH",
+        "JNJ",
+        "LLY",
+        "ABBV",
+        "MRK",
+        "PFE",
+        "XOM",
+        "CVX",
+        "CAT",
+        "BA"
+      ],
+      "risk": {
+        "perTrade": 0.02,
+        "maxDrawdown": 0.25,
+        "sizing": "fixed",
+        "kellyFraction": 0.25,
+        "maxPositions": 9,
+        "maxPositionSizePercent": 11,
+        "maxPortfolioDrawdown": null,
+        "dailyLossLimit": 0.05,
+        "maxConsecutiveLosses": null,
+        "trimAtProfitPercent": null,
+        "trimFraction": 0.5
+      },
+      "regime": {
+        "enabled": false,
+        "entropyWindows": [
+          21,
+          63
+        ],
+        "preferred": "low-entropy",
+        "blockOnTransition": false,
+        "referenceSymbol": "SPY"
+      },
+      "macro": {
+        "enabled": false,
+        "riskOffScalar": 0.25
+      },
+      "llm": {
+        "enabled": false,
+        "model": "claude-sonnet-4-6",
+        "callBudget": 50,
+        "role": "advisor"
+      },
+      "plugins": {
+        "flow": {
+          "minPremium": 250000,
+          "minSkew": 0.65,
+          "lookbackMinutes": 30,
+          "scanner": false
+        },
+        "insider": {
+          "minNotional": 100000,
+          "lookbackDays": 10,
+          "scanner": false
+        },
+        "darkpool": {
+          "minPremium": 1000000,
+          "minBuyShare": 0.6,
+          "lookbackMinutes": 120,
+          "scanner": false,
+          "dropAtMid": true,
+          "maxSinglePrintShare": 0.25,
+          "minPrints": 5,
+          "rthOnly": true
+        },
+        "trend": {
+          "rankBy": "momentum"
+        }
+      },
+      "personaExcerpt": "# Personality\n\nI own the strongest, full stop. Every month I rank the field by who's been\nwinning over the last six months, buy the top fifth, and hold them — no\nsecond-guessing, no stops, no staring at the screen between rebalances. Winners\nkeep winning longer than people expect; my whole job is to keep riding them and",
+      "exitTunables": {
+        "stopLossPercent": 1,
+        "takeProfitPercent": 2,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      "live": {
+        "status": "running",
+        "cash": 1078,
+        "positions": [
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "stats": {
+          "totalTrades": 7,
+          "wins": 2,
+          "losses": 5,
+          "winRate": 28.6,
+          "totalPnL": -1031.8,
+          "maxDrawdown": 11.5,
+          "consecutiveLosses": 0,
+          "sharpe": -4.94
+        }
+      },
+      "promotion": {
+        "action": "hold",
+        "reason": "sim — not yet promoted",
+        "metrics": {
+          "sharpe": -4.94,
+          "winRate": 0.29,
+          "maxDD": 11.5,
+          "totalTrades": 7,
+          "days": 41.28
+        },
+        "edge": {
+          "pass": false,
+          "source": "cross-sectional-momentum",
+          "reason": "cross-sectional-momentum: only 7/50 source trades",
+          "trades": 7,
+          "expectancyPct": -1.29,
+          "expectancyLowerCB": -4.32
+        }
+      }
+    },
+    {
+      "slug": "trend-follower",
+      "name": "Trend Follower",
+      "tier": "paper",
+      "strategy": "trend-following",
+      "capital": 100000,
+      "effectiveCapital": 20000,
+      "watchlist": [
+        "SPY",
+        "QQQ",
+        "IWM",
+        "DIA",
+        "XLK",
+        "SMH",
+        "XLF",
+        "XLE",
+        "XLV",
+        "XLY",
+        "XLP",
+        "XLI",
+        "XLU",
+        "XLB",
+        "XLRE",
+        "XLC",
+        "EEM",
+        "EFA",
+        "GLD",
+        "SLV",
+        "TLT",
+        "IEF",
+        "DBC"
+      ],
+      "risk": {
+        "perTrade": 0.02,
+        "maxDrawdown": 0.25,
+        "sizing": "fixed",
+        "kellyFraction": 0.25,
+        "maxPositions": 5,
+        "maxPositionSizePercent": 20,
+        "maxPortfolioDrawdown": 0.12,
+        "dailyLossLimit": 0.05,
+        "maxConsecutiveLosses": 8,
+        "trimAtProfitPercent": 25,
+        "trimFraction": 0.5
+      },
+      "regime": {
+        "enabled": false,
+        "entropyWindows": [
+          21,
+          63
+        ],
+        "preferred": "any",
+        "blockOnTransition": false,
+        "referenceSymbol": "SPY"
+      },
+      "macro": {
+        "enabled": false,
+        "riskOffScalar": 0.25
+      },
+      "llm": {
+        "enabled": false,
+        "model": "claude-sonnet-4-6",
+        "callBudget": 50,
+        "role": "advisor"
+      },
+      "plugins": {
+        "flow": {
+          "minPremium": 250000,
+          "minSkew": 0.65,
+          "lookbackMinutes": 30,
+          "scanner": false
+        },
+        "insider": {
+          "minNotional": 100000,
+          "lookbackDays": 10,
+          "scanner": false
+        },
+        "darkpool": {
+          "minPremium": 1000000,
+          "minBuyShare": 0.6,
+          "lookbackMinutes": 120,
+          "scanner": false,
+          "dropAtMid": true,
+          "maxSinglePrintShare": 0.25,
+          "minPrints": 5,
+          "rthOnly": true
+        },
+        "trend": {
+          "rankBy": "volAdjusted"
+        }
+      },
+      "personaExcerpt": "# Personality\n\nI don't predict — I follow. I have no opinion about whether the market _should_\ngo up; I only ask whether it _is_ going up, right now, in front of me. When a\nthing is above its 200-day line and climbing, I own it. When it rolls over, I'm\nout — to cash, no arguing, no averaging down, no \"it'll come back.\" Boring on",
+      "exitTunables": {
+        "stopLossPercent": 1,
+        "takeProfitPercent": 2,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      "live": {
+        "status": "running",
+        "cash": 66538.52,
+        "positions": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "stats": {
+          "totalTrades": 1,
+          "wins": 0,
+          "losses": 1,
+          "winRate": 0,
+          "totalPnL": -13.55,
+          "maxDrawdown": 0,
+          "consecutiveLosses": 1,
+          "sharpe": null
+        }
+      },
+      "promotion": {
+        "action": "hold",
+        "reason": "paper — performing within tolerance",
+        "metrics": {
+          "sharpe": null,
+          "winRate": 0,
+          "maxDD": 0,
+          "totalTrades": 1,
+          "days": 41.29
+        },
+        "edge": {
+          "pass": false,
+          "source": "trend-following",
+          "reason": "trend-following: only 1/50 source trades",
+          "trades": 1,
+          "expectancyPct": null,
+          "expectancyLowerCB": null
+        }
+      }
+    },
+    {
+      "slug": "volume-hunter",
+      "name": "Volume Hunter",
+      "tier": "simulated",
+      "strategy": "dark-pool",
+      "capital": 100000,
+      "effectiveCapital": 100000,
+      "watchlist": [
+        "NVDA",
+        "AMD",
+        "TSLA",
+        "AAPL",
+        "META",
+        "MSFT",
+        "AMZN",
+        "PLTR"
+      ],
+      "risk": {
+        "perTrade": 0.02,
+        "maxDrawdown": 0.15,
+        "sizing": "confidence-scaled",
+        "kellyFraction": 0.25,
+        "maxPositions": 3,
+        "maxPositionSizePercent": 15,
+        "maxPortfolioDrawdown": null,
+        "dailyLossLimit": 0.05,
+        "maxConsecutiveLosses": null,
+        "trimAtProfitPercent": null,
+        "trimFraction": 0.5
+      },
+      "regime": {
+        "enabled": false,
+        "entropyWindows": [
+          21,
+          63
+        ],
+        "preferred": "any",
+        "blockOnTransition": false,
+        "referenceSymbol": "SPY"
+      },
+      "macro": {
+        "enabled": false,
+        "riskOffScalar": 0.25
+      },
+      "llm": {
+        "enabled": false,
+        "model": "claude-sonnet-4-6",
+        "callBudget": 50,
+        "role": "advisor"
+      },
+      "plugins": {
+        "flow": {
+          "minPremium": 250000,
+          "minSkew": 0.65,
+          "lookbackMinutes": 30,
+          "scanner": false
+        },
+        "insider": {
+          "minNotional": 100000,
+          "lookbackDays": 10,
+          "scanner": false
+        },
+        "darkpool": {
+          "minPremium": 5000000,
+          "minBuyShare": 0.62,
+          "lookbackMinutes": 120,
+          "scanner": true,
+          "dropAtMid": true,
+          "maxSinglePrintShare": 0.25,
+          "minPrints": 5,
+          "rthOnly": true
+        },
+        "trend": {
+          "rankBy": "momentum"
+        }
+      },
+      "personaExcerpt": "# Personality\n\nI watch the trades nobody's supposed to see. When institutions move real size,\nthey don't do it on the lit exchange where everyone's watching — they cross it\nin the dark pool. I read those prints. When the big blocks are lifting offers,\nquietly, in size, I follow the elephants' footprints.",
+      "exitTunables": {
+        "stopLossPercent": 4,
+        "takeProfitPercent": 6,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      "live": {
+        "status": "paused",
+        "cash": 100000,
+        "positions": [],
+        "stats": {
+          "totalTrades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": 0,
+          "totalPnL": 0,
+          "maxDrawdown": 0,
+          "consecutiveLosses": 0,
+          "sharpe": null
+        }
+      },
+      "promotion": {
+        "action": "hold",
+        "reason": "sim — not yet promoted",
+        "metrics": {
+          "sharpe": null,
+          "winRate": 0,
+          "maxDD": 0,
+          "totalTrades": 0,
+          "days": 41.95
+        },
+        "edge": {
+          "pass": false,
+          "source": "dark-pool",
+          "reason": "dark-pool: only 4/50 source trades",
+          "trades": 4,
+          "expectancyPct": -1.35,
+          "expectancyLowerCB": -2.79
+        }
+      }
+    }
+  ],
+  "gates": {
+    "entropy": {
+      "status": "OFF — no edge (validated 2026-06, p≥0.6, n=5,881)",
+      "note": "Certified faithful to @keo/quant-core entropyGateCore but kept off — zero edge.",
+      "defaults": {
+        "enabled": false,
+        "entropyWindows": [
+          21,
+          63,
+          252
+        ],
+        "preferred": "any",
+        "blockOnTransition": true,
+        "referenceSymbol": null
+      },
+      "enabledBrokers": []
+    },
+    "macro": {
+      "note": "Per-broker opt-in (config.macroGateEnabled) AND FRED_API_KEY. Scales size; never a standalone return series.",
+      "riskOffScalarDefault": 0.25,
+      "DEEP_INVERSION": -0.5,
+      "HY_SPIKE_MULT": 1.25,
+      "series": {
+        "curveSlope": "T10Y2Y",
+        "hySpread": "BAMLH0A0HYM2"
+      },
+      "live": {
+        "state": "inert",
+        "reason": "FRED_API_KEY not set — macro gate inert"
+      },
+      "enabledBrokers": []
+    },
+    "kelly": {
+      "note": "Fractional Kelly f* = (p·b − q)/b, clamped to a fractional multiple. Blends a Bayesian prior until real history accrues.",
+      "MIN_TRADES_FOR_EMPIRICAL": 20,
+      "MIN_LOSSES_FOR_PAYOFF": 5,
+      "MAX_WIN_RATE": 0.95,
+      "PRIOR_WIN_RATE": 0.51,
+      "PRIOR_PAYOFF_RATIO": 1,
+      "ROLLING_WINDOW": 100,
+      "fallbacks": {
+        "fractionMult": 0.25,
+        "maxPercent": 25,
+        "minPercent": 0.5
+      }
+    },
+    "rails": {
+      "note": "Daily-loss + consecutive-loss halts are per-broker opt-in via frontmatter. Soft halts on new entries; exits/stops stay active.",
+      "brokers": [
+        {
+          "slug": "flow-hunter",
+          "dailyLossLimit": 0.05,
+          "maxConsecutiveLosses": null,
+          "maxPortfolioDrawdown": null,
+          "currentConsecutiveLosses": 3
+        },
+        {
+          "slug": "insider-tracker",
+          "dailyLossLimit": 0.05,
+          "maxConsecutiveLosses": null,
+          "maxPortfolioDrawdown": null,
+          "currentConsecutiveLosses": 1
+        },
+        {
+          "slug": "momentum-rotator",
+          "dailyLossLimit": 0.05,
+          "maxConsecutiveLosses": null,
+          "maxPortfolioDrawdown": null,
+          "currentConsecutiveLosses": 0
+        },
+        {
+          "slug": "trend-follower",
+          "dailyLossLimit": 0.05,
+          "maxConsecutiveLosses": 8,
+          "maxPortfolioDrawdown": 0.12,
+          "currentConsecutiveLosses": 1
+        },
+        {
+          "slug": "volume-hunter",
+          "dailyLossLimit": 0.05,
+          "maxConsecutiveLosses": null,
+          "maxPortfolioDrawdown": null,
+          "currentConsecutiveLosses": 0
+        }
+      ]
+    }
+  },
+  "signals": {
+    "semiconductor": {
+      "note": "SOXX-based volatility-adaptive direction → routes SOXL (long) / SOXS (short).",
+      "config": {
+        "minConfidenceToTrade": 55,
+        "highConfidence": 75,
+        "switchConfidence": 70,
+        "baseEntryThreshold": 0.35,
+        "baseExitThreshold": 0.2,
+        "volatilityMultiplier": 1.2,
+        "minThreshold": 0.15,
+        "maxThreshold": 1.5
+      },
+      "cacheTTLms": 30000,
+      "model": {
+        "baseConfidence": 50,
+        "effectiveThresholdMult": 0.7,
+        "signals": [
+          {
+            "key": "intradayDirection",
+            "points": 15,
+            "weightLabel": "30%",
+            "note": "move from open beyond effective threshold"
+          },
+          {
+            "key": "rollingMomentum",
+            "points": 12,
+            "weightLabel": "25%",
+            "note": "recent 75-min direction"
+          },
+          {
+            "key": "reversal",
+            "points": 12,
+            "weightLabel": "25%",
+            "note": "position within intraday range (drop-from-high / rise-from-low)"
+          },
+          {
+            "key": "strongMove",
+            "points": 10,
+            "weightLabel": "20%",
+            "note": "+5 for building momentum"
+          },
+          {
+            "key": "technicalTrend",
+            "points": 8,
+            "weightLabel": "±",
+            "note": "-5 when short-term trend conflicts"
+          },
+          {
+            "key": "volumeConfirm",
+            "points": 5,
+            "weightLabel": "±",
+            "note": "-3 on low volume"
+          }
+        ]
+      },
+      "live": {
+        "available": false,
+        "reason": "market data unavailable (no API key or fetch failed)"
+      }
+    },
+    "strategies": {
+      "allowed": [
+        "momentum-breakout",
+        "mean-reversion",
+        "entropy-adaptive",
+        "medallion-ensemble",
+        "llm-gated",
+        "balanced",
+        "conservative",
+        "aggressive",
+        "options-flow",
+        "insider-following",
+        "dark-pool",
+        "trend-following",
+        "cross-sectional-momentum"
+      ],
+      "inUse": {
+        "options-flow": [
+          "flow-hunter"
+        ],
+        "insider-following": [
+          "insider-tracker"
+        ],
+        "cross-sectional-momentum": [
+          "momentum-rotator"
+        ],
+        "trend-following": [
+          "trend-follower"
+        ],
+        "dark-pool": [
+          "volume-hunter"
+        ]
+      }
+    },
+    "technicals": {
+      "note": "Indicators feeding entry/exit confidence (getAllIndicators).",
+      "indicators": [
+        {
+          "key": "rsi",
+          "use": "overbought/oversold; RSI>rsiOverbought adds exit pressure"
+        },
+        {
+          "key": "adx",
+          "use": "trend strength; gates exit dampening"
+        },
+        {
+          "key": "macd",
+          "use": "reduced weight — removed from exits (low 5-min accuracy)"
+        },
+        {
+          "key": "volumeRatio",
+          "use": "confirmation; low-volume-on-advance = distribution"
+        },
+        {
+          "key": "trend",
+          "use": "short/medium-term classification"
+        }
+      ]
+    }
+  },
+  "exits": {
+    "note": "Additive exit score; a position exits when it clears the trigger. Critical weights (stop/TP/trailing/EOD) are never dampened.",
+    "model": {
+      "trigger": {
+        "base": 70,
+        "tinyProfit": 95
+      },
+      "weights": [
+        {
+          "key": "partialExit",
+          "points": 100,
+          "critical": true,
+          "note": "first TP hit w/ partial exits enabled — forces the partial"
+        },
+        {
+          "key": "takeProfit",
+          "points": 30,
+          "critical": true,
+          "note": "TP reached; needs confirmation"
+        },
+        {
+          "key": "takeProfitScalp",
+          "points": 100,
+          "critical": true,
+          "note": "aggressive scalp (TP < 0.5%) — immediate"
+        },
+        {
+          "key": "stopLoss",
+          "points": 100,
+          "critical": true,
+          "note": "hard stop — non-negotiable"
+        },
+        {
+          "key": "trailingStop",
+          "points": 35,
+          "critical": true,
+          "note": "locks in % of gains after min-profit"
+        },
+        {
+          "key": "eodForce",
+          "points": 100,
+          "critical": true,
+          "note": "within exitBeforeCloseMinutes of close"
+        },
+        {
+          "key": "eodApproach",
+          "points": 50,
+          "critical": true,
+          "note": "within 30 min of close"
+        },
+        {
+          "key": "rsiOverbought",
+          "points": 20,
+          "critical": false,
+          "note": "RSI > rsiOverbought"
+        },
+        {
+          "key": "volumeDistribution",
+          "points": 10,
+          "critical": false,
+          "note": "low volume on advance"
+        },
+        {
+          "key": "counterTrend",
+          "points": 10,
+          "critical": false,
+          "note": "counter-trend position in hostile regime"
+        },
+        {
+          "key": "counterTrendLosing",
+          "points": 10,
+          "critical": false,
+          "note": "counter-trend AND losing"
+        },
+        {
+          "key": "counterTrendQuickProfit",
+          "points": 15,
+          "critical": false,
+          "note": "counter-trend AND +0.5%"
+        },
+        {
+          "key": "aiHoldOversold",
+          "points": -20,
+          "critical": false,
+          "note": "oversold w/ volume support — reduces pressure"
+        },
+        {
+          "key": "aiHoldTrend",
+          "points": -15,
+          "critical": false,
+          "note": "ADX trend still bullish — reduces pressure"
+        }
+      ],
+      "dampening": {
+        "baseFactorDefault": 0.4,
+        "floor": 0.2,
+        "formula": "max(0.2, base * (1 - min(pnl/takeProfit, 2) * 0.3))",
+        "appliesWhen": "pnl>0 AND ADX trending AND regime-aligned AND base<1.0"
+      },
+      "tunables": [
+        {
+          "key": "stopLossPercent",
+          "note": "× leverage for leveraged ETFs"
+        },
+        {
+          "key": "takeProfitPercent",
+          "default": 2,
+          "note": "× leverage"
+        },
+        {
+          "key": "trailingStopPercent",
+          "note": "0 = disabled; % of gains to lock in"
+        },
+        {
+          "key": "trailingStopMinProfitPercent",
+          "default": 2
+        },
+        {
+          "key": "rsiOverbought",
+          "default": 70
+        },
+        {
+          "key": "exitBeforeCloseMinutes",
+          "default": 15,
+          "note": "max(cfg, 30) for leveraged ETFs"
+        },
+        {
+          "key": "minProfitForExitPercent",
+          "default": "0.5 × leverage"
+        },
+        {
+          "key": "trendDampeningFactor",
+          "default": 0.4
+        }
+      ]
+    },
+    "driftWarning": "Header comments in evaluateExit() still say stop-loss 40 / EOD 50 — the LIVE code uses 100 and a 70/95 trigger. This map reflects the code.",
+    "perBrokerTunables": [
+      {
+        "slug": "flow-hunter",
+        "stopLossPercent": 1,
+        "takeProfitPercent": 2,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      {
+        "slug": "insider-tracker",
+        "stopLossPercent": 8,
+        "takeProfitPercent": 10,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      {
+        "slug": "momentum-rotator",
+        "stopLossPercent": 1,
+        "takeProfitPercent": 2,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      {
+        "slug": "trend-follower",
+        "stopLossPercent": 1,
+        "takeProfitPercent": 2,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      },
+      {
+        "slug": "volume-hunter",
+        "stopLossPercent": 4,
+        "takeProfitPercent": 6,
+        "trailingStopPercent": 0,
+        "trailingStopMinProfitPercent": 2,
+        "rsiOverbought": 70,
+        "exitBeforeClose": false,
+        "exitBeforeCloseMinutes": 15,
+        "minProfitForExitPercent": "0.5 × leverage",
+        "trendDampeningFactor": 0.4
+      }
+    ]
+  },
+  "evals": {
+    "fiveGates": [
+      {
+        "key": "dataIntegrity",
+        "checks": "raw vs adjusted alignment, cross-source consistency, structural faults"
+      },
+      {
+        "key": "faithfulness",
+        "checks": "live plugin certified against @keo/quant-core shared core, <30 days old"
+      },
+      {
+        "key": "outOfSample",
+        "checks": "walk-forward OOS Sharpe > 0 AND beats passive EW-N control"
+      },
+      {
+        "key": "realisticCosts",
+        "checks": "OOS Sharpe still > 0 at 2× transaction costs"
+      },
+      {
+        "key": "multipleTesting",
+        "checks": "deflated Sharpe ≥ 95% vs expected max-of-N trials"
+      }
+    ],
+    "verdictTally": {
+      "FAILED:dataIntegrity": 10,
+      "FAILED:outOfSample": 11,
+      "UNVALIDATED": 19,
+      "FAILED:multipleTesting": 36
+    },
+    "totalRuns": 76,
+    "recentRuns": [
+      {
+        "runId": "trend-following__crossasset-dualmom-diverseEtf-WF-OOS__20260708-221811",
+        "family": "trend-following",
+        "strategyId": "crossasset-dualmom-diverseEtf-WF-OOS",
+        "verdict": "FAILED:dataIntegrity",
+        "sharpe": 0.53,
+        "maxDD": -0.3,
+        "generatedAt": "2026-07-08T22:18:11.576Z"
+      },
+      {
+        "runId": "cross-sectional-rank__gbdt-topN-diverseEtf-WF-OOS__20260708-203147",
+        "family": "cross-sectional-rank",
+        "strategyId": "gbdt-topN-diverseEtf-WF-OOS",
+        "verdict": "FAILED:dataIntegrity",
+        "sharpe": 1.13,
+        "maxDD": -0.2,
+        "generatedAt": "2026-07-08T20:31:47.641Z"
+      },
+      {
+        "runId": "cross-sectional-rank__gbdt-topN-WF-OOS__20260708-200437",
+        "family": "cross-sectional-rank",
+        "strategyId": "gbdt-topN-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": 1.11,
+        "maxDD": -0.34,
+        "generatedAt": "2026-07-08T20:04:37.143Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-instrumented__20260625-161258",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-instrumented",
+        "verdict": "UNVALIDATED",
+        "sharpe": 0.92,
+        "maxDD": -0.22,
+        "generatedAt": "2026-06-25T16:12:58.903Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-WF-OOS__20260625-161258",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.88,
+        "maxDD": -0.22,
+        "generatedAt": "2026-06-25T16:12:58.304Z"
+      },
+      {
+        "runId": "leveraged-momentum__soxl-momentum-3sig-WF-OOS__20260615-182655",
+        "family": "leveraged-momentum",
+        "strategyId": "soxl-momentum-3sig-WF-OOS",
+        "verdict": "FAILED:dataIntegrity",
+        "sharpe": 0.57,
+        "maxDD": -0.39,
+        "generatedAt": "2026-06-15T18:26:55.564Z"
+      },
+      {
+        "runId": "trend-following__mf-sleeve-capped-WF-OOS__20260612-162207",
+        "family": "trend-following",
+        "strategyId": "mf-sleeve-capped-WF-OOS",
+        "verdict": "FAILED:dataIntegrity",
+        "sharpe": 0.76,
+        "maxDD": -0.19,
+        "generatedAt": "2026-06-12T16:22:07.299Z"
+      },
+      {
+        "runId": "xs-momentum__top-momentum-WF-OOS__20260612-162144",
+        "family": "xs-momentum",
+        "strategyId": "top-momentum-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.87,
+        "maxDD": -0.34,
+        "generatedAt": "2026-06-12T16:21:44.223Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260612-162103",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.88,
+        "maxDD": -0.23,
+        "generatedAt": "2026-06-12T16:21:03.706Z"
+      },
+      {
+        "runId": "trend-following__vrp-sleeve-capped-WF-OOS__20260611-164433",
+        "family": "trend-following",
+        "strategyId": "vrp-sleeve-capped-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.92,
+        "maxDD": -0.19,
+        "generatedAt": "2026-06-11T16:44:33.199Z"
+      },
+      {
+        "runId": "trend-following__mf-sleeve-capped-WF-OOS__20260610-192523",
+        "family": "trend-following",
+        "strategyId": "mf-sleeve-capped-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": 0.76,
+        "maxDD": -0.19,
+        "generatedAt": "2026-06-10T19:25:23.030Z"
+      },
+      {
+        "runId": "trend-following__mf-sleeve-combo-WF-OOS__20260610-184701",
+        "family": "trend-following",
+        "strategyId": "mf-sleeve-combo-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": 0.69,
+        "maxDD": -0.15,
+        "generatedAt": "2026-06-10T18:47:01.518Z"
+      },
+      {
+        "runId": "volume-profile__vp2-naked-poc-revisit__20260610-114416",
+        "family": "volume-profile",
+        "strategyId": "vp2-naked-poc-revisit",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.56,
+        "maxDD": -0.11,
+        "generatedAt": "2026-06-10T11:44:16.274Z"
+      },
+      {
+        "runId": "volume-profile__vp1-value-area-acceptance__20260610-114407",
+        "family": "volume-profile",
+        "strategyId": "vp1-value-area-acceptance",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.61,
+        "maxDD": -0.19,
+        "generatedAt": "2026-06-10T11:44:07.433Z"
+      },
+      {
+        "runId": "short-vol-spike__uvxy-spike-short-WF-OOS__20260610-092957",
+        "family": "short-vol-spike",
+        "strategyId": "uvxy-spike-short-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.63,
+        "maxDD": -0.53,
+        "generatedAt": "2026-06-10T09:29:57.509Z"
+      },
+      {
+        "runId": "overnight-drift__soxx-overnight-fixed-auction-WF-OOS__20260610-092955",
+        "family": "overnight-drift",
+        "strategyId": "soxx-overnight-fixed-auction-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": 0.88,
+        "maxDD": -0.41,
+        "generatedAt": "2026-06-10T09:29:55.389Z"
+      },
+      {
+        "runId": "overnight-drift__overnight-variants-WF-OOS__20260610-092954",
+        "family": "overnight-drift",
+        "strategyId": "overnight-variants-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": -0.29,
+        "maxDD": -0.27,
+        "generatedAt": "2026-06-10T09:29:54.679Z"
+      },
+      {
+        "runId": "xs-momentum__top-momentum-WF-OOS__20260610-092952",
+        "family": "xs-momentum",
+        "strategyId": "top-momentum-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.86,
+        "maxDD": -0.34,
+        "generatedAt": "2026-06-10T09:29:52.508Z"
+      },
+      {
+        "runId": "trend-following__combo-A-B-riskparity-WF-OOS__20260610-092940",
+        "family": "trend-following",
+        "strategyId": "combo-A-B-riskparity-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": 0.72,
+        "maxDD": -0.23,
+        "generatedAt": "2026-06-10T09:29:40.659Z"
+      },
+      {
+        "runId": "trend-following__diversifier-sleeve-WF-OOS__20260610-092933",
+        "family": "trend-following",
+        "strategyId": "diversifier-sleeve-WF-OOS",
+        "verdict": "FAILED:outOfSample",
+        "sharpe": 0.52,
+        "maxDD": -0.24,
+        "generatedAt": "2026-06-10T09:29:33.243Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-breadth23-volsize-WF-OOS__20260610-092930",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-breadth23-volsize-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.75,
+        "maxDD": -0.21,
+        "generatedAt": "2026-06-10T09:29:30.011Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260610-092923",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.89,
+        "maxDD": -0.23,
+        "generatedAt": "2026-06-10T09:29:23.758Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260610-092859",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.89,
+        "maxDD": -0.23,
+        "generatedAt": "2026-06-10T09:28:59.484Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-breadth23-volrank-WF-OOS__20260610-092852",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-breadth23-volrank-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.89,
+        "maxDD": -0.23,
+        "generatedAt": "2026-06-10T09:28:52.119Z"
+      },
+      {
+        "runId": "trend-following__deployed-top5-volrank23-av3-exit-entryanchor-WF-OOS__20260610-091943",
+        "family": "trend-following",
+        "strategyId": "deployed-top5-volrank23-av3-exit-entryanchor-WF-OOS",
+        "verdict": "FAILED:multipleTesting",
+        "sharpe": 0.51,
+        "maxDD": -0.28,
+        "generatedAt": "2026-06-10T09:19:43.255Z"
+      }
+    ],
+    "validatedSources": {
+      "registry": {},
+      "maxAgeDays": 90,
+      "requiresEventValidation": [
+        "dark-pool",
+        "options-flow",
+        "insider-following"
+      ],
+      "eventStudyMinArchiveDays": 60
+    },
+    "certifications": [
+      {
+        "name": "entropy-gate-effect",
+        "generatedAt": "2026-06-10T04:51:05.419Z",
+        "ageDays": 34.42
+      },
+      {
+        "name": "entropy-gate",
+        "generatedAt": "2026-06-10T08:36:55.169Z",
+        "ageDays": 34.26
+      },
+      {
+        "name": "trend-core",
+        "generatedAt": "2026-06-10T08:36:54.708Z",
+        "ageDays": 34.26
+      }
+    ]
+  },
+  "promotion": {
+    "note": "Survival mechanics. A sim broker graduates to paper only when aggregate stats AND its signal source clear the bars below.",
+    "PROMOTE": {
+      "minSharpe": 1.5,
+      "minWinRate": 0.52,
+      "maxDrawdownPct": 15,
+      "minTrades": 100,
+      "minDays": 20
+    },
+    "EDGE_GATE": {
+      "minTrades": 50,
+      "minExpectancyPct": 0.15,
+      "requireSignificant": true
+    },
+    "DEMOTE": {
+      "maxDrawdownPct": 20,
+      "minSharpe": 0.5,
+      "minDays": 10
+    },
+    "FIRE": {
+      "maxDrawdownPct": 30,
+      "demotionsIn30Days": 2,
+      "minTrades": 30,
+      "minDays": 10
+    },
+    "DEFUND": {
+      "minTrades": 12,
+      "cooldownHours": 24
+    },
+    "tiers": [
+      "simulated",
+      "paper",
+      "live"
+    ],
+    "breeding": "On fire (and breed enabled): clone the top-Sharpe survivor, jitter perTrade/kellyFraction/maxPositionSizePercent ±20–25%, child starts simulated."
+  }
+}
