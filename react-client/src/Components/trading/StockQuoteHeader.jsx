@@ -21,7 +21,7 @@ const StockQuoteHeader = ({
 
     const fetchQuote = async () => {
       try {
-        const res = await fetch(`/api/polygon/quote/${symbol}`);
+        const res = await fetch(`/api/quote/${symbol}`);
         if (res.ok) {
           const data = await res.json();
           setQuote(data);

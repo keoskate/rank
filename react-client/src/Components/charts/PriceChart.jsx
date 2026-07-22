@@ -57,13 +57,16 @@ const PriceChart = ({
 
     try {
       const { value: multiplier, unit, days } = selectedTimeframe;
-      const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
+      // Fresh Alpaca IEX bars (Polygon aggregates are delayed on this tier).
+      // Alpaca's range is [start, end) so 'to' must be tomorrow to include today.
+      const token = unit === 'minute' ? String(multiplier) : unit;
+      const toStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
       const res = await fetch(
-        `/api/polygon/aggregates/${symbol}/${multiplier}/${unit}?` +
-          `from=${startDate.toISOString().split('T')[0]}&to=${endDate.toISOString().split('T')[0]}`
+        `/api/alpaca/bars/${symbol}/${token}?` +
+          `from=${startDate.toISOString().split('T')[0]}&to=${toStr}`
       );
 
       if (!res.ok) throw new Error('Failed to fetch chart data');

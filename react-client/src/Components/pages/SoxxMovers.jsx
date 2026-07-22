@@ -74,7 +74,7 @@ const SoxxMovers = () => {
       const results = await Promise.all(
         SOXX_TOP.map(async ({ sym }) => {
           try {
-            const res = await fetch(`/api/polygon/quote/${sym}`);
+            const res = await fetch(`/api/quote/${sym}`);
             if (!res.ok) return [sym, null];
             const data = await res.json();
             return [sym, data];

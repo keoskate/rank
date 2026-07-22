@@ -1719,10 +1719,40 @@ module.exports = function (deps) {
              from: fromDate.toISOString().split('T')[0],
              to: toDate.toISOString().split('T')[0],
            }))
-        : polygonClient.getAggregates(symbol, parseInt(timeframe), unit, {
-            from: fromDate.toISOString().split('T')[0],
-            to: toDate.toISOString().split('T')[0],
-          });
+        : (async () => {
+            // Fresh Alpaca IEX bars — Polygon aggregates are delayed on this
+            // tier (recent SIP is subscription-gated). Normalize to Polygon's
+            // exact shape so the indicator service + frontend (lightweight-
+            // charts) are unchanged — same overlays, live data.
+            const tf = parseInt(timeframe) || 1;
+            const alpacaTf =
+              unit === 'minute' ? `${tf}Min` : unit === 'hour' ? `${tf}Hour` : '1Day';
+            // Alpaca's range is [start, end): 'to' must be tomorrow to include
+            // today's bars (a same-day 'to' excluded the live session).
+            const toStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+            const raw = await alpacaClient.getBars(
+              symbol,
+              alpacaTf,
+              fromDate.toISOString().split('T')[0],
+              toStr,
+              5000
+            );
+            return (raw || []).map(b => {
+              const ms = new Date(b.timestamp).getTime();
+              return {
+                date: new Date(ms).toISOString().split('T')[0],
+                time: Math.floor(ms / 1000),
+                timestamp: ms,
+                open: b.open,
+                high: b.high,
+                low: b.low,
+                close: b.close,
+                volume: b.volume,
+                vwap: b.vwap,
+                transactions: b.tradeCount,
+              };
+            });
+          })();
 
       const prevClosePromise = isCryptoSymbol
         ? Promise.resolve(null)

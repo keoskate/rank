@@ -143,3 +143,6 @@ __pycache__/
 # Regenerable rank-score caches: exported bars + OOS scores + certs
 # (rebuild with: npm run rank:export && npm run rank:scores)
 data/rank-cache/
+
+# Integrity layer output (regenerated every 60s)
+data/reports/integrity/

@@ -175,7 +175,7 @@ const LiveTradingChart = ({
   // Also fetch current quote for more real-time price
   const fetchQuote = useCallback(async () => {
     try {
-      const response = await fetch(`/api/polygon/quote/${symbol}`);
+      const response = await fetch(`/api/quote/${symbol}`);
       if (response.ok) {
         const data = await response.json();
         if (data.price) {

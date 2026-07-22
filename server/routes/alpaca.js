@@ -329,6 +329,47 @@ module.exports = function (deps) {
     }
   });
 
+  // Fresh live quote — the UI's single source of truth. Serves the same Alpaca
+  // IEX price the engine trades on (getLatestTrade), never the stale Polygon
+  // previous-close that /api/polygon/quote falls back to. On failure it reports
+  // { stale: true } rather than silently returning yesterday's number.
+  router.get('/api/quote/:symbol', async (req, res) => {
+    const assetUtils = require('../assetUtils');
+    const raw = req.params.symbol;
+    const symbol = raw.toUpperCase();
+    const isCrypto =
+      symbol.includes('/') ||
+      /(USD|USDT|USDC)$/.test(symbol) ||
+      !!(assetUtils.CRYPTO_BASE_TO_PAIR && assetUtils.CRYPTO_BASE_TO_PAIR[symbol]);
+    try {
+      if (isCrypto) {
+        const q = await alpacaClient.getCryptoLatestQuote(raw);
+        const mid =
+          Number.isFinite(q.askPrice) && Number.isFinite(q.bidPrice)
+            ? (q.askPrice + q.bidPrice) / 2
+            : q.price || null;
+        return res.json({
+          symbol: raw,
+          last: mid,
+          price: mid,
+          bid: Number.isFinite(q.bidPrice) ? q.bidPrice : null,
+          ask: Number.isFinite(q.askPrice) ? q.askPrice : null,
+          timestamp: q.timestamp || null,
+          source: 'alpaca-crypto',
+          stale: false,
+        });
+      }
+      const snap = await alpacaClient.getSnapshot(symbol);
+      return res.json({ ...snap, source: 'alpaca-iex', stale: false });
+    } catch (error) {
+      // Never fall back to stale prev-close — surface staleness to the UI.
+      console.error(`❌ /api/quote/${symbol}:`, error.message);
+      return res
+        .status(200)
+        .json({ symbol, last: null, price: null, stale: true, error: error.message });
+    }
+  });
+
   // 26b. Get historical bars from Alpaca (alternative to Polygon)
   // Alpaca includes pre-calculated VWAP in bar data
   router.get('/api/alpaca/bars/:symbol/:timeframe', async (req, res) => {

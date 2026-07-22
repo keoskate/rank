@@ -135,7 +135,7 @@ const StockDetailPage = () => {
         // Fetch all data in parallel
         const [detailsRes, quoteRes, analysisRes] = await Promise.all([
           fetch(`/api/polygon/details/${ticker}`).catch(() => null),
-          fetch(`/api/polygon/quote/${ticker}`).catch(() => null),
+          fetch(`/api/quote/${ticker}`).catch(() => null),
           fetch(`/api/stock/analysis/${ticker}`).catch(() => null),
         ]);
 

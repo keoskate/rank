@@ -83,7 +83,7 @@ const MarketStrip = () => {
         SYMBOLS.map(async ({ sym, polygonOverride }) => {
           try {
             const target = polygonOverride || sym;
-            const res = await fetch(`/api/polygon/quote/${encodeURIComponent(target)}`);
+            const res = await fetch(`/api/quote/${encodeURIComponent(target)}`);
             if (!res.ok) return [sym, null];
             const data = await res.json();
             return [sym, data];

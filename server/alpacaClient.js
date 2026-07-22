@@ -332,10 +332,22 @@ async function cancelAllOrders() {
  * @returns {Object} - Latest quote data
  */
 async function getLatestQuote(symbol) {
-  const quote = await alpacaRequest(
-    'GET',
-    `/v2/stocks/${symbol}/quotes/latest`
-  );
+  // Market data lives on data.alpaca.markets (NOT the trading host that
+  // alpacaRequest targets) — the old path 404'd, which silently pushed callers
+  // onto stale fallbacks. feed=iex is the free real-time feed the WS also uses.
+  const MARKET_DATA_URL = 'https://data.alpaca.markets';
+  const credentials = tradingModeManager.getCredentials();
+  await rateLimit();
+  const response = await axios({
+    method: 'GET',
+    url: `${MARKET_DATA_URL}/v2/stocks/${symbol}/quotes/latest?feed=iex`,
+    headers: {
+      'APCA-API-KEY-ID': credentials.apiKey,
+      'APCA-API-SECRET-KEY': credentials.secretKey,
+    },
+    timeout: 10000,
+  });
+  const quote = response.data;
 
   return {
     symbol: quote.symbol,
@@ -354,10 +366,20 @@ async function getLatestQuote(symbol) {
  * @returns {Object} - Latest trade data
  */
 async function getLatestTrade(symbol) {
-  const trade = await alpacaRequest(
-    'GET',
-    `/v2/stocks/${symbol}/trades/latest`
-  );
+  // Data endpoint (see getLatestQuote) — trading host 404s on /v2/stocks/*.
+  const MARKET_DATA_URL = 'https://data.alpaca.markets';
+  const credentials = tradingModeManager.getCredentials();
+  await rateLimit();
+  const response = await axios({
+    method: 'GET',
+    url: `${MARKET_DATA_URL}/v2/stocks/${symbol}/trades/latest?feed=iex`,
+    headers: {
+      'APCA-API-KEY-ID': credentials.apiKey,
+      'APCA-API-SECRET-KEY': credentials.secretKey,
+    },
+    timeout: 10000,
+  });
+  const trade = response.data;
 
   return {
     symbol: trade.symbol,
@@ -365,6 +387,53 @@ async function getLatestTrade(symbol) {
     size: trade.trade.s,
     timestamp: trade.trade.t,
     exchange: trade.trade.x,
+  };
+}
+
+/**
+ * Full live snapshot for a symbol in ONE call — latest trade + daily bar +
+ * previous close. This is what the UI should read: a fresh superset (last,
+ * OHLCV, prevClose, change%) from the same IEX feed the engine trades on.
+ * @param {string} symbol
+ * @returns {Object} normalized quote superset
+ */
+async function getSnapshot(symbol) {
+  const MARKET_DATA_URL = 'https://data.alpaca.markets';
+  const credentials = tradingModeManager.getCredentials();
+  await rateLimit();
+  const response = await axios({
+    method: 'GET',
+    url: `${MARKET_DATA_URL}/v2/stocks/${symbol}/snapshot?feed=iex`,
+    headers: {
+      'APCA-API-KEY-ID': credentials.apiKey,
+      'APCA-API-SECRET-KEY': credentials.secretKey,
+    },
+    timeout: 10000,
+  });
+  const s = response.data || {};
+  const lt = s.latestTrade || {};
+  const lq = s.latestQuote || {};
+  const db = s.dailyBar || {};
+  const pdb = s.prevDailyBar || {};
+  const last = parseFloat(lt.p);
+  const prevClose = parseFloat(pdb.c);
+  return {
+    symbol: s.symbol || symbol,
+    last: Number.isFinite(last) ? last : null,
+    price: Number.isFinite(last) ? last : null,
+    bid: parseFloat(lq.bp) || null,
+    ask: parseFloat(lq.ap) || null,
+    open: parseFloat(db.o) || null,
+    high: parseFloat(db.h) || null,
+    low: parseFloat(db.l) || null,
+    close: parseFloat(db.c) || null,
+    volume: parseInt(db.v, 10) || null,
+    prevClose: Number.isFinite(prevClose) ? prevClose : null,
+    change:
+      Number.isFinite(last) && Number.isFinite(prevClose) ? last - prevClose : null,
+    changePercent:
+      Number.isFinite(last) && prevClose ? ((last - prevClose) / prevClose) * 100 : null,
+    timestamp: lt.t || null,
   };
 }
 
@@ -384,7 +453,8 @@ async function getBars(
   start = null,
   end = null,
   limit = 10000,
-  adjustment = null // 'raw'|'split'|'dividend'|'all'. null = Alpaca default (raw).
+  adjustment = null, // 'raw'|'split'|'dividend'|'all'. null = Alpaca default (raw).
+  feed = 'iex' // 'iex' (live-safe, ~1500d history) | 'sip' (full history; recent data gated)
 ) {
   // Market data uses a different endpoint than trading API
   const MARKET_DATA_URL = 'https://data.alpaca.markets';
@@ -403,6 +473,14 @@ async function getBars(
       const params = new URLSearchParams({
         timeframe,
         limit: Math.min(maxBarsPerRequest, limit - allBars.length).toString(),
+        // Default 'iex': free real-time feed — recent SIP data is
+        // subscription-gated (429s), which silently starved charts of live
+        // candles. BUT the IEX feed's HISTORY floors at ~1500 trading days,
+        // which just as silently amputated deep backtest fetches (caught
+        // 2026-07-22: bars-cache poisoned with 2020+ series). Deep-history
+        // callers whose end is already clamped days back (lib/marketData.js)
+        // must pass feed='sip'.
+        feed,
       });
 
       if (start) params.append('start', start);
@@ -1131,6 +1209,7 @@ module.exports = {
   // Market data
   getLatestQuote,
   getLatestTrade,
+  getSnapshot,
   getBars,
 
   // Cross-validation

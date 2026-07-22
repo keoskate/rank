@@ -3,11 +3,14 @@ import { createChart } from 'lightweight-charts';
 import theme from '../../theme';
 import Card from '../common/Card';
 
+// Canonical day-trading timeframes. alpacaToken maps to /api/alpaca/bars'
+// timeframe param (5→5Min, 15→15Min, 60→1Hour, day→1Day) — the real-time IEX
+// feed the engine trades on, not delayed Polygon.
 const TIMEFRAMES = [
-  { label: '5m',  multiplier: 5,  timespan: 'minute', limit: 78,  lookbackDays: 3 },
-  { label: '15m', multiplier: 15, timespan: 'minute', limit: 130, lookbackDays: 5 },
-  { label: '1H',  multiplier: 1,  timespan: 'hour',   limit: 140, lookbackDays: 14 },
-  { label: '1D',  multiplier: 1,  timespan: 'day',    limit: 90,  lookbackDays: 180 },
+  { label: '5m',  alpacaToken: '5',   limit: 78,  lookbackDays: 3 },
+  { label: '15m', alpacaToken: '15',  limit: 130, lookbackDays: 5 },
+  { label: '1H',  alpacaToken: '60',  limit: 140, lookbackDays: 14 },
+  { label: '1D',  alpacaToken: 'day', limit: 90,  lookbackDays: 180 },
 ];
 
 const REFRESH_MS = 60000;
@@ -86,12 +89,17 @@ const SoxlChart = ({ symbol = 'SOXL' }) => {
         const now = new Date();
         const from = new Date(now.getTime() - tf.lookbackDays * 86400000);
         const fromStr = from.toISOString().slice(0, 10);
-        const toStr = now.toISOString().slice(0, 10);
-        const url = `/api/polygon/bars/${symbol}/${tf.multiplier}/${tf.timespan}?from=${fromStr}&to=${toStr}&limit=${tf.limit * 2}`;
+        // Alpaca's range is [start, end), so 'to' must be tomorrow or today's
+        // intraday bars get excluded.
+        const toStr = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+        // Alpaca returns bars oldest-first and a small limit truncates to the
+        // OLDEST bars in the window (never reaching today). Fetch the whole
+        // lookback (1000 covers every timeframe here) and display the tail.
+        const url = `/api/alpaca/bars/${symbol}/${tf.alpacaToken}?from=${fromStr}&to=${toStr}&limit=1000`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const bars = (json.bars || []).slice(-tf.limit);
+        const bars = (json.results || json.bars || []).slice(-tf.limit);
         if (cancelled || !seriesRef.current || !volumeRef.current) return;
         const candleData = bars.map(b => ({
           time: Math.floor(b.timestamp / 1000),
