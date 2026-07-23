@@ -198,9 +198,14 @@ const IntradayAnalyzerPage = () => {
     setClosingPosition(true);
 
     try {
-      const response = await fetch(`/api/alpaca/positions/${symbol}`, {
-        method: 'DELETE',
-      });
+      // Close on the SAME account the page is reading from (the global
+      // picker) — a read/write account mismatch is the wrong-account bug class.
+      const response = await fetch(
+        `/api/alpaca/positions/${symbol}?mode=${accountId}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       const data = await response.json();
 

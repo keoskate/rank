@@ -412,7 +412,7 @@ async function executeEntry(sessionId, symbol, decision) {
         ? parseFloat(account.non_marginable_buying_power) ||
           parseFloat(account.cash) ||
           0
-        : tradingMode === 'paper'
+        : tradingMode !== 'live' // any paper account (incl. dedicated ones)
           ? parseFloat(account.buying_power) || 0
           : parseFloat(account.daytrading_buying_power) ||
             parseFloat(account.buying_power) ||

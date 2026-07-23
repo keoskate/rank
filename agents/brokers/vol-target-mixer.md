@@ -4,10 +4,10 @@ name: Vol-Target Mixer
 tier: simulated
 capital: 100000
 paperAllocation: null
-# Dedicated evidence account (PA3T8D5R9TL8). Inert at sim tier. NOTE: the
-# session carries this as alpacaAccountId (UI scoping works now), but the
-# ORDER EXECUTOR does not yet route by it — that wiring is the pre-promotion
-# task. Do NOT flip tier:paper before orderExecutor honors alpacaAccountId.
+# Dedicated evidence account (PA3T8D5R9TL8). Inert at sim tier. Routing is
+# WIRED (2026-07-23): getSessionTradingMode returns this binding for paper
+# tier, so ALL Alpaca traffic (orders, position sync, account reads) routes
+# here the moment tier flips to paper. Promotion = a one-word tier change.
 alpacaAccount: paper-mixer
 watchlist:
   - SOXX

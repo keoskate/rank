@@ -536,8 +536,9 @@ async function updatePDTStateCache(tradingMode) {
  * @returns {Promise<{allowed: boolean, reason: string|null}>}
  */
 async function canExecuteDayTrade(tradingMode, sessionConfig) {
-  // Paper trading has no PDT restrictions
-  if (tradingMode === 'paper') {
+  // Paper trading has no PDT restrictions. Any non-live mode is a paper
+  // account (incl. dedicated ones like 'paper-mixer') — live is the special case.
+  if (tradingMode !== 'live') {
     return { allowed: true, reason: null };
   }
 
@@ -761,7 +762,21 @@ function getSessionTradingMode(session) {
   // the near-empty live account, $1.1k, not the $75k paper account). Default to
   // paper for safety; only ever return 'live' when tradingMode is explicitly set.
   if (session.config.tradingMode === 'live') return 'live';
-  if (session.config.tradingMode === 'paper') return 'paper';
+  if (session.config.tradingMode === 'paper') {
+    // Dedicated paper-account binding (brokerSchema `alpacaAccount` →
+    // session `alpacaAccountId`, e.g. vol-target-mixer → 'paper-mixer').
+    // This helper is the single choke point every Alpaca call's mode flows
+    // through (orders, position sync, account reads), so returning the bound
+    // account id here routes ALL of the session's traffic at its own
+    // account. Guard: registered paper-kind accounts only — an unknown or
+    // live-kind binding falls back to the shared 'paper' main, never live.
+    const bound = session.config.alpacaAccountId;
+    if (bound && bound !== 'paper') {
+      const tmm = require('./tradingModeManager');
+      if (tmm.accountKind(bound) === 'paper') return bound;
+    }
+    return 'paper';
+  }
   return session.config.paperTradeOnly === false ? 'live' : 'paper';
 }
 
