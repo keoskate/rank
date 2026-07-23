@@ -130,6 +130,32 @@ async function _state(cfg) {
   return volTargetStateFromCloses(pair.dates, pair.closesA, pair.closesB, cfg);
 }
 
+// Once-per-ET-day state line so "why no trades" is readable straight from the
+// log (2026-07-22 finding: the plugin was silent below the entry bar, and the
+// day's 4,668-evaluation funnel was opaque without offline recomputation).
+// The decision only changes daily (bars through yesterday), so one line per
+// day per session captures it fully — no 10-second-tick spam.
+const _stateLoggedDay = new Map(); // sessionId -> ET day already logged
+function _logDailyState(session, st, cfg) {
+  const day = _etDay();
+  if (_stateLoggedDay.get(session.sessionId) === day) return;
+  _stateLoggedDay.set(session.sessionId, day);
+  const { pairA, pairB, enterAboveWeight } = execParams(cfg);
+  const w = st.weights;
+  const entering = Math.max(w.a, w.b) >= enterAboveWeight;
+  tradingLogger.logInfo(
+    `Vol-target state ${day}: mix vol ${(st.realizedVol * 100).toFixed(1)}% → scalar ${(st.scalar * 100).toFixed(0)}% → targets ${pairA} ${(w.a * 100).toFixed(1)}% / ${pairB} ${(w.b * 100).toFixed(1)}% / cash ${(w.cash * 100).toFixed(1)}% — ${entering ? 'ABOVE' : 'below'} the ${(enterAboveWeight * 100).toFixed(0)}% entry bar`,
+    {
+      sessionId: session.sessionId,
+      sessionName: session.name,
+      scalar: st.scalar,
+      realizedVol: st.realizedVol,
+      weights: w,
+      enterAboveWeight,
+    }
+  );
+}
+
 /** Target weight for one symbol of the pair (null if not in the pair). */
 function _legWeight(st, symbol, cfg) {
   const { pairA, pairB } = execParams(cfg);
@@ -150,6 +176,7 @@ async function evaluate(session, symbol, ctx) {
         source: SLUG,
       };
     }
+    _logDailyState(session, st, cfg);
     const w = _legWeight(st, symbol, cfg);
     if (w == null) {
       return {
