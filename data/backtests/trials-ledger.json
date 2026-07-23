@@ -27139,6 +27139,23 @@
         0
       ],
       "recordedAt": "2026-07-22T08:31:39.204Z"
+    },
+    {
+      "family": "vol-managed",
+      "strategyId": "champion-oot-2004-2016",
+      "kind": "out-of-time",
+      "params": {
+        "mixW": 0.5,
+        "targetVol": 0.12,
+        "volWindow": 20,
+        "vendor": "yahoo"
+      },
+      "sharpe": 0.4883475187421831,
+      "window": {
+        "start": "2004-11-18",
+        "end": "2016-01-04"
+      },
+      "recordedAt": "2026-07-22T09:00:51.476Z"
     }
   ]
 }
