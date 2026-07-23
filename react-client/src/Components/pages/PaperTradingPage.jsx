@@ -13,12 +13,15 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useAccountView } from '../../contexts/AccountViewContext';
 import Button from '../common/Button';
 import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
 import theme from '../../theme';
 
 const PaperTradingPage = () => {
+  const { accountId, account: pickerAccount, isLive } = useAccountView();
+
   // Account state
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
@@ -44,11 +47,11 @@ const PaperTradingPage = () => {
   const [tradingMode, setTradingMode] = useState(null);
   const [modeLoading, setModeLoading] = useState(false);
 
-  // Load data on mount and refresh
+  // Load data on mount and when account picker changes
   useEffect(() => {
     loadAllData();
     loadTradingMode();
-  }, []);
+  }, [accountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -85,7 +88,7 @@ const PaperTradingPage = () => {
    * Load Alpaca account info
    */
   const loadAccount = async () => {
-    const response = await fetch('/api/alpaca/account');
+    const response = await fetch(`/api/alpaca/account?mode=${accountId}`);
     const data = await response.json();
 
     if (data.success) {
@@ -99,7 +102,7 @@ const PaperTradingPage = () => {
    * Load current positions
    */
   const loadPositions = async () => {
-    const response = await fetch('/api/alpaca/positions');
+    const response = await fetch(`/api/alpaca/positions?mode=${accountId}`);
     const data = await response.json();
 
     if (data.success) {
@@ -111,7 +114,9 @@ const PaperTradingPage = () => {
    * Load recent orders
    */
   const loadOrders = async () => {
-    const response = await fetch('/api/alpaca/orders?limit=50');
+    const response = await fetch(
+      `/api/alpaca/orders?limit=50&mode=${accountId}`
+    );
     const data = await response.json();
 
     if (data.success) {
@@ -217,6 +222,7 @@ const PaperTradingPage = () => {
           side: orderType,
           type: 'market',
           time_in_force: 'day',
+          mode: accountId,
         }),
       });
 
@@ -279,6 +285,7 @@ const PaperTradingPage = () => {
                 side: 'buy',
                 type: 'market',
                 time_in_force: 'day',
+                mode: accountId,
               }),
             });
 
@@ -798,6 +805,23 @@ const PaperTradingPage = () => {
               ? '⏳ Placing Order...'
               : `${orderType.toUpperCase()} ${quantity} Shares`}
           </Button>
+
+          <div
+            style={{
+              marginTop: theme.spacing.sm,
+              padding: theme.spacing.xs,
+              fontSize: theme.typography.fontSize.xs,
+              color: isLive ? '#fff' : theme.colors.infoDark,
+              textAlign: 'center',
+              backgroundColor: isLive ? '#b45309' : theme.colors.infoLight,
+              borderRadius: theme.borderRadius.sm,
+              fontWeight: '600',
+            }}
+          >
+            {isLive
+              ? `REAL MONEY — ${pickerAccount?.label || accountId}`
+              : `PAPER · ${pickerAccount?.label || accountId}`}
+          </div>
 
           <Card
             variant="info"

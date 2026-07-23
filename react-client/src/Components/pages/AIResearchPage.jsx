@@ -15,11 +15,14 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useAccountView } from '../../contexts/AccountViewContext';
 import Button from '../common/Button';
 import Card from '../common/Card';
 import theme from '../../theme';
 
 const AIResearchPage = () => {
+  const { accountId } = useAccountView();
+
   // Chat state
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -42,6 +45,11 @@ const AIResearchPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Reload account when picker changes
+  useEffect(() => {
+    loadAccount();
+  }, [accountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load initial data
   useEffect(() => {
@@ -86,7 +94,7 @@ const AIResearchPage = () => {
 
   const loadAccount = async () => {
     try {
-      const response = await fetch('/api/alpaca/account');
+      const response = await fetch(`/api/alpaca/account?mode=${accountId}`);
       const data = await response.json();
       if (data.success) {
         setAccount(data.account);

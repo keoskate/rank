@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStockData } from '../StockDataProvider';
+import { useAccountView } from '../../contexts/AccountViewContext';
 import theme from '../../theme';
 import Card from '../common/Card';
 import Button from '../common/Button';
@@ -89,6 +90,7 @@ const StockDetailPage = () => {
   const { ticker } = useParams();
   const navigate = useNavigate();
   const { stockData } = useStockData();
+  const { accountId, account, isLive } = useAccountView();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [companyInfo, setCompanyInfo] = useState(null);
@@ -182,11 +184,11 @@ const StockDetailPage = () => {
     const res = await fetch('/api/alpaca/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order),
+      body: JSON.stringify({ ...order, mode: accountId }),
     });
 
+    const data = await res.json();
     if (!res.ok) {
-      const data = await res.json();
       throw new Error(data.error || 'Order failed');
     }
 
@@ -265,7 +267,7 @@ const StockDetailPage = () => {
       const response = await fetch('/api/alpaca/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({ ...orderData, mode: accountId }),
       });
 
       const data = await response.json();
@@ -660,14 +662,17 @@ const StockDetailPage = () => {
                 marginTop: theme.spacing.sm,
                 padding: theme.spacing.xs,
                 fontSize: theme.typography.fontSize.xs,
-                color: theme.colors.info,
+                color: isLive ? '#fff' : theme.colors.info,
                 textAlign: 'center',
-                backgroundColor: `${theme.colors.info}10`,
+                backgroundColor: isLive ? '#b45309' : `${theme.colors.info}10`,
                 borderRadius: theme.borderRadius.sm,
-                border: `1px solid ${theme.colors.info}30`,
+                border: `1px solid ${isLive ? '#b45309' : theme.colors.info + '30'}`,
+                fontWeight: theme.typography.fontWeight.medium,
               }}
             >
-              📋 Paper Trading Mode (Alpaca)
+              {isLive
+                ? `REAL MONEY — ${account?.label || accountId}`
+                : `PAPER · ${account?.label || accountId}`}
             </div>
           </Card>
 

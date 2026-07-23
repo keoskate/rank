@@ -306,9 +306,9 @@ async function getOrderById(orderId, mode = null) {
  * @param {string} orderId - Order ID to cancel
  * @returns {boolean} - Success status
  */
-async function cancelOrder(orderId) {
+async function cancelOrder(orderId, mode = null) {
   console.log(`❌ Cancelling order: ${orderId}`);
-  await alpacaRequest('DELETE', `/v2/orders/${orderId}`);
+  await alpacaRequest('DELETE', `/v2/orders/${orderId}`, null, mode);
   console.log(`✅ Order cancelled: ${orderId}`);
   return true;
 }

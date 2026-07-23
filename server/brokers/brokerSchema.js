@@ -26,9 +26,15 @@ const ALLOWED_STRATEGIES = [
 ];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
+const tradingModeManager = require('../tradingModeManager');
+
 const BROKER_DEFAULTS = {
   tier: 'simulated',
   capital: 100000,
+  // Which REGISTERED Alpaca paper account this broker trades when at paper
+  // tier (null = the shared 'paper' main account). Lets a strategy own an
+  // isolated evidence account (e.g. vol-target-mixer → 'paper-mixer').
+  alpacaAccount: null,
   // When promoted to tier=paper, the broker is allocated this much of the
   // shared Alpaca paper account. Defaults to 20% of `capital` (e.g. $20k
   // for a $100k broker). Sum across paper-tier brokers must fit within the
@@ -217,6 +223,24 @@ function validateBroker(raw, filename = '') {
     ALLOWED_STRATEGIES.includes(strategy),
     `strategy must be one of ${ALLOWED_STRATEGIES.join('|')}`
   );
+
+  // Optional dedicated paper account binding — must be a REGISTERED paper-kind
+  // account id (never 'live': real money stays behind the tier machinery).
+  const alpacaAccount = raw.alpacaAccount || null;
+  if (alpacaAccount !== null) {
+    const reg = tradingModeManager
+      .listAccounts()
+      .find(a => a.id === alpacaAccount);
+    pushIf(
+      errs,
+      Boolean(reg) && reg.kind === 'paper',
+      `alpacaAccount "${alpacaAccount}" must be a registered PAPER account id (${tradingModeManager
+        .listAccounts()
+        .filter(a => a.kind === 'paper')
+        .map(a => a.id)
+        .join('|')})`
+    );
+  }
 
   const risk = deepMerge(BROKER_DEFAULTS.risk, raw.risk || {});
   pushIf(
@@ -485,6 +509,7 @@ function validateBroker(raw, filename = '') {
       tier,
       capital,
       paperAllocation,
+      alpacaAccount,
       watchlist,
       strategy,
       risk,
@@ -561,6 +586,15 @@ function brokerToSessionConfig(broker, personaBody = '') {
     initialCapital: cap,
     allocatedCapital: cap,
     paperAllocation: broker.paperAllocation,
+    // Which Alpaca account this session's REAL orders route to / its record
+    // lives in. null = simulated (no Alpaca account at all). The UI's global
+    // account picker filters session lists on this.
+    alpacaAccountId:
+      effectiveTier === 'live'
+        ? 'live'
+        : effectiveTier === 'paper'
+          ? broker.alpacaAccount || 'paper'
+          : null,
     watchlist: broker.watchlist,
     autoTrade: true,
     manageAllPositions: false,

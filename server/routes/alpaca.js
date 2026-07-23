@@ -4,12 +4,27 @@ const router = express.Router();
 module.exports = function (deps) {
   const { alpacaClient, alpacaStream, tradingModeManager } = deps;
 
+  // Any REGISTERED account id is a valid per-request mode ('paper' | 'live' |
+  // 'paper-mixer' | …) — the old inline 'paper'||'live' whitelist silently
+  // dropped dedicated accounts to the global default. Unknown → null (global).
+  const validModes = new Set(tradingModeManager.listAccounts().map(a => a.id));
+  const resolveMode = m => (validModes.has(m) ? m : null);
+
+  // Account registry for the global account picker UI.
+  router.get('/api/alpaca/accounts', (req, res) => {
+    res.json({
+      success: true,
+      accounts: tradingModeManager.listAccounts(),
+      engineMode: tradingModeManager.getCurrentMode(),
+    });
+  });
+
   // 18. Get Alpaca account info
   router.get('/api/alpaca/account', async (req, res) => {
     try {
       // Use mode from query param (paper or live) - passed directly to client without changing global state
       const { mode } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      const tradingMode = resolveMode(mode);
       const account = await alpacaClient.getAccount(tradingMode);
       res.json({
         success: true,
@@ -27,7 +42,7 @@ module.exports = function (deps) {
     try {
       // Use mode from query param (paper or live) - passed directly to client without changing global state
       const { mode } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      const tradingMode = resolveMode(mode);
       const pdtStatus = await alpacaClient.getPDTStatus(tradingMode);
       res.json({
         success: true,
@@ -43,17 +58,22 @@ module.exports = function (deps) {
   // Get Portfolio History (equity and P&L over time)
   router.get('/api/alpaca/portfolio-history', async (req, res) => {
     try {
-      const { mode, period, timeframe, date_start, date_end, extended_hours } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      const { mode, period, timeframe, date_start, date_end, extended_hours } =
+        req.query;
+      const tradingMode = resolveMode(mode);
 
       const options = {};
       if (period) options.period = period;
       if (timeframe) options.timeframe = timeframe;
       if (date_start) options.date_start = date_start;
       if (date_end) options.date_end = date_end;
-      if (extended_hours !== undefined) options.extended_hours = extended_hours === 'true';
+      if (extended_hours !== undefined)
+        options.extended_hours = extended_hours === 'true';
 
-      const history = await alpacaClient.getPortfolioHistory(options, tradingMode);
+      const history = await alpacaClient.getPortfolioHistory(
+        options,
+        tradingMode
+      );
       res.json({
         success: true,
         ...history,
@@ -70,7 +90,7 @@ module.exports = function (deps) {
     try {
       // Use mode from query param (paper or live) - passed directly to client without changing global state
       const { mode } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      const tradingMode = resolveMode(mode);
       const positions = await alpacaClient.getPositions(tradingMode);
       res.json({
         success: true,
@@ -89,7 +109,7 @@ module.exports = function (deps) {
       const { symbol } = req.params;
       // Use mode from query param (paper or live) - passed directly to client without changing global state
       const { mode } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      const tradingMode = resolveMode(mode);
       const position = await alpacaClient.getPosition(symbol, tradingMode);
 
       if (!position) {
@@ -115,6 +135,21 @@ module.exports = function (deps) {
     }
   });
 
+  // WRITE-ROUTE ACCOUNT GUARD: manual orders may target a specific PAPER
+  // account (?mode= / body.mode = 'paper' | 'paper-mixer' | 'paper-keo'), but
+  // per-request routing to the LIVE account is structurally rejected — real
+  // money is reachable ONLY via the engine's global live mode, which carries
+  // the confirmation/safety flow (validateOrder reads the global mode, so a
+  // per-request 'live' would silently bypass those checks — the exact
+  // wrong-account bug class this guard exists to kill).
+  const resolveWriteMode = m => {
+    const mode = resolveMode(m);
+    if (mode && tradingModeManager.accountKind(mode) === 'live') {
+      return { error: 'live orders are not routable per-request — switch the engine to live mode (with its confirmation flow) instead' };
+    }
+    return { mode };
+  };
+
   // 21. Place order on Alpaca
   router.post('/api/alpaca/orders', async (req, res) => {
     try {
@@ -134,6 +169,10 @@ module.exports = function (deps) {
           .json({ error: 'symbol, qty, and side are required' });
       }
 
+      const wm = resolveWriteMode(req.body.mode || req.query.mode);
+      if (wm.error) return res.status(403).json({ error: wm.error });
+      const tradingMode = wm.mode;
+
       const orderParams = {
         symbol,
         qty,
@@ -151,17 +190,27 @@ module.exports = function (deps) {
         orderParams.market_price = market_price;
       }
 
-      // Get account value for safety validation
+      // Get account value for safety validation (from the SAME account the
+      // order will hit — validating against a different account's value is
+      // another flavor of the wrong-account bug)
       let accountValue = null;
       try {
-        const account = await alpacaClient.getAccount();
+        const account = await alpacaClient.getAccount(tradingMode);
         accountValue = parseFloat(account.portfolio_value);
       } catch (e) {
         console.warn('⚠️  Could not fetch account value for validation');
       }
 
-      const order = await alpacaClient.placeOrder(orderParams, accountValue);
-      res.json({ success: true, order });
+      const order = await alpacaClient.placeOrder(
+        orderParams,
+        accountValue,
+        tradingMode
+      );
+      res.json({
+        success: true,
+        order,
+        mode: tradingMode || tradingModeManager.getCurrentMode(),
+      });
     } catch (error) {
       console.error('❌ Error placing order:', error.message);
       res.status(500).json({ error: error.message });
@@ -173,7 +222,7 @@ module.exports = function (deps) {
     try {
       // Use mode from query param (paper or live) - passed directly to client without changing global state
       const { mode } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      const tradingMode = resolveMode(mode);
 
       const filters = {};
       if (req.query.status) filters.status = req.query.status;
@@ -269,7 +318,9 @@ module.exports = function (deps) {
   router.delete('/api/alpaca/orders/:orderId', async (req, res) => {
     try {
       const { orderId } = req.params;
-      await alpacaClient.cancelOrder(orderId);
+      const wm = resolveWriteMode(req.query.mode);
+      if (wm.error) return res.status(403).json({ error: wm.error });
+      await alpacaClient.cancelOrder(orderId, wm.mode);
       res.json({ success: true, message: 'Order cancelled' });
     } catch (error) {
       console.error('❌ Error cancelling order:', error.message);
@@ -281,9 +332,10 @@ module.exports = function (deps) {
   router.delete('/api/alpaca/positions/:symbol', async (req, res) => {
     try {
       const { symbol } = req.params;
-      // Use mode from query param (paper or live) - passed directly to client without changing global state
-      const { mode } = req.query;
-      const tradingMode = mode === 'paper' || mode === 'live' ? mode : null;
+      // Per-request account for the close — write-guarded (live rejected).
+      const wm = resolveWriteMode(req.query.mode);
+      if (wm.error) return res.status(403).json({ error: wm.error });
+      const tradingMode = wm.mode;
       const result = await alpacaClient.closePosition(symbol, tradingMode);
       res.json({
         success: true,
@@ -340,7 +392,9 @@ module.exports = function (deps) {
     const isCrypto =
       symbol.includes('/') ||
       /(USD|USDT|USDC)$/.test(symbol) ||
-      !!(assetUtils.CRYPTO_BASE_TO_PAIR && assetUtils.CRYPTO_BASE_TO_PAIR[symbol]);
+      !!(
+        assetUtils.CRYPTO_BASE_TO_PAIR && assetUtils.CRYPTO_BASE_TO_PAIR[symbol]
+      );
     try {
       if (isCrypto) {
         const q = await alpacaClient.getCryptoLatestQuote(raw);
@@ -364,9 +418,13 @@ module.exports = function (deps) {
     } catch (error) {
       // Never fall back to stale prev-close — surface staleness to the UI.
       console.error(`❌ /api/quote/${symbol}:`, error.message);
-      return res
-        .status(200)
-        .json({ symbol, last: null, price: null, stale: true, error: error.message });
+      return res.status(200).json({
+        symbol,
+        last: null,
+        price: null,
+        stale: true,
+        error: error.message,
+      });
     }
   });
 

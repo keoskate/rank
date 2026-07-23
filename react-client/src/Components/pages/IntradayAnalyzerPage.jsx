@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAccountView } from '../../contexts/AccountViewContext';
 import MetricCorrelationChart from '../MetricCorrelationChart';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -20,6 +21,7 @@ import theme from '../../theme';
 const IntradayAnalyzerPage = () => {
   const location = useLocation();
   const tickerFromNav = location.state?.ticker;
+  const { accountId } = useAccountView();
 
   const [symbol, setSymbol] = useState(tickerFromNav || 'QBTS');
   const [date, setDate] = useState('2025-12-04'); // Fixed: default to 2025
@@ -148,7 +150,9 @@ const IntradayAnalyzerPage = () => {
     if (!symbol) return;
 
     try {
-      const response = await fetch(`/api/alpaca/positions/${symbol}`);
+      const response = await fetch(
+        `/api/alpaca/positions/${symbol}?mode=${accountId}`
+      );
       const data = await response.json();
 
       if (data.success && data.position) {
@@ -166,7 +170,9 @@ const IntradayAnalyzerPage = () => {
     if (!symbol) return;
 
     try {
-      const response = await fetch(`/api/alpaca/quotes/${symbol}`);
+      const response = await fetch(
+        `/api/alpaca/quotes/${symbol}?mode=${accountId}`
+      );
       const data = await response.json();
 
       if (data.success && data.quote) {

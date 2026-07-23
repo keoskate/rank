@@ -20,10 +20,17 @@ const TRADING_MODES = {
 // Current trading mode (default to PAPER for safety)
 let currentMode = process.env.TRADING_MODE || TRADING_MODES.PAPER;
 
-// Alpaca API endpoints
+// Alpaca API endpoints. Beyond the two ENGINE modes (paper|live, which the
+// global singleton can switch between), additional named ACCOUNTS are
+// reachable only via an explicit per-request mode string — e.g. 'paper-mixer'
+// is the Vol-Target Mixer's dedicated paper account (PA3T8D5R9TL8), isolated
+// so its forward record never mixes with the shared paper pool. setTradingMode
+// deliberately does NOT accept these: the engine's global default can never
+// silently point at a strategy-dedicated account.
 const ALPACA_ENDPOINTS = {
   [TRADING_MODES.PAPER]: 'https://paper-api.alpaca.markets', // https://paper-api.alpaca.markets/v2
   [TRADING_MODES.LIVE]: 'https://api.alpaca.markets',
+  'paper-mixer': 'https://paper-api.alpaca.markets',
 };
 
 // API Credentials - Must be set via environment variables
@@ -39,7 +46,48 @@ const CREDENTIALS = {
     secretKey: process.env.ALPACA_LIVE_SECRET_KEY,
     expectedAccountNumber: process.env.ALPACA_LIVE_ACCOUNT || '',
   },
+  'paper-mixer': {
+    apiKey: process.env.ALPACA_MIXER_KEY,
+    secretKey: process.env.ALPACA_MIXER_SECRET,
+    expectedAccountNumber: process.env.ALPACA_MIXER_ACCOUNT || 'PA3T8D5R9TL8',
+  },
+  'paper-keo': {
+    apiKey: process.env.ALPACA_KEO_PAPER_KEY,
+    secretKey: process.env.ALPACA_KEO_PAPER_SECRET,
+    expectedAccountNumber: process.env.ALPACA_KEO_ACCOUNT || '',
+  },
 };
+ALPACA_ENDPOINTS['paper-keo'] = 'https://paper-api.alpaca.markets';
+
+// Display registry for account pickers. kind drives UI safety styling:
+// 'paper' accounts are simulated money; 'live' is REAL MONEY.
+const ACCOUNTS = [
+  { id: 'paper', label: 'Paper — Main', kind: 'paper' },
+  { id: 'paper-mixer', label: 'Paper — Vol-Target Mixer', kind: 'paper' },
+  { id: 'paper-keo', label: 'Paper — Keo Fund', kind: 'paper' },
+  { id: 'live', label: 'Live — REAL MONEY', kind: 'live' },
+];
+
+/** kind ('paper'|'live') for a registered account id; null if unknown. */
+function accountKind(id) {
+  const a = ACCOUNTS.find(x => x.id === id);
+  return a ? a.kind : null;
+}
+
+/**
+ * Account registry for UI pickers: id, label, kind, expected account number,
+ * and whether credentials are actually configured (unconfigured accounts
+ * render disabled instead of erroring on select).
+ */
+function listAccounts() {
+  return ACCOUNTS.map(a => ({
+    ...a,
+    accountNumber: CREDENTIALS[a.id].expectedAccountNumber || null,
+    configured: Boolean(
+      CREDENTIALS[a.id].apiKey && CREDENTIALS[a.id].secretKey
+    ),
+  }));
+}
 
 /**
  * Get current trading mode
@@ -262,6 +310,8 @@ function getModeInfo() {
 
 module.exports = {
   TRADING_MODES,
+  listAccounts,
+  accountKind,
   getCurrentMode,
   setTradingMode,
   isLiveMode,

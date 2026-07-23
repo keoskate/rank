@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useAccountView } from '../../contexts/AccountViewContext';
 import theme from '../../theme';
 import Button from '../common/Button';
 
@@ -13,6 +14,7 @@ const StandardOrderForm = ({
   onSubmitOrder,
   compact = false,
 }) => {
+  const { accountId, account, isLive } = useAccountView();
   const [orderType, setOrderType] = useState('market');
   const [side, setSide] = useState('buy');
   const [quantity, setQuantity] = useState('');
@@ -62,11 +64,11 @@ const StandardOrderForm = ({
       if (onSubmitOrder) {
         await onSubmitOrder(order);
       } else {
-        // Default: submit to paper trading API
+        // Default: submit to Alpaca API for the currently selected account
         const res = await fetch('/api/alpaca/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(order),
+          body: JSON.stringify({ ...order, mode: accountId }),
         });
 
         if (!res.ok) {
@@ -290,16 +292,22 @@ const StandardOrderForm = ({
           : `${side.toUpperCase()} ${qty || 0} ${symbol}`}
       </Button>
 
-      {/* Paper Trading Notice */}
+      {/* Account badge */}
       <div
         style={{
           marginTop: theme.spacing.sm,
           fontSize: theme.typography.fontSize.xs,
-          color: theme.colors.gray500,
+          color: isLive ? '#fff' : theme.colors.gray600,
           textAlign: 'center',
+          backgroundColor: isLive ? '#b45309' : theme.colors.gray100,
+          borderRadius: theme.borderRadius.sm,
+          padding: '2px 6px',
+          fontWeight: theme.typography.fontWeight.medium,
         }}
       >
-        Paper Trading Mode
+        {isLive
+          ? `REAL MONEY — ${account?.label || accountId}`
+          : `PAPER · ${account?.label || accountId}`}
       </div>
     </form>
   );

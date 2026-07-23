@@ -10,10 +10,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import Button from '../common/Button';
 import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
+import ViewModeToggle from '../common/ViewModeToggle';
+import useViewMode from '../../hooks/useViewMode';
+import { useAccountView } from '../../contexts/AccountViewContext';
 import theme from '../../theme';
 
 const TradingSessionsList = () => {
   const navigate = useNavigate();
+  const { viewMode, isEasy, toggleViewMode } = useViewMode();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,11 +29,19 @@ const TradingSessionsList = () => {
   const [cloneName, setCloneName] = useState('');
   const [clonePaperTrading, setClonePaperTrading] = useState(true);
 
-  // Fetch sessions on mount
+  // The GLOBAL account picker (NavBar) decides which Alpaca account the
+  // summary card shows; re-fetch when it changes.
+  const {
+    accountId,
+    account: viewAccount,
+    isLive: isLiveView,
+  } = useAccountView();
+
+  // Fetch sessions on mount; account summary follows the global picker
   useEffect(() => {
     fetchSessions();
     fetchAccount();
-  }, []);
+  }, [accountId]);
 
   const fetchSessions = async () => {
     try {
@@ -64,7 +76,7 @@ const TradingSessionsList = () => {
 
   const fetchAccount = async () => {
     try {
-      const res = await fetch('/api/alpaca/account');
+      const res = await fetch(`/api/alpaca/account?mode=${accountId}`);
       const data = await res.json();
       if (res.ok) {
         setAccount(data.account || data);
@@ -219,6 +231,60 @@ const TradingSessionsList = () => {
     }
   };
 
+  // Toggle a session's auto-trade (execute orders vs. signals-only). Enabling
+  // means the strategy will actually place orders, so guard it with a confirm.
+  const setAutoTrade = async (sessionId, value, e) => {
+    if (e) e.stopPropagation();
+    if (
+      value &&
+      !window.confirm(
+        'Enable auto-trade? The strategy will start placing real orders on its account when it finds signals.'
+      )
+    ) {
+      return;
+    }
+    try {
+      await fetch(`/api/ai/session/${sessionId}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoTrade: value }),
+      });
+      fetchSessions();
+    } catch (err) {
+      console.error('Failed to set auto-trade:', err);
+    }
+  };
+
+  // Promote a practice (sim) session to the real Alpaca paper account.
+  const promoteToPaper = async (sessionId, name, e) => {
+    if (e) e.stopPropagation();
+    if (
+      !window.confirm(
+        `Upgrade "${name}" to REAL Alpaca paper trading?\n\n` +
+          `• Best reserved for VALIDATED strategies — real paper money, shared account.\n` +
+          `• Wipes its practice positions and starts fresh with $20,000 on the Alpaca paper account.\n` +
+          `• Its track record (wins/losses) is kept.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/ai/session/${sessionId}/promote-to-paper`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allocation: 20000 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to promote to paper');
+        return;
+      }
+      fetchSessions();
+    } catch (err) {
+      console.error('Failed to promote to paper:', err);
+    }
+  };
+
   const formatCurrency = value => {
     if (value == null || isNaN(value)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
@@ -251,9 +317,28 @@ const TradingSessionsList = () => {
     }
   };
 
-  const runningSessions = sessions.filter(s => s.status === 'running');
-  const pausedSessions = sessions.filter(s => s.status === 'paused');
-  const stoppedSessions = sessions.filter(s => s.status === 'stopped');
+  // Which Alpaca account a session's real orders route to (null = simulated,
+  // no Alpaca account at all). Broker sessions carry config.alpacaAccountId
+  // from brokerSchema; legacy paper sessions default to the shared main.
+  const accountOf = s =>
+    s.config?.alpacaAccountId !== undefined
+      ? s.config.alpacaAccountId
+      : s.tier === 'paper' || s.config?.simulationMode === false
+        ? 'paper'
+        : null;
+
+  // Global picker scoping: account-bound sessions only show under THEIR
+  // account; simulated sessions (no account) stay visible everywhere with
+  // their SIM badge — hiding them entirely would make brokers "disappear".
+  const scopedSessions = sessions.filter(s => {
+    const acc = accountOf(s);
+    return acc === null || acc === accountId;
+  });
+
+  const runningSessions = scopedSessions.filter(s => s.status === 'running');
+  const pausedSessions = scopedSessions.filter(s => s.status === 'paused');
+  const stoppedSessions = scopedSessions.filter(s => s.status === 'stopped');
+  const hiddenByScope = sessions.length - scopedSessions.length;
 
   return (
     <div
@@ -280,9 +365,18 @@ const TradingSessionsList = () => {
             Manage your autonomous trading strategies
           </p>
         </div>
-        <Button variant="primary" onClick={() => setShowNewForm(true)}>
-          + New Session
-        </Button>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.md,
+          }}
+        >
+          <ViewModeToggle mode={viewMode} onToggle={toggleViewMode} />
+          <Button variant="primary" onClick={() => setShowNewForm(true)}>
+            + New Session
+          </Button>
+        </div>
       </div>
 
       {/* Account Overview */}
@@ -296,14 +390,21 @@ const TradingSessionsList = () => {
           }}
         >
           <MetricCard
-            title="Account Equity"
+            title={viewAccount ? viewAccount.label : 'Alpaca Paper Account'}
             value={formatCurrency(account.equity)}
-            subtitle={`Cash: ${formatCurrency(account.buying_power)}`}
+            subtitle={
+              isLiveView
+                ? '🔴 REAL MONEY — live Alpaca account'
+                : viewAccount && viewAccount.accountNumber
+                  ? `Paper money · ${viewAccount.accountNumber}`
+                  : 'Real paper money · shared across paper sessions'
+            }
+            variant={isLiveView ? 'error' : 'default'}
           />
           <MetricCard
             title="Active Sessions"
             value={runningSessions.length}
-            subtitle={`${pausedSessions.length} paused`}
+            subtitle={`${pausedSessions.length} paused${hiddenByScope > 0 ? ` · ${hiddenByScope} on other accounts` : ''}`}
             variant={runningSessions.length > 0 ? 'success' : 'default'}
           />
           <MetricCard
@@ -413,8 +514,21 @@ const TradingSessionsList = () => {
         </Card>
       )}
 
+      {/* Easy mode — grouped by real vs practice money */}
+      {!loading && isEasy && sessions.length > 0 && (
+        <EasyModeList
+          sessions={sessions}
+          onStop={stopSession}
+          onSetAutoTrade={setAutoTrade}
+          onPromote={promoteToPaper}
+          formatCurrency={formatCurrency}
+          getStatusColor={getStatusColor}
+          navigate={navigate}
+        />
+      )}
+
       {/* Active Sessions */}
-      {runningSessions.length > 0 && (
+      {!isEasy && runningSessions.length > 0 && (
         <div style={{ marginBottom: theme.spacing.lg }}>
           <h2
             style={{
@@ -445,7 +559,7 @@ const TradingSessionsList = () => {
       )}
 
       {/* Paused Sessions */}
-      {pausedSessions.length > 0 && (
+      {!isEasy && pausedSessions.length > 0 && (
         <div style={{ marginBottom: theme.spacing.lg }}>
           <h2
             style={{
@@ -476,7 +590,7 @@ const TradingSessionsList = () => {
       )}
 
       {/* Stopped Sessions */}
-      {stoppedSessions.length > 0 && (
+      {!isEasy && stoppedSessions.length > 0 && (
         <div>
           <h2
             style={{
@@ -748,6 +862,8 @@ const SessionCard = ({
   getStatusBg,
 }) => {
   const navigate = useNavigate();
+  const isRealPaper =
+    session.config?.simulationMode !== true;
 
   return (
     <Card
@@ -800,6 +916,25 @@ const SessionCard = ({
             >
               {session.status}
             </span>
+            {/* Money-world badge — shown for ALL sessions, not just brokers */}
+            <span
+              title={
+                isRealPaper
+                  ? 'Trades the real Alpaca paper account'
+                  : 'Practice / simulated money — not connected to Alpaca'
+              }
+              style={{
+                padding: '2px 8px',
+                borderRadius: theme.borderRadius.sm,
+                backgroundColor: isRealPaper ? '#2563eb' : '#6b7280',
+                color: 'white',
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: theme.typography.fontWeight.medium,
+                textTransform: 'uppercase',
+              }}
+            >
+              {isRealPaper ? 'Paper' : 'Sim'}
+            </span>
             {session.isBroker && (
               <>
                 <span
@@ -814,20 +949,6 @@ const SessionCard = ({
                   }}
                 >
                   Exchange
-                </span>
-                <span
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: theme.borderRadius.sm,
-                    backgroundColor:
-                      session.tier === 'paper' ? '#2563eb' : '#6b7280',
-                    color: 'white',
-                    fontSize: theme.typography.fontSize.xs,
-                    fontWeight: theme.typography.fontWeight.medium,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {session.tier === 'paper' ? 'Paper' : 'Sim'}
                 </span>
                 <span
                   title="No strategy has cleared the 5-gate validation — this is an unvalidated forward test, not proven edge"
@@ -1110,6 +1231,250 @@ const SessionCard = ({
         </div>
       </div>
     </Card>
+  );
+};
+
+// ── Easy mode ──────────────────────────────────────────────────────────────
+// Curated cards grouped by real vs practice money, with a real auto-trade
+// toggle and honest labels. Reuses the already-fetched sessions array.
+
+const isRealPaperSession = s =>
+  s?.config?.simulationMode !== true;
+
+const easyBadge = bg => ({
+  padding: '2px 8px',
+  borderRadius: theme.borderRadius.sm,
+  backgroundColor: bg,
+  color: 'white',
+  fontSize: theme.typography.fontSize.xs,
+  fontWeight: theme.typography.fontWeight.medium,
+  textTransform: 'uppercase',
+});
+
+const EasySessionCard = ({
+  session,
+  onStop,
+  onSetAutoTrade,
+  onPromote,
+  formatCurrency,
+  getStatusColor,
+  navigate,
+}) => {
+  const realPaper = isRealPaperSession(session);
+  const autoOn = session.config?.autoTrade === true;
+  const pnl =
+    session.stats?.totalPnLWithUnrealized ?? session.stats?.totalPnL ?? 0;
+  const staleMs = session.lastActivity
+    ? Date.now() - new Date(session.lastActivity).getTime()
+    : 0;
+  const isStale = session.status === 'running' && staleMs > 24 * 3600 * 1000;
+  const staleH = Math.round(staleMs / 3600000);
+
+  return (
+    <Card
+      style={{
+        padding: theme.spacing.md,
+        cursor: 'pointer',
+        border: `1px solid ${getStatusColor(session.status)}30`,
+      }}
+      onClick={() => navigate(`/live-trading/${session.sessionId}`)}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              flexWrap: 'wrap',
+            }}
+          >
+            <h3 style={{ margin: 0, color: theme.colors.gray900 }}>
+              {session.name || 'Unnamed Session'}
+            </h3>
+            <span style={easyBadge(getStatusColor(session.status))}>
+              {session.status}
+            </span>
+            <span style={easyBadge(realPaper ? '#2563eb' : '#6b7280')}>
+              {realPaper ? 'Paper' : 'Sim'}
+            </span>
+            {isStale && (
+              <span
+                title="Running, but no activity in over a day"
+                style={easyBadge(theme.colors.warning)}
+              >
+                Stale {staleH}h
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              marginTop: 6,
+              display: 'flex',
+              gap: theme.spacing.md,
+              alignItems: 'center',
+              fontSize: theme.typography.fontSize.sm,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span
+              style={{
+                color: pnl >= 0 ? theme.colors.success : theme.colors.error,
+                fontWeight: theme.typography.fontWeight.medium,
+              }}
+            >
+              {formatCurrency(pnl)}
+              {!realPaper && (
+                <span style={{ color: theme.colors.gray500, fontWeight: 400 }}>
+                  {' '}
+                  (sim)
+                </span>
+              )}
+            </span>
+            <span style={{ color: theme.colors.gray600 }}>
+              {autoOn
+                ? '● executing trades'
+                : '○ signals only — not placing orders'}
+            </span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={e => onSetAutoTrade(session.sessionId, !autoOn, e)}
+            title="Auto-Trade ON = the strategy places orders on signals. OFF = it only logs signals (no orders)."
+            style={{
+              padding: '6px 12px',
+              borderRadius: theme.borderRadius.full,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.sm,
+              fontWeight: theme.typography.fontWeight.bold,
+              color: '#fff',
+              backgroundColor: autoOn
+                ? theme.colors.success
+                : theme.colors.gray500,
+            }}
+          >
+            Auto-Trade: {autoOn ? 'ON' : 'OFF'}
+          </button>
+          {!realPaper && onPromote && (
+            <button
+              type="button"
+              onClick={e =>
+                onPromote(session.sessionId, session.name || 'this session', e)
+              }
+              title="Move this practice strategy onto the real Alpaca paper account"
+              style={{
+                padding: '6px 12px',
+                borderRadius: theme.borderRadius.full,
+                border: `1px solid ${theme.colors.info}`,
+                background: 'transparent',
+                color: theme.colors.info,
+                cursor: 'pointer',
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: theme.typography.fontWeight.medium,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ↑ Upgrade to Paper
+            </button>
+          )}
+          {session.status !== 'stopped' && (
+            <Button
+              variant="secondary"
+              onClick={e => onStop(session.sessionId, e)}
+            >
+              Stop
+            </Button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const EasyModeList = ({
+  sessions,
+  onStop,
+  onSetAutoTrade,
+  onPromote,
+  formatCurrency,
+  getStatusColor,
+  navigate,
+}) => {
+  const real = sessions.filter(isRealPaperSession);
+  const practice = sessions.filter(s => !isRealPaperSession(s));
+
+  const Section = ({ title, subtitle, accent, items }) =>
+    items.length > 0 ? (
+      <div style={{ marginBottom: theme.spacing.lg }}>
+        <h2
+          style={{
+            color: accent,
+            fontSize: theme.typography.fontSize.lg,
+            margin: 0,
+          }}
+        >
+          {title} ({items.length})
+        </h2>
+        <p
+          style={{
+            margin: '2px 0 12px',
+            color: theme.colors.gray500,
+            fontSize: theme.typography.fontSize.sm,
+          }}
+        >
+          {subtitle}
+        </p>
+        <div style={{ display: 'grid', gap: theme.spacing.md }}>
+          {items.map(s => (
+            <EasySessionCard
+              key={s.sessionId}
+              session={s}
+              onStop={onStop}
+              onSetAutoTrade={onSetAutoTrade}
+              onPromote={onPromote}
+              formatCurrency={formatCurrency}
+              getStatusColor={getStatusColor}
+              navigate={navigate}
+            />
+          ))}
+        </div>
+      </div>
+    ) : null;
+
+  return (
+    <>
+      <Section
+        title="Real Paper Money"
+        subtitle="Trades the live Alpaca paper account — real fills, real P&L."
+        accent={theme.colors.info}
+        items={real}
+      />
+      <Section
+        title="Practice (Simulated)"
+        subtitle="Fake $100k pools, not connected to Alpaca — for testing only."
+        accent={theme.colors.gray600}
+        items={practice}
+      />
+    </>
   );
 };
 

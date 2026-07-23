@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import theme from '../theme';
+import AccountPicker from './common/AccountPicker';
 
 /**
  * NavBar - Clean, minimal navigation
@@ -100,6 +101,9 @@ const NavBar = () => {
               {item.label}
             </Link>
           ))}
+
+          {/* Global account picker — which account the whole site is viewing */}
+          <AccountPicker />
 
           {/* Tools Dropdown */}
           <div style={{ position: 'relative' }}>
