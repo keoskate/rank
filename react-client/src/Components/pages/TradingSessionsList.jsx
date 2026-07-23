@@ -332,18 +332,37 @@ const TradingSessionsList = () => {
     return 'paper'; // legacy default: real orders on the shared main paper account
   };
 
-  // Global picker scoping: account-bound sessions only show under THEIR
-  // account; simulated sessions (no account) stay visible everywhere with
-  // their SIM badge — hiding them entirely would make brokers "disappear".
-  const scopedSessions = sessions.filter(s => {
-    const acc = accountOf(s);
-    return acc === null || acc === accountId;
+  // STRICT picker scoping (2026-07-23 user feedback: "i shouldn't see
+  // practice simulated units in the new account"): an account view shows ONLY
+  // sessions bound to that account. Simulated sessions belong to NO account —
+  // they live in a separate, collapsed "Simulation sandbox" section below,
+  // clearly labeled as not-connected-to-Alpaca, so they stay reachable
+  // without masquerading as holdings of whichever account is selected.
+  const scopedSessions = sessions.filter(s => accountOf(s) === accountId);
+  const simSessions = sessions.filter(s => accountOf(s) === null);
+  const [showSandbox, setShowSandbox] = useState(() => {
+    try {
+      return localStorage.getItem('sessions-show-sandbox') === '1';
+    } catch {
+      return false;
+    }
   });
+  const toggleSandbox = () => {
+    setShowSandbox(v => {
+      try {
+        localStorage.setItem('sessions-show-sandbox', v ? '0' : '1');
+      } catch {
+        /* private mode — preference just won't persist */
+      }
+      return !v;
+    });
+  };
 
   const runningSessions = scopedSessions.filter(s => s.status === 'running');
   const pausedSessions = scopedSessions.filter(s => s.status === 'paused');
   const stoppedSessions = scopedSessions.filter(s => s.status === 'stopped');
-  const hiddenByScope = sessions.length - scopedSessions.length;
+  const hiddenByScope =
+    sessions.length - scopedSessions.length - simSessions.length;
 
   return (
     <div
@@ -409,7 +428,7 @@ const TradingSessionsList = () => {
           <MetricCard
             title="Active Sessions"
             value={runningSessions.length}
-            subtitle={`${pausedSessions.length} paused${hiddenByScope > 0 ? ` · ${hiddenByScope} on other accounts` : ''}`}
+            subtitle={`${pausedSessions.length} paused${simSessions.length > 0 ? ` · ${simSessions.length} in sandbox` : ''}${hiddenByScope > 0 ? ` · ${hiddenByScope} on other accounts` : ''}`}
             variant={runningSessions.length > 0 ? 'success' : 'default'}
           />
           <MetricCard
@@ -625,6 +644,90 @@ const TradingSessionsList = () => {
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Scoped empty state: the selected account has no sessions yet (e.g.
+          a freshly created dedicated account awaiting its broker's promotion). */}
+      {!loading && scopedSessions.length === 0 && (
+        <Card style={{ padding: theme.spacing.lg, textAlign: 'center' }}>
+          <h3 style={{ margin: 0, color: theme.colors.gray600 }}>
+            No sessions trade {viewAccount ? viewAccount.label : 'this account'}{' '}
+            yet
+          </h3>
+          <p style={{ color: theme.colors.gray500, marginBottom: 0 }}>
+            {accountId === 'paper-mixer'
+              ? 'The Vol-Target Mixer broker will trade here once promoted from the simulation sandbox to paper tier.'
+              : 'Sessions appear here when a strategy is bound to this account.'}
+          </p>
+        </Card>
+      )}
+
+      {/* Simulation sandbox — sessions bound to NO Alpaca account (fake
+          internal $100k pools). Deliberately OUTSIDE the account scoping and
+          collapsed by default: showing them under an account header made
+          them read as that account's holdings (2026-07-23 feedback). */}
+      {!loading && simSessions.length > 0 && (
+        <div style={{ marginTop: theme.spacing.xl }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderTop: `2px dashed ${theme.colors.gray300}`,
+              paddingTop: theme.spacing.md,
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: theme.typography.fontSize.lg,
+                  color: theme.colors.gray600,
+                }}
+              >
+                Simulation sandbox ({simSessions.length})
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  marginTop: '2px',
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.gray500,
+                }}
+              >
+                Fake internal $100k pools — not connected to ANY Alpaca account.
+                Not part of {viewAccount ? viewAccount.label : 'this account'}.
+              </p>
+            </div>
+            <Button variant="secondary" onClick={toggleSandbox}>
+              {showSandbox ? 'Hide' : `Show ${simSessions.length} simulated`}
+            </Button>
+          </div>
+          {showSandbox && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: theme.spacing.sm,
+                marginTop: theme.spacing.md,
+                opacity: 0.92,
+              }}
+            >
+              {simSessions.map(s => (
+                <EasySessionCard
+                  key={s.sessionId}
+                  session={s}
+                  onStop={stopSession}
+                  onSetAutoTrade={setAutoTrade}
+                  onPromote={promoteToPaper}
+                  formatCurrency={formatCurrency}
+                  getStatusColor={getStatusColor}
+                  navigate={navigate}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
