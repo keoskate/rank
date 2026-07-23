@@ -31,6 +31,7 @@
     "daily": "node scripts/daily-summary.js",
     "trend": "node scripts/daily-summary.js --trend",
     "capture:flow": "node scripts/capture-flow.js",
+    "capture:insider": "node scripts/capture-insider.js",
     "backtest:insider": "node scripts/backtest-insider.js",
     "backtest:trend": "node scripts/backtests/ts-momentum-trend.js",
     "backtest:view": "node scripts/backtests/view-run.js",
