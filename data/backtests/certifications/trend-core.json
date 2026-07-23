@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-10T08:36:54.708Z",
+  "generatedAt": "2026-07-23T15:11:10.701Z",
   "window": {
     "start": "2016-01-04",
-    "end": "2026-06-07"
+    "end": "2026-07-20"
   },
   "symbols": [
     "SPY",
@@ -27,22 +27,22 @@
   "configs": [
     {
       "config": "deployed-defaults",
-      "comparisons": 41879,
-      "uptrendRate": 0.6749444829150648,
+      "comparisons": 42401,
+      "uptrendRate": 0.6775076059526898,
       "divergences": [],
       "pass": true
     },
     {
       "config": "sma150-mom126",
-      "comparisons": 8390,
-      "uptrendRate": 0.6365911799761621,
+      "comparisons": 8481,
+      "uptrendRate": 0.6388397594623275,
       "divergences": [],
       "pass": true
     },
     {
       "config": "sma250",
-      "comparisons": 8390,
-      "uptrendRate": 0.6973778307508939,
+      "comparisons": 8481,
+      "uptrendRate": 0.699327909444641,
       "divergences": [],
       "pass": true
     }
@@ -52,9 +52,9 @@
     "live may use a realtime intraday price instead of the latest close for trend-break timing",
     "live order execution uses engine slot/sizing mechanics; backtest emulates them (see validate-trend)"
   ],
-  "daysTested": 58659,
+  "daysTested": 59363,
   "ordering": {
-    "comparisons": 204,
+    "comparisons": 207,
     "mismatches": [],
     "pass": true
   }

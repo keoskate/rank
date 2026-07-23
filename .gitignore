@@ -146,3 +146,6 @@ data/rank-cache/
 
 # Integrity layer output (regenerated every 60s)
 data/reports/integrity/
+
+# Maintenance scheduler state (rewritten every tick)
+data/maintenance-state.json

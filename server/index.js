@@ -1236,6 +1236,13 @@ server.listen(PORT, () => {
   setInterval(maybeFinalizeDarkPool, 5 * 60 * 1000);
   maybeFinalizeDarkPool();
 
+  // --- Self-driving maintenance (insider capture, cert freshness) -----------
+  // Critical chores that must never depend on a human remembering them:
+  // daily insider-feed archival (the feed forgets in ~2 weeks) and automatic
+  // regeneration of gate-2 faithfulness certifications before their 30-day
+  // expiry. See server/maintenanceJobs.js.
+  require('./maintenanceJobs').start({ logger: console });
+
   // --- Signal scanners: feed-driven watchlists ------------------------------
   // A fixed watchlist misses the signal — insiders buy obscure names, flow and
   // dark-pool concentrate wherever the action is today. Scanner brokers refresh

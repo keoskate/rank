@@ -594,6 +594,14 @@
       "note": "SVXY -83.0% close-to-close into 2018-02-06 is the documented Volmageddon NAV collapse (the after-hours 2018-02-05 VIX-futures spike printed into the 02-06 close; XIV terminated the same event; SVXY ~$71.80 -> ~$11.34 matches the historical record).",
       "verified": "2026-06-12, cross-instrument leverage-ratio check + historical record",
       "addedBy": "D17 third-vendor investigation"
+    },
+    {
+      "symbol": "DBC",
+      "contains": "2018-12-24",
+      "status": "known-vendor-deviation",
+      "note": "Holiday half-day close-print class (same mechanism as the COVID-2020 class in _readme): 2018-12-24 was a 1pm-ET half session at the bottom of the Dec-2018 selloff; Alpaca DBC consolidated-tape close deviates from the official closing print, producing a single-leg RETURN mismatch 2018-12-24->2018-12-26 (alpaca 3.62% vs yahoo 2.22%). Transient: the adjacent legs (12-21->12-24 and 12-26->12-27) show no mismatch, so the level ratio reverts immediately and cumulative-return impact is ~0. Single-day returns sampled on this date are unreliable.",
+      "verified": "2026-07-23, single-leg-only mismatch confirmed via runDataIntegrityGate on the ensemble universe (adjacent legs clean)",
+      "addedBy": "ensemble gate-1 investigation"
     }
   ]
 }
