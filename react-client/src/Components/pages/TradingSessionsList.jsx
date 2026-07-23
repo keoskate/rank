@@ -318,14 +318,19 @@ const TradingSessionsList = () => {
   };
 
   // Which Alpaca account a session's real orders route to (null = simulated,
-  // no Alpaca account at all). Broker sessions carry config.alpacaAccountId
-  // from brokerSchema; legacy paper sessions default to the shared main.
-  const accountOf = s =>
-    s.config?.alpacaAccountId !== undefined
-      ? s.config.alpacaAccountId
-      : s.tier === 'paper' || s.config?.simulationMode === false
-        ? 'paper'
-        : null;
+  // no Alpaca account at all). Mirrors the ENGINE's routing semantics:
+  // broker sessions carry config.alpacaAccountId from brokerSchema; legacy
+  // sessions (EXP-B/QBTX era — no alpacaAccountId field) trade the shared
+  // main paper account unless explicitly simulationMode:true, matching both
+  // orderExecutor's sim-vs-real routing and this page's own "Real Paper
+  // Money" grouping (simulationMode !== true).
+  const accountOf = s => {
+    const c = s.config || {};
+    if (c.alpacaAccountId !== undefined) return c.alpacaAccountId; // authoritative (may be null = sim)
+    if (c.simulationMode === true) return null; // simulated — no Alpaca account
+    if (c.tradingMode === 'live' || c.paperTradeOnly === false) return 'live';
+    return 'paper'; // legacy default: real orders on the shared main paper account
+  };
 
   // Global picker scoping: account-bound sessions only show under THEIR
   // account; simulated sessions (no account) stay visible everywhere with
@@ -514,10 +519,13 @@ const TradingSessionsList = () => {
         </Card>
       )}
 
-      {/* Easy mode — grouped by real vs practice money */}
-      {!loading && isEasy && sessions.length > 0 && (
+      {/* Easy mode — grouped by real vs practice money. MUST receive the
+          account-SCOPED list, not the raw one: passing `sessions` here was
+          exactly the leak the 2026-07-23 screenshot caught (Main-account
+          EXP-B/QBTX sessions rendering under the Keo Fund view). */}
+      {!loading && isEasy && scopedSessions.length > 0 && (
         <EasyModeList
-          sessions={sessions}
+          sessions={scopedSessions}
           onStop={stopSession}
           onSetAutoTrade={setAutoTrade}
           onPromote={promoteToPaper}
@@ -862,8 +870,7 @@ const SessionCard = ({
   getStatusBg,
 }) => {
   const navigate = useNavigate();
-  const isRealPaper =
-    session.config?.simulationMode !== true;
+  const isRealPaper = session.config?.simulationMode !== true;
 
   return (
     <Card
@@ -1238,8 +1245,7 @@ const SessionCard = ({
 // Curated cards grouped by real vs practice money, with a real auto-trade
 // toggle and honest labels. Reuses the already-fetched sessions array.
 
-const isRealPaperSession = s =>
-  s?.config?.simulationMode !== true;
+const isRealPaperSession = s => s?.config?.simulationMode !== true;
 
 const easyBadge = bg => ({
   padding: '2px 8px',
@@ -1419,6 +1425,9 @@ const EasyModeList = ({
   getStatusColor,
   navigate,
 }) => {
+  // Which account this list is scoped to (global picker) — used to label the
+  // real-money section with the actual account instead of a generic string.
+  const { account: viewAccount } = useAccountView();
   const real = sessions.filter(isRealPaperSession);
   const practice = sessions.filter(s => !isRealPaperSession(s));
 
@@ -1464,7 +1473,7 @@ const EasyModeList = ({
     <>
       <Section
         title="Real Paper Money"
-        subtitle="Trades the live Alpaca paper account — real fills, real P&L."
+        subtitle={`Trades ${viewAccount ? viewAccount.label : 'the live Alpaca paper account'}${viewAccount && viewAccount.accountNumber ? ` (${viewAccount.accountNumber})` : ''} — real fills, real P&L.`}
         accent={theme.colors.info}
         items={real}
       />
