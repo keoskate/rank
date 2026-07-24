@@ -24,6 +24,10 @@ import MarketTideCard from '../common/MarketTideCard';
 import StrategyValidatorPanel from '../common/StrategyValidatorPanel';
 import TradingLogPanel from '../common/TradingLogPanel';
 import ErrorBoundary from '../common/ErrorBoundary';
+import ViewModeToggle from '../common/ViewModeToggle';
+import Pill from '../common/Pill';
+import StatBlock from '../common/StatBlock';
+import useViewMode from '../../hooks/useViewMode';
 import { TradingConfigPanel, TradingSessionSummary } from '../trading';
 // LiveTradingChart removed - now using TradingViewChart
 import theme from '../../theme';
@@ -132,6 +136,9 @@ const LiveTradingDashboard = ({
   const [error, setError] = useState(null);
   const [accountLoading, setAccountLoading] = useState(true);
   const [positionsLoading, setPositionsLoading] = useState(true);
+
+  // Easy/Full view mode (curated MVP vs every panel). Persisted to localStorage.
+  const { viewMode, toggleViewMode } = useViewMode();
 
   // Simulation mode
   const [showSimulator, setShowSimulator] = useState(false);
@@ -940,6 +947,22 @@ const LiveTradingDashboard = ({
     }
   };
 
+  // Toggle live order execution. Enabling means real orders will be placed on
+  // signals, so confirm first; disabling drops to signals-only immediately.
+  const toggleAutoTrade = () => {
+    const next = !config.autoTrade;
+    if (next) {
+      const real = config.simulationMode !== true;
+      const ok = window.confirm(
+        real
+          ? 'Turn ON Auto-Trade? This strategy will place REAL orders on the Alpaca paper account when its signals fire.'
+          : 'Turn ON Auto-Trade? This simulated strategy will execute trades against its virtual $100k pool.'
+      );
+      if (!ok) return;
+    }
+    updateConfig('autoTrade', next);
+  };
+
   // Load a saved config from localStorage (from simulator ConfigPanel)
   const loadSavedConfig = configName => {
     const loaded = savedConfigs[configName];
@@ -1036,6 +1059,30 @@ const LiveTradingDashboard = ({
     const sign = num >= 0 ? '+' : '';
     return `${sign}${num.toFixed(2)}%`;
   };
+
+  // Signed dollar string with a true minus sign, for the curated stat row.
+  const signedMoney = value => {
+    const n = Number(value) || 0;
+    const abs = Math.abs(n).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${n < 0 ? '−' : '+'}$${abs}`;
+  };
+
+  // Today's P&L = broker equity vs prior close. Alpaca returns last_equity as a
+  // STRING, and on this shared paper account it's "0" (truthy!) until the first
+  // market close — so the old `account.last_equity` guard passed and computed
+  // equity − 0 = the ENTIRE equity as "today's P&L" (the +$77k bug). Require a
+  // real positive prior-close mark; otherwise fall back to the session's own
+  // tracked P&L (what the rest of the UI shows).
+  const eqNum = parseFloat(account?.equity ?? account?.portfolio_value);
+  const lastEqNum = parseFloat(account?.last_equity);
+  const hasIntradayMark =
+    Number.isFinite(eqNum) && Number.isFinite(lastEqNum) && lastEqNum > 0;
+  const sessionPnL =
+    stats.totalPnLWithUnrealized ?? stats.totalPnL ?? 0;
+  const todayPnL = hasIntradayMark ? eqNum - lastEqNum : sessionPnL;
 
   return (
     <div
@@ -1156,6 +1203,17 @@ const LiveTradingDashboard = ({
             >
               {config.assetType === 'crypto' ? 'CRYPTO' : 'STOCKS'}
             </span>
+            {/* Money-world: real Alpaca paper vs simulated pool */}
+            <Pill
+              label={config.simulationMode === true ? 'Sim' : 'Paper'}
+              tone={config.simulationMode === true ? 'paper' : 'ink'}
+              title={
+                config.simulationMode === true
+                  ? 'Simulated — a virtual $100k pool, not connected to Alpaca'
+                  : 'Real Alpaca paper account — real fills, real P&L'
+              }
+              style={{ marginLeft: theme.spacing.sm }}
+            />
           </div>
         </div>
 
@@ -1166,6 +1224,38 @@ const LiveTradingDashboard = ({
             alignItems: 'center',
           }}
         >
+          {/* View mode: Easy (curated) vs Full (every panel) */}
+          <ViewModeToggle mode={viewMode} onToggle={toggleViewMode} />
+
+          {/* Auto-Trade: the real execute-orders switch (both modes) */}
+          <button
+            type="button"
+            onClick={toggleAutoTrade}
+            title="Auto-Trade ON = places real orders on signals. OFF = logs signals only, no orders."
+            style={{
+              padding: '7px 14px',
+              borderRadius: theme.borderRadius.xs,
+              border: `1px solid ${
+                config.autoTrade
+                  ? theme.colors.successMuted
+                  : theme.colors.ruler
+              }`,
+              cursor: 'pointer',
+              fontFamily: theme.typography.fontFamilyMono,
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: config.autoTrade ? '#fff' : theme.colors.ink,
+              background: config.autoTrade
+                ? theme.colors.successMuted
+                : 'transparent',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {config.autoTrade ? '● Auto-Trade ON' : '○ Auto-Trade OFF'}
+          </button>
+
           {/* Audio Toggle Button */}
           <Button
             variant={audioSettings.enabled ? 'primary' : 'outline'}
@@ -1200,41 +1290,49 @@ const LiveTradingDashboard = ({
             {audioSettings.enabled ? '🔊' : '🔇'}
           </Button>
 
-          {/* Simulate Trading Button */}
-          <Button
-            variant={showSimulator ? 'primary' : 'outline'}
-            onClick={() => setShowSimulator(!showSimulator)}
-            style={{
-              backgroundColor: showSimulator
-                ? theme.colors.info
-                : 'transparent',
-              borderColor: theme.colors.info,
-              color: showSimulator ? '#fff' : theme.colors.info,
-            }}
-          >
-            {showSimulator ? 'Hide Simulator' : 'Simulate Trading'}
-          </Button>
+          {/* Run Backtest + Experimental — advanced, Full mode only */}
+          {viewMode === 'full' && (
+            <>
+              {/* Run Backtest (historical replay simulator) */}
+              <Button
+                variant={showSimulator ? 'primary' : 'outline'}
+                onClick={() => setShowSimulator(!showSimulator)}
+                style={{
+                  backgroundColor: showSimulator
+                    ? theme.colors.info
+                    : 'transparent',
+                  borderColor: theme.colors.info,
+                  color: showSimulator ? '#fff' : theme.colors.info,
+                }}
+                title="Replay this strategy over historical days (does not place orders)"
+              >
+                {showSimulator ? 'Hide Backtest' : 'Run Backtest'}
+              </Button>
 
-          {/* Experimental Analysis Toggle */}
-          <Button
-            variant="ghost"
-            onClick={toggleExperimentalPanels}
-            style={{
-              backgroundColor: showExperimentalPanels
-                ? '#fef3c7'
-                : 'transparent',
-              borderColor: showExperimentalPanels
-                ? '#f59e0b'
-                : theme.colors.gray300,
-              color: showExperimentalPanels ? '#b45309' : theme.colors.gray500,
-              fontSize: theme.typography.fontSize.sm,
-              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-              minWidth: 'auto',
-            }}
-            title="Toggle experimental analysis panels (Market Regime & Leveraged ETF)"
-          >
-            🧪 {showExperimentalPanels ? 'ON' : 'OFF'}
-          </Button>
+              {/* Experimental Analysis Toggle */}
+              <Button
+                variant="ghost"
+                onClick={toggleExperimentalPanels}
+                style={{
+                  backgroundColor: showExperimentalPanels
+                    ? '#fef3c7'
+                    : 'transparent',
+                  borderColor: showExperimentalPanels
+                    ? '#f59e0b'
+                    : theme.colors.gray300,
+                  color: showExperimentalPanels
+                    ? '#b45309'
+                    : theme.colors.gray500,
+                  fontSize: theme.typography.fontSize.sm,
+                  padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                  minWidth: 'auto',
+                }}
+                title="Toggle experimental analysis panels (Market Regime & Leveraged ETF)"
+              >
+                🧪 {showExperimentalPanels ? 'ON' : 'OFF'}
+              </Button>
+            </>
+          )}
 
           {/* Session controls - based on current status */}
           {urlSessionId && sessionStatus === 'stopped' && (
@@ -1295,9 +1393,11 @@ const LiveTradingDashboard = ({
           >
             Summary
           </Button>
-          <Button variant="ghost" onClick={() => setShowConfig(!showConfig)}>
-            Config
-          </Button>
+          {viewMode === 'full' && (
+            <Button variant="ghost" onClick={() => setShowConfig(!showConfig)}>
+              Config
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1368,8 +1468,59 @@ const LiveTradingDashboard = ({
           </Card>
         )}
 
-      {/* Configuration Panel - Enhanced */}
-      {showConfig && (
+      {/* Curated stat row (Easy) — the north-star numbers, right under the
+          header so they read first. Full mode uses the MetricCard grid below. */}
+      {viewMode === 'easy' && (
+        <Card
+          variant="default"
+          style={{
+            marginBottom: theme.spacing.lg,
+            padding: `18px ${theme.spacing.lg}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              rowGap: theme.spacing.md,
+            }}
+          >
+            <StatBlock
+              label="Account Equity"
+              value={formatCurrency(account?.equity || account?.portfolio_value)}
+              style={{ paddingLeft: 0 }}
+            />
+            <StatBlock
+              label="Today's P&amp;L"
+              divider
+              color={
+                todayPnL >= 0
+                  ? theme.colors.successMuted
+                  : theme.colors.errorMuted
+              }
+              value={signedMoney(todayPnL)}
+            />
+            <StatBlock
+              label="Win Rate"
+              divider
+              value={stats.totalTrades > 0 ? `${stats.winRate || 0}%` : '—'}
+            />
+            <StatBlock
+              label="Open Positions"
+              divider
+              value={String(positions.length)}
+            />
+            <StatBlock
+              label="Trades"
+              divider
+              value={String(stats.totalTrades || 0)}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* Configuration Panel - Enhanced (Full mode only) */}
+      {viewMode === 'full' && showConfig && (
         <Card
           style={{ marginBottom: theme.spacing.lg, padding: theme.spacing.lg }}
         >
@@ -2716,8 +2867,8 @@ const LiveTradingDashboard = ({
         </Card>
       )}
 
-      {/* Trading Day Simulator - Shows when enabled */}
-      {showSimulator && (
+      {/* Trading Day Simulator - Shows when enabled (Full mode only) */}
+      {viewMode === 'full' && showSimulator && (
         <TradingSimulator
           onComplete={results => {
             // Optionally handle simulation results
@@ -2732,8 +2883,8 @@ const LiveTradingDashboard = ({
         />
       )}
 
-      {/* Experimental Analysis Panels - Only when enabled via header button */}
-      {showExperimentalPanels && (
+      {/* Experimental Analysis Panels - Only when enabled via header button (Full mode only) */}
+      {viewMode === 'full' && showExperimentalPanels && (
         <div
           style={{
             marginBottom: theme.spacing.md,
@@ -3100,7 +3251,8 @@ const LiveTradingDashboard = ({
         </div>
       )}
 
-      {/* Strategy Tools Row - Monitor & Validator */}
+      {/* Strategy Tools Row - Monitor & Validator (Full mode only) */}
+      {viewMode === 'full' && (
       <div
         style={{
           display: 'grid',
@@ -3146,18 +3298,23 @@ const LiveTradingDashboard = ({
           />
         </ErrorBoundary>
       </div>
+      )}
 
-      {/* Trading Log Panel - Diagnostics and debugging */}
-      <ErrorBoundary message="Trading Log panel encountered an error. Trading continues normally.">
-        <TradingLogPanel
-          sessionId={urlSessionId}
-          autoRefresh={sessionStatus === 'running'}
-          refreshInterval={3000}
-          defaultCollapsed={false}
-        />
-      </ErrorBoundary>
+      {/* Trading Log Panel - Diagnostics and debugging (Full mode; Easy shows
+          it at the bottom, below the charts/positions) */}
+      {viewMode === 'full' && (
+        <ErrorBoundary message="Trading Log panel encountered an error. Trading continues normally.">
+          <TradingLogPanel
+            sessionId={urlSessionId}
+            autoRefresh={sessionStatus === 'running'}
+            refreshInterval={3000}
+            defaultCollapsed={false}
+          />
+        </ErrorBoundary>
+      )}
 
-      {/* Performance Metrics - Connected to real account data */}
+      {/* Performance Metrics - Connected to real account data (Full) */}
+      {viewMode === 'full' && (
       <div
         style={{
           display: 'grid',
@@ -3177,23 +3334,13 @@ const LiveTradingDashboard = ({
         />
         <MetricCard
           title="Today's P&L"
-          value={formatCurrency(
-            account?.equity && account?.last_equity
-              ? parseFloat(account.equity) - parseFloat(account.last_equity)
-              : stats.totalPnL
-          )}
+          value={formatCurrency(todayPnL)}
           subtitle={
-            account?.equity && account?.last_equity
-              ? `${(((parseFloat(account.equity) - parseFloat(account.last_equity)) / parseFloat(account.last_equity)) * 100).toFixed(2)}% change`
-              : 'vs yesterday close'
+            hasIntradayMark
+              ? `${((todayPnL / lastEqNum) * 100).toFixed(2)}% vs prior close`
+              : 'Session P&L (no prior-close mark)'
           }
-          variant={
-            (account?.equity && account?.last_equity
-              ? parseFloat(account.equity) - parseFloat(account.last_equity)
-              : stats.totalPnL) >= 0
-              ? 'success'
-              : 'error'
-          }
+          variant={todayPnL >= 0 ? 'success' : 'error'}
         />
         <MetricCard
           title="Today's Orders"
@@ -3236,12 +3383,16 @@ const LiveTradingDashboard = ({
           />
         )}
       </div>
+      )}
 
-      {/* Main Content Grid */}
+      {/* Main Content Grid — single column in Easy (no AI-feed sidebar).
+          minmax(0,1fr) keeps a wide chart/table from overflowing the left
+          track and shoving the sidebar off-screen on narrower windows. */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 350px',
+          gridTemplateColumns:
+            viewMode === 'full' ? 'minmax(0, 1fr) 350px' : '1fr',
           gap: theme.spacing.lg,
         }}
       >
@@ -3266,7 +3417,7 @@ const LiveTradingDashboard = ({
                 positions={positions || []}
                 height={300}
                 refreshInterval={sessionStatus === 'running' ? 10000 : 60000}
-                maxCharts={5}
+                maxCharts={viewMode === 'easy' ? 2 : 5}
               />
             </div>
           )}
@@ -3457,7 +3608,8 @@ const LiveTradingDashboard = ({
           </Card>
         </div>
 
-        {/* Right Column - AI Decisions and Alerts */}
+        {/* Right Column - AI Decisions and Alerts (Full mode only) */}
+        {viewMode === 'full' && (
         <div>
           {/* AI Decision Feed - Expanded height */}
           <Card style={{ marginBottom: theme.spacing.lg }}>
@@ -3663,22 +3815,60 @@ const LiveTradingDashboard = ({
                   {config.watchlist.length} symbols
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <span>Auto-Trade</span>
-                <span
+                <button
+                  type="button"
+                  onClick={toggleAutoTrade}
+                  title="Click to toggle live order execution"
                   style={{
-                    color: config.autoTrade
-                      ? theme.colors.success
-                      : theme.colors.gray400,
+                    padding: '3px 10px',
+                    borderRadius: theme.borderRadius.xs,
+                    border: `1px solid ${
+                      config.autoTrade
+                        ? theme.colors.successMuted
+                        : theme.colors.ruler
+                    }`,
+                    cursor: 'pointer',
+                    fontFamily: theme.typography.fontFamilyMono,
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: config.autoTrade ? '#fff' : theme.colors.ink,
+                    background: config.autoTrade
+                      ? theme.colors.successMuted
+                      : 'transparent',
                   }}
                 >
-                  {config.autoTrade ? 'Enabled' : 'Disabled'}
-                </span>
+                  {config.autoTrade ? 'On' : 'Off'}
+                </button>
               </div>
             </div>
           </Card>
         </div>
+        )}
       </div>
+
+      {/* Trading Log Panel (Easy) — at the bottom, below the charts/positions */}
+      {viewMode === 'easy' && (
+        <ErrorBoundary message="Trading Log panel encountered an error. Trading continues normally.">
+          <div style={{ marginTop: theme.spacing.lg }}>
+            <TradingLogPanel
+              sessionId={urlSessionId}
+              autoRefresh={sessionStatus === 'running'}
+              refreshInterval={3000}
+              defaultCollapsed={false}
+            />
+          </div>
+        </ErrorBoundary>
+      )}
 
       {/* CSS for pulse animation */}
       <style>{`

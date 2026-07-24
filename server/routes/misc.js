@@ -776,9 +776,15 @@ module.exports = function (deps) {
 
       // We need at least bars data to provide analysis
       if (bars.error || !bars || bars.length === 0) {
-        throw new Error(
+        // Data unavailable (e.g. crypto like BTC-USD via an unauthorized Polygon
+        // plan) is a symbol/data condition, not a server fault — mark it 422 so
+        // the catch below returns a clean 4xx instead of a scary 500.
+        const err = new Error(
           `Unable to fetch historical data for ${symbol}. The symbol may be invalid or market data unavailable.`
         );
+        err.statusCode = 422;
+        err.dataUnavailable = true;
+        throw err;
       }
 
       // Get latest quote from Polygon for current price
@@ -1249,8 +1255,19 @@ module.exports = function (deps) {
       console.log(`✅ Analysis complete for ${symbol}: ${recommendation}`);
       res.json({ success: true, analysis: analysisResult });
     } catch (error) {
-      console.error(`❌ Error analyzing ${req.params.symbol}:`, error.message);
-      res.status(500).json({ error: error.message });
+      const status = error.statusCode || 500;
+      if (status >= 500) {
+        console.error(`❌ Error analyzing ${req.params.symbol}:`, error.message);
+      } else {
+        console.log(
+          `ℹ️  Analysis unavailable for ${req.params.symbol}: ${error.message}`
+        );
+      }
+      res.status(status).json({
+        error: error.message,
+        symbol: req.params.symbol,
+        dataUnavailable: !!error.dataUnavailable,
+      });
     }
   });
 

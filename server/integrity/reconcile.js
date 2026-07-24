@@ -90,11 +90,20 @@ async function reconcileSession(session) {
     }
   }
 
-  // 3. P&L drift detection (any session with a baseline). Surfaces the
-  //    display-vs-reality gap; does NOT auto-correct (that needs the per-broker
-  //    equity rework for the shared paper account).
+  // 3. P&L drift detection — SIM SESSIONS ONLY. The check asserts the balance-
+  //    sheet identity `cash + posVal - baseline == trackedPnL`. That identity
+  //    only holds for a self-contained ledger. Paper/live sessions execute real
+  //    fills on a SHARED external Alpaca account, so `portfolio.cash` is not the
+  //    session's real cash and `cash + posVal - baseline` is not its P&L — the
+  //    "gap" is structural, not drift, and firing it every minute for every
+  //    paper session was pure false-positive noise (tracked $0 vs computed
+  //    -$4.6k across 5 shared-account sessions). Meaningful per-paper-session
+  //    reconciliation needs the per-broker equity attribution rework; until then
+  //    we only assert the identity where it can actually hold. The ghost-
+  //    quarantine and stop-fire guards above already covered sim sessions; this
+  //    keeps the drift check exactly where it caught the real -$20k incident.
   const baseline = Number(session.portfolio.initialValue);
-  if (positions && baseline > 0) {
+  if (isSim && positions && baseline > 0) {
     const cash = Number(session.portfolio.cash) || 0;
     let posVal = 0;
     for (const p of positions.values()) posVal += Number(p.marketValue) || 0;

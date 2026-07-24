@@ -725,7 +725,10 @@ function writeIntegrityReport(summary) {
     const path = require('path');
     const dir = path.join(__dirname, '../data/reports/integrity');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'latest.json'), JSON.stringify(summary, null, 2));
+    fs.writeFileSync(
+      path.join(dir, 'latest.json'),
+      JSON.stringify(summary, null, 2)
+    );
   } catch (e) {
     /* integrity reporting is best-effort */
   }
@@ -3057,7 +3060,9 @@ async function analyzeAndTrade(sessionId) {
   // 3. Consecutive losses (opt-in; null = off). Auto-clears when a winning exit
   //    resets session.stats.consecutiveLosses in the executor.
   const consecLossLimit =
-    session.config.maxConsecutiveLosses ?? session.config.consecutiveLossLimit ?? null;
+    session.config.maxConsecutiveLosses ??
+    session.config.consecutiveLossLimit ??
+    null;
   if (
     !entriesHalted &&
     consecLossLimit != null &&
@@ -3985,8 +3990,18 @@ function seedSyntheticTradeHistory(sessionId, opts = {}) {
 function transitionToPaperTier(sessionId, paperAllocation) {
   const session = sessions.get(sessionId);
   if (!session) return { error: 'no session' };
-  if (session.config.simulationMode === false) {
-    return { error: 'session is already on real Alpaca path' };
+  // Only a GENUINELY simulated session (simulationMode === true) may be promoted.
+  // Legacy real-paper sessions carry simulationMode ABSENT (undefined) — they
+  // already route real orders to the shared Alpaca paper account, so the old
+  // `=== false` guard let them through and re-seeded them to the paper
+  // allocation (wiping tracked positions, resetting the P&L baseline). Mirror
+  // the UI's `simulationMode !== true` money-world test so absent/false are both
+  // treated as already-on-paper. (Same bug class as the sessions-list grouping.)
+  if (session.config.simulationMode !== true) {
+    return {
+      error:
+        'session is already on the real Alpaca path (only simulated sessions can be promoted)',
+    };
   }
   // Wipe simulated positions — they were virtual; the real Alpaca account has
   // no such positions to match. Cash resets to the paper allocation.
@@ -4195,6 +4210,64 @@ function resetSessionCapital(sessionId, capital) {
   };
   saveSessions();
   return true;
+}
+
+/**
+ * Repair a sim session's cash ledger + baseline to match its trade records,
+ * WITHOUT wiping trade history. The ghost-position bug debited cash for
+ * positions later removed without crediting it back, and the old syncPortfolio
+ * drifted initialValue off its $100k start — so equity (cash + positions)
+ * stopped matching initialValue + tracked P&L (e.g. Crypto's -$80k, Strategy 4's
+ * -$20k ledger gaps). stats.totalPnL (sum of closed trades) is the intact truth;
+ * this reconciles the ledger to it. Sim-only.
+ * @param {string} sessionId
+ * @param {number} baseline - correct starting capital (default 100000)
+ */
+function reconcileLedger(sessionId, baseline = 100000) {
+  const session = sessions.get(sessionId);
+  if (!session) return { error: 'session not found' };
+  if (!session.config.simulationMode) return { error: 'sim sessions only' };
+  const positions = session.portfolio.positions;
+  let openCost = 0;
+  let openValue = 0;
+  for (const p of positions.values()) {
+    openCost += (Number(p.averageCost) || 0) * (Number(p.quantity) || 0);
+    openValue += Number(p.marketValue) || 0;
+  }
+  const realized = Number(session.stats.totalPnL) || 0;
+  const before = {
+    cash: session.portfolio.cash,
+    initialValue: session.portfolio.initialValue,
+  };
+  // equity = cash + ΣmarketValue must equal baseline + realized + unrealized;
+  // solving for cash: cash = baseline + realized - Σ(cost basis of open pos).
+  session.portfolio.initialValue = baseline;
+  session.portfolio.cash = baseline + realized - openCost;
+  session.stats.peakValue = Math.max(
+    baseline,
+    session.portfolio.cash + openValue,
+    Number(session.stats.peakValue) || 0
+  );
+  saveSessions();
+  tradingLogger.logInfo('[Reconcile] Ledger repaired to match trade records', {
+    sessionId,
+    sessionName: session.name,
+    before,
+    after: { cash: session.portfolio.cash, initialValue: baseline },
+    realized,
+  });
+  return {
+    sessionId,
+    name: session.name,
+    before,
+    after: {
+      cash: session.portfolio.cash,
+      initialValue: session.portfolio.initialValue,
+    },
+    realized,
+    openCost,
+    openPositions: positions.size,
+  };
 }
 
 /**
@@ -4640,6 +4713,7 @@ module.exports = {
   dryRunEntry,
   updateConfig,
   resetSessionCapital,
+  reconcileLedger,
   resetLossStreak,
   manualSimEntry,
   manualSimExit,

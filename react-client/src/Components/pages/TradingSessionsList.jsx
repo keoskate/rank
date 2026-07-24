@@ -10,6 +10,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import Button from '../common/Button';
 import Card from '../common/Card';
 import MetricCard from '../common/MetricCard';
+import Money from '../common/Money';
+import Pill from '../common/Pill';
 import ViewModeToggle from '../common/ViewModeToggle';
 import useViewMode from '../../hooks/useViewMode';
 import { useAccountView } from '../../contexts/AccountViewContext';
@@ -542,17 +544,18 @@ const TradingSessionsList = () => {
           account-SCOPED list, not the raw one: passing `sessions` here was
           exactly the leak the 2026-07-23 screenshot caught (Main-account
           EXP-B/QBTX sessions rendering under the Keo Fund view). */}
-      {!loading && isEasy && scopedSessions.length > 0 && (
-        <EasyModeList
-          sessions={scopedSessions}
-          onStop={stopSession}
-          onSetAutoTrade={setAutoTrade}
-          onPromote={promoteToPaper}
-          formatCurrency={formatCurrency}
-          getStatusColor={getStatusColor}
-          navigate={navigate}
-        />
-      )}
+      {!loading &&
+        isEasy &&
+        (scopedSessions.length > 0 || simSessions.length > 0) && (
+          <EasyModeList
+            sessions={scopedSessions}
+            simSessions={simSessions}
+            onStop={stopSession}
+            onSetAutoTrade={setAutoTrade}
+            onPromote={promoteToPaper}
+            navigate={navigate}
+          />
+        )}
 
       {/* Active Sessions */}
       {!isEasy && runningSessions.length > 0 && (
@@ -666,8 +669,10 @@ const TradingSessionsList = () => {
       {/* Simulation sandbox — sessions bound to NO Alpaca account (fake
           internal $100k pools). Deliberately OUTSIDE the account scoping and
           collapsed by default: showing them under an account header made
-          them read as that account's holdings (2026-07-23 feedback). */}
-      {!loading && simSessions.length > 0 && (
+          them read as that account's holdings (2026-07-23 feedback). Easy mode
+          surfaces these as EasyModeList's "Practice (Simulated)" section, so
+          this Full-mode-only accordion avoids double-listing them. */}
+      {!loading && !isEasy && simSessions.length > 0 && (
         <div style={{ marginTop: theme.spacing.xl }}>
           <div
             style={{
@@ -721,8 +726,6 @@ const TradingSessionsList = () => {
                   onStop={stopSession}
                   onSetAutoTrade={setAutoTrade}
                   onPromote={promoteToPaper}
-                  formatCurrency={formatCurrency}
-                  getStatusColor={getStatusColor}
                   navigate={navigate}
                 />
               ))}
@@ -1350,14 +1353,31 @@ const SessionCard = ({
 
 const isRealPaperSession = s => s?.config?.simulationMode !== true;
 
-const easyBadge = bg => ({
-  padding: '2px 8px',
-  borderRadius: theme.borderRadius.sm,
-  backgroundColor: bg,
-  color: 'white',
-  fontSize: theme.typography.fontSize.xs,
+const ghostBtnStyle = {
+  padding: '6px 12px',
+  borderRadius: theme.borderRadius.xs,
+  border: `1px solid ${theme.colors.ruler}`,
+  background: 'transparent',
+  color: theme.colors.ink,
+  cursor: 'pointer',
+  fontSize: theme.typography.fontSize.sm,
   fontWeight: theme.typography.fontWeight.medium,
+  whiteSpace: 'nowrap',
+};
+
+const autoToggleStyle = on => ({
+  padding: '6px 12px',
+  borderRadius: theme.borderRadius.xs,
+  border: `1px solid ${on ? theme.colors.successMuted : theme.colors.ruler}`,
+  cursor: 'pointer',
+  fontFamily: theme.typography.fontFamilyMono,
+  fontSize: '0.72rem',
+  fontWeight: 700,
+  letterSpacing: '0.04em',
   textTransform: 'uppercase',
+  color: on ? '#fff' : theme.colors.ink,
+  background: on ? theme.colors.successMuted : 'transparent',
+  whiteSpace: 'nowrap',
 });
 
 const EasySessionCard = ({
@@ -1365,8 +1385,6 @@ const EasySessionCard = ({
   onStop,
   onSetAutoTrade,
   onPromote,
-  formatCurrency,
-  getStatusColor,
   navigate,
 }) => {
   const realPaper = isRealPaperSession(session);
@@ -1378,26 +1396,45 @@ const EasySessionCard = ({
     : 0;
   const isStale = session.status === 'running' && staleMs > 24 * 3600 * 1000;
   const staleH = Math.round(staleMs / 3600000);
+  const watchlist = (session.watchlist || session.config?.symbols || [])
+    .slice(0, 4)
+    .join(' · ');
+  const accent =
+    pnl > 0
+      ? theme.colors.successMuted
+      : pnl < 0
+        ? theme.colors.errorMuted
+        : theme.colors.ruler;
 
   return (
     <Card
-      style={{
-        padding: theme.spacing.md,
-        cursor: 'pointer',
-        border: `1px solid ${getStatusColor(session.status)}30`,
-      }}
+      variant="default"
+      padding="none"
+      style={{ cursor: 'pointer', overflow: 'hidden', position: 'relative' }}
       onClick={() => navigate(`/live-trading/${session.sessionId}`)}
     >
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 3,
+          background: accent,
+        }}
+      />
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: theme.spacing.md,
+          gap: theme.spacing.lg,
           flexWrap: 'wrap',
+          padding: `14px ${theme.spacing.md} 14px ${theme.spacing.lg}`,
         }}
       >
-        <div style={{ flex: 1, minWidth: 200 }}>
+        {/* identity + north-star P&L */}
+        <div style={{ flex: 1, minWidth: 240 }}>
           <div
             style={{
               display: 'flex',
@@ -1406,56 +1443,78 @@ const EasySessionCard = ({
               flexWrap: 'wrap',
             }}
           >
-            <h3 style={{ margin: 0, color: theme.colors.gray900 }}>
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.md,
+                fontWeight: theme.typography.fontWeight.bold,
+                color: theme.colors.charcoal,
+              }}
+            >
               {session.name || 'Unnamed Session'}
-            </h3>
-            <span style={easyBadge(getStatusColor(session.status))}>
-              {session.status}
             </span>
-            <span style={easyBadge(realPaper ? '#2563eb' : '#6b7280')}>
-              {realPaper ? 'Paper' : 'Sim'}
-            </span>
+            <Pill
+              label={session.status}
+              tone={
+                session.status === 'running'
+                  ? 'good'
+                  : session.status === 'paused'
+                    ? 'warn'
+                    : 'paper'
+              }
+            />
             {isStale && (
-              <span
+              <Pill
+                label={`stale ${staleH}h`}
+                tone="warn"
                 title="Running, but no activity in over a day"
-                style={easyBadge(theme.colors.warning)}
-              >
-                Stale {staleH}h
-              </span>
+              />
             )}
           </div>
           <div
             style={{
-              marginTop: 6,
               display: 'flex',
+              alignItems: 'baseline',
               gap: theme.spacing.md,
-              alignItems: 'center',
-              fontSize: theme.typography.fontSize.sm,
+              marginTop: 10,
               flexWrap: 'wrap',
             }}
           >
+            <Money value={pnl} signed size="lg" sim={!realPaper} />
             <span
               style={{
-                color: pnl >= 0 ? theme.colors.success : theme.colors.error,
-                fontWeight: theme.typography.fontWeight.medium,
+                fontSize: theme.typography.fontSize.xs,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: theme.colors.ink,
               }}
             >
-              {formatCurrency(pnl)}
-              {!realPaper && (
-                <span style={{ color: theme.colors.gray500, fontWeight: 400 }}>
-                  {' '}
-                  (sim)
-                </span>
-              )}
+              net P&amp;L
             </span>
-            <span style={{ color: theme.colors.gray600 }}>
-              {autoOn
-                ? '● executing trades'
-                : '○ signals only — not placing orders'}
+            <span
+              style={{
+                fontSize: theme.typography.fontSize.sm,
+                color: autoOn
+                  ? theme.colors.successMuted
+                  : theme.colors.textMuted,
+              }}
+            >
+              {autoOn ? '● executing' : '○ signals only'}
             </span>
+            {watchlist && (
+              <span
+                style={{
+                  fontFamily: theme.typography.fontFamilyMono,
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textMuted,
+                }}
+              >
+                {watchlist}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* controls */}
         <div
           style={{
             display: 'flex',
@@ -1467,21 +1526,10 @@ const EasySessionCard = ({
           <button
             type="button"
             onClick={e => onSetAutoTrade(session.sessionId, !autoOn, e)}
-            title="Auto-Trade ON = the strategy places orders on signals. OFF = it only logs signals (no orders)."
-            style={{
-              padding: '6px 12px',
-              borderRadius: theme.borderRadius.full,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: theme.typography.fontSize.sm,
-              fontWeight: theme.typography.fontWeight.bold,
-              color: '#fff',
-              backgroundColor: autoOn
-                ? theme.colors.success
-                : theme.colors.gray500,
-            }}
+            title="Auto-Trade ON = places orders on signals. OFF = logs signals only."
+            style={autoToggleStyle(autoOn)}
           >
-            Auto-Trade: {autoOn ? 'ON' : 'OFF'}
+            Auto-Trade {autoOn ? 'ON' : 'OFF'}
           </button>
           {!realPaper && onPromote && (
             <button
@@ -1490,28 +1538,19 @@ const EasySessionCard = ({
                 onPromote(session.sessionId, session.name || 'this session', e)
               }
               title="Move this practice strategy onto the real Alpaca paper account"
-              style={{
-                padding: '6px 12px',
-                borderRadius: theme.borderRadius.full,
-                border: `1px solid ${theme.colors.info}`,
-                background: 'transparent',
-                color: theme.colors.info,
-                cursor: 'pointer',
-                fontSize: theme.typography.fontSize.sm,
-                fontWeight: theme.typography.fontWeight.medium,
-                whiteSpace: 'nowrap',
-              }}
+              style={ghostBtnStyle}
             >
               ↑ Upgrade to Paper
             </button>
           )}
           {session.status !== 'stopped' && (
-            <Button
-              variant="secondary"
+            <button
+              type="button"
               onClick={e => onStop(session.sessionId, e)}
+              style={ghostBtnStyle}
             >
               Stop
-            </Button>
+            </button>
           )}
         </div>
       </div>
@@ -1521,36 +1560,61 @@ const EasySessionCard = ({
 
 const EasyModeList = ({
   sessions,
+  simSessions = [],
   onStop,
   onSetAutoTrade,
   onPromote,
-  formatCurrency,
-  getStatusColor,
   navigate,
 }) => {
   // Which account this list is scoped to (global picker) — used to label the
   // real-money section with the actual account instead of a generic string.
   const { account: viewAccount } = useAccountView();
+  // Real = the account-scoped sessions (all route real orders to this Alpaca
+  // account). Practice = the account-less simulated pools, surfaced here as a
+  // first-class section instead of the collapsed Full-mode "sandbox" accordion.
   const real = sessions.filter(isRealPaperSession);
-  const practice = sessions.filter(s => !isRealPaperSession(s));
+  const practice = simSessions;
 
-  const Section = ({ title, subtitle, accent, items }) =>
+  const Section = ({ title, subtitle, items }) =>
     items.length > 0 ? (
-      <div style={{ marginBottom: theme.spacing.lg }}>
-        <h2
+      <div style={{ marginBottom: theme.spacing.xl }}>
+        <div
           style={{
-            color: accent,
-            fontSize: theme.typography.fontSize.lg,
-            margin: 0,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: theme.spacing.sm,
+            paddingBottom: 6,
+            borderBottom: `1px solid ${theme.colors.ruler}`,
           }}
         >
-          {title} ({items.length})
-        </h2>
+          <h2
+            style={{
+              fontFamily: theme.typography.fontFamilyMono,
+              fontSize: theme.typography.fontSize.sm,
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: theme.colors.charcoal,
+              margin: 0,
+            }}
+          >
+            {title}
+          </h2>
+          <span
+            style={{
+              fontFamily: theme.typography.fontFamilyMono,
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textMuted,
+            }}
+          >
+            {items.length}
+          </span>
+        </div>
         <p
           style={{
-            margin: '2px 0 12px',
-            color: theme.colors.gray500,
-            fontSize: theme.typography.fontSize.sm,
+            margin: '8px 0 14px',
+            color: theme.colors.ink,
+            fontSize: theme.typography.fontSize.xs,
           }}
         >
           {subtitle}
@@ -1563,8 +1627,6 @@ const EasyModeList = ({
               onStop={onStop}
               onSetAutoTrade={onSetAutoTrade}
               onPromote={onPromote}
-              formatCurrency={formatCurrency}
-              getStatusColor={getStatusColor}
               navigate={navigate}
             />
           ))}
@@ -1577,13 +1639,11 @@ const EasyModeList = ({
       <Section
         title="Real Paper Money"
         subtitle={`Trades ${viewAccount ? viewAccount.label : 'the live Alpaca paper account'}${viewAccount && viewAccount.accountNumber ? ` (${viewAccount.accountNumber})` : ''} — real fills, real P&L.`}
-        accent={theme.colors.info}
         items={real}
       />
       <Section
         title="Practice (Simulated)"
         subtitle="Fake $100k pools, not connected to Alpaca — for testing only."
-        accent={theme.colors.gray600}
         items={practice}
       />
     </>
