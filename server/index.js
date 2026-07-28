@@ -1288,6 +1288,14 @@ server.listen(PORT, () => {
   // seed watchlist for up to 30 min after a restart.
   setTimeout(refreshScanners, 90 * 1000);
 
+  // Options self-improvement heartbeat: one earnest scan + full grading per
+  // market day, ledger delta to Telegram. OPTIONS_DAILY_LOOP=off to disable.
+  try {
+    require('./scanner/optionsDailyLoop').start();
+  } catch (err) {
+    console.error('Options daily loop failed to start:', err.message);
+  }
+
   // Initialize Telegram bot if configured
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_OWNER_ID) {
     telegramBot.initialize(
