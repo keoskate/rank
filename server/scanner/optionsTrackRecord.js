@@ -35,6 +35,12 @@ const STORE_FILE = path.join(__dirname, '..', '..', 'data', 'options-track-recor
 const DAY_MS = 86400000;
 const EXIT_BAR_GRACE_DAYS = 3; // thin contracts don't trade every day
 const BARS_BATCH_SIZE = 40;
+// v2: option exits valued at estimated BID (close minus half the entry-time
+// relative spread — a seller doesn't get the last-trade print) + stock-leg
+// attribution. Bumping this re-grades the whole ledger from the same raw
+// entries; the methodology is versioned, the record never rewrites itself
+// silently.
+const GRADE_VERSION = 2;
 
 function _load() {
   try {
@@ -158,12 +164,22 @@ function gradePick(pick, optionBars, underlyingBars, today, { useTouches = true 
   }
   if (exitValue == null) return null; // no data yet — try again later
 
+  // Sellers get the bid, not the last print: haircut trade-based exits by
+  // half the entry-time relative spread. Intrinsic-at-expiry settles at
+  // parity — no spread to pay.
+  const exitValueRaw = exitValue;
+  if (valueSource !== 'intrinsicAtExpiry') {
+    const spreadHaircut = Math.min(Math.max(card.spreadPct ?? 0, 0), 0.5) / 2;
+    exitValue = Math.max(exitValue * (1 - spreadHaircut), 0);
+  }
+
   const entry = card.entryDebit;
   const returnPct = (exitValue - entry) / entry;
   return {
     exitDate,
     exitReason,
     exitValue: +exitValue.toFixed(3),
+    exitValueRaw: +exitValueRaw.toFixed(3),
     valueSource,
     returnPct: +returnPct.toFixed(4),
     plPerContract: +((exitValue - entry) * 100).toFixed(2),
@@ -171,8 +187,58 @@ function gradePick(pick, optionBars, underlyingBars, today, { useTouches = true 
   };
 }
 
+/**
+ * Grade the STOCK side of the pick under the same touch playbook — was the
+ * direction call right, independent of the option wrapper? Separates
+ * "picked the wrong direction" from "the vehicle (theta + spread) ate a
+ * correct call" — they have opposite fixes. PURE, unit-tested.
+ * @returns {object|null} { exitDate, exitReason, exitPrice, returnPct, win }
+ */
+function gradeStockLeg(pick, underlyingBars, today) {
+  const card = pick.card;
+  const entryDay = pick.recordedAt.slice(0, 10);
+  const isLong = card.direction === 'LONG';
+  const dayOf = b => (b.t || new Date(b.timestamp).toISOString()).slice(0, 10);
+  const inWindow = (underlyingBars || [])
+    .filter(b => dayOf(b) > entryDay && dayOf(b) <= pick.planExitDate)
+    .sort((a, b) => dayOf(a).localeCompare(dayOf(b)));
+
+  let exitDate = null;
+  let exitReason = null;
+  let exitPrice = null;
+  for (const b of inWindow) {
+    const hitTarget = isLong ? b.high >= card.targetPrice : b.low <= card.targetPrice;
+    const hitStop = isLong ? b.low <= card.stopPrice : b.high >= card.stopPrice;
+    if (hitTarget || hitStop) {
+      exitDate = dayOf(b);
+      exitReason = hitStop ? 'stopHit' : 'targetHit'; // same-day both-touch: pessimistic
+      exitPrice = hitStop ? card.stopPrice : card.targetPrice;
+      break;
+    }
+  }
+  if (!exitDate) {
+    if (today <= pick.planExitDate) return null;
+    const exitBar = inWindow[inWindow.length - 1];
+    if (!exitBar) return null;
+    exitDate = dayOf(exitBar);
+    exitReason = 'planExit';
+    exitPrice = exitBar.close;
+  }
+
+  const entry = card.underlyingPrice;
+  const raw = (exitPrice - entry) / entry;
+  const returnPct = isLong ? raw : -raw;
+  return {
+    exitDate,
+    exitReason,
+    exitPrice: +exitPrice.toFixed(4),
+    returnPct: +returnPct.toFixed(4),
+    win: returnPct > 0,
+  };
+}
+
 function _needsGrading(p) {
-  return p.status === 'open' || !p.exitHold;
+  return p.gradeVersion !== GRADE_VERSION || p.status === 'open' || !p.exitHold || !p.stockLeg;
 }
 
 /**
@@ -231,7 +297,18 @@ async function evaluatePending() {
 
   let graded = 0;
   let gradedHold = 0;
+  let changed = false;
   for (const pick of pending) {
+    // Methodology bump: wipe derived grades and redo from the raw entry.
+    if (pick.gradeVersion !== GRADE_VERSION) {
+      delete pick.exit;
+      delete pick.exitHold;
+      delete pick.stockLeg;
+      pick.status = 'open';
+      pick.holdStatus = 'open';
+      pick.gradeVersion = GRADE_VERSION;
+      changed = true;
+    }
     const optionBars = optionBarsBySym[pick.card.contractSymbol] || [];
     const underlyingBars = underlyingCache.get(pick.card.underlying) || [];
     if (pick.status === 'open') {
@@ -251,8 +328,15 @@ async function evaluatePending() {
         gradedHold++;
       }
     }
+    if (!pick.stockLeg) {
+      const stockLeg = gradeStockLeg(pick, underlyingBars, today);
+      if (stockLeg) {
+        pick.stockLeg = stockLeg;
+        changed = true;
+      }
+    }
   }
-  if (graded || gradedHold) _save(picks);
+  if (graded || gradedHold || changed) _save(picks);
   return { graded, gradedHold };
 }
 
@@ -331,6 +415,27 @@ async function getReport({ limit = 50 } = {}) {
       playbooks: withStops && holdToPlan
         ? { comparablePicks: both.length, withStops, holdToPlan, verdict: playbookVerdict }
         : null,
+      attribution: (() => {
+        // Direction vs vehicle: was the stock call right, and did the
+        // option deliver when it was?
+        const attributed = picks.filter(p => p.exit && p.stockLeg);
+        if (!attributed.length) return null;
+        const stockWon = attributed.filter(p => p.stockLeg.win);
+        const slice = arr => (arr.length
+          ? {
+              picks: arr.length,
+              optionWinRate: +(arr.filter(p => p.exit.win).length / arr.length).toFixed(4),
+              avgOptionReturnPct: +avg(arr.map(p => p.exit.returnPct)).toFixed(4),
+            }
+          : null);
+        return {
+          picks: attributed.length,
+          stockLegWinRate: +(stockWon.length / attributed.length).toFixed(4),
+          whenStockWon: slice(stockWon),
+          whenStockLost: slice(attributed.filter(p => !p.stockLeg.win)),
+          note: 'stock right but option lost = the vehicle (theta + spread) ate a correct call — opposite fix from a wrong direction',
+        };
+      })(),
     },
     picks: picks
       .slice()
@@ -339,4 +444,4 @@ async function getReport({ limit = 50 } = {}) {
   };
 }
 
-module.exports = { recordPicks, gradePick, evaluatePending, getReport, STORE_FILE };
+module.exports = { recordPicks, gradePick, gradeStockLeg, evaluatePending, getReport, STORE_FILE, GRADE_VERSION };

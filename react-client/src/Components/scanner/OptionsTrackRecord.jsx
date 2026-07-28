@@ -73,6 +73,23 @@ const OptionsTrackRecord = ({ refreshKey }) => {
               {' '}<strong style={{ color: theme.colors.charcoal }}>{s.playbooks.verdict}</strong>
             </div>
           )}
+          {s.attribution?.whenStockWon && (
+            <div style={{
+              fontSize: '0.74rem',
+              color: theme.colors.gray700,
+              background: theme.colors.parchment,
+              border: `1px solid ${theme.colors.gray200}`,
+              borderRadius: theme.borderRadius.xs,
+              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+              marginBottom: theme.spacing.xs,
+            }}>
+              <strong style={{ color: theme.colors.charcoal }}>Direction vs vehicle</strong> — the stock call was right on{' '}
+              {Math.round(s.attribution.stockLegWinRate * 100)}% of {s.attribution.picks} graded picks. When it was right, the option won{' '}
+              {Math.round(s.attribution.whenStockWon.optionWinRate * 100)}% of the time
+              (avg {s.attribution.whenStockWon.avgOptionReturnPct >= 0 ? '+' : ''}{Math.round(s.attribution.whenStockWon.avgOptionReturnPct * 100)}%) —
+              the gap is what theta and spread cost a correct call.
+            </div>
+          )}
           {report.picks.slice(0, 15).map(p => {
             const graded = p.status === 'win' || p.status === 'loss';
             const pct = graded ? p.exit.returnPct : p.openMark?.returnPct;
