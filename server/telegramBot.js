@@ -68,6 +68,14 @@ function initialize(token, ownerChatId) {
   bot.onText(/^\/yes$/i, (msg) => isOwner(msg) && handleConfirm(msg));
   bot.onText(/^\/no$/i, (msg) => isOwner(msg) && handleCancel(msg));
 
+  // Options scanner commands (/options, /optbuy, /optpositions, /optsell)
+  require('./telegramOptions').register({
+    bot,
+    isOwner,
+    setPendingConfirmation,
+    ownerId,
+  });
+
   // Natural language handler (catches anything that isn't a /command)
   bot.on('message', (msg) => {
     if (!isOwner(msg)) return;
@@ -118,6 +126,12 @@ async function handleHelp(msg) {
     '/sell SOXL 50 — Sell 50 shares\n' +
     '/close SOXL — Close position\n' +
     '/trade SOXL — Start auto\\-trading session\n\n' +
+    '*Options:*\n' +
+    '/options 5 — Top option picks, plain English\n' +
+    '/optbuy 1 — Buy card \\#1 \\(1 contract\\)\n' +
+    '/optpositions — Open option bets \\+ advice\n' +
+    '/optsell 1 — Sell position \\#1\n' +
+    '/optrecord — How past picks performed \\(W/L\\)\n\n' +
     '*Sessions:*\n' +
     '/pause NAME — Pause session\n' +
     '/resume NAME — Resume session\n' +

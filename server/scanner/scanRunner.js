@@ -16,6 +16,8 @@ const scanCache = require('./scanCache');
 const scanStore = require('./scanStore');
 const { getDefaultUniverse } = require('./universe');
 
+const { recentDaysFromBars } = require('./recentDays');
+
 const DEFAULT_HORIZON_DAYS = 5;
 const DEFAULT_MIN_PROBABILITY = 0.55;
 const DEFAULT_MAX_RESULTS = 25;
@@ -107,6 +109,7 @@ async function _scoreSymbol(symbol, horizonDays) {
     atrPct: +targets.atrPct.toFixed(2),
     riskReward: +targets.riskReward.toFixed(2),
     expectedValue: +expectedValue.toFixed(3),
+    recentDays: recentDaysFromBars(bars),
     signalConfidence: signalEval.confidence,
     patternConfidence: patternPred?.confidence ?? null,
     patternSignal: patternPred?.signal ?? null,

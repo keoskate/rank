@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { runScan } = require('../scanner/scanRunner');
-const { runOptionsScan } = require('../scanner/optionsScanRunner');
+const { runOptionsScan, requoteLatest } = require('../scanner/optionsScanRunner');
 const scanStore = require('../scanner/scanStore');
 
 module.exports = function () {
@@ -57,6 +57,25 @@ module.exports = function () {
       res.json(result);
     } catch (err) {
       console.error('Scanner /options/scan error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/api/scanner/options/requote', async (req, res) => {
+    try {
+      res.json(await requoteLatest());
+    } catch (err) {
+      console.error('Scanner /options/requote error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/api/scanner/options/track-record', async (req, res) => {
+    try {
+      const limit = Number.isFinite(+req.query.limit) ? +req.query.limit : 50;
+      res.json(await require('../scanner/optionsTrackRecord').getReport({ limit }));
+    } catch (err) {
+      console.error('Scanner /options/track-record error:', err);
       res.status(500).json({ error: err.message });
     }
   });

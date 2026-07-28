@@ -132,6 +132,7 @@ async function _scanUnderlying(stockRow, params, today) {
     if (!result.ok) { count(result.reason); continue; }
 
     const row = result.row;
+    row.recentDays = stockRow.recentDays ?? null;
     // Earnings-mode filter uses per-contract span (expiry vs earnings date).
     if (params.earningsMode === 'exclude' && row.earnings?.withinHorizon) {
       count('earningsExcluded');
@@ -262,7 +263,118 @@ async function runOptionsScan(rawParams = {}) {
     scanResult.persistError = err.message;
   }
 
+  // Every surfaced card goes on the permanent record — that's how we learn
+  // whether the recommendations actually make money.
+  try {
+    require('./optionsTrackRecord').recordPicks(scanResult);
+  } catch (err) {
+    console.error('[OptionsScan] track-record recording failed:', err.message);
+  }
+
   return scanResult;
 }
 
-module.exports = { runOptionsScan };
+/**
+ * Re-price the latest options scan from LIVE quotes without re-running the
+ * stock leg. The thesis (direction/target/stop/probability) stays fixed;
+ * the option quote, greeks, IV, and current underlying price update — so
+ * cards track the market instead of a scan-time snapshot. Rows that no
+ * longer pass filters (spread blew out, quote vanished) are kept but marked
+ * live.status='degraded' rather than silently dropped. Original ranking
+ * order is preserved so cards don't jump around between polls.
+ */
+async function requoteLatest() {
+  const scan = scanStore.loadLatest('options-scan');
+  const rows = scan?.opportunities || [];
+  if (!rows.length) return { error: 'No options scan to requote', opportunities: [] };
+
+  const asOf = new Date().toISOString();
+  const today = asOf.slice(0, 10);
+  const alpacaClient = require('../alpacaClient');
+
+  const [marks, priceEntries] = await Promise.all([
+    alpacaOptions.getSnapshotsBySymbols(rows.map(r => r.contractSymbol), 30 * 1000),
+    Promise.all([...new Set(rows.map(r => r.underlying))].map(async sym => {
+      try {
+        const snap = await alpacaClient.getSnapshot(sym);
+        return [sym, {
+          price: snap?.latestTrade?.p ?? snap?.minuteBar?.c ?? snap?.dailyBar?.c ?? null,
+          prevClose: snap?.prevDailyBar?.c ?? null,
+        }];
+      } catch {
+        return [sym, { price: null, prevClose: null }];
+      }
+    })),
+  ]);
+  const stockPrices = Object.fromEntries(priceEntries);
+
+  const filters = {
+    maxSpreadPct: scan.params?.maxSpreadPct,
+    minOpenInterest: scan.params?.minOpenInterest,
+    minDelta: scan.params?.minDelta,
+    maxDebit: scan.params?.maxDebit,
+  };
+
+  const opportunities = rows.map(row => {
+    const snap = marks.snapshots?.[row.contractSymbol];
+    const stock = stockPrices[row.underlying] || {};
+    const stockPrice = Number.isFinite(stock.price) ? stock.price : row.underlyingPrice;
+    const stockChangeTodayPct = Number.isFinite(stock.price) && Number.isFinite(stock.prevClose) && stock.prevClose > 0
+      ? ((stock.price - stock.prevClose) / stock.prevClose) * 100
+      : null;
+    const liveBase = { asOf, stockPrice, stockChangeTodayPct };
+
+    if (!snap?.latestQuote) {
+      return { ...row, live: { ...liveBase, status: 'noQuote' } };
+    }
+
+    const result = scoreContract(
+      {
+        symbol: row.underlying,
+        direction: row.direction,
+        probability: row.stockProbability,
+        currentPrice: stockPrice,
+        targetPrice: row.targetPrice,
+        stopPrice: row.stopPrice,
+        horizonDays: scan.horizonDays,
+      },
+      {
+        occSymbol: row.contractSymbol,
+        strike: row.strike,
+        expiration: row.expiration,
+        type: row.type,
+        bid: snap.latestQuote.bp,
+        ask: snap.latestQuote.ap,
+        greeks: snap.greeks || null,
+        iv: snap.impliedVolatility ?? null,
+        openInterest: row.openInterest, // OI updates daily; scan-time value is current
+        dayVolume: snap.dailyBar?.v ?? row.dayVolume,
+      },
+      { today, ivRank: row.ivRank, earnings: row.earnings },
+      filters
+    );
+
+    if (!result.ok) {
+      return { ...row, live: { ...liveBase, status: 'degraded', reason: result.reason } };
+    }
+
+    const updated = result.row;
+    updated.recentDays = row.recentDays ?? null;
+    const quoteMs = snap.latestQuote.t ? Date.parse(snap.latestQuote.t) : NaN;
+    updated.quoteAgeMinutes = Number.isFinite(quoteMs)
+      ? Math.max(Math.round((Date.now() - quoteMs) / 60000), 0)
+      : null;
+    updated.live = { ...liveBase, status: 'ok' };
+    return updated;
+  });
+
+  return {
+    scanId: scan.scanId,
+    generatedAt: scan.generatedAt,
+    horizonDays: scan.horizonDays,
+    asOf,
+    opportunities,
+  };
+}
+
+module.exports = { runOptionsScan, requoteLatest };

@@ -295,4 +295,5 @@ const OptionRowPair = ({ o, i, isExpanded, onToggle, cellStyle, right }) => (
   </>
 );
 
+export { PopBar };
 export default memo(OptionsOpportunityTable);

@@ -182,12 +182,79 @@ async function getChainSnapshots(underlying, {
   return result;
 }
 
+/**
+ * Snapshots for specific contracts (quotes + greeks + IV), for marking open
+ * positions and pricing exits. Short TTL — these back live sell decisions.
+ * @param {string[]} occSymbols
+ * @returns {{ snapshots: Object<string, object>, error?: string }}
+ */
+async function getSnapshotsBySymbols(occSymbols, ttlMs = 60 * 1000) {
+  const syms = (occSymbols || []).filter(Boolean).map(s => String(s).toUpperCase());
+  if (!syms.length) return { snapshots: {} };
+
+  const query = `symbols=${encodeURIComponent(syms.join(','))}&feed=indicative`;
+  const cacheKey = `bysym|${query}`;
+  const hit = _cached(cacheKey, ttlMs);
+  if (hit) return hit;
+
+  const res = await _get(`${DATA_BASE_URL}/v1beta1/options/snapshots?${query}`);
+  if (res.error) return { snapshots: {}, error: res.error };
+  const result = { snapshots: res.snapshots || {} };
+  cache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
+}
+
+/**
+ * Historical daily bars for specific contracts — grades the track record
+ * (what did this option actually trade at on the exit date?).
+ * @returns {{ bars: Object<string, Array>, error?: string }} bars keyed by
+ *   OCC symbol, each [{ t, o, h, l, c, v }].
+ */
+async function getOptionBars(occSymbols, { start, end } = {}) {
+  const syms = (occSymbols || []).filter(Boolean).map(s => String(s).toUpperCase());
+  if (!syms.length) return { bars: {} };
+
+  const query = _buildQuery({
+    symbols: syms.join(','),
+    timeframe: '1Day',
+    start,
+    end,
+    limit: 1000,
+  });
+  const cacheKey = `bars|${query}`;
+  const hit = _cached(cacheKey, CONTRACTS_TTL_MS);
+  if (hit) return hit;
+
+  const bars = {};
+  let pageToken = null;
+  for (let page = 0; page < MAX_CONTRACT_PAGES; page++) {
+    const url = `${DATA_BASE_URL}/v1beta1/options/bars?${query}` +
+      (pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : '');
+    const res = await _get(url);
+    if (res.error) {
+      if (Object.keys(bars).length === 0) return { bars: {}, error: res.error };
+      break;
+    }
+    for (const [sym, arr] of Object.entries(res.bars || {})) {
+      bars[sym] = (bars[sym] || []).concat(arr);
+    }
+    pageToken = res.next_page_token;
+    if (!pageToken) break;
+  }
+
+  const result = { bars };
+  cache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
+}
+
 const clearCache = () => cache.clear();
 
 module.exports = {
   isConfigured,
   getContracts,
   getChainSnapshots,
+  getSnapshotsBySymbols,
+  getOptionBars,
   clearCache,
   CHAIN_TTL_MS,
 };
