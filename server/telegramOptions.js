@@ -374,6 +374,14 @@ async function handleOptRecord(bot, msg) {
           `Hold to plan: ${Math.round(pb.holdToPlan.winRate * 100)}% win, avg ${pb.holdToPlan.avgReturnPct >= 0 ? '+' : ''}${Math.round(pb.holdToPlan.avgReturnPct * 100)}%\n` +
           `${pb.verdict}\n`;
       }
+      if (s.attribution?.whenStockWon) {
+        const a = s.attribution;
+        text +=
+          `\n*Direction vs vehicle:*\n` +
+          `Stock call right on ${Math.round(a.stockLegWinRate * 100)}% of ${a.picks} picks\n` +
+          `When right, option won ${Math.round(a.whenStockWon.optionWinRate * 100)}% ` +
+          `(avg ${a.whenStockWon.avgOptionReturnPct >= 0 ? '+' : ''}${Math.round(a.whenStockWon.avgOptionReturnPct * 100)}%) — the rest is theta \\+ spread\n`;
+      }
     } else {
       text += `${s.totalPicks} picks recorded, none graded yet` +
         (s.nextGradeDate ? ` — first results after ${lang.fmtShortDate(s.nextGradeDate)}` : '') + '\n';

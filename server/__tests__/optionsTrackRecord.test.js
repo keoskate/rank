@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gradePick } from '../scanner/optionsTrackRecord.js';
+import { gradePick, gradeStockLeg } from '../scanner/optionsTrackRecord.js';
 
 const basePick = {
   recordedAt: '2026-07-01T14:00:00.000Z',
@@ -87,6 +87,63 @@ describe('gradePick', () => {
 
   it('returns null when there is no option data and no expiry yet', () => {
     expect(gradePick(basePick, [], [uBar('2026-07-09', 192, 186, 190)], '2026-07-10')).toBeNull();
+  });
+});
+
+describe('gradePick — exit-at-bid haircut (v2)', () => {
+  it('haircuts trade-based exits by half the entry-time relative spread', () => {
+    const wideSpread = { ...basePick, card: { ...basePick.card, spreadPct: 0.1 } };
+    const optionBars = [oBar('2026-07-03', 9.2)];
+    const underlyingBars = [uBar('2026-07-03', 199, 189, 197)];
+    const exit = gradePick(wideSpread, optionBars, underlyingBars, '2026-07-05');
+    expect(exit.exitValueRaw).toBe(9.2);
+    expect(exit.exitValue).toBeCloseTo(9.2 * 0.95, 3); // 10% spread → 5% off the print
+    expect(exit.returnPct).toBeCloseTo((9.2 * 0.95 - 4) / 4, 4);
+  });
+
+  it('does not haircut intrinsic-at-expiry settlement', () => {
+    const wideSpread = {
+      ...basePick,
+      planExitDate: '2026-07-17',
+      card: { ...basePick.card, spreadPct: 0.2 },
+    };
+    const exit = gradePick(wideSpread, [], [uBar('2026-07-17', 200, 195, 198)], '2026-07-20');
+    expect(exit.valueSource).toBe('intrinsicAtExpiry');
+    expect(exit.exitValue).toBeCloseTo(8, 3); // 198 - 190, untouched
+  });
+});
+
+describe('gradeStockLeg — direction vs vehicle attribution', () => {
+  it('LONG stock leg wins at the target level', () => {
+    const leg = gradeStockLeg(
+      { ...basePick, card: { ...basePick.card, direction: 'LONG', underlyingPrice: 185 } },
+      [uBar('2026-07-03', 199, 189, 197)],
+      '2026-07-05'
+    );
+    expect(leg.exitReason).toBe('targetHit');
+    expect(leg.exitPrice).toBe(198);
+    expect(leg.returnPct).toBeCloseTo((198 - 185) / 185, 4);
+    expect(leg.win).toBe(true);
+  });
+
+  it('SHORT stock leg signs returns correctly and loses on a stop', () => {
+    const shortPick = {
+      ...basePick,
+      card: { ...basePick.card, direction: 'SHORT', underlyingPrice: 185, targetPrice: 172, stopPrice: 191 },
+    };
+    const leg = gradeStockLeg(shortPick, [uBar('2026-07-03', 192, 186, 190)], '2026-07-05');
+    expect(leg.exitReason).toBe('stopHit');
+    expect(leg.returnPct).toBeCloseTo(-(191 - 185) / 185, 4);
+    expect(leg.win).toBe(false);
+  });
+
+  it('no touch grades at the plan-exit close after the date passes', () => {
+    const bars = [uBar('2026-07-08', 193, 187, 191)];
+    expect(gradeStockLeg({ ...basePick, card: { ...basePick.card, direction: 'LONG', underlyingPrice: 185 } }, bars, '2026-07-08')).toBeNull();
+    const leg = gradeStockLeg({ ...basePick, card: { ...basePick.card, direction: 'LONG', underlyingPrice: 185 } }, bars, '2026-07-09');
+    expect(leg.exitReason).toBe('planExit');
+    expect(leg.exitPrice).toBe(191);
+    expect(leg.win).toBe(true); // stock inched up — this is the "vehicle tax" case when the option still lost
   });
 });
 

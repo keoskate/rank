@@ -68,7 +68,9 @@
         "Needs 6.9% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 812
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NFLX260731C00072000-2026-07-22",
@@ -140,7 +142,9 @@
         "Needs 5.7% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 812
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "XOM260731P00144000-2026-07-22",
@@ -213,16 +217,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.569Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.19,
+      "exitValue": 0.183,
+      "exitValueRaw": 0.19,
       "valueSource": "optionClose",
-      "returnPct": -0.7751,
-      "plPerContract": -65.5,
+      "returnPct": -0.7833,
+      "plPerContract": -66.19,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:35.262Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "WMT260731C00115000-2026-07-22",
@@ -293,16 +307,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.569Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.15,
+      "exitValue": 0.146,
+      "exitValueRaw": 0.15,
       "valueSource": "optionClose",
-      "returnPct": -0.7126,
-      "plPerContract": -37.2,
+      "returnPct": -0.721,
+      "plPerContract": -37.64,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:35.414Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
+      "win": false
+    }
   },
   {
     "id": "XOM260731P00145000-2026-07-22",
@@ -375,16 +399,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.569Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.3,
+      "exitValue": 0.286,
+      "exitValueRaw": 0.3,
       "valueSource": "optionClose",
-      "returnPct": -0.7183,
-      "plPerContract": -76.5,
+      "returnPct": -0.7319,
+      "plPerContract": -77.94,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:35.556Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "NVDA260729C00217500-2026-07-22",
@@ -455,16 +489,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.570Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.03,
+      "exitValue": 0.029,
+      "exitValueRaw": 0.03,
       "valueSource": "optionClose",
-      "returnPct": -0.9726,
-      "plPerContract": -106.5,
+      "returnPct": -0.9734,
+      "plPerContract": -106.58,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:47.999Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "NVDA260729C00215000-2026-07-22",
@@ -535,16 +579,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.570Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.049,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.9683,
-      "plPerContract": -152.7,
+      "returnPct": -0.9688,
+      "plPerContract": -152.78,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:47.999Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "CVX260807P00185000-2026-07-22",
@@ -616,16 +670,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.570Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.5,
+      "exitValue": 1.405,
+      "exitValueRaw": 1.5,
       "valueSource": "optionClose",
-      "returnPct": -0.4595,
-      "plPerContract": -127.5,
+      "returnPct": -0.4936,
+      "plPerContract": -136.98,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:36.005Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "WMT260731C00113000-2026-07-22",
@@ -695,16 +759,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.571Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.32,
+      "exitValue": 0.312,
+      "exitValueRaw": 0.32,
       "valueSource": "optionClose",
-      "returnPct": -0.666,
-      "plPerContract": -63.8,
+      "returnPct": -0.6748,
+      "plPerContract": -64.65,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:36.158Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
+      "win": false
+    }
   },
   {
     "id": "DAL260731C00088000-2026-07-22",
@@ -774,16 +848,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.571Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.25,
+      "exitValue": 0.239,
+      "exitValueRaw": 0.25,
       "valueSource": "optionClose",
-      "returnPct": -0.7283,
-      "plPerContract": -67,
+      "returnPct": -0.7403,
+      "plPerContract": -68.11,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:36.311Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
+      "win": false
+    }
   },
   {
     "id": "CVX260731P00190000-2026-07-22",
@@ -855,16 +939,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.571Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.12,
+      "exitValue": 2.024,
+      "exitValueRaw": 2.12,
       "valueSource": "optionClose",
-      "returnPct": -0.4472,
-      "plPerContract": -171.5,
+      "returnPct": -0.4723,
+      "plPerContract": -181.11,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:36.461Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "MCD260731C00267500-2026-07-22",
@@ -935,7 +1029,9 @@
         "Needs 2.6% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 812
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DAL260731C00087000-2026-07-22",
@@ -1005,16 +1101,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.571Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.32,
+      "exitValue": 0.305,
+      "exitValueRaw": 0.32,
       "valueSource": "optionClose",
-      "returnPct": -0.7381,
-      "plPerContract": -90.2,
+      "returnPct": -0.7502,
+      "plPerContract": -91.67,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:36.758Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
+      "win": false
+    }
   },
   {
     "id": "MCD260731C00265000-2026-07-22",
@@ -1084,7 +1190,9 @@
         "Needs 2.0% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 812
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS260731C00097000-2026-07-22",
@@ -1155,16 +1263,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.571Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.33,
+      "exitValue": 0.311,
+      "exitValueRaw": 0.33,
       "valueSource": "optionClose",
-      "returnPct": -0.7692,
-      "plPerContract": -110,
+      "returnPct": -0.7825,
+      "plPerContract": -111.9,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:37.064Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
+      "win": false
+    }
   },
   {
     "id": "ENPH260731C00042500-2026-07-22",
@@ -1239,16 +1357,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.571Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 1.1,
+      "exitValue": 1.025,
+      "exitValueRaw": 1.1,
       "valueSource": "optionClose",
-      "returnPct": -0.5325,
-      "plPerContract": -125.3,
+      "returnPct": -0.5644,
+      "plPerContract": -132.8,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.000Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 36.3259,
+      "returnPct": -0.0905,
+      "win": false
+    }
   },
   {
     "id": "HD260731C00335000-2026-07-22",
@@ -1318,7 +1446,9 @@
         "Needs 2.6% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 812
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS260731C00096000-2026-07-22",
@@ -1388,16 +1518,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.52,
+      "exitValue": 0.495,
+      "exitValueRaw": 0.52,
       "valueSource": "optionClose",
-      "returnPct": -0.7256,
-      "plPerContract": -137.5,
+      "returnPct": -0.7389,
+      "plPerContract": -140.03,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:37.523Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
+      "win": false
+    }
   },
   {
     "id": "AAPL260729C00330000-2026-07-22",
@@ -1468,16 +1608,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.25,
+      "exitValue": 1.183,
+      "exitValueRaw": 1.25,
       "valueSource": "optionClose",
-      "returnPct": -0.7236,
-      "plPerContract": -327.2,
+      "returnPct": -0.7383,
+      "plPerContract": -333.87,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:37.680Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "ENPH260731C00040000-2026-07-22",
@@ -1552,16 +1702,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 1.87,
+      "exitValue": 1.767,
+      "exitValueRaw": 1.87,
       "valueSource": "optionClose",
-      "returnPct": -0.4559,
-      "plPerContract": -156.7,
+      "returnPct": -0.486,
+      "plPerContract": -167.04,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.000Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 36.3259,
+      "returnPct": -0.0905,
+      "win": false
+    }
   },
   {
     "id": "RUN260731C00013000-2026-07-22",
@@ -1632,16 +1792,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.03,
+      "exitValue": 0.029,
+      "exitValueRaw": 0.03,
       "valueSource": "optionClose",
-      "returnPct": -0.8605,
-      "plPerContract": -18.5,
+      "returnPct": -0.8671,
+      "plPerContract": -18.64,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:37.980Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 10.5696,
+      "returnPct": -0.0761,
+      "win": false
+    }
   },
   {
     "id": "AMD260731C00615000-2026-07-22",
@@ -1713,16 +1883,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.34,
+      "exitValue": 0.335,
+      "exitValueRaw": 0.34,
       "valueSource": "optionClose",
-      "returnPct": -0.9628,
-      "plPerContract": -880.3,
+      "returnPct": -0.9634,
+      "plPerContract": -880.81,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.000Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "AMD260731C00610000-2026-07-22",
@@ -1794,16 +1974,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.36,
+      "exitValue": 0.344,
+      "exitValueRaw": 0.36,
       "valueSource": "optionClose",
-      "returnPct": -0.9647,
-      "plPerContract": -983.5,
+      "returnPct": -0.9662,
+      "plPerContract": -985.05,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.000Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "AAPL260729C00327500-2026-07-22",
@@ -1873,16 +2063,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.87,
+      "exitValue": 1.793,
+      "exitValueRaw": 1.87,
       "valueSource": "optionClose",
-      "returnPct": -0.6722,
-      "plPerContract": -383.5,
+      "returnPct": -0.6857,
+      "plPerContract": -391.2,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:38.429Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "JNJ260821C00265000-2026-07-22",
@@ -1953,16 +2153,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 13,
+      "exitValue": 11.95,
+      "exitValueRaw": 12.72,
       "valueSource": "optionClose",
-      "returnPct": 4.0881,
-      "plPerContract": 1044.5,
+      "returnPct": 3.6773,
+      "plPerContract": 939.54,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.727Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 269.43,
+      "returnPct": 0.0751,
+      "win": true
+    }
   },
   {
     "id": "PATH260731C00012500-2026-07-22",
@@ -2032,16 +2242,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.572Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.03,
+      "exitValue": 0.029,
+      "exitValueRaw": 0.03,
       "valueSource": "optionClose",
-      "returnPct": -0.9241,
-      "plPerContract": -36.5,
+      "returnPct": -0.926,
+      "plPerContract": -36.58,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:38.732Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "HD260814C00345000-2026-07-22",
@@ -2110,7 +2330,9 @@
         "Needs 5.5% move to breakeven by 2026-08-14"
       ],
       "quoteAgeMinutes": 812
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PATH260731C00013500-2026-07-22",
@@ -2182,16 +2404,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.573Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.02,
+      "exitValue": 0.019,
+      "exitValueRaw": 0.02,
       "valueSource": "optionClose",
-      "returnPct": -0.871,
-      "plPerContract": -13.5,
+      "returnPct": -0.8796,
+      "plPerContract": -13.63,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:39.033Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "SHOP260731C00125000-2026-07-22",
@@ -2263,16 +2495,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.573Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.59,
+      "exitValue": 0.555,
+      "exitValueRaw": 0.59,
       "valueSource": "optionClose",
-      "returnPct": -0.8523,
-      "plPerContract": -340.5,
+      "returnPct": -0.8611,
+      "plPerContract": -344,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:39.190Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 117.2958,
+      "returnPct": -0.0466,
+      "win": false
+    }
   },
   {
     "id": "JNJ260821C00260000-2026-07-22",
@@ -2342,16 +2584,26 @@
       ],
       "quoteAgeMinutes": 812
     },
+    "evaluatedAt": "2026-07-28T14:03:08.573Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 16.52,
+      "exitValue": 15.217,
+      "exitValueRaw": 16.1,
       "valueSource": "optionClose",
-      "returnPct": 3.1982,
-      "plPerContract": 1258.5,
+      "returnPct": 2.8671,
+      "plPerContract": 1128.19,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 269.43,
+      "returnPct": 0.0751,
+      "win": true
+    }
   },
   {
     "id": "NFLX260731C00071000-2026-07-22",
@@ -2421,7 +2673,9 @@
         "Needs 4.5% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 813
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NVDA260729C00212500-2026-07-22",
@@ -2491,16 +2745,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.573Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.08,
+      "exitValue": 0.079,
+      "exitValueRaw": 0.08,
       "valueSource": "optionClose",
-      "returnPct": -0.9659,
-      "plPerContract": -226.3,
+      "returnPct": -0.9664,
+      "plPerContract": -226.42,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.000Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "XOM260821P00140000-2026-07-22",
@@ -2572,16 +2836,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.573Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.77,
+      "exitValue": 0.752,
+      "exitValueRaw": 0.77,
       "valueSource": "optionClose",
-      "returnPct": -0.4941,
-      "plPerContract": -75.2,
+      "returnPct": -0.5058,
+      "plPerContract": -76.99,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:39.793Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "DAL260731C00086000-2026-07-22",
@@ -2651,16 +2925,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.573Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.5,
+      "exitValue": 0.492,
+      "exitValueRaw": 0.5,
       "valueSource": "optionClose",
-      "returnPct": -0.6811,
-      "plPerContract": -106.8,
+      "returnPct": -0.6863,
+      "plPerContract": -107.6,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:39.941Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
+      "win": false
+    }
   },
   {
     "id": "MCD260821C00285000-2026-07-22",
@@ -2732,7 +3016,9 @@
         "Earnings 2026-08-04 (market prices ±4.6%)"
       ],
       "quoteAgeMinutes": 813
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WMT260731C00110000-2026-07-22",
@@ -2802,16 +3088,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.98,
+      "exitValue": 0.962,
+      "exitValueRaw": 0.98,
       "valueSource": "optionClose",
-      "returnPct": -0.5484,
-      "plPerContract": -119,
+      "returnPct": -0.5568,
+      "plPerContract": -120.82,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:40.239Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
+      "win": false
+    }
   },
   {
     "id": "CVX260918P00180000-2026-07-22",
@@ -2882,16 +3178,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.11,
+      "exitValue": 3.077,
+      "exitValueRaw": 3.11,
       "valueSource": "optionClose",
-      "returnPct": -0.2609,
-      "plPerContract": -109.8,
+      "returnPct": -0.2689,
+      "plPerContract": -113.14,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:40.403Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "DAL260731C00085000-2026-07-22",
@@ -2961,16 +3267,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.73,
+      "exitValue": 0.712,
+      "exitValueRaw": 0.73,
       "valueSource": "optionClose",
-      "returnPct": -0.6465,
-      "plPerContract": -133.5,
+      "returnPct": -0.6552,
+      "plPerContract": -135.29,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:40.541Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
+      "win": false
+    }
   },
   {
     "id": "CVX260918P00185000-2026-07-22",
@@ -3041,16 +3357,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 4.55,
+      "exitValue": 4.481,
+      "exitValueRaw": 4.55,
       "valueSource": "optionClose",
-      "returnPct": -0.2436,
-      "plPerContract": -146.5,
+      "returnPct": -0.255,
+      "plPerContract": -153.37,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:40.688Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "MCD260821C00275000-2026-07-22",
@@ -3121,7 +3447,9 @@
         "Earnings 2026-08-04 (market prices ±4.6%)"
       ],
       "quoteAgeMinutes": 813
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "AMD260731C00590000-2026-07-22",
@@ -3192,16 +3520,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.79,
+      "exitValue": 0.777,
+      "exitValueRaw": 0.79,
       "valueSource": "optionClose",
-      "returnPct": -0.9471,
-      "plPerContract": -1415,
+      "returnPct": -0.948,
+      "plPerContract": -1416.28,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.000Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "WMT260814C00112000-2026-07-22",
@@ -3269,16 +3607,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.35,
+      "exitValue": 1.324,
+      "exitValueRaw": 1.35,
       "valueSource": "optionClose",
-      "returnPct": -0.4347,
-      "plPerContract": -103.8,
+      "returnPct": -0.4454,
+      "plPerContract": -106.37,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:41.141Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
+      "win": false
+    }
   },
   {
     "id": "XOM260821P00150000-2026-07-22",
@@ -3349,16 +3697,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.574Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3,
+      "exitValue": 2.979,
+      "exitValueRaw": 3,
       "valueSource": "optionClose",
-      "returnPct": -0.393,
-      "plPerContract": -194.2,
+      "returnPct": -0.3973,
+      "plPerContract": -196.33,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:41.299Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "KMI260807C00033000-2026-07-22",
@@ -3430,16 +3788,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.12,
+      "exitValue": 0.119,
+      "exitValueRaw": 0.12,
       "valueSource": "optionClose",
-      "returnPct": -0.7122,
-      "plPerContract": -29.7,
+      "returnPct": -0.7157,
+      "plPerContract": -29.84,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.001Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 31.6814,
+      "returnPct": -0.0216,
+      "win": false
+    }
   },
   {
     "id": "AAPL260821C00352500-2026-07-22",
@@ -3511,16 +3879,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.65,
+      "exitValue": 1.613,
+      "exitValueRaw": 1.65,
       "valueSource": "optionClose",
-      "returnPct": -0.472,
-      "plPerContract": -147.5,
+      "returnPct": -0.484,
+      "plPerContract": -151.24,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:41.599Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "AAPL260821C00350000-2026-07-22",
@@ -3592,16 +3970,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.03,
+      "exitValue": 2.019,
+      "exitValueRaw": 2.03,
       "valueSource": "optionClose",
-      "returnPct": -0.4408,
-      "plPerContract": -160,
+      "returnPct": -0.4438,
+      "plPerContract": -161.12,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:41.755Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "PATH260821C00013000-2026-07-22",
@@ -3669,16 +4057,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.15,
+      "exitValue": 0.148,
+      "exitValueRaw": 0.15,
       "valueSource": "optionClose",
-      "returnPct": -0.7561,
-      "plPerContract": -46.5,
+      "returnPct": -0.7601,
+      "plPerContract": -46.75,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:41.902Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "HD260918C00340000-2026-07-22",
@@ -3748,7 +4146,9 @@
         "Earnings 2026-08-18 (market prices ±6.5%)"
       ],
       "quoteAgeMinutes": 813
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS260807C00096000-2026-07-22",
@@ -3819,16 +4219,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.25,
+      "exitValue": 2.204,
+      "exitValueRaw": 2.25,
       "valueSource": "optionClose",
-      "returnPct": -0.4289,
-      "plPerContract": -169,
+      "returnPct": -0.4406,
+      "plPerContract": -173.61,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:42.200Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
+      "win": false
+    }
   },
   {
     "id": "MA260918C00585000-2026-07-22",
@@ -3899,16 +4309,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 7.2,
+      "exitValue": 7.035,
+      "exitValueRaw": 7.2,
       "valueSource": "optionClose:2026-07-24",
-      "returnPct": -0.1216,
-      "plPerContract": -99.7,
+      "returnPct": -0.1417,
+      "plPerContract": -116.15,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:08.655Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 526.1069,
+      "returnPct": -0.0227,
+      "win": false
+    }
   },
   {
     "id": "AMZN260821C00275000-2026-07-22",
@@ -3980,16 +4400,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.575Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.5,
+      "exitValue": 1.472,
+      "exitValueRaw": 1.5,
       "valueSource": "optionClose",
-      "returnPct": -0.6047,
-      "plPerContract": -229.5,
+      "returnPct": -0.6121,
+      "plPerContract": -232.29,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:42.504Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 240.3704,
+      "returnPct": -0.029,
+      "win": false
+    }
   },
   {
     "id": "AMZN260828C00275000-2026-07-22",
@@ -4061,16 +4491,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.576Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.9,
+      "exitValue": 1.876,
+      "exitValueRaw": 1.9,
       "valueSource": "optionClose",
-      "returnPct": -0.5634,
-      "plPerContract": -245.2,
+      "returnPct": -0.569,
+      "plPerContract": -247.61,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:42.653Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 240.3704,
+      "returnPct": -0.029,
+      "win": false
+    }
   },
   {
     "id": "DIS260821C00095000-2026-07-22",
@@ -4141,16 +4581,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.576Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.14,
+      "exitValue": 3.075,
+      "exitValueRaw": 3.14,
       "valueSource": "optionClose",
-      "returnPct": -0.3566,
-      "plPerContract": -174,
+      "returnPct": -0.3699,
+      "plPerContract": -180.5,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:42.804Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
+      "win": false
+    }
   },
   {
     "id": "JNJ260821C00240000-2026-07-22",
@@ -4218,16 +4668,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.576Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 34.39,
+      "exitValue": 33.663,
+      "exitValueRaw": 34.39,
       "valueSource": "optionClose",
-      "returnPct": 1.3999,
-      "plPerContract": 2006,
+      "returnPct": 1.3491,
+      "plPerContract": 1933.27,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 269.43,
+      "returnPct": 0.0751,
+      "win": true
+    }
   },
   {
     "id": "KMI260918C00033000-2026-07-22",
@@ -4299,16 +4759,26 @@
       ],
       "quoteAgeMinutes": 813
     },
+    "evaluatedAt": "2026-07-28T14:03:08.576Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.54,
+      "exitValue": 0.531,
+      "exitValueRaw": 0.54,
       "valueSource": "optionClose",
-      "returnPct": -0.3884,
-      "plPerContract": -34.3,
+      "returnPct": -0.3989,
+      "plPerContract": -35.23,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.001Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 31.6814,
+      "returnPct": -0.0216,
+      "win": false
+    }
   },
   {
     "id": "V260821C00350000-2026-07-22",
@@ -4379,7 +4849,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 813
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "V260731C00335000-2026-07-22",
@@ -4451,7 +4923,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 813
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PYPL260821P00050000-2026-07-22",
@@ -4525,16 +4999,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.576Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 0.25,
+      "exitValue": 0.278,
+      "exitValueRaw": 0.3,
       "valueSource": "optionClose",
-      "returnPct": -0.6403,
-      "plPerContract": -44.5,
+      "returnPct": -0.6006,
+      "plPerContract": -41.74,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 57.7885,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "NVDA260803C00220000-2026-07-22",
@@ -4605,16 +5089,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.576Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.14,
+      "exitValue": 0.133,
+      "exitValueRaw": 0.14,
       "valueSource": "optionClose",
-      "returnPct": -0.9042,
-      "plPerContract": -132.2,
+      "returnPct": -0.9093,
+      "plPerContract": -132.94,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.001Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "VLO260821P00280000-2026-07-22",
@@ -4686,7 +5180,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "IONQ260731C00038000-2026-07-22",
@@ -4756,7 +5252,9 @@
         "Needs 10.8% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "IONQ260731C00037000-2026-07-22",
@@ -4825,7 +5323,9 @@
         "Needs 9.0% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "VLO260821P00290000-2026-07-22",
@@ -4897,7 +5397,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "AAPL260821C00355000-2026-07-22",
@@ -4971,16 +5473,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.577Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.42,
+      "exitValue": 1.345,
+      "exitValueRaw": 1.42,
       "valueSource": "optionClose",
-      "returnPct": -0.4779,
-      "plPerContract": -130,
+      "returnPct": -0.5055,
+      "plPerContract": -137.5,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:44.462Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "PLTR260731C00145000-2026-07-22",
@@ -5051,16 +5563,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.577Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.12,
+      "exitValue": 0.116,
+      "exitValueRaw": 0.12,
       "valueSource": "optionClose",
-      "returnPct": -0.9,
-      "plPerContract": -108,
+      "returnPct": -0.9034,
+      "plPerContract": -108.41,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:44.618Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 126.1156,
+      "returnPct": -0.0493,
+      "win": false
+    }
   },
   {
     "id": "PLTR260731C00144000-2026-07-22",
@@ -5131,16 +5653,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.577Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.14,
+      "exitValue": 0.133,
+      "exitValueRaw": 0.14,
       "valueSource": "optionClose",
-      "returnPct": -0.8968,
-      "plPerContract": -121.7,
+      "returnPct": -0.9019,
+      "plPerContract": -122.39,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:44.773Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 126.1156,
+      "returnPct": -0.0493,
+      "win": false
+    }
   },
   {
     "id": "V260821C00385000-2026-07-22",
@@ -5213,7 +5745,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260821P00180000-2026-07-22",
@@ -5287,16 +5821,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.577Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.6,
+      "exitValue": 1.497,
+      "exitValueRaw": 1.6,
       "valueSource": "optionClose",
-      "returnPct": -0.4128,
-      "plPerContract": -112.5,
+      "returnPct": -0.4507,
+      "plPerContract": -122.8,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:45.071Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "V260821C00380000-2026-07-22",
@@ -5369,7 +5913,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CRM260821C00190000-2026-07-22",
@@ -5439,16 +5985,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.577Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.74,
+      "exitValue": 0.727,
+      "exitValueRaw": 0.74,
       "valueSource": "optionClose",
-      "returnPct": -0.7689,
-      "plPerContract": -246.2,
+      "returnPct": -0.7729,
+      "plPerContract": -247.48,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:45.375Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 162.9015,
+      "returnPct": -0.0421,
+      "win": false
+    }
   },
   {
     "id": "CRM260814C00195000-2026-07-22",
@@ -5519,16 +6075,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.34,
+      "exitValue": 0.323,
+      "exitValueRaw": 0.34,
       "valueSource": "optionClose",
-      "returnPct": -0.8021,
-      "plPerContract": -137.8,
+      "returnPct": -0.8121,
+      "plPerContract": -139.53,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:45.533Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 162.9015,
+      "returnPct": -0.0421,
+      "win": false
+    }
   },
   {
     "id": "KMI260821C00033000-2026-07-22",
@@ -5601,16 +6167,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.27,
+      "exitValue": 0.257,
+      "exitValueRaw": 0.27,
       "valueSource": "optionClose",
-      "returnPct": -0.561,
-      "plPerContract": -34.5,
+      "returnPct": -0.5829,
+      "plPerContract": -35.85,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.001Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 31.6814,
+      "returnPct": -0.0216,
+      "win": false
+    }
   },
   {
     "id": "PYPL260731P00052000-2026-07-22",
@@ -5685,16 +6261,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.047,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.9333,
-      "plPerContract": -70,
+      "returnPct": -0.937,
+      "plPerContract": -70.27,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 57.7885,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "MA260821C00575000-2026-07-22",
@@ -5767,16 +6353,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.35,
+      "exitValue": 3.234,
+      "exitValueRaw": 3.35,
       "valueSource": "optionClose",
-      "returnPct": -0.4303,
-      "plPerContract": -253,
+      "returnPct": -0.45,
+      "plPerContract": -264.59,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:45.983Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 526.1069,
+      "returnPct": -0.0227,
+      "win": false
+    }
   },
   {
     "id": "PATH260807C00013000-2026-07-22",
@@ -5846,16 +6442,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.047,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.8718,
-      "plPerContract": -34,
+      "returnPct": -0.8785,
+      "plPerContract": -34.26,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:46.132Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "MA260821C00565000-2026-07-22",
@@ -5927,16 +6533,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 4.7,
+      "exitValue": 4.526,
+      "exitValueRaw": 4.7,
       "valueSource": "optionClose",
-      "returnPct": -0.4199,
-      "plPerContract": -340.2,
+      "returnPct": -0.4414,
+      "plPerContract": -357.64,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:46.290Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 526.1069,
+      "returnPct": -0.0227,
+      "win": false
+    }
   },
   {
     "id": "AMD260821C00650000-2026-07-22",
@@ -6009,16 +6625,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 6,
+      "exitValue": 5.89,
+      "exitValueRaw": 6,
       "valueSource": "optionClose",
-      "returnPct": -0.696,
-      "plPerContract": -1374,
+      "returnPct": -0.7016,
+      "plPerContract": -1385.04,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.001Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "RUN260821C00013000-2026-07-22",
@@ -6090,16 +6716,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.578Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.38,
+      "exitValue": 0.363,
+      "exitValueRaw": 0.38,
       "valueSource": "optionClose",
-      "returnPct": -0.5202,
-      "plPerContract": -41.2,
+      "returnPct": -0.5419,
+      "plPerContract": -42.92,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:46.581Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 10.5696,
+      "returnPct": -0.0761,
+      "win": false
+    }
   },
   {
     "id": "OKTA260821C00150000-2026-07-22",
@@ -6169,16 +6805,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 3.07,
+      "exitValue": 2.865,
+      "exitValueRaw": 3.07,
       "valueSource": "optionClose",
-      "returnPct": -0.6186,
-      "plPerContract": -498,
+      "returnPct": -0.6441,
+      "plPerContract": -518.49,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 133.4594,
+      "returnPct": -0.0582,
+      "win": false
+    }
   },
   {
     "id": "OKTA260821C00145000-2026-07-22",
@@ -6246,16 +6892,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 5.64,
+      "exitValue": 5.447,
+      "exitValueRaw": 5.64,
       "valueSource": "optionClose",
-      "returnPct": -0.4242,
-      "plPerContract": -415.5,
+      "returnPct": -0.4439,
+      "plPerContract": -434.82,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 133.4594,
+      "returnPct": -0.0582,
+      "win": false
+    }
   },
   {
     "id": "PYPL270115P00050000-2026-07-22",
@@ -6328,16 +6984,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 2.05,
+      "exitValue": 1.921,
+      "exitValueRaw": 2.05,
       "valueSource": "optionClose",
-      "returnPct": -0.1087,
-      "plPerContract": -25,
+      "returnPct": -0.1647,
+      "plPerContract": -37.87,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 57.7885,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "CVX261016P00170000-2026-07-22",
@@ -6410,16 +7076,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.32,
+      "exitValue": 2.291,
+      "exitValueRaw": 2.32,
       "valueSource": "optionClose",
-      "returnPct": -0.1723,
-      "plPerContract": -48.3,
+      "returnPct": -0.1827,
+      "plPerContract": -51.21,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:47.186Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "PYPL261016P00057500-2026-07-22",
@@ -6491,16 +7167,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 4.31,
+      "exitValue": 4.113,
+      "exitValueRaw": 4.31,
       "valueSource": "optionClose:2026-07-27",
-      "returnPct": -0.0606,
-      "plPerContract": -27.8,
+      "returnPct": -0.1035,
+      "plPerContract": -47.5,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.728Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 57.7885,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "CVX261016P00175000-2026-07-22",
@@ -6573,16 +7259,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.26,
+      "exitValue": 3.193,
+      "exitValueRaw": 3.26,
       "valueSource": "optionClose",
-      "returnPct": -0.1747,
-      "plPerContract": -69,
+      "returnPct": -0.1916,
+      "plPerContract": -75.67,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:47.488Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "NVDA261016C00245000-2026-07-22",
@@ -6654,16 +7350,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 2.82,
+      "exitValue": 2.795,
+      "exitValueRaw": 2.82,
       "valueSource": "optionClose",
-      "returnPct": -0.4401,
-      "plPerContract": -221.7,
+      "returnPct": -0.4452,
+      "plPerContract": -224.22,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.001Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "NFLX261016C00080000-2026-07-22",
@@ -6732,7 +7438,9 @@
         "Needs 19.1% move to breakeven by 2026-10-16"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NVDA261016C00240000-2026-07-22",
@@ -6803,16 +7511,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.579Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 3.37,
+      "exitValue": 3.328,
+      "exitValueRaw": 3.37,
       "valueSource": "optionClose",
-      "returnPct": -0.4468,
-      "plPerContract": -272.2,
+      "returnPct": -0.4537,
+      "plPerContract": -276.38,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.002Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "NFLX261016C00077500-2026-07-22",
@@ -6881,7 +7599,9 @@
         "Needs 16.3% move to breakeven by 2026-10-16"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "IONQ261016C00040000-2026-07-22",
@@ -6951,7 +7671,9 @@
         "Earnings 2026-08-05 (market prices ±15.9%)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PSX270115P00185000-2026-07-22",
@@ -7023,7 +7745,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CRM261016C00200000-2026-07-22",
@@ -7094,16 +7818,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.580Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.38,
+      "exitValue": 3.332,
+      "exitValueRaw": 3.38,
       "valueSource": "optionClose",
-      "returnPct": -0.5001,
-      "plPerContract": -338.2,
+      "returnPct": -0.5072,
+      "plPerContract": -342.98,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:48.547Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 162.9015,
+      "returnPct": -0.0421,
+      "win": false
+    }
   },
   {
     "id": "IONQ261016C00035000-2026-07-22",
@@ -7173,7 +7907,9 @@
         "Earnings 2026-08-05 (market prices ±15.9%)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "RUN270115C00010000-2026-07-22",
@@ -7244,16 +7980,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.580Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.75,
+      "exitValue": 2.62,
+      "exitValueRaw": 2.75,
       "valueSource": "optionClose",
-      "returnPct": -0.2333,
-      "plPerContract": -83.7,
+      "returnPct": -0.2695,
+      "plPerContract": -96.65,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:48.848Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 10.5696,
+      "returnPct": -0.0761,
+      "win": false
+    }
   },
   {
     "id": "ADSK261016C00250000-2026-07-22",
@@ -7323,6 +8069,15 @@
         "Earnings 2026-08-27"
       ],
       "quoteAgeMinutes": 816
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2,
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 203.0792,
+      "returnPct": -0.0382,
+      "win": false
     }
   },
   {
@@ -7396,7 +8151,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CRM261016C00190000-2026-07-22",
@@ -7467,16 +8224,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.580Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 4.9,
+      "exitValue": 4.765,
+      "exitValueRaw": 4.9,
       "valueSource": "optionClose",
-      "returnPct": -0.4794,
-      "plPerContract": -451.2,
+      "returnPct": -0.4937,
+      "plPerContract": -464.65,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:49.300Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 162.9015,
+      "returnPct": -0.0421,
+      "win": false
+    }
   },
   {
     "id": "VLO261218P00300000-2026-07-22",
@@ -7547,7 +8314,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "XOM261016P00145000-2026-07-22",
@@ -7619,16 +8388,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.580Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 4.3,
+      "exitValue": 4.265,
+      "exitValueRaw": 4.3,
       "valueSource": "optionClose",
-      "returnPct": -0.2331,
-      "plPerContract": -130.7,
+      "returnPct": -0.2393,
+      "plPerContract": -134.16,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:49.603Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "ENPH261016C00045000-2026-07-22",
@@ -7702,16 +8481,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.580Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 3.36,
+      "exitValue": 3.152,
+      "exitValueRaw": 3.36,
       "valueSource": "optionClose",
-      "returnPct": -0.397,
-      "plPerContract": -221.2,
+      "returnPct": -0.4344,
+      "plPerContract": -242.03,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.002Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 36.3259,
+      "returnPct": -0.0905,
+      "win": false
+    }
   },
   {
     "id": "XOM261016P00140000-2026-07-22",
@@ -7784,16 +8573,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.580Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.92,
+      "exitValue": 2.797,
+      "exitValueRaw": 2.92,
       "valueSource": "optionClose",
-      "returnPct": -0.2455,
-      "plPerContract": -95,
+      "returnPct": -0.2773,
+      "plPerContract": -107.32,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:49.906Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "MCD261016C00260000-2026-07-22",
@@ -7865,7 +8664,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "MCD261016C00280000-2026-07-22",
@@ -7937,7 +8738,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "AMD261016C00560000-2026-07-22",
@@ -8010,16 +8813,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 46.25,
+      "exitValue": 45.896,
+      "exitValueRaw": 46.25,
       "valueSource": "optionClose",
-      "returnPct": -0.402,
-      "plPerContract": -3108.5,
+      "returnPct": -0.4065,
+      "plPerContract": -3143.88,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.002Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "AMD261016C00600000-2026-07-22",
@@ -8092,16 +8905,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 36.15,
+      "exitValue": 35.763,
+      "exitValueRaw": 36.15,
       "valueSource": "optionClose",
-      "returnPct": -0.4161,
-      "plPerContract": -2576,
+      "returnPct": -0.4223,
+      "plPerContract": -2614.68,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.002Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "AAPL261016C00335000-2026-07-22",
@@ -8173,16 +8996,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 12.2,
+      "exitValue": 12.071,
+      "exitValueRaw": 12.2,
       "valueSource": "optionClose",
-      "returnPct": -0.2248,
-      "plPerContract": -353.8,
+      "returnPct": -0.233,
+      "plPerContract": -366.67,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:50.662Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "AAPL261016C00340000-2026-07-22",
@@ -8254,16 +9087,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 10.5,
+      "exitValue": 10.299,
+      "exitValueRaw": 10.5,
       "valueSource": "optionClose",
-      "returnPct": -0.2364,
-      "plPerContract": -325,
+      "returnPct": -0.2509,
+      "plPerContract": -345.05,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:50.808Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "PATH261120C00014000-2026-07-22",
@@ -8335,16 +9178,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.77,
+      "exitValue": 0.723,
+      "exitValueRaw": 0.77,
       "valueSource": "optionClose",
-      "returnPct": -0.4984,
-      "plPerContract": -76.5,
+      "returnPct": -0.5287,
+      "plPerContract": -81.15,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:50.964Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "V261016C00380000-2026-07-22",
@@ -8415,7 +9268,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "V261016C00360000-2026-07-22",
@@ -8486,7 +9341,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PATH261218C00014000-2026-07-22",
@@ -8558,16 +9415,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.06,
+      "exitValue": 1.005,
+      "exitValueRaw": 1.06,
       "valueSource": "optionClose",
-      "returnPct": -0.4028,
-      "plPerContract": -71.5,
+      "returnPct": -0.4339,
+      "plPerContract": -77.01,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:51.411Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "CVX270319P00170000-2026-07-22",
@@ -8640,24 +9507,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 6.6,
+      "exitValue": 6.117,
+      "exitValueRaw": 6.6,
       "valueSource": "optionClose",
-      "returnPct": -0.2226,
-      "plPerContract": -189,
+      "returnPct": -0.2796,
+      "plPerContract": -237.35,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:51.565Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 7.08,
+      "exitValue": 6.561,
+      "exitValueRaw": 7.08,
       "valueSource": "optionClose",
-      "returnPct": -0.1661,
-      "plPerContract": -141,
+      "returnPct": -0.2272,
+      "plPerContract": -192.86,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
       "win": false
     }
   },
@@ -8731,24 +9608,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 8.05,
+      "exitValue": 7.489,
+      "exitValueRaw": 8.05,
       "valueSource": "optionClose",
-      "returnPct": -0.203,
-      "plPerContract": -205,
+      "returnPct": -0.2585,
+      "plPerContract": -261.07,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:51.714Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 8.65,
+      "exitValue": 8.048,
+      "exitValueRaw": 8.65,
       "valueSource": "optionClose",
-      "returnPct": -0.1436,
-      "plPerContract": -145,
+      "returnPct": -0.2032,
+      "plPerContract": -205.25,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
       "win": false
     }
   },
@@ -8823,25 +9710,35 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.581Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 7.62,
+      "exitValue": 7.105,
+      "exitValueRaw": 7.62,
       "valueSource": "optionClose",
-      "returnPct": -0.0039,
-      "plPerContract": -3,
+      "returnPct": -0.0712,
+      "plPerContract": -54.47,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.357Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 7.62,
+      "exitValue": 7.105,
+      "exitValueRaw": 7.62,
       "valueSource": "optionClose",
-      "returnPct": -0.0039,
-      "plPerContract": -3,
+      "returnPct": -0.0712,
+      "plPerContract": -54.47,
       "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 264.76,
+      "returnPct": 0.0032,
+      "win": true
     }
   },
   {
@@ -8914,24 +9811,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 6.33,
+      "exitValue": 6.285,
+      "exitValueRaw": 6.33,
       "valueSource": "optionClose",
-      "returnPct": 0.1204,
-      "plPerContract": 68,
+      "returnPct": 0.1124,
+      "plPerContract": 63.51,
       "win": true
     },
-    "evaluatedAt": "2026-07-26T05:34:09.357Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 6.33,
+      "exitValue": 6.285,
+      "exitValueRaw": 6.33,
       "valueSource": "optionClose",
-      "returnPct": 0.1204,
-      "plPerContract": 68,
+      "returnPct": 0.1124,
+      "plPerContract": 63.51,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 70.09,
+      "returnPct": 0.0207,
       "win": true
     }
   },
@@ -9005,24 +9912,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 5.8,
+      "exitValue": 5.586,
+      "exitValueRaw": 5.8,
       "valueSource": "optionClose",
-      "returnPct": -0.1588,
-      "plPerContract": -109.5,
+      "returnPct": -0.1899,
+      "plPerContract": -130.93,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:52.172Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 5.55,
+      "exitValue": 5.345,
+      "exitValueRaw": 5.55,
       "valueSource": "optionClose",
-      "returnPct": -0.1951,
-      "plPerContract": -134.5,
+      "returnPct": -0.2248,
+      "plPerContract": -155.01,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
       "win": false
     }
   },
@@ -9096,25 +10013,35 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 12.7,
+      "exitValue": 12.219,
+      "exitValueRaw": 12.7,
       "valueSource": "optionClose",
-      "returnPct": -0.0258,
-      "plPerContract": -33.7,
+      "returnPct": -0.0628,
+      "plPerContract": -81.83,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.357Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 12.7,
+      "exitValue": 12.219,
+      "exitValueRaw": 12.7,
       "valueSource": "optionClose",
-      "returnPct": -0.0258,
-      "plPerContract": -33.7,
+      "returnPct": -0.0628,
+      "plPerContract": -81.83,
       "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 264.76,
+      "returnPct": 0.0032,
+      "win": true
     }
   },
   {
@@ -9187,24 +10114,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 7.3,
+      "exitValue": 6.926,
+      "exitValueRaw": 7.3,
       "valueSource": "optionClose",
-      "returnPct": -0.1796,
-      "plPerContract": -159.8,
+      "returnPct": -0.2217,
+      "plPerContract": -197.25,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:52.476Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 7.25,
+      "exitValue": 6.878,
+      "exitValueRaw": 7.25,
       "valueSource": "optionClose",
-      "returnPct": -0.1852,
-      "plPerContract": -164.8,
+      "returnPct": -0.227,
+      "plPerContract": -201.99,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
       "win": false
     }
   },
@@ -9277,24 +10214,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.8,
+      "exitValue": 3.673,
+      "exitValueRaw": 3.8,
       "valueSource": "optionClose",
-      "returnPct": -0.1418,
-      "plPerContract": -62.8,
+      "returnPct": -0.1704,
+      "plPerContract": -75.45,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:52.623Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 3.94,
+      "exitValue": 3.809,
+      "exitValueRaw": 3.94,
       "valueSource": "optionClose",
-      "returnPct": -0.1102,
-      "plPerContract": -48.8,
+      "returnPct": -0.1398,
+      "plPerContract": -61.92,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
       "win": false
     }
   },
@@ -9366,6 +10313,15 @@
         "Earnings 2026-10-08"
       ],
       "quoteAgeMinutes": 816
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2,
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
+      "win": false
     }
   },
   {
@@ -9438,24 +10394,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 8.35,
+      "exitValue": 8.152,
+      "exitValueRaw": 8.35,
       "valueSource": "optionClose",
-      "returnPct": 0.0872,
-      "plPerContract": 67,
+      "returnPct": 0.0615,
+      "plPerContract": 47.21,
       "win": true
     },
-    "evaluatedAt": "2026-07-26T05:34:09.458Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 8.35,
+      "exitValue": 8.152,
+      "exitValueRaw": 8.35,
       "valueSource": "optionClose",
-      "returnPct": 0.0872,
-      "plPerContract": 67,
+      "returnPct": 0.0615,
+      "plPerContract": 47.21,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 70.09,
+      "returnPct": 0.0207,
       "win": true
     }
   },
@@ -9528,24 +10494,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 8.2,
+      "exitValue": 8.036,
+      "exitValueRaw": 8.2,
       "valueSource": "optionClose:2026-07-24",
-      "returnPct": -0.0979,
-      "plPerContract": -89,
+      "returnPct": -0.116,
+      "plPerContract": -105.4,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.458Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 8.2,
+      "exitValue": 8.036,
+      "exitValueRaw": 8.2,
       "valueSource": "optionClose",
-      "returnPct": -0.0979,
-      "plPerContract": -89,
+      "returnPct": -0.116,
+      "plPerContract": -105.4,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
       "win": false
     }
   },
@@ -9619,24 +10595,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 21.3,
+      "exitValue": 19.712,
+      "exitValueRaw": 21.3,
       "valueSource": "optionClose:2026-07-27",
-      "returnPct": 0.1212,
-      "plPerContract": 230.3,
+      "returnPct": 0.0376,
+      "plPerContract": 71.51,
       "win": true
     },
-    "evaluatedAt": "2026-07-27T21:47:48.002Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 21.3,
+      "exitValue": 19.712,
+      "exitValueRaw": 21.3,
       "valueSource": "optionClose:2026-07-27",
-      "returnPct": 0.1212,
-      "plPerContract": 230.3,
+      "returnPct": 0.0376,
+      "plPerContract": 71.51,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 332.98,
+      "returnPct": 0.0042,
       "win": true
     }
   },
@@ -9710,24 +10696,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 4.8,
+      "exitValue": 4.443,
+      "exitValueRaw": 4.8,
       "valueSource": "optionClose",
-      "returnPct": -0.2096,
-      "plPerContract": -127.3,
+      "returnPct": -0.2683,
+      "plPerContract": -162.96,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:53.378Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 5.24,
+      "exitValue": 4.851,
+      "exitValueRaw": 5.24,
       "valueSource": "optionClose",
-      "returnPct": -0.1372,
-      "plPerContract": -83.3,
+      "returnPct": -0.2013,
+      "plPerContract": -122.23,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
       "win": false
     }
   },
@@ -9801,25 +10797,35 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 16.2,
+      "exitValue": 15.053,
+      "exitValueRaw": 16.2,
       "valueSource": "optionClose",
-      "returnPct": -0.0535,
-      "plPerContract": -91.5,
+      "returnPct": -0.1205,
+      "plPerContract": -206.2,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.458Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 16.2,
+      "exitValue": 15.053,
+      "exitValueRaw": 16.2,
       "valueSource": "optionClose",
-      "returnPct": -0.0535,
-      "plPerContract": -91.5,
+      "returnPct": -0.1205,
+      "plPerContract": -206.2,
       "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 332.98,
+      "returnPct": 0.0042,
+      "win": true
     }
   },
   {
@@ -9891,24 +10897,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 7.4,
+      "exitValue": 7.23,
+      "exitValueRaw": 7.4,
       "valueSource": "optionClose",
-      "returnPct": -0.1802,
-      "plPerContract": -162.7,
+      "returnPct": -0.1991,
+      "plPerContract": -179.68,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:53.681Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 8.5,
+      "exitValue": 8.305,
+      "exitValueRaw": 8.5,
       "valueSource": "optionClose",
-      "returnPct": -0.0584,
-      "plPerContract": -52.7,
+      "returnPct": -0.08,
+      "plPerContract": -72.21,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
       "win": false
     }
   },
@@ -9981,24 +10997,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 30,
+      "exitValue": 28.549,
+      "exitValueRaw": 30,
       "valueSource": "optionClose",
-      "returnPct": 0.3752,
-      "plPerContract": 818.5,
+      "returnPct": 0.3087,
+      "plPerContract": 673.45,
       "win": true
     },
-    "evaluatedAt": "2026-07-26T05:34:09.459Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 30,
+      "exitValue": 28.549,
+      "exitValueRaw": 30,
       "valueSource": "optionClose",
-      "returnPct": 0.3752,
-      "plPerContract": 818.5,
+      "returnPct": 0.3087,
+      "plPerContract": 673.45,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 263.4,
+      "returnPct": 0.051,
       "win": true
     }
   },
@@ -10072,24 +11098,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 10.65,
-      "valueSource": "optionClose:2026-07-23",
-      "returnPct": 0.1123,
-      "plPerContract": 107.5,
+      "exitValue": 9.692,
+      "exitValueRaw": 10.4,
+      "valueSource": "optionClose:2026-07-27",
+      "returnPct": 0.0122,
+      "plPerContract": 11.73,
       "win": true
     },
-    "evaluatedAt": "2026-07-26T05:34:09.561Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 10.4,
+      "exitValue": 9.692,
+      "exitValueRaw": 10.4,
       "valueSource": "optionClose:2026-07-27",
-      "returnPct": 0.0862,
-      "plPerContract": 82.5,
+      "returnPct": 0.0122,
+      "plPerContract": 11.73,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 238.75,
+      "returnPct": 0.0239,
       "win": true
     }
   },
@@ -10161,6 +11197,15 @@
         "Earnings 2026-07-28 (market prices ±5.5%)"
       ],
       "quoteAgeMinutes": 816
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2,
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 238.75,
+      "returnPct": 0.0239,
+      "win": true
     }
   },
   {
@@ -10233,24 +11278,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 5.03,
+      "exitValue": 4.686,
+      "exitValueRaw": 5.03,
       "valueSource": "optionClose",
-      "returnPct": -0.179,
-      "plPerContract": -109.7,
+      "returnPct": -0.2352,
+      "plPerContract": -144.08,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:54.279Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 5.75,
+      "exitValue": 5.357,
+      "exitValueRaw": 5.75,
       "valueSource": "optionClose",
-      "returnPct": -0.0615,
-      "plPerContract": -37.7,
+      "returnPct": -0.1257,
+      "plPerContract": -77,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
       "win": false
     }
   },
@@ -10323,24 +11378,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 43.8,
+      "exitValue": 42.547,
+      "exitValueRaw": 43.8,
       "valueSource": "optionClose",
-      "returnPct": 0.2875,
-      "plPerContract": 978,
+      "returnPct": 0.2507,
+      "plPerContract": 852.73,
       "win": true
     },
-    "evaluatedAt": "2026-07-26T05:34:09.561Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 43.8,
+      "exitValue": 42.547,
+      "exitValueRaw": 43.8,
       "valueSource": "optionClose",
-      "returnPct": 0.2875,
-      "plPerContract": 978,
+      "returnPct": 0.2507,
+      "plPerContract": 852.73,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 263.4,
+      "returnPct": 0.051,
       "win": true
     }
   },
@@ -10405,24 +11470,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.582Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 46.5,
+      "exitValue": 46.035,
+      "exitValueRaw": 46.5,
       "valueSource": "optionClose",
-      "returnPct": -0.254,
-      "plPerContract": -1583,
+      "returnPct": -0.2614,
+      "plPerContract": -1629.5,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:54.586Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 40.5,
+      "exitValue": 40.095,
+      "exitValueRaw": 40.5,
       "valueSource": "optionClose",
-      "returnPct": -0.3502,
-      "plPerContract": -2183,
+      "returnPct": -0.3567,
+      "plPerContract": -2223.5,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 619.0409,
+      "returnPct": -0.0385,
       "win": false
     }
   },
@@ -10487,24 +11562,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 59.97,
+      "exitValue": 59.85,
+      "exitValueRaw": 59.97,
       "valueSource": "optionClose",
-      "returnPct": -0.226,
-      "plPerContract": -1751.3,
+      "returnPct": -0.2276,
+      "plPerContract": -1763.29,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:54.738Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 52.8,
+      "exitValue": 52.694,
+      "exitValueRaw": 52.8,
       "valueSource": "optionClose",
-      "returnPct": -0.3186,
-      "plPerContract": -2468.3,
+      "returnPct": -0.3199,
+      "plPerContract": -2478.86,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 619.0409,
+      "returnPct": -0.0385,
       "win": false
     }
   },
@@ -10576,6 +11661,15 @@
         "Earnings 2026-08-26"
       ],
       "quoteAgeMinutes": 816
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2,
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 183.28,
+      "returnPct": -0.0412,
+      "win": false
     }
   },
   {
@@ -10647,24 +11741,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 26.25,
+      "exitValue": 25.213,
+      "exitValueRaw": 26.25,
       "valueSource": "optionClose:2026-07-27",
-      "returnPct": -0.2411,
-      "plPerContract": -834,
+      "returnPct": -0.2711,
+      "plPerContract": -937.69,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.003Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 26.25,
+      "exitValue": 25.213,
+      "exitValueRaw": 26.25,
       "valueSource": "optionClose:2026-07-27",
-      "returnPct": -0.2411,
-      "plPerContract": -834,
+      "returnPct": -0.2711,
+      "plPerContract": -937.69,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 183.28,
+      "returnPct": -0.0412,
       "win": false
     }
   },
@@ -10674,7 +11778,7 @@
     "scanId": "options-scan-1784712944533",
     "horizonDays": 1,
     "planExitDate": "2026-07-24",
-    "status": "win",
+    "status": "loss",
     "card": {
       "contractSymbol": "KO270319C00090000",
       "underlying": "KO",
@@ -10737,24 +11841,34 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 2.85,
+      "exitValue": 2.746,
+      "exitValueRaw": 2.85,
       "valueSource": "optionClose",
-      "returnPct": 0.0215,
-      "plPerContract": 6,
-      "win": true
+      "returnPct": -0.0158,
+      "plPerContract": -4.4,
+      "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.767Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 2.85,
+      "exitValue": 2.746,
+      "exitValueRaw": 2.85,
       "valueSource": "optionClose",
-      "returnPct": 0.0215,
-      "plPerContract": 6,
+      "returnPct": -0.0158,
+      "plPerContract": -4.4,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 82.25,
+      "returnPct": 0.0034,
       "win": true
     }
   },
@@ -10829,7 +11943,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "V260731C00355000-2026-07-22",
@@ -10901,7 +12017,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WM260821C00230000-2026-07-22",
@@ -10973,7 +12091,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WM260821C00220000-2026-07-22",
@@ -11044,7 +12164,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "MA260821C00585000-2026-07-22",
@@ -11117,16 +12239,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.25,
+      "exitValue": 2.089,
+      "exitValueRaw": 2.25,
       "valueSource": "optionClose",
-      "returnPct": -0.4733,
-      "plPerContract": -202.2,
+      "returnPct": -0.511,
+      "plPerContract": -218.29,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:55.944Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 526.1069,
+      "returnPct": -0.0227,
+      "win": false
+    }
   },
   {
     "id": "MCD260731C00275000-2026-07-22",
@@ -11198,7 +12330,9 @@
         "Needs 4.7% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DAL260731C00090000-2026-07-22",
@@ -11270,16 +12404,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.1,
+      "exitValue": 0.091,
+      "exitValueRaw": 0.1,
       "valueSource": "optionClose",
-      "returnPct": -0.7988,
-      "plPerContract": -39.7,
+      "returnPct": -0.8179,
+      "plPerContract": -40.65,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:56.246Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 82.0061,
+      "returnPct": -0.031,
+      "win": false
+    }
   },
   {
     "id": "MCD260731C00272500-2026-07-22",
@@ -11350,7 +12494,9 @@
         "Needs 3.9% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 816
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS260731C00100000-2026-07-22",
@@ -11422,16 +12568,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.11,
+      "exitValue": 0.101,
+      "exitValueRaw": 0.11,
       "valueSource": "optionClose",
-      "returnPct": -0.78,
-      "plPerContract": -39,
+      "returnPct": -0.7983,
+      "plPerContract": -39.92,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:56.551Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
+      "win": false
+    }
   },
   {
     "id": "WMT260731C00114000-2026-07-22",
@@ -11502,16 +12658,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.2,
+      "exitValue": 0.182,
+      "exitValueRaw": 0.2,
       "valueSource": "optionClose",
-      "returnPct": -0.7183,
-      "plPerContract": -51,
+      "returnPct": -0.7432,
+      "plPerContract": -52.76,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:56.702Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 107.6045,
+      "returnPct": -0.0252,
+      "win": false
+    }
   },
   {
     "id": "DIS260731C00099000-2026-07-22",
@@ -11582,16 +12748,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.15,
+      "exitValue": 0.138,
+      "exitValueRaw": 0.15,
       "valueSource": "optionClose",
-      "returnPct": -0.7896,
-      "plPerContract": -56.3,
+      "returnPct": -0.8065,
+      "plPerContract": -57.5,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:56.853Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.9864,
+      "returnPct": -0.0224,
+      "win": false
+    }
   },
   {
     "id": "JNJ260731C00260000-2026-07-22",
@@ -11663,16 +12839,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 13.55,
+      "exitValue": 11.465,
+      "exitValueRaw": 13,
       "valueSource": "optionClose",
-      "returnPct": 9.0743,
-      "plPerContract": 1220.5,
+      "returnPct": 7.5239,
+      "plPerContract": 1011.97,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.729Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 269.43,
+      "returnPct": 0.0751,
+      "win": true
+    }
   },
   {
     "id": "JNJ260731C00255000-2026-07-22",
@@ -11743,16 +12929,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 19,
+      "exitValue": 16.713,
+      "exitValueRaw": 19,
       "valueSource": "optionClose",
-      "returnPct": 6.4364,
-      "plPerContract": 1644.5,
+      "returnPct": 5.5414,
+      "plPerContract": 1415.84,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.729Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 269.43,
+      "returnPct": 0.0751,
+      "win": true
+    }
   },
   {
     "id": "AAPL260729C00335000-2026-07-22",
@@ -11823,16 +13019,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.48,
+      "exitValue": 0.432,
+      "exitValueRaw": 0.48,
       "valueSource": "optionClose",
-      "returnPct": -0.8235,
-      "plPerContract": -224,
+      "returnPct": -0.8412,
+      "plPerContract": -228.82,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:57.315Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "AAPL260729C00332500-2026-07-22",
@@ -11903,16 +13109,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.77,
+      "exitValue": 0.71,
+      "exitValueRaw": 0.77,
       "valueSource": "optionClose",
-      "returnPct": -0.7762,
-      "plPerContract": -267,
+      "returnPct": -0.7937,
+      "plPerContract": -273.05,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:57.464Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "ENPH260731C00042000-2026-07-22",
@@ -11987,16 +13203,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 1.23,
+      "exitValue": 1.079,
+      "exitValueRaw": 1.23,
       "valueSource": "optionClose",
-      "returnPct": -0.5182,
-      "plPerContract": -132.3,
+      "returnPct": -0.5773,
+      "plPerContract": -147.39,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.003Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 36.3259,
+      "returnPct": -0.0905,
+      "win": false
+    }
   },
   {
     "id": "RUN260731C00012500-2026-07-22",
@@ -12067,16 +13293,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.046,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.8377,
-      "plPerContract": -25.8,
+      "returnPct": -0.8514,
+      "plPerContract": -26.22,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:57.764Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 10.5696,
+      "returnPct": -0.0761,
+      "win": false
+    }
   },
   {
     "id": "PATH260731C00013000-2026-07-22",
@@ -12147,16 +13383,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.03,
+      "exitValue": 0.027,
+      "exitValueRaw": 0.03,
       "valueSource": "optionClose",
-      "returnPct": -0.8734,
-      "plPerContract": -20.7,
+      "returnPct": -0.8875,
+      "plPerContract": -21.03,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:57.915Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "SHOP260731C00135000-2026-07-22",
@@ -12229,16 +13475,26 @@
       ],
       "quoteAgeMinutes": 816
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.08,
+      "exitValue": 0.071,
+      "exitValueRaw": 0.08,
       "valueSource": "optionClose",
-      "returnPct": -0.9314,
-      "plPerContract": -108.7,
+      "returnPct": -0.9392,
+      "plPerContract": -109.6,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:58.067Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 117.2958,
+      "returnPct": -0.0466,
+      "win": false
+    }
   },
   {
     "id": "NVDA260731C00217500-2026-07-22",
@@ -12309,16 +13565,26 @@
       ],
       "quoteAgeMinutes": 818
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.13,
+      "exitValue": 0.128,
+      "exitValueRaw": 0.13,
       "valueSource": "optionClose",
-      "returnPct": -0.9177,
-      "plPerContract": -145,
+      "returnPct": -0.9188,
+      "plPerContract": -145.17,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.003Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "CRWD260731C00210000-2026-07-22",
@@ -12389,16 +13655,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.17,
+      "exitValue": 0.164,
+      "exitValueRaw": 0.17,
       "valueSource": "optionClose",
-      "returnPct": -0.9353,
-      "plPerContract": -245.7,
+      "returnPct": -0.9374,
+      "plPerContract": -246.26,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.003Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 180.7662,
+      "returnPct": -0.0543,
+      "win": false
+    }
   },
   {
     "id": "LYFT260731C00016500-2026-07-22",
@@ -12469,16 +13745,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.048,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.6094,
-      "plPerContract": -7.8,
+      "returnPct": -0.625,
+      "plPerContract": -8,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:58.516Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 14.5516,
+      "returnPct": -0.042,
+      "win": false
+    }
   },
   {
     "id": "CRWD260807C00217500-2026-07-22",
@@ -12549,16 +13835,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.56,
+      "exitValue": 0.525,
+      "exitValueRaw": 0.56,
       "valueSource": "optionClose",
-      "returnPct": -0.8095,
-      "plPerContract": -238,
+      "returnPct": -0.8216,
+      "plPerContract": -241.54,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.003Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 180.7662,
+      "returnPct": -0.0543,
+      "win": false
+    }
   },
   {
     "id": "JPM260731P00342500-2026-07-22",
@@ -12629,16 +13925,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 1.17,
+      "exitValue": 1.108,
+      "exitValueRaw": 1.17,
       "valueSource": "optionClose",
-      "returnPct": -0.7247,
-      "plPerContract": -308,
+      "returnPct": -0.7393,
+      "plPerContract": -314.22,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.864Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 353.1799,
+      "returnPct": -0.023,
+      "win": false
+    }
   },
   {
     "id": "JPM260814P00330000-2026-07-22",
@@ -12709,16 +14015,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 1.38,
+      "exitValue": 1.29,
+      "exitValueRaw": 1.38,
       "valueSource": "optionClose",
-      "returnPct": -0.5158,
-      "plPerContract": -147,
+      "returnPct": -0.5474,
+      "plPerContract": -156,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.864Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 353.1799,
+      "returnPct": -0.023,
+      "win": false
+    }
   },
   {
     "id": "VZ260821P00041000-2026-07-22",
@@ -12791,16 +14107,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.583Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.1,
+      "exitValue": 0.097,
+      "exitValueRaw": 0.1,
       "valueSource": "optionClose",
-      "returnPct": -0.7925,
-      "plPerContract": -38.2,
+      "returnPct": -0.7991,
+      "plPerContract": -38.52,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.967Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 44.9855,
+      "returnPct": -0.0275,
+      "win": false
+    }
   },
   {
     "id": "KO260814C00086000-2026-07-22",
@@ -12872,16 +14198,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 4.01,
+      "exitValue": 4.161,
+      "exitValueRaw": 4.34,
       "valueSource": "optionClose",
-      "returnPct": 5.4992,
-      "plPerContract": 339.3,
+      "returnPct": 5.7435,
+      "plPerContract": 354.38,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.729Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 85.68,
+      "returnPct": 0.0453,
+      "win": true
+    }
   },
   {
     "id": "VZ260807P00043000-2026-07-22",
@@ -12954,16 +14290,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.13,
+      "exitValue": 0.12,
+      "exitValueRaw": 0.13,
       "valueSource": "optionClose",
-      "returnPct": -0.8667,
-      "plPerContract": -84.5,
+      "returnPct": -0.8766,
+      "plPerContract": -85.47,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:09.967Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 44.9855,
+      "returnPct": -0.0275,
+      "win": false
+    }
   },
   {
     "id": "LYFT260731C00015000-2026-07-22",
@@ -13033,16 +14379,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.16,
+      "exitValue": 0.153,
+      "exitValueRaw": 0.16,
       "valueSource": "optionClose",
-      "returnPct": -0.7594,
-      "plPerContract": -50.5,
+      "returnPct": -0.7705,
+      "plPerContract": -51.24,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:59.565Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 14.5516,
+      "returnPct": -0.042,
+      "win": false
+    }
   },
   {
     "id": "META260731C00710000-2026-07-22",
@@ -13116,16 +14472,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.84,
+      "exitValue": 3.718,
+      "exitValueRaw": 3.84,
       "valueSource": "optionClose",
-      "returnPct": -0.6296,
-      "plPerContract": -652.7,
+      "returnPct": -0.6414,
+      "plPerContract": -664.93,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:34:59.719Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 619.0409,
+      "returnPct": -0.0385,
+      "win": false
+    }
   },
   {
     "id": "KO260821C00086000-2026-07-22",
@@ -13196,16 +14562,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "targetHit",
-      "exitValue": 4.38,
+      "exitValue": 4.411,
+      "exitValueRaw": 4.44,
       "valueSource": "optionClose",
-      "returnPct": 4.7031,
-      "plPerContract": 361.2,
+      "returnPct": 4.7434,
+      "plPerContract": 364.29,
       "win": true
     },
-    "evaluatedAt": "2026-07-28T13:54:26.729Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "targetHit",
+      "exitPrice": 85.68,
+      "returnPct": 0.0453,
+      "win": true
+    }
   },
   {
     "id": "META260731C00705000-2026-07-22",
@@ -13279,16 +14655,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 4.15,
+      "exitValue": 4.047,
+      "exitValueRaw": 4.15,
       "valueSource": "optionClose",
-      "returnPct": -0.6302,
-      "plPerContract": -707.3,
+      "returnPct": -0.6394,
+      "plPerContract": -717.59,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:00.020Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 619.0409,
+      "returnPct": -0.0385,
+      "win": false
+    }
   },
   {
     "id": "NFLX260918C00081000-2026-07-22",
@@ -13358,7 +14744,9 @@
         "Needs 19.1% move to breakeven by 2026-09-18"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NFLX260821C00077000-2026-07-22",
@@ -13428,7 +14816,9 @@
         "Needs 13.0% move to breakeven by 2026-08-21"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "KMI260918C00035000-2026-07-22",
@@ -13501,16 +14891,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.19,
+      "exitValue": 0.184,
+      "exitValueRaw": 0.19,
       "valueSource": "optionClose",
-      "returnPct": -0.4154,
-      "plPerContract": -13.5,
+      "returnPct": -0.4337,
+      "plPerContract": -14.09,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.003Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 31.6814,
+      "returnPct": -0.0216,
+      "win": false
+    }
   },
   {
     "id": "NVDA260821C00230000-2026-07-22",
@@ -13580,16 +14980,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.6,
+      "exitValue": 0.593,
+      "exitValueRaw": 0.6,
       "valueSource": "optionClose",
-      "returnPct": -0.7097,
-      "plPerContract": -146.7,
+      "returnPct": -0.7133,
+      "plPerContract": -147.44,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.004Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 200.0947,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "AAPL260918C00370000-2026-07-22",
@@ -13662,16 +15072,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.78,
+      "exitValue": 1.727,
+      "exitValueRaw": 1.78,
       "valueSource": "optionClose",
-      "returnPct": -0.3813,
-      "plPerContract": -109.7,
+      "returnPct": -0.3999,
+      "plPerContract": -115.04,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:00.781Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "HD260918C00370000-2026-07-22",
@@ -13744,7 +15164,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "AAPL260918C00365000-2026-07-22",
@@ -13817,16 +15239,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.3,
+      "exitValue": 2.262,
+      "exitValueRaw": 2.3,
       "valueSource": "optionClose",
-      "returnPct": -0.3699,
-      "plPerContract": -135,
+      "returnPct": -0.3803,
+      "plPerContract": -138.81,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:01.079Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 319.533,
+      "returnPct": -0.025,
+      "win": false
+    }
   },
   {
     "id": "MCD260918C00290000-2026-07-22",
@@ -13899,7 +15331,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "V260918C00395000-2026-07-22",
@@ -13972,7 +15406,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "MCD260918C00295000-2026-07-22",
@@ -14046,7 +15482,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "KMI260918C00034000-2026-07-22",
@@ -14119,16 +15557,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.31,
+      "exitValue": 0.29,
+      "exitValueRaw": 0.31,
       "valueSource": "optionClose",
-      "returnPct": -0.458,
-      "plPerContract": -26.2,
+      "returnPct": -0.4922,
+      "plPerContract": -28.15,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.004Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 31.6814,
+      "returnPct": -0.0216,
+      "win": false
+    }
   },
   {
     "id": "V260918C00390000-2026-07-22",
@@ -14201,7 +15649,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "HD260918C00360000-2026-07-22",
@@ -14272,7 +15722,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "MA260918C00590000-2026-07-22",
@@ -14346,16 +15798,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 5.4,
+      "exitValue": 5.062,
+      "exitValueRaw": 5.4,
       "valueSource": "optionClose",
-      "returnPct": -0.2631,
-      "plPerContract": -192.8,
+      "returnPct": -0.3093,
+      "plPerContract": -226.63,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:02.135Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 526.1069,
+      "returnPct": -0.0227,
+      "win": false
+    }
   },
   {
     "id": "ENPH260918C00045000-2026-07-22",
@@ -14428,16 +15890,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 2.87,
+      "exitValue": 2.736,
+      "exitValueRaw": 2.87,
       "valueSource": "optionClose",
-      "returnPct": -0.3282,
-      "plPerContract": -140.2,
+      "returnPct": -0.3596,
+      "plPerContract": -153.6,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.004Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 36.3259,
+      "returnPct": -0.0905,
+      "win": false
+    }
   },
   {
     "id": "META260918C00755000-2026-07-22",
@@ -14511,16 +15983,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 8.45,
+      "exitValue": 8.388,
+      "exitValueRaw": 8.45,
       "valueSource": "optionClose",
-      "returnPct": -0.4663,
-      "plPerContract": -738.2,
+      "returnPct": -0.4702,
+      "plPerContract": -744.37,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:02.451Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 619.0409,
+      "returnPct": -0.0385,
+      "win": false
+    }
   },
   {
     "id": "AMD260918C00650000-2026-07-22",
@@ -14593,16 +16075,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 15.55,
+      "exitValue": 15.342,
+      "exitValueRaw": 15.55,
       "valueSource": "optionClose",
-      "returnPct": -0.5572,
-      "plPerContract": -1956.8,
+      "returnPct": -0.5631,
+      "plPerContract": -1977.56,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.004Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 506.9563,
+      "returnPct": -0.0688,
+      "win": false
+    }
   },
   {
     "id": "META260918C00745000-2026-07-22",
@@ -14675,16 +16167,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 9.8,
+      "exitValue": 9.721,
+      "exitValueRaw": 9.8,
       "valueSource": "optionClose",
-      "returnPct": -0.4534,
-      "plPerContract": -812.8,
+      "returnPct": -0.4578,
+      "plPerContract": -820.74,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:02.754Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 619.0409,
+      "returnPct": -0.0385,
+      "win": false
+    }
   },
   {
     "id": "XOM260918P00140000-2026-07-22",
@@ -14757,16 +16259,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.584Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.85,
+      "exitValue": 1.789,
+      "exitValueRaw": 1.85,
       "valueSource": "optionClose",
-      "returnPct": -0.3285,
-      "plPerContract": -90.5,
+      "returnPct": -0.3508,
+      "plPerContract": -96.64,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:02.898Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 155.0562,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "RTX260918C00210000-2026-07-22",
@@ -14838,7 +16350,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PATH260821C00014000-2026-07-22",
@@ -14908,16 +16422,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.09,
+      "exitValue": 0.085,
+      "exitValueRaw": 0.09,
       "valueSource": "optionClose",
-      "returnPct": -0.7692,
-      "plPerContract": -30,
+      "returnPct": -0.7814,
+      "plPerContract": -30.47,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:03.207Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 11.3648,
+      "returnPct": -0.0561,
+      "win": false
+    }
   },
   {
     "id": "WM260918C00240000-2026-07-22",
@@ -14989,7 +16513,9 @@
         "IV-crush haircut priced in (report lands before exit)"
       ],
       "quoteAgeMinutes": 822
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260918P00175000-2026-07-22",
@@ -15062,16 +16588,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.08,
+      "exitValue": 2.027,
+      "exitValueRaw": 2.08,
       "valueSource": "optionClose",
-      "returnPct": -0.2558,
-      "plPerContract": -71.5,
+      "returnPct": -0.2747,
+      "plPerContract": -76.77,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:03.501Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 194.8781,
+      "returnPct": -0.0199,
+      "win": false
+    }
   },
   {
     "id": "AMZN260918C00280000-2026-07-22",
@@ -15144,16 +16680,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.61,
+      "exitValue": 2.597,
+      "exitValueRaw": 2.61,
       "valueSource": "optionClose",
-      "returnPct": -0.4869,
-      "plPerContract": -247.7,
+      "returnPct": -0.4895,
+      "plPerContract": -248.99,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:03.649Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 240.3704,
+      "returnPct": -0.029,
+      "win": false
+    }
   },
   {
     "id": "SHOP260731C00116000-2026-07-22",
@@ -15225,16 +16771,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.44,
+      "exitValue": 2.284,
+      "exitValueRaw": 2.44,
       "valueSource": "optionClose",
-      "returnPct": -0.7417,
-      "plPerContract": -700.8,
+      "returnPct": -0.7582,
+      "plPerContract": -716.39,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:03.800Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 117.2958,
+      "returnPct": -0.0466,
+      "win": false
+    }
   },
   {
     "id": "MGNI260821C00019000-2026-07-22",
@@ -15305,16 +16861,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.33,
+      "exitValue": 1.285,
+      "exitValueRaw": 1.33,
       "valueSource": "optionClose",
-      "returnPct": -0.3137,
-      "plPerContract": -60.8,
+      "returnPct": -0.3371,
+      "plPerContract": -65.34,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:03.953Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 18.2778,
+      "returnPct": -0.0445,
+      "win": false
+    }
   },
   {
     "id": "MGNI260918C00020000-2026-07-22",
@@ -15386,16 +16952,26 @@
       ],
       "quoteAgeMinutes": 822
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.5,
+      "exitValue": 1.404,
+      "exitValueRaw": 1.5,
       "valueSource": "optionClose",
-      "returnPct": -0.2526,
-      "plPerContract": -50.7,
+      "returnPct": -0.3006,
+      "plPerContract": -60.34,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:04.106Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 18.2778,
+      "returnPct": -0.0445,
+      "win": false
+    }
   },
   {
     "id": "ASML260731C02000000-2026-07-22",
@@ -15460,24 +17036,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 3.9,
+      "exitValue": 3.656,
+      "exitValueRaw": 3.9,
       "valueSource": "optionClose",
-      "returnPct": -0.7851,
-      "plPerContract": -1425,
+      "returnPct": -0.7986,
+      "plPerContract": -1449.37,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.191Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 3.9,
+      "exitValue": 3.656,
+      "exitValueRaw": 3.9,
       "valueSource": "optionClose",
-      "returnPct": -0.7851,
-      "plPerContract": -1425,
+      "returnPct": -0.7986,
+      "plPerContract": -1449.37,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 1757.09,
+      "returnPct": -0.0247,
       "win": false
     }
   },
@@ -15543,24 +17129,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 1.1,
+      "exitValue": 1.044,
+      "exitValueRaw": 1.1,
       "valueSource": "optionClose",
-      "returnPct": -0.7893,
-      "plPerContract": -412,
+      "returnPct": -0.8,
+      "plPerContract": -417.62,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.191Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 1.1,
+      "exitValue": 1.044,
+      "exitValueRaw": 1.1,
       "valueSource": "optionClose",
-      "returnPct": -0.7893,
-      "plPerContract": -412,
+      "returnPct": -0.8,
+      "plPerContract": -417.62,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 183.28,
+      "returnPct": -0.0412,
       "win": false
     }
   },
@@ -15626,24 +17222,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 1.75,
+      "exitValue": 1.627,
+      "exitValueRaw": 1.75,
       "valueSource": "optionClose",
-      "returnPct": -0.6864,
-      "plPerContract": -383,
+      "returnPct": -0.7085,
+      "plPerContract": -395.34,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.191Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 1.75,
+      "exitValue": 1.627,
+      "exitValueRaw": 1.75,
       "valueSource": "optionClose",
-      "returnPct": -0.6864,
-      "plPerContract": -383,
+      "returnPct": -0.7085,
+      "plPerContract": -395.34,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 353.1799,
+      "returnPct": -0.023,
       "win": false
     }
   },
@@ -15708,24 +17314,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 24.15,
+      "exitValue": 23.355,
+      "exitValueRaw": 24.15,
       "valueSource": "optionClose",
-      "returnPct": -0.4033,
-      "plPerContract": -1632.5,
+      "returnPct": -0.423,
+      "plPerContract": -1711.95,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.191Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 24.15,
+      "exitValue": 23.355,
+      "exitValueRaw": 24.15,
       "valueSource": "optionClose",
-      "returnPct": -0.4033,
-      "plPerContract": -1632.5,
+      "returnPct": -0.423,
+      "plPerContract": -1711.95,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "planExit",
+      "exitPrice": 1757.09,
+      "returnPct": -0.0247,
       "win": false
     }
   },
@@ -15791,24 +17407,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.13,
+      "exitValue": 0.124,
+      "exitValueRaw": 0.13,
       "valueSource": "optionClose",
-      "returnPct": -0.9642,
-      "plPerContract": -350.5,
+      "returnPct": -0.9659,
+      "plPerContract": -351.12,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:04.940Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 0.07,
+      "exitValue": 0.067,
+      "exitValueRaw": 0.07,
       "valueSource": "optionClose",
-      "returnPct": -0.9807,
-      "plPerContract": -356.5,
+      "returnPct": -0.9817,
+      "plPerContract": -356.84,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 335.8544,
+      "returnPct": -0.0325,
       "win": false
     }
   },
@@ -15873,24 +17499,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "loss",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.16,
+      "exitValue": 0.154,
+      "exitValueRaw": 0.16,
       "valueSource": "optionClose",
-      "returnPct": -0.9655,
-      "plPerContract": -447.5,
+      "returnPct": -0.9668,
+      "plPerContract": -448.1,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:05.082Z",
-    "holdStatus": "loss",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 0.1,
+      "exitValue": 0.096,
+      "exitValueRaw": 0.1,
       "valueSource": "optionClose",
-      "returnPct": -0.9784,
-      "plPerContract": -453.5,
+      "returnPct": -0.9792,
+      "plPerContract": -453.87,
+      "win": false
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 335.8544,
+      "returnPct": -0.0325,
       "win": false
     }
   },
@@ -15956,24 +17592,34 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "win",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "targetHit",
-      "exitValue": 5.92,
+      "exitValue": 5.55,
+      "exitValueRaw": 5.92,
       "valueSource": "optionClose",
-      "returnPct": 1.9899,
-      "plPerContract": 394,
+      "returnPct": 1.803,
+      "plPerContract": 357,
       "win": true
     },
-    "evaluatedAt": "2026-07-23T23:35:05.205Z",
-    "holdStatus": "win",
     "exitHold": {
       "exitDate": "2026-07-24",
       "exitReason": "planExit",
-      "exitValue": 8.2,
+      "exitValue": 7.687,
+      "exitValueRaw": 8.2,
       "valueSource": "optionClose",
-      "returnPct": 3.1414,
-      "plPerContract": 622,
+      "returnPct": 2.8826,
+      "plPerContract": 570.75,
+      "win": true
+    },
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "targetHit",
+      "exitPrice": 203.94,
+      "returnPct": 0.053,
       "win": true
     }
   },
@@ -16037,7 +17683,9 @@
         "Needs -12.7% move to breakeven by 2026-08-14"
       ],
       "quoteAgeMinutes": 824
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "TSLA260821P00335000-2026-07-22",
@@ -16099,7 +17747,9 @@
         "Needs -13.0% move to breakeven by 2026-08-21"
       ],
       "quoteAgeMinutes": 824
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PYPL260918P00050000-2026-07-22",
@@ -16162,16 +17812,26 @@
       ],
       "quoteAgeMinutes": 824
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 0.68,
+      "exitValue": 0.705,
+      "exitValueRaw": 0.72,
       "valueSource": "optionClose",
-      "returnPct": -0.4271,
-      "plPerContract": -50.7,
+      "returnPct": -0.4063,
+      "plPerContract": -48.23,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.730Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 57.7885,
+      "returnPct": -0.0347,
+      "win": false
+    }
   },
   {
     "id": "ORCL260731C00143000-2026-07-22",
@@ -16243,16 +17903,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.13,
+      "exitValue": 0.121,
+      "exitValueRaw": 0.13,
       "valueSource": "optionClose",
-      "returnPct": -0.8924,
-      "plPerContract": -107.8,
+      "returnPct": -0.9002,
+      "plPerContract": -108.75,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.389Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 118.116,
+      "returnPct": -0.0625,
+      "win": false
+    }
   },
   {
     "id": "ORCL260731C00142000-2026-07-22",
@@ -16324,16 +17994,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.15,
+      "exitValue": 0.142,
+      "exitValueRaw": 0.15,
       "valueSource": "optionClose",
-      "returnPct": -0.8876,
-      "plPerContract": -118.5,
+      "returnPct": -0.8937,
+      "plPerContract": -119.31,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.389Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 118.116,
+      "returnPct": -0.0625,
+      "win": false
+    }
   },
   {
     "id": "WMT260731C00112000-2026-07-22",
@@ -16396,7 +18076,9 @@
         "Needs 3.3% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260814P00185000-2026-07-22",
@@ -16467,16 +18149,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.88,
+      "exitValue": 1.818,
+      "exitValueRaw": 1.88,
       "valueSource": "optionClose",
-      "returnPct": -0.2327,
-      "plPerContract": -57,
+      "returnPct": -0.2581,
+      "plPerContract": -63.24,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:06.254Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 196.6839,
+      "returnPct": -0.0193,
+      "win": false
+    }
   },
   {
     "id": "IONQ260731C00041000-2026-07-22",
@@ -16546,7 +18238,9 @@
         "Needs 19.3% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "UBER260731C00075000-2026-07-22",
@@ -16617,16 +18311,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.04,
+      "exitValue": 0.039,
+      "exitValueRaw": 0.04,
       "valueSource": "optionClose",
-      "returnPct": -0.891,
-      "plPerContract": -32.7,
+      "returnPct": -0.8925,
+      "plPerContract": -32.75,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.597Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 67.7565,
+      "returnPct": -0.0334,
+      "win": false
+    }
   },
   {
     "id": "RUN260731C00012000-2026-07-22",
@@ -16697,16 +18401,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.03,
+      "exitValue": 0.028,
+      "exitValueRaw": 0.03,
       "valueSource": "optionClose",
-      "returnPct": -0.8462,
-      "plPerContract": -16.5,
+      "returnPct": -0.8543,
+      "plPerContract": -16.66,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.691Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 10.064,
+      "returnPct": -0.0784,
+      "win": false
+    }
   },
   {
     "id": "QBTS260731C00017500-2026-07-22",
@@ -16775,7 +18489,9 @@
         "Needs 6.7% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "TSLA260729C00410000-2026-07-22",
@@ -16839,16 +18555,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.11,
+      "exitValue": 0.109,
+      "exitValueRaw": 0.11,
       "valueSource": "optionClose",
-      "returnPct": -0.9613,
-      "plPerContract": -273.5,
+      "returnPct": -0.9617,
+      "plPerContract": -273.62,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:07.004Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 358.5301,
+      "returnPct": -0.0427,
+      "win": false
+    }
   },
   {
     "id": "TSLA260729C00405000-2026-07-22",
@@ -16912,16 +18638,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.12,
+      "exitValue": 0.117,
+      "exitValueRaw": 0.12,
       "valueSource": "optionClose",
-      "returnPct": -0.9672,
-      "plPerContract": -353.5,
+      "returnPct": -0.968,
+      "plPerContract": -353.8,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:07.154Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 358.5301,
+      "returnPct": -0.0427,
+      "win": false
+    }
   },
   {
     "id": "LYFT260731C00015500-2026-07-22",
@@ -16984,16 +18720,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.585Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 0.1,
+      "exitValue": 0.097,
+      "exitValueRaw": 0.1,
       "valueSource": "optionClose",
-      "returnPct": -0.435,
-      "plPerContract": -7.7,
+      "returnPct": -0.4512,
+      "plPerContract": -7.99,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:07.314Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 13.8815,
+      "returnPct": -0.0443,
+      "win": false
+    }
   },
   {
     "id": "INTC260731C00124000-2026-07-22",
@@ -17067,16 +18813,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.12,
+      "exitValue": 0.114,
+      "exitValueRaw": 0.12,
       "valueSource": "optionClose",
-      "returnPct": -0.949,
-      "plPerContract": -223.5,
+      "returnPct": -0.9515,
+      "plPerContract": -224.07,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 95.1879,
+      "returnPct": -0.0841,
+      "win": false
+    }
   },
   {
     "id": "INTC260729C00115000-2026-07-22",
@@ -17150,16 +18906,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.09,
+      "exitValue": 0.084,
+      "exitValueRaw": 0.09,
       "valueSource": "optionClose",
-      "returnPct": -0.9742,
-      "plPerContract": -339.5,
+      "returnPct": -0.9759,
+      "plPerContract": -340.11,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 95.1879,
+      "returnPct": -0.0841,
+      "win": false
+    }
   },
   {
     "id": "UBER260731C00074000-2026-07-22",
@@ -17231,16 +18997,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.046,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.9138,
-      "plPerContract": -53,
+      "returnPct": -0.92,
+      "plPerContract": -53.36,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 67.7565,
+      "returnPct": -0.0334,
+      "win": false
+    }
   },
   {
     "id": "QBTS260731C00017000-2026-07-22",
@@ -17309,7 +19085,9 @@
         "Needs 5.4% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "XOM260821P00145000-2026-07-22",
@@ -17373,16 +19151,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.56,
+      "exitValue": 1.463,
+      "exitValueRaw": 1.56,
       "valueSource": "optionClose",
-      "returnPct": -0.2761,
-      "plPerContract": -59.5,
+      "returnPct": -0.3211,
+      "plPerContract": -69.2,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:08.063Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 157.8079,
+      "returnPct": -0.0215,
+      "win": false
+    }
   },
   {
     "id": "CRWD260731C00205000-2026-07-22",
@@ -17447,16 +19235,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 0.12,
+      "exitValue": 0.057,
+      "exitValueRaw": 0.06,
       "valueSource": "optionClose",
-      "returnPct": -0.9548,
-      "plPerContract": -253.5,
+      "returnPct": -0.9787,
+      "plPerContract": -259.85,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.730Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 177.25,
+      "returnPct": -0.0546,
+      "win": false
+    }
   },
   {
     "id": "CRWD260731C00202500-2026-07-22",
@@ -17520,16 +19318,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 0.25,
+      "exitValue": 0.236,
+      "exitValueRaw": 0.25,
       "valueSource": "optionClose",
-      "returnPct": -0.9222,
-      "plPerContract": -296.5,
+      "returnPct": -0.9265,
+      "plPerContract": -297.86,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.730Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 177.25,
+      "returnPct": -0.0546,
+      "win": false
+    }
   },
   {
     "id": "XOM260821P00148000-2026-07-22",
@@ -17590,16 +19398,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.19,
+      "exitValue": 2.108,
+      "exitValueRaw": 2.19,
       "valueSource": "optionClose",
-      "returnPct": -0.3032,
-      "plPerContract": -95.3,
+      "returnPct": -0.3292,
+      "plPerContract": -103.47,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:08.523Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 157.8079,
+      "returnPct": -0.0215,
+      "win": false
+    }
   },
   {
     "id": "XOM261016P00135000-2026-07-22",
@@ -17672,16 +19490,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.95,
+      "exitValue": 1.848,
+      "exitValueRaw": 1.95,
       "valueSource": "optionClose",
-      "returnPct": -0.1383,
-      "plPerContract": -31.3,
+      "returnPct": -0.1832,
+      "plPerContract": -41.47,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:08.669Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 157.8079,
+      "returnPct": -0.0215,
+      "win": false
+    }
   },
   {
     "id": "ORCL261016C00150000-2026-07-22",
@@ -17752,16 +19580,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 5.75,
+      "exitValue": 5.494,
+      "exitValueRaw": 5.75,
       "valueSource": "optionClose",
-      "returnPct": -0.4107,
-      "plPerContract": -400.8,
+      "returnPct": -0.437,
+      "plPerContract": -426.42,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 118.116,
+      "returnPct": -0.0625,
+      "win": false
+    }
   },
   {
     "id": "ORCL261016C00145000-2026-07-22",
@@ -17832,16 +19670,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 6.7,
+      "exitValue": 6.537,
+      "exitValueRaw": 6.7,
       "valueSource": "optionClose",
-      "returnPct": -0.3924,
-      "plPerContract": -432.7,
+      "returnPct": -0.4072,
+      "plPerContract": -448.98,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 118.116,
+      "returnPct": -0.0625,
+      "win": false
+    }
   },
   {
     "id": "WMT261016C00125000-2026-07-22",
@@ -17912,7 +19760,9 @@
         "Earnings 2026-08-20 (market prices ±6.0%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WMT261016C00120000-2026-07-22",
@@ -17982,7 +19832,9 @@
         "Earnings 2026-08-20 (market prices ±6.0%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "MCD261016C00290000-2026-07-22",
@@ -18054,7 +19906,9 @@
         "Earnings 2026-08-04 (market prices ±4.4%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "QBTS261016C00019000-2026-07-22",
@@ -18125,7 +19979,9 @@
         "Earnings 2026-08-06 (market prices ±14.9%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "QBTS261016C00018000-2026-07-22",
@@ -18195,7 +20051,9 @@
         "Earnings 2026-08-06 (market prices ±14.9%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS261016C00105000-2026-07-22",
@@ -18266,16 +20124,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 1.86,
+      "exitValue": 1.817,
+      "exitValueRaw": 1.86,
       "valueSource": "optionClose",
-      "returnPct": -0.2846,
-      "plPerContract": -74,
+      "returnPct": -0.3013,
+      "plPerContract": -78.34,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:09.871Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.5635,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "DIS261120C00110000-2026-07-22",
@@ -18346,16 +20214,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 2.05,
+      "exitValue": 2.031,
+      "exitValueRaw": 2.05,
       "valueSource": "optionClose",
-      "returnPct": -0.2485,
-      "plPerContract": -67.8,
+      "returnPct": -0.2554,
+      "plPerContract": -69.69,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:10.022Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 93.5635,
+      "returnPct": -0.0221,
+      "win": false
+    }
   },
   {
     "id": "INTC261016C00115000-2026-07-22",
@@ -18428,16 +20306,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 7.49,
+      "exitValue": 7.447,
+      "exitValueRaw": 7.49,
       "valueSource": "optionClose",
-      "returnPct": -0.4631,
-      "plPerContract": -646,
+      "returnPct": -0.4662,
+      "plPerContract": -650.31,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 95.1879,
+      "returnPct": -0.0841,
+      "win": false
+    }
   },
   {
     "id": "INTC261016C00110000-2026-07-22",
@@ -18510,16 +20398,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 8.68,
+      "exitValue": 8.548,
+      "exitValueRaw": 8.68,
       "valueSource": "optionClose",
-      "returnPct": -0.4412,
-      "plPerContract": -685.2,
+      "returnPct": -0.4497,
+      "plPerContract": -698.44,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 95.1879,
+      "returnPct": -0.0841,
+      "win": false
+    }
   },
   {
     "id": "UBER261016C00080000-2026-07-22",
@@ -18590,16 +20488,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 1.44,
+      "exitValue": 1.391,
+      "exitValueRaw": 1.44,
       "valueSource": "optionClose",
-      "returnPct": -0.4025,
-      "plPerContract": -97,
+      "returnPct": -0.4227,
+      "plPerContract": -101.86,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.894Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 67.7565,
+      "returnPct": -0.0334,
+      "win": false
+    }
   },
   {
     "id": "DAL270115C00100000-2026-07-22",
@@ -18670,16 +20578,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 3.75,
+      "exitValue": 3.645,
+      "exitValueRaw": 3.75,
       "valueSource": "optionClose",
-      "returnPct": -0.1379,
-      "plPerContract": -60,
+      "returnPct": -0.162,
+      "plPerContract": -70.48,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:10.636Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 81.2199,
+      "returnPct": -0.0306,
+      "win": false
+    }
   },
   {
     "id": "AMD261016C00660000-2026-07-22",
@@ -18751,16 +20669,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 24.07,
+      "exitValue": 23.723,
+      "exitValueRaw": 24.07,
       "valueSource": "optionClose",
-      "returnPct": -0.5047,
-      "plPerContract": -2452.3,
+      "returnPct": -0.5118,
+      "plPerContract": -2486.96,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.005Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 517.9022,
+      "returnPct": -0.0672,
+      "win": false
+    }
   },
   {
     "id": "DAL270115C00095000-2026-07-22",
@@ -18831,16 +20759,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-23",
       "exitReason": "stopHit",
-      "exitValue": 5.05,
+      "exitValue": 4.965,
+      "exitValueRaw": 5.05,
       "valueSource": "optionClose",
-      "returnPct": -0.1097,
-      "plPerContract": -62.2,
+      "returnPct": -0.1247,
+      "plPerContract": -70.73,
       "win": false
     },
-    "evaluatedAt": "2026-07-23T23:35:10.928Z"
+    "stockLeg": {
+      "exitDate": "2026-07-23",
+      "exitReason": "stopHit",
+      "exitPrice": 81.2199,
+      "returnPct": -0.0306,
+      "win": false
+    }
   },
   {
     "id": "AAPL261016C00360000-2026-07-22",
@@ -18911,7 +20849,9 @@
         "Earnings 2026-07-30 (market prices ±4.0%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "AAPL261016C00355000-2026-07-22",
@@ -18981,7 +20921,9 @@
         "Earnings 2026-07-30 (market prices ±4.0%)"
       ],
       "quoteAgeMinutes": 1
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "AMD261016C00640000-2026-07-22",
@@ -19053,16 +20995,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 26.7,
+      "exitValue": 25.693,
+      "exitValueRaw": 26.7,
       "valueSource": "optionClose",
-      "returnPct": -0.5096,
-      "plPerContract": -2774.3,
+      "returnPct": -0.5281,
+      "plPerContract": -2874.96,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.005Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 517.9022,
+      "returnPct": -0.0672,
+      "win": false
+    }
   },
   {
     "id": "UBER261016C00075000-2026-07-22",
@@ -19133,16 +21085,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.586Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 2.4,
+      "exitValue": 2.304,
+      "exitValueRaw": 2.4,
       "valueSource": "optionClose",
-      "returnPct": -0.3693,
-      "plPerContract": -140.5,
+      "returnPct": -0.3946,
+      "plPerContract": -150.15,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:10.995Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 67.7565,
+      "returnPct": -0.0334,
+      "win": false
+    }
   },
   {
     "id": "CRWD261016C00217500-2026-07-22",
@@ -19212,6 +21174,15 @@
         "Earnings 2026-08-26"
       ],
       "quoteAgeMinutes": 1
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2,
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 177.25,
+      "returnPct": -0.0546,
+      "win": false
     }
   },
   {
@@ -19284,16 +21255,26 @@
       ],
       "quoteAgeMinutes": 1
     },
+    "evaluatedAt": "2026-07-28T14:03:08.587Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-28",
       "exitReason": "stopHit",
-      "exitValue": 11,
-      "valueSource": "optionClose:2026-07-27",
-      "returnPct": -0.2772,
-      "plPerContract": -421.8,
+      "exitValue": 8.167,
+      "exitValueRaw": 8.7,
+      "valueSource": "optionClose",
+      "returnPct": -0.4634,
+      "plPerContract": -705.13,
       "win": false
     },
-    "evaluatedAt": "2026-07-28T13:54:26.731Z"
+    "stockLeg": {
+      "exitDate": "2026-07-28",
+      "exitReason": "stopHit",
+      "exitPrice": 177.25,
+      "returnPct": -0.0546,
+      "win": false
+    }
   },
   {
     "id": "ORCL260731C00134000-2026-07-23",
@@ -19357,7 +21338,9 @@
         "Needs 11.4% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "ORCL260731C00133000-2026-07-23",
@@ -19420,7 +21403,9 @@
         "Needs 10.6% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "XOM260731P00150000-2026-07-23",
@@ -19493,7 +21478,9 @@
         "Earnings 2026-07-31 (market prices ±3.8%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "GOOGL260731C00330000-2026-07-23",
@@ -19556,7 +21543,9 @@
         "Needs 4.8% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WMT260731C00112000-2026-07-23",
@@ -19626,7 +21615,9 @@
         "Needs 4.2% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "GOOGL260731C00325000-2026-07-23",
@@ -19688,7 +21679,9 @@
         "Needs 3.7% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "UBER260731C00073000-2026-07-23",
@@ -19753,16 +21746,26 @@
       ],
       "quoteAgeMinutes": 0
     },
+    "evaluatedAt": "2026-07-28T14:03:08.587Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.05,
+      "exitValue": 0.048,
+      "exitValueRaw": 0.05,
       "valueSource": "optionClose",
-      "returnPct": -0.858,
-      "plPerContract": -30.2,
+      "returnPct": -0.8641,
+      "plPerContract": -30.42,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:11.220Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 66.4894,
+      "returnPct": -0.034,
+      "win": false
+    }
   },
   {
     "id": "CVX260814P00185000-2026-07-23",
@@ -19834,7 +21837,9 @@
         "Earnings 2026-07-31 (market prices ±3.5%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS260731C00095000-2026-07-23",
@@ -19904,7 +21909,9 @@
         "Needs 3.1% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "UBER260731C00072000-2026-07-23",
@@ -19969,16 +21976,26 @@
       ],
       "quoteAgeMinutes": 0
     },
+    "evaluatedAt": "2026-07-28T14:03:08.587Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-24",
       "exitReason": "stopHit",
-      "exitValue": 0.11,
+      "exitValue": 0.109,
+      "exitValueRaw": 0.11,
       "valueSource": "optionClose",
-      "returnPct": -0.7741,
-      "plPerContract": -37.7,
+      "returnPct": -0.7765,
+      "plPerContract": -37.81,
       "win": false
     },
-    "evaluatedAt": "2026-07-26T05:34:11.404Z"
+    "stockLeg": {
+      "exitDate": "2026-07-24",
+      "exitReason": "stopHit",
+      "exitPrice": 66.4894,
+      "returnPct": -0.034,
+      "win": false
+    }
   },
   {
     "id": "QCOM260731C00195000-2026-07-23",
@@ -20042,7 +22059,9 @@
         "Needs 15.3% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "TSLA260731C00340000-2026-07-23",
@@ -20106,16 +22125,26 @@
       ],
       "quoteAgeMinutes": 0
     },
+    "evaluatedAt": "2026-07-28T14:03:08.587Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.59,
+      "exitValue": 0.577,
+      "exitValueRaw": 0.59,
       "valueSource": "optionClose",
-      "returnPct": -0.8153,
-      "plPerContract": -260.5,
+      "returnPct": -0.8194,
+      "plPerContract": -261.81,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.006Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 304.8306,
+      "returnPct": -0.0577,
+      "win": false
+    }
   },
   {
     "id": "NFLX260731C00071000-2026-07-23",
@@ -20184,7 +22213,9 @@
         "Needs 4.2% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WMT260731C00111000-2026-07-23",
@@ -20253,7 +22284,9 @@
         "Needs 3.4% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NFLX260807C00074000-2026-07-23",
@@ -20322,7 +22355,9 @@
         "Needs 8.2% move to breakeven by 2026-08-07"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "QCOM260731C00192500-2026-07-23",
@@ -20386,7 +22421,9 @@
         "Needs 14.1% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "HD260731C00335000-2026-07-23",
@@ -20449,7 +22486,9 @@
         "Needs 3.7% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DIS260731C00094000-2026-07-23",
@@ -20518,7 +22557,9 @@
         "Needs 2.4% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260821P00185000-2026-07-23",
@@ -20589,7 +22630,9 @@
         "Earnings 2026-07-31 (market prices ±3.5%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "IONQ260731C00037000-2026-07-23",
@@ -20659,7 +22702,9 @@
         "Needs 11.0% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "XOM260821P00145000-2026-07-23",
@@ -20730,7 +22775,9 @@
         "Earnings 2026-07-31 (market prices ±3.8%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "OXY260821P00054000-2026-07-23",
@@ -20801,7 +22848,9 @@
         "Earnings 2026-08-05 (market prices ±6.1%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PATH260731C00011500-2026-07-23",
@@ -20872,7 +22921,9 @@
         "Needs 11.0% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "TSLA260814C00360000-2026-07-23",
@@ -20935,16 +22986,26 @@
       ],
       "quoteAgeMinutes": 0
     },
+    "evaluatedAt": "2026-07-28T14:03:08.587Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 1.61,
+      "exitValue": 1.598,
+      "exitValueRaw": 1.61,
       "valueSource": "optionClose",
-      "returnPct": -0.5424,
-      "plPerContract": -190.8,
+      "returnPct": -0.5456,
+      "plPerContract": -191.95,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.006Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 304.8306,
+      "returnPct": -0.0577,
+      "win": false
+    }
   },
   {
     "id": "IONQ260731C00036000-2026-07-23",
@@ -21014,7 +23075,9 @@
         "Needs 9.0% move to breakeven by 2026-07-31"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "OXY260821P00055000-2026-07-23",
@@ -21085,7 +23148,9 @@
         "Earnings 2026-08-05 (market prices ±6.1%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "COP260821P00115000-2026-07-23",
@@ -21157,7 +23222,9 @@
         "Earnings 2026-08-06 (market prices ±5.2%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "PATH260807C00012000-2026-07-23",
@@ -21226,7 +23293,9 @@
         "Needs 16.0% move to breakeven by 2026-08-07"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "COP260821P00117000-2026-07-23",
@@ -21297,7 +23366,9 @@
         "Earnings 2026-08-06 (market prices ±5.2%)"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DAL260821C00085000-2026-07-23",
@@ -21359,7 +23430,9 @@
         "Needs 6.2% move to breakeven by 2026-08-21"
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "ORCL260731C00135000-2026-07-23",
@@ -21445,7 +23518,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "GOOGL260807C00345000-2026-07-23",
@@ -21523,7 +23598,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NFLX260731C00073000-2026-07-23",
@@ -21602,7 +23679,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "NFLX260731C00072000-2026-07-23",
@@ -21681,7 +23760,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "XOM260814P00146000-2026-07-23",
@@ -21769,7 +23850,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "WMT260731C00110000-2026-07-23",
@@ -21855,7 +23938,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DAL260821C00090000-2026-07-23",
@@ -21934,7 +24019,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "OXY260821P00052500-2026-07-23",
@@ -22021,7 +24108,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DAL260731C00082000-2026-07-23",
@@ -22100,7 +24189,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "LYFT260731C00014000-2026-07-23",
@@ -22185,7 +24276,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "HD260814C00345000-2026-07-23",
@@ -22271,7 +24364,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260814P00195000-2026-07-23",
@@ -22357,7 +24452,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "ENPH260821C00045000-2026-07-23",
@@ -22445,7 +24542,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "ENPH260821C00044000-2026-07-23",
@@ -22534,7 +24633,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "EOG260821P00135000-2026-07-23",
@@ -22622,7 +24723,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "GOOGL260731C00340000-2026-07-23",
@@ -22702,7 +24805,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260807P00185000-2026-07-23",
@@ -22790,7 +24895,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "CVX260731P00190000-2026-07-23",
@@ -22878,7 +24985,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "LRCX260731C00380000-2026-07-23",
@@ -22970,16 +25079,26 @@
       ],
       "quoteAgeMinutes": 0
     },
+    "evaluatedAt": "2026-07-28T14:03:08.588Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.7,
+      "exitValue": 0.652,
+      "exitValueRaw": 0.7,
       "valueSource": "optionClose",
-      "returnPct": -0.8414,
-      "plPerContract": -371.5,
+      "returnPct": -0.8522,
+      "plPerContract": -376.25,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.007Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 295.7229,
+      "returnPct": -0.0755,
+      "win": false
+    }
   },
   {
     "id": "LYFT260731C00015000-2026-07-23",
@@ -23065,7 +25184,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "LRCX260731C00375000-2026-07-23",
@@ -23157,16 +25278,26 @@
       ],
       "quoteAgeMinutes": 0
     },
+    "evaluatedAt": "2026-07-28T14:03:08.588Z",
+    "holdStatus": "open",
+    "gradeVersion": 2,
     "exit": {
       "exitDate": "2026-07-27",
       "exitReason": "stopHit",
-      "exitValue": 0.61,
+      "exitValue": 0.572,
+      "exitValueRaw": 0.61,
       "valueSource": "optionClose",
-      "returnPct": -0.8853,
-      "plPerContract": -471,
+      "returnPct": -0.8924,
+      "plPerContract": -474.78,
       "win": false
     },
-    "evaluatedAt": "2026-07-27T21:47:48.007Z"
+    "stockLeg": {
+      "exitDate": "2026-07-27",
+      "exitReason": "stopHit",
+      "exitPrice": 295.7229,
+      "returnPct": -0.0755,
+      "win": false
+    }
   },
   {
     "id": "DAL260814C00087000-2026-07-23",
@@ -23251,7 +25382,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "LYFT260731C00014500-2026-07-23",
@@ -23337,7 +25470,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "ENPH260731C00040000-2026-07-23",
@@ -23427,7 +25562,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "COP260821P00110000-2026-07-23",
@@ -23515,7 +25652,9 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "HD260807C00335000-2026-07-23",
@@ -23598,7 +25737,9 @@
         -1
       ],
       "quoteAgeMinutes": 3
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "DAL260821C00087000-2026-07-23",
@@ -23683,7 +25824,9 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "holdStatus": "open",
+    "gradeVersion": 2
   },
   {
     "id": "TSM260807C00425000-2026-07-28",
@@ -23763,7 +25906,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "ORCL260807C00131000-2026-07-28",
@@ -23843,7 +25987,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "TSM260807C00420000-2026-07-28",
@@ -23923,7 +26068,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "ORCL260807C00130000-2026-07-28",
@@ -24003,7 +26149,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "MU260807C00980000-2026-07-28",
@@ -24091,7 +26238,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "MU260807C00975000-2026-07-28",
@@ -24178,7 +26326,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "GOOGL260807C00347500-2026-07-28",
@@ -24265,7 +26414,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "GOOGL260807C00345000-2026-07-28",
@@ -24351,7 +26501,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "TSLA260805C00330000-2026-07-28",
@@ -24431,7 +26582,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "TSLA260805C00327500-2026-07-28",
@@ -24511,7 +26663,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "CRWD260807C00190000-2026-07-28",
@@ -24597,7 +26750,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "VZ260918P00045000-2026-07-28",
@@ -24685,7 +26839,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "AMD260807C00535000-2026-07-28",
@@ -24765,7 +26920,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "VZ260821P00048000-2026-07-28",
@@ -24852,7 +27008,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "ASML260821C01800000-2026-07-28",
@@ -24939,7 +27096,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "AMD260807C00525000-2026-07-28",
@@ -25019,7 +27177,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "ASML260821C01770000-2026-07-28",
@@ -25103,7 +27262,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "CRWD260821C00210000-2026-07-28",
@@ -25190,7 +27350,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "RTX260918P00210000-2026-07-28",
@@ -25277,7 +27438,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "SOXX260918C00565000-2026-07-28",
@@ -25356,7 +27518,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "SOXX260814C00480000-2026-07-28",
@@ -25433,7 +27596,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "T260918P00026000-2026-07-28",
@@ -25517,7 +27681,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "RTX260918P00220000-2026-07-28",
@@ -25603,7 +27768,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "LRCX260807C00285000-2026-07-28",
@@ -25693,7 +27859,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "QCOM260807C00180000-2026-07-28",
@@ -25782,7 +27949,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "QCOM260807C00190000-2026-07-28",
@@ -25871,7 +28039,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "T260918P00027000-2026-07-28",
@@ -25955,7 +28124,8 @@
         1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "JPM260918P00330000-2026-07-28",
@@ -26041,7 +28211,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "JPM260918P00325000-2026-07-28",
@@ -26128,7 +28299,8 @@
         -1
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   },
   {
     "id": "AMZN260807C00247500-2026-07-28",
@@ -26217,6 +28389,7 @@
         0
       ],
       "quoteAgeMinutes": 0
-    }
+    },
+    "gradeVersion": 2
   }
 ]
