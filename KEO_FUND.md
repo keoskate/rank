@@ -100,7 +100,13 @@ ballast layer whose only job is surviving the crashes in between.
 | GLD | 65 sh · $24,174 · 12% | ~0.1 correlation to the whole stack; the 2008-tested crash damper. |
 | SGOV | 159 sh · $16,002 · 8% | T-bills — dry powder that band-rebalancing deploys INTO crashes automatically. |
 
-Plus two anchors outside the tech stack: **ABBV** (26 sh · $6,743 — cash-machine pharma, 29% vol, the calmest thing in the fund) and **RTX** (31 sh · $6,596 — defense/aerospace; sensors, GPS, missiles: the geopolitical hedge on the same technology wave).
+Plus one anchor outside the pure tech stack: **RTX** (defense/aerospace; sensors, GPS,
+autonomy-adjacent — the geopolitical hedge on the same technology wave).
+
+> **Amendment 2026-08-03 — ABBV removed.** It was a legacy staple whose only answer to
+> "why are you here?" was "I'm calm" — neither thesis nor seatbelt. Its weight was
+> redistributed half to ballast (GLD/SGOV), half to the calm platforms (AMZN/GOOGL).
+> Rule affirmed: every holding must be either part of the machine or part of the seatbelt.
 
 ---
 
@@ -117,6 +123,24 @@ Plus two anchors outside the tech stack: **ABBV** (26 sh · $6,743 — cash-mach
 - **Survivorship warning:** these are hand-picked winners; absolute backtest returns (25.9% CAGR) are inflated by construction and are NOT expectations. The honest forward framing: equity-market returns with a technology tilt, and materially better crash behavior.
 - **What the policy verifiably does:** holding these same names naively drew down **−41.6%** (−38% in 2022). The policy structure took the identical stocks through at **−27%** (−22% in 2022) and −6% vs −15% in 2018.
 - **Pre-accepted feelings:** a 2022-type year ≈ **−22 to −26%**. In melt-up years the fund WILL badly lag naive aggression (2024: +37% vs +116% naive). Both are the seatbelt working.
+
+## The $50k bread-and-butter configuration (STARTING CONFIG, 2026-08-03)
+
+The fund launches at $50,000 with the thesis distilled to 20 positions — every layer
+represented by its strongest carrier, every position large enough to matter:
+
+| Sleeve | % | Holdings |
+|---|---|---|
+| Ballast | 23% | GLD 14 · SGOV 9 |
+| AI Platforms | 29% | AMZN 7.5 · GOOGL 7 · MSFT 5.5 · META 4 · PLTR 2.5 · TSLA 2.5 |
+| Silicon Core | 25% | NVDA 7 · TSM 5 · AVGO 5 · ASML 5 · AMAT 3 |
+| Anchor | 6% | RTX 6 |
+| Physical Plant | 6% | VRT 3 · CEG 3 |
+| Robotics | 5% | ISRG 5 |
+| Frontier (VC rules) | 6% | SPCX 1.5 · RKLB 1.5 · IONQ 1.5 · CRWV 1.5 |
+
+**Scale-up ladder:** at ~$100k add LRCX, KLAC, AMD, CGNX, ANET and expand the frontier
+sleeve (RGTI, QBTS, IREN, BE). At ~$200k, the full 42-position sheet above (minus ABBV).
 
 ## Execution & operations
 
