@@ -103,6 +103,16 @@ ballast layer whose only job is surviving the crashes in between.
 Plus one anchor outside the pure tech stack: **RTX** (defense/aerospace; sensors, GPS,
 autonomy-adjacent — the geopolitical hedge on the same technology wave).
 
+> **Amendment 2026-08-04 — ballast to the 15% floor; ISRG removed.**
+> (1) Ballast trimmed 21.5% → **15%** (GLD 10 / SGOV 5) at the user's explicit risk
+> acceptance — expected 2022-type year worsens to ≈ −28→−31%. The freed 6.5% went to
+> CORE sleeves only (silicon 30, platforms 26, infra 15) — never to the frontier sleeve:
+> seatbelt money must not fund lottery tickets. The vol brake remains armed.
+> (2) ISRG sold (the "profitable robotics" answer is NVDA — every robot runs its
+> chips; its slot flowed to NVDA/TSLA/CGNX: brains, autonomy, machine vision).
+> META remains a fixed 5-share tracking position (conflict of interest, user holds
+> META personally).
+
 > **Amendment 2026-08-03 — ABBV removed.** It was a legacy staple whose only answer to
 > "why are you here?" was "I'm calm" — neither thesis nor seatbelt. Its weight was
 > redistributed half to ballast (GLD/SGOV), half to the calm platforms (AMZN/GOOGL).
