@@ -16,7 +16,6 @@ const MACRO = [
   { sym: 'TLT', label: 'Bonds', group: 'Rates' },
   { sym: 'UUP', label: 'Dollar', group: 'Dollar' },
 ];
-const GROUPS = ['Equities', 'Semis', 'Volatility', 'Safe-haven', 'Rates', 'Dollar'];
 const REFRESH_MS = 30000;
 
 const pctFromOpen = q => {
@@ -151,28 +150,33 @@ const MacroContextPanel = () => {
         </div>
       )}
 
-      {/* Macro grid, grouped by asset class */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: theme.spacing.sm }}>
-        {GROUPS.map(group => (
-          <div key={group}>
-            <div style={{ fontSize: '10px', color: theme.colors.gray400, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-              {group}
+      {/* Macro grid — one uniform cell per instrument (aligned label/group on
+          top, price/day% below) so columns don't stagger by group size. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px 18px' }}>
+        {MACRO.map(({ sym, label, group }) => {
+          const pct = pctFromOpen(quotes[sym]);
+          const last = quotes[sym]?.last ?? quotes[sym]?.close;
+          return (
+            <div key={sym}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ fontWeight: 700, fontSize: theme.typography.fontSize.sm, color: theme.colors.gray800 }}>
+                  {label}
+                </span>
+                <span style={{ fontSize: '9px', color: theme.colors.gray400, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {group}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ color: theme.colors.gray500, fontSize: theme.typography.fontSize.xs }}>
+                  {last != null ? `$${Number(last).toFixed(0)}` : '—'}
+                </span>
+                <span style={{ color: pctColor(pct), fontWeight: 700, fontSize: theme.typography.fontSize.sm }}>
+                  {pct == null ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
+                </span>
+              </div>
             </div>
-            {MACRO.filter(m => m.group === group).map(({ sym, label }) => {
-              const pct = pctFromOpen(quotes[sym]);
-              const last = quotes[sym]?.last ?? quotes[sym]?.close;
-              return (
-                <div key={sym} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, fontFamily: 'monospace', fontSize: theme.typography.fontSize.sm, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700 }}>{label}</span>
-                  <span style={{ color: pctColor(pct), fontWeight: 600, fontSize: theme.typography.fontSize.xs }}>
-                    {last != null ? `$${Number(last).toFixed(0)}` : '—'}{' '}
-                    {pct == null ? '' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
