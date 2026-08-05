@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import Sparkline from '../common/Sparkline';
 import { fmtET } from '../../utils/timeFormat';
 
 // Earnings across SOXX constituents (from Unusual Whales via /api/soxx/earnings):
@@ -43,12 +44,30 @@ const agoLabel = days =>
 
 const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : '');
 
-const UP_COLS = '46px 60px 58px minmax(0,1fr) 54px 34px 54px';
-const PAST_COLS = '46px 60px 58px minmax(0,1fr) 54px 38px 72px';
+// Fixed columns grouped left; trailing 1fr track absorbs slack on the right so
+// the date doesn't balloon and disconnect the run-up/reaction columns.
+const UP_COLS = '46px 58px 58px 112px 58px 34px 54px 1fr';
+const PAST_COLS = '46px 58px 58px 112px 58px 38px 72px 1fr';
 
 // Signed % with sign, colored. e.g. "+25%" / "-6.7%".
 const fmtSignedPct = (v, dp = 0) =>
   v == null || !Number.isFinite(v) ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(dp)}%`;
+
+// Run-up mini-timeline: the ~1-month price trajectory into the report as a
+// sparkline (green rising / red falling), with the % in the tooltip. Falls back
+// to the number when no series is available.
+const RunupSpark = ({ spark, pct, note }) => (
+  <span
+    title={pct == null ? 'run-up unavailable' : `ran ${fmtSignedPct(pct, 1)} ${note}`}
+    style={{ display: 'inline-flex', alignItems: 'center' }}
+  >
+    {Array.isArray(spark) && spark.length > 1 ? (
+      <Sparkline points={spark} w={52} h={16} strokeWidth={1.25} />
+    ) : (
+      <span style={{ color: pctColor(pct), fontWeight: 600 }}>{fmtSignedPct(pct)}</span>
+    )}
+  </span>
+);
 
 const colHeadStyle = {
   fontSize: '9px',
@@ -152,9 +171,9 @@ const SoxxEarnings = ({ quotes = {} }) => {
                     <span>Mkt cap</span>
                     <span style={{ textAlign: 'right' }}>Price</span>
                     <span>Date</span>
-                    <span style={{ textAlign: 'right' }} title="run-up so far (~1 month)">1mo</span>
+                    <span title="~1-month price run-up into the report">Run-up</span>
                     <span style={{ textAlign: 'right' }}>Time</span>
-                    <span style={{ textAlign: 'right' }}>±Move</span>
+                    <span style={{ textAlign: 'right' }} title="options-implied expected move">Implied</span>
                   </div>
                   <div style={{ display: 'grid', gap: 3 }}>
                     {upcoming.map(e => {
@@ -169,9 +188,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                             {label}
                             <span style={{ color: theme.colors.gray400, marginLeft: 5 }}>{relLabel(days)}{e.estimated ? '*' : ''}</span>
                           </span>
-                          <span style={{ textAlign: 'right', color: pctColor(e.runupSoFar), fontWeight: 600 }} title="price change over the last ~1 month (run-up into the report)">
-                            {fmtSignedPct(e.runupSoFar)}
-                          </span>
+                          <RunupSpark spark={e.spark} pct={e.runupSoFar} note="so far (~1 month into the report)" />
                           <span style={{ color: theme.colors.gray400, textAlign: 'right' }}>{timeTag(e.time)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="expected move (options-implied)">
                             {e.expectedMovePct != null ? `±${e.expectedMovePct.toFixed(1)}%` : '—'}
@@ -212,9 +229,9 @@ const SoxxEarnings = ({ quotes = {} }) => {
                     <span title="market cap at report time (approx)">Mkt cap</span>
                     <span style={{ textAlign: 'right' }} title="price at report time">Price</span>
                     <span>Date</span>
-                    <span style={{ textAlign: 'right' }} title="run-up into the report (~1 month before)">1mo</span>
+                    <span title="~1-month price run-up into the report">Run-up</span>
                     <span style={{ textAlign: 'center' }}>EPS</span>
-                    <span style={{ textAlign: 'right' }}>React</span>
+                    <span style={{ textAlign: 'right' }} title="1-day price reaction after the report">Reaction</span>
                   </div>
                   <div style={{ display: 'grid', gap: 3 }}>
                     {past.map(e => {
@@ -238,9 +255,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                             {label}
                             <span style={{ color: theme.colors.gray400, marginLeft: 5 }}>{agoLabel(days)}</span>
                           </span>
-                          <span style={{ textAlign: 'right', color: pctColor(e.runupPct), fontWeight: 600 }} title="run-up into the report (~1 month price change before)">
-                            {fmtSignedPct(e.runupPct)}
-                          </span>
+                          <RunupSpark spark={e.spark} pct={e.runupPct} note="into the report (~1 month before)" />
                           <span
                             style={{ textAlign: 'center', color: e.beat == null ? theme.colors.gray400 : e.beat ? theme.colors.success : theme.colors.error }}
                             title="EPS vs street estimate"
@@ -301,7 +316,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
           )}
 
           <div style={{ fontSize: '10px', color: theme.colors.gray400, fontFamily: 'monospace' }}>
-            ~mcap = approx (no live shares) · past = value at report time · 1mo = run-up into the report · beat/miss = EPS vs estimate · ▲▼% = 1-day reaction (hover for 1-week) · ≠ = diverged · * = est. date
+            ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo price into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · ≠ = diverged vs beat/miss · * = est. date
           </div>
         </>
       )}

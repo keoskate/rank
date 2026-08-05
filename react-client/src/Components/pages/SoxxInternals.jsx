@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import Sparkline from '../common/Sparkline';
 import { fmtET } from '../../utils/timeFormat';
 import {
   SOXX_TOP,
@@ -32,23 +33,6 @@ const HeatBar = memo(({ pct, scale = 1.5 }) => {
         }}
       />
     </div>
-  );
-});
-
-// Tiny sparkline of the breadth (% green) history, 0–100 with a dashed 50 line.
-const Sparkline = memo(({ points, w = 130, h = 26 }) => {
-  if (!points || points.length < 2) return null;
-  const xStep = w / (points.length - 1);
-  const y = v => h - (Math.max(0, Math.min(100, v)) / 100) * h;
-  const d = points
-    .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * xStep).toFixed(1)} ${y(v).toFixed(1)}`)
-    .join(' ');
-  const rising = points[points.length - 1] >= points[0];
-  return (
-    <svg width={w} height={h} style={{ display: 'block' }}>
-      <line x1="0" y1={y(50)} x2={w} y2={y(50)} stroke={theme.colors.gray200} strokeWidth="1" strokeDasharray="2 2" />
-      <path d={d} fill="none" stroke={rising ? theme.colors.success : theme.colors.error} strokeWidth="1.5" />
-    </svg>
   );
 });
 
@@ -185,7 +169,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
           <Section label="Breadth trend (intraday)">
             {trend ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
-                <Sparkline points={trend.points} />
+                <Sparkline points={trend.points} min={0} max={100} midline={50} />
                 <div style={{ fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
                   <span style={{ color: trend.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     {trend.label}

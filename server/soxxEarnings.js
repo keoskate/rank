@@ -100,6 +100,15 @@ async function dailyBars(symbol, start, end) {
 const pctChange = (from, to) =>
   Number.isFinite(from) && Number.isFinite(to) && from > 0 ? ((to - from) / from) * 100 : null;
 
+// Evenly downsample an array to at most n points (for a compact sparkline).
+const downsample = (arr, n = 16) => {
+  if (!Array.isArray(arr) || arr.length <= n) return arr || [];
+  const out = [];
+  const step = (arr.length - 1) / (n - 1);
+  for (let i = 0; i < n; i++) out.push(arr[Math.round(i * step)]);
+  return out;
+};
+
 /**
  * Enriched earnings for the DISPLAY route only (kept off the AI-context path so
  * that stays lean). Per row, fetches one daily-bars window and derives:
@@ -126,12 +135,15 @@ async function computeSoxxEarningsEnriched(forceRefresh = false) {
     chunk.forEach((r, j) => {
       const b = barsArr[j];
       let runupSoFar = null;
+      let spark = [];
       if (b.length > 1) {
-        const last = b[b.length - 1].close;
-        const prior = b[Math.max(0, b.length - 1 - RUNUP_BARS)].close;
+        const closes = b.map(x => x.close);
+        const last = closes[closes.length - 1];
+        const prior = closes[Math.max(0, closes.length - 1 - RUNUP_BARS)];
         runupSoFar = pctChange(prior, last);
+        spark = downsample(closes.slice(-RUNUP_BARS - 1));
       }
-      upcoming.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, runupSoFar });
+      upcoming.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, runupSoFar, spark });
     });
   }
 
@@ -149,13 +161,17 @@ async function computeSoxxEarningsEnriched(forceRefresh = false) {
       const b = barsArr[j];
       let priceThen = null;
       let runupPct = null;
+      let spark = [];
       if (b.length) {
         const idx = b.findIndex(x => new Date(x.timestamp).toISOString().slice(0, 10) === r.date);
         const rptIdx = idx >= 0 ? idx : b.length - 1;
         priceThen = b[rptIdx].close;
-        runupPct = pctChange(b[Math.max(0, rptIdx - RUNUP_BARS)].close, priceThen);
+        const startIdx = Math.max(0, rptIdx - RUNUP_BARS);
+        runupPct = pctChange(b[startIdx].close, priceThen);
+        // series is the run-up INTO the report (window start → report date)
+        spark = downsample(b.slice(startIdx, rptIdx + 1).map(x => x.close));
       }
-      past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen, runupPct });
+      past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen, runupPct, spark });
     });
   }
 

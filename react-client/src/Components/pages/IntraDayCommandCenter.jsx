@@ -427,7 +427,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       <SectionHeader index={2} label="Active trading" />
       <LivePriceTickers socket={socket} symbols={TRACKED_SYMBOLS} positions={positions} />
       <SoxlChart symbol="SOXL" />
-      <TwoCol>
+      <TwoCol align="start">
         <OpenPositionsTable
           positions={positions}
           loading={positions.length === 0 && !positionsError}

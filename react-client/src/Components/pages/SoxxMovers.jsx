@@ -16,10 +16,12 @@ const rate = pct => {
   return { label: 'HOLD', color: theme.colors.gray700, bg: theme.colors.gray200 };
 };
 
+// Approximate (static caps, no live shares source) — shown with "~", matching
+// the SOXX Earnings card.
 const fmtMcap = b => {
   if (b == null) return '—';
-  if (b >= 1000) return `$${(b / 1000).toFixed(2)}T`;
-  return `$${b}B`;
+  if (b >= 1000) return `~$${(b / 1000).toFixed(2)}T`;
+  return `~$${b}B`;
 };
 
 const REFRESH_MS = 30000;

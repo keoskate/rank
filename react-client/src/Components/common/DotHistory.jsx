@@ -51,7 +51,7 @@ const DotHistory = ({ recentDays, magnitudes, maxMagnitude = 8, label, size = 8,
         ))}
       </div>
       {caption && (
-        <span style={{ fontSize: '0.62rem', color: theme.colors.gray500, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: '11px', color: theme.colors.gray600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           {caption}
         </span>
       )}
