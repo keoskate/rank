@@ -2,42 +2,7 @@ import { useState, useEffect, useMemo, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
 import { fmtET } from '../../utils/timeFormat';
-
-// SOXX (iShares Semiconductor ETF) constituents — weights + market caps are
-// approximate, for context only. ~30 holdings; big names like ASML/TSM/NXPI
-// were previously omitted (list was truncated at 12).
-const SOXX_TOP = [
-  { sym: 'NVDA', weight: 9.5, mcapB: 5300 },
-  { sym: 'AVGO', weight: 8.0, mcapB: 2000 },
-  { sym: 'AMD',  weight: 7.5, mcapB: 750 },
-  { sym: 'TSM',  weight: 6.5, mcapB: 1050 },
-  { sym: 'ASML', weight: 5.5, mcapB: 400 },
-  { sym: 'QCOM', weight: 5.0, mcapB: 270 },
-  { sym: 'TXN',  weight: 4.5, mcapB: 270 },
-  { sym: 'MU',   weight: 4.5, mcapB: 90 },
-  { sym: 'INTC', weight: 4.5, mcapB: 600 },
-  { sym: 'AMAT', weight: 4.0, mcapB: 360 },
-  { sym: 'LRCX', weight: 4.0, mcapB: 390 },
-  { sym: 'KLAC', weight: 4.0, mcapB: 250 },
-  { sym: 'ADI',  weight: 4.0, mcapB: 200 },
-  { sym: 'MRVL', weight: 3.5, mcapB: 150 },
-  { sym: 'NXPI', weight: 3.2, mcapB: 55 },
-  { sym: 'MCHP', weight: 3.0, mcapB: 40 },
-  { sym: 'MPWR', weight: 2.4, mcapB: 45 },
-  { sym: 'ON',   weight: 2.0, mcapB: 30 },
-  { sym: 'ENTG', weight: 1.6, mcapB: 20 },
-  { sym: 'TER',  weight: 1.5, mcapB: 25 },
-  { sym: 'STM',  weight: 1.4, mcapB: 30 },
-  { sym: 'SWKS', weight: 1.2, mcapB: 15 },
-  { sym: 'QRVO', weight: 1.0, mcapB: 9 },
-  { sym: 'MKSI', weight: 1.0, mcapB: 8 },
-  { sym: 'LSCC', weight: 0.9, mcapB: 8 },
-  { sym: 'RMBS', weight: 0.8, mcapB: 7 },
-  { sym: 'AMKR', weight: 0.7, mcapB: 7 },
-  { sym: 'ALGM', weight: 0.6, mcapB: 5 },
-  { sym: 'SLAB', weight: 0.6, mcapB: 4 },
-  { sym: 'WOLF', weight: 0.4, mcapB: 2 },
-];
+import { SOXX_TOP, pctFromOpen } from './soxxConstituents';
 
 // How many rows to show before the user expands.
 const COLLAPSED_COUNT = 12;
@@ -59,14 +24,6 @@ const fmtMcap = b => {
 
 const REFRESH_MS = 30000;
 
-const pctChange = quote => {
-  if (!quote) return null;
-  const last = Number(quote.last ?? quote.close);
-  const ref = Number(quote.open ?? quote.prevClose);
-  if (!Number.isFinite(last) || !Number.isFinite(ref) || ref === 0) return null;
-  return ((last - ref) / ref) * 100;
-};
-
 const Bar = memo(({ pct, magnitude }) => {
   const widthPct = Math.min(100, Math.abs(magnitude) / 0.4 * 100);
   const color = pct >= 0 ? theme.colors.success : theme.colors.error;
@@ -86,13 +43,21 @@ const Bar = memo(({ pct, magnitude }) => {
   );
 });
 
-const SoxxMovers = () => {
-  const [quotes, setQuotes] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [updatedAt, setUpdatedAt] = useState(null);
+// Accepts a shared `quotes` map from the parent (Command Center fetches the 30
+// constituent quotes once for both this and SoxxInternals). Falls back to
+// fetching them itself when rendered standalone.
+const SoxxMovers = ({ quotes: quotesProp, updatedAt: updatedAtProp } = {}) => {
+  const usingProp = quotesProp != null;
+  const [selfQuotes, setSelfQuotes] = useState({});
+  const [selfUpdatedAt, setSelfUpdatedAt] = useState(null);
   const [expanded, setExpanded] = useState(false);
 
+  const quotes = usingProp ? quotesProp : selfQuotes;
+  const updatedAt = usingProp ? updatedAtProp : selfUpdatedAt;
+  const loading = Object.keys(quotes || {}).length === 0;
+
   useEffect(() => {
+    if (usingProp) return; // parent supplies the quotes
     let cancelled = false;
     const fetchAll = async () => {
       const results = await Promise.all(
@@ -108,9 +73,8 @@ const SoxxMovers = () => {
         })
       );
       if (cancelled) return;
-      setQuotes(Object.fromEntries(results));
-      setLoading(false);
-      setUpdatedAt(new Date());
+      setSelfQuotes(Object.fromEntries(results));
+      setSelfUpdatedAt(new Date());
     };
     fetchAll();
     const id = setInterval(fetchAll, REFRESH_MS);
@@ -118,12 +82,12 @@ const SoxxMovers = () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [usingProp]);
 
   const rows = useMemo(() => {
     return SOXX_TOP.map(({ sym, weight, mcapB }) => {
       const q = quotes[sym];
-      const pct = pctChange(q);
+      const pct = pctFromOpen(q);
       const contribution = pct == null ? null : (pct * weight) / 100;
       return { sym, weight, mcapB, last: q?.last ?? q?.close, pct, contribution };
     }).sort((a, b) => {

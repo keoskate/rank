@@ -12,6 +12,9 @@ import SignalActivityPanel from './SignalActivityPanel';
 import GatesAndIndicatorsPanel from './GatesAndIndicatorsPanel';
 import MarketStrip from './MarketStrip';
 import SoxxMovers from './SoxxMovers';
+import SoxxInternals from './SoxxInternals';
+import MacroContextPanel from './MacroContextPanel';
+import { SOXX_TOP } from './soxxConstituents';
 import MultiTimeframeTechnicals from './MultiTimeframeTechnicals';
 import SoxlChart from './SoxlChart';
 import SemiconductorSentimentPanel from '../trading/SemiconductorSentimentPanel';
@@ -113,7 +116,37 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [flashTrades, setFlashTrades] = useState(new Set());
   const [indicatorData, setIndicatorData] = useState({});
+  const [constituentQuotes, setConstituentQuotes] = useState({});
+  const [constituentUpdatedAt, setConstituentUpdatedAt] = useState(null);
   const [socket, setSocket] = useState(null);
+
+  // Poll the 30 SOXX constituent quotes ONCE here and feed both SoxxMovers and
+  // SoxxInternals (breadth/rotation), so we don't fetch them twice.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchConstituents = async () => {
+      const results = await Promise.all(
+        SOXX_TOP.map(async ({ sym }) => {
+          try {
+            const res = await fetch(`/api/quote/${sym}`);
+            if (!res.ok) return [sym, null];
+            return [sym, await res.json()];
+          } catch {
+            return [sym, null];
+          }
+        })
+      );
+      if (cancelled) return;
+      setConstituentQuotes(Object.fromEntries(results));
+      setConstituentUpdatedAt(new Date());
+    };
+    fetchConstituents();
+    const id = setInterval(fetchConstituents, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   // Poll indicators for the semis symbols directly — reliable, always populated.
   useEffect(() => {
@@ -408,8 +441,20 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       </TwoCol>
 
       <SectionHeader index={3} label="Market context" />
-      <TwoCol>
-        <SoxxMovers />
+      {/* High-level read first: macro cross-asset + SOXX internals (what's
+          driving semis), then the constituent detail + technicals below. */}
+      <TwoCol align="start">
+        <MacroContextPanel />
+        <SoxxInternals
+          quotes={constituentQuotes}
+          updatedAt={constituentUpdatedAt}
+        />
+      </TwoCol>
+      <TwoCol align="start">
+        <SoxxMovers
+          quotes={constituentQuotes}
+          updatedAt={constituentUpdatedAt}
+        />
         <MultiTimeframeTechnicals symbol="SOXL" />
       </TwoCol>
       <TwoCol align="start">

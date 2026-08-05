@@ -10,6 +10,10 @@ const SYMBOLS = [
   // proxy that tracks volatility DIRECTION — same reason the others use ETFs.
   { sym: 'VIXY', label: 'VIX' },
   { sym: 'SOXX', label: 'SOXX' },
+  { sym: 'SMH',  label: 'SMH' },
+  { sym: 'GLD',  label: 'Gold' },
+  { sym: 'TLT',  label: 'Bonds' },
+  { sym: 'UUP',  label: 'USD' },
 ];
 
 const REFRESH_MS = 30000;
