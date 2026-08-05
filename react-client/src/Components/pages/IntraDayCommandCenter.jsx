@@ -19,7 +19,6 @@ import { SOXX_TOP } from './soxxConstituents';
 import MultiTimeframeTechnicals from './MultiTimeframeTechnicals';
 import SoxlChart from './SoxlChart';
 import SemiconductorSentimentPanel from '../trading/SemiconductorSentimentPanel';
-import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 
 // Defined at module scope so referential identity is stable across parent
 // re-renders (5s poll cycle). Previously defined inline → new function
@@ -442,27 +441,25 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       </TwoCol>
 
       <SectionHeader index={3} label="Market context" />
-      {/* High-level read first: macro cross-asset + SOXX internals (what's
-          driving semis), then the constituent detail + technicals below. */}
+      {/* Top-down: macro backdrop + SOXL's own multi-timeframe/daily trend, then
+          the constituent detail (movers + earnings), then breadth + regime, then
+          the grounded synthesis read (Semiconductor Sentiment) full-width. */}
       <TwoCol align="start">
         <MacroContextPanel />
-        <SoxxInternals
-          quotes={constituentQuotes}
-          updatedAt={constituentUpdatedAt}
-        />
+        <MultiTimeframeTechnicals symbol="SOXL" />
       </TwoCol>
       <TwoCol align="start">
         <SoxxMovers
           quotes={constituentQuotes}
           updatedAt={constituentUpdatedAt}
         />
-        <SoxxEarnings />
+        <SoxxInternals
+          quotes={constituentQuotes}
+          updatedAt={constituentUpdatedAt}
+        />
       </TwoCol>
-      <MultiTimeframeTechnicals symbol="SOXL" />
-      <TwoCol align="start">
-        <SemiconductorSentimentPanel />
-        <TechnicalRegimeCard symbol="SOXL" />
-      </TwoCol>
+      <SoxxEarnings quotes={constituentQuotes} />
+      <SemiconductorSentimentPanel />
 
       <SectionHeader index={4} label="Activity" />
       <SessionCardGrid sessions={sessions} flashTrades={flashTrades} />

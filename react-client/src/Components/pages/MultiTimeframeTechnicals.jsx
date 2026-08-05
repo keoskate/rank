@@ -1,6 +1,29 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import DotHistory from '../common/DotHistory';
+
+// Close-to-close daily direction from the 1D candles the panel already fetches.
+// Neutral band ±0.15% matches server/scanner/recentDays.js so the dot strip
+// reads the same up/flat/down as the options scanner.
+const NEUTRAL_DAY_PCT = 0.15;
+const dailyFromCandles = candles => {
+  if (!Array.isArray(candles) || candles.length < 2) return [];
+  const out = [];
+  for (let i = 1; i < candles.length; i++) {
+    const prev = candles[i - 1].close;
+    const close = candles[i].close;
+    if (!Number.isFinite(prev) || !Number.isFinite(close) || prev <= 0) continue;
+    const pct = ((close - prev) / prev) * 100;
+    out.push({
+      date: candles[i].date,
+      close,
+      pct,
+      dir: pct > NEUTRAL_DAY_PCT ? 1 : pct < -NEUTRAL_DAY_PCT ? -1 : 0,
+    });
+  }
+  return out;
+};
 
 const TIMEFRAMES = [
   { label: '5m',  timeframe: '5',  unit: 'minute' },
@@ -31,6 +54,13 @@ const trendBadge = side => {
 const MultiTimeframeTechnicals = ({ symbol = 'SOXL' }) => {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  // Daily direction history from the 1D candles already in the response.
+  const daily = useMemo(() => dailyFromCandles(data['1D']?.candles), [data]);
+  const dots = useMemo(() => daily.slice(-30).map(d => d.dir), [daily]);
+  const mags = useMemo(() => daily.slice(-30).map(d => d.pct), [daily]); // signed day %
+  const breakdown = useMemo(() => daily.slice(-20).reverse(), [daily]); // newest first
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +99,20 @@ const MultiTimeframeTechnicals = ({ symbol = 'SOXL' }) => {
           <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>loading…</span>
         )}
       </div>
+      {/* 30-day daily direction — up/flat/down, shade scales with move size */}
+      {dots.length > 1 && (
+        <div style={{ marginBottom: theme.spacing.sm }}>
+          <DotHistory
+            recentDays={dots}
+            magnitudes={mags}
+            maxMagnitude={8}
+            label={`last ${dots.length} days`}
+            size={12}
+            gap={4}
+          />
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '50px 60px 80px 80px 90px 90px', gap: 8, fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${theme.colors.gray200}` }}>
         <div>TF</div>
         <div style={{ textAlign: 'right' }}>RSI</div>
@@ -106,6 +150,61 @@ const MultiTimeframeTechnicals = ({ symbol = 'SOXL' }) => {
           </div>
         );
       })}
+
+      {/* Expandable daily breakdown — "see more days" */}
+      {breakdown.length > 0 && (
+        <>
+          <button
+            onClick={() => setExpanded(e => !e)}
+            style={{
+              marginTop: theme.spacing.sm,
+              width: '100%',
+              background: 'transparent',
+              border: 'none',
+              borderTop: `1px solid ${theme.colors.gray200}`,
+              paddingTop: theme.spacing.sm,
+              color: theme.colors.gray600,
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.xs,
+              fontWeight: theme.typography.fontWeight.medium,
+              textAlign: 'left',
+            }}
+          >
+            {expanded ? '▴ Hide daily breakdown' : `▾ Daily breakdown (last ${breakdown.length} days)`}
+          </button>
+          {expanded && (
+            <div style={{ marginTop: 6, display: 'grid', gap: 2 }}>
+              {breakdown.map(d => (
+                <div
+                  key={d.date}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 70px 64px',
+                    gap: 8,
+                    alignItems: 'baseline',
+                    fontFamily: theme.typography.fontFamilyMono,
+                    fontSize: theme.typography.fontSize.xs,
+                  }}
+                >
+                  <span style={{ color: theme.colors.gray600 }}>{d.date}</span>
+                  <span style={{ textAlign: 'right', color: theme.colors.gray700 }}>
+                    ${Number.isFinite(d.close) ? d.close.toFixed(2) : '—'}
+                  </span>
+                  <span
+                    style={{
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      color: d.dir > 0 ? theme.colors.success : d.dir < 0 ? theme.colors.error : theme.colors.gray500,
+                    }}
+                  >
+                    {d.pct >= 0 ? '+' : ''}{d.pct.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </Card>
   );
 };

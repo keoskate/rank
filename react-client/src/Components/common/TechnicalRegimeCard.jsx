@@ -34,7 +34,7 @@ const REGIME_INFO = {
   },
 };
 
-const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
+const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded = false }) => {
   const [regime, setRegime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -82,8 +82,8 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
 
   const currentRegime = regime ? REGIME_INFO[regime] : null;
 
-  return (
-    <Card>
+  const inner = (
+    <>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -289,8 +289,11 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
           </Button>
         </div>
       )}
-    </Card>
+    </>
   );
+
+  if (embedded) return <div>{inner}</div>;
+  return <Card>{inner}</Card>;
 };
 
 export default TechnicalRegimeCard;

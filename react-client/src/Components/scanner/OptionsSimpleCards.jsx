@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import theme from '../../theme';
+import DotHistory from '../common/DotHistory';
 import { PopBar } from './OptionsOpportunityTable';
 import {
   betSentence,
@@ -80,31 +81,6 @@ const PriceLine = ({ o }) => {
       {gap.phrase && (
         <span style={{ color: past ? theme.colors.successMuted : theme.colors.gray600 }}> — {gap.phrase}</span>
       )}
-    </div>
-  );
-};
-
-/** One dot per trading day, oldest → newest. */
-const DotHistory = ({ recentDays }) => {
-  if (!Array.isArray(recentDays) || !recentDays.length) return null;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ display: 'flex', gap: 4 }}>
-        {recentDays.map((d, i) => (
-          <span
-            key={i}
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: d > 0 ? theme.colors.successMuted : d < 0 ? theme.colors.errorMuted : theme.colors.gray300,
-            }}
-          />
-        ))}
-      </div>
-      <span style={{ fontSize: '0.62rem', color: theme.colors.gray500, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-        last {recentDays.length} days
-      </span>
     </div>
   );
 };

@@ -2917,10 +2917,10 @@ module.exports = function (deps) {
   // 1-day reaction + EPS beat/miss) for each SOXX constituent, from UW. The
   // aggregation lives in server/soxxEarnings.js so the AI analyst's context pack
   // can reuse it; it's cached 1h there (UW client also caches ~6h per symbol).
-  const { computeSoxxEarnings } = require('../soxxEarnings');
+  const { computeSoxxEarningsEnriched } = require('../soxxEarnings');
   router.get('/api/soxx/earnings', async (req, res) => {
     try {
-      const data = await computeSoxxEarnings(req.query.refresh === 'true');
+      const data = await computeSoxxEarningsEnriched(req.query.refresh === 'true');
       res.json(data);
     } catch (error) {
       console.error('Error building SOXX earnings:', error);

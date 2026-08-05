@@ -8,10 +8,16 @@
  */
 
 const unusualWhalesClient = require('./unusualWhalesClient');
-const { SOXX_SYMS } = require('./soxxConstituents');
+const alpacaClient = require('./alpacaClient');
+const { SOXX_SYMS, SOXX_TOP } = require('./soxxConstituents');
 
 const CACHE_MS = 60 * 60 * 1000; // 1h
 let _cache = { at: 0, data: null };
+let _enrichedCache = { at: 0, data: null };
+
+// Static approximate market caps ($B) keyed by symbol — no live shares-outstanding
+// source, so these are context-only and shown with a "~".
+const MCAP_B = Object.fromEntries(SOXX_TOP.map(c => [c.sym, c.mcapB]));
 
 const num = v => (v != null && Number.isFinite(parseFloat(v)) ? parseFloat(v) : null);
 
@@ -75,4 +81,50 @@ async function computeSoxxEarnings(forceRefresh = false) {
   return data;
 }
 
-module.exports = { computeSoxxEarnings };
+// Daily close on (or just after) a given YYYY-MM-DD — "what the stock was when
+// it reported". Best-effort; returns null on any failure.
+async function closeOnDate(symbol, date) {
+  try {
+    const end = new Date(new Date(`${date}T00:00:00Z`).getTime() + 6 * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const bars = await alpacaClient.getBars(symbol, '1Day', date, end, 10);
+    if (!Array.isArray(bars) || !bars.length) return null;
+    const onDay = bars.find(
+      b => new Date(b.timestamp).toISOString().slice(0, 10) === date
+    );
+    const bar = onDay || bars[0];
+    return Number.isFinite(bar.close) ? bar.close : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enriched earnings for the DISPLAY route only (kept off the AI-context path so
+ * that stays lean): adds approximate market cap to every row and, for past
+ * reports, the stock's close on the report date (`priceThen`). Cached 1h.
+ */
+async function computeSoxxEarningsEnriched(forceRefresh = false) {
+  if (!forceRefresh && _enrichedCache.data && Date.now() - _enrichedCache.at < CACHE_MS) {
+    return _enrichedCache.data;
+  }
+  const base = await computeSoxxEarnings(forceRefresh);
+
+  const upcoming = base.upcoming.map(r => ({ ...r, mcapB: MCAP_B[r.sym] ?? null }));
+
+  // Fetch the report-date close for each past row in small batches.
+  const past = [];
+  const batch = 6;
+  for (let i = 0; i < base.past.length; i += batch) {
+    const chunk = base.past.slice(i, i + batch);
+    const prices = await Promise.all(chunk.map(r => closeOnDate(r.sym, r.date)));
+    chunk.forEach((r, j) => past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen: prices[j] }));
+  }
+
+  const data = { upcoming, past, asOf: base.asOf };
+  _enrichedCache = { at: Date.now(), data };
+  return data;
+}
+
+module.exports = { computeSoxxEarnings, computeSoxxEarningsEnriched };

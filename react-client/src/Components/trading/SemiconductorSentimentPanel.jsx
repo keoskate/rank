@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
+import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
 import { fmtET } from '../../utils/timeFormat';
 
 // ── color helpers ──────────────────────────────────────────────────────────
@@ -257,6 +258,12 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
           <div style={s.statValue}>${sentiment?.currentPrice || 'N/A'}</div>
           <div style={s.subtext}>Open: ${sentiment?.openPrice || 'N/A'}</div>
         </div>
+      </div>
+
+      {/* Longer-horizon technical regime (90-day) — consolidated here alongside
+          the intraday sentiment so the direction reads live in one place. */}
+      <div style={{ border: `1px solid ${theme.colors.gray200}`, borderRadius: theme.borderRadius.sm, padding: theme.spacing.md, marginBottom: theme.spacing.md }}>
+        <TechnicalRegimeCard symbol="SOXL" embedded />
       </div>
 
       {/* Dynamic thresholds */}
