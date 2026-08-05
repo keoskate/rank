@@ -83,7 +83,7 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange }) => {
   const currentRegime = regime ? REGIME_INFO[regime] : null;
 
   return (
-    <Card style={{ height: '100%' }}>
+    <Card>
       {/* Header */}
       <div style={{
         display: 'flex',

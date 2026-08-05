@@ -6,7 +6,9 @@ const SYMBOLS = [
   { sym: 'QQQ',  label: 'NDX' },
   { sym: 'IWM',  label: 'RUT' },
   { sym: 'DIA',  label: 'DJI' },
-  { sym: 'VIX',  label: 'VIX',  polygonOverride: 'I:VIX' },
+  // I:VIX (the index) isn't served by Alpaca/IEX (400); VIXY is a tradeable VIX
+  // proxy that tracks volatility DIRECTION — same reason the others use ETFs.
+  { sym: 'VIXY', label: 'VIX' },
   { sym: 'SOXX', label: 'SOXX' },
 ];
 

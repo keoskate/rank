@@ -16,7 +16,6 @@ import MultiTimeframeTechnicals from './MultiTimeframeTechnicals';
 import SoxlChart from './SoxlChart';
 import SemiconductorSentimentPanel from '../trading/SemiconductorSentimentPanel';
 import TechnicalRegimeCard from '../common/TechnicalRegimeCard';
-import LeveragedEtfPanel from '../common/LeveragedEtfPanel';
 
 // Defined at module scope so referential identity is stable across parent
 // re-renders (5s poll cycle). Previously defined inline → new function
@@ -57,12 +56,15 @@ const SectionHeader = ({ index, label }) => (
   </div>
 );
 
-const TwoCol = ({ children }) => (
+const TwoCol = ({ children, align }) => (
   <div
     style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
       gap: theme.spacing.md,
+      // Default (stretch) matches equal-height pairs; align="start" lets a short
+      // card size to its content instead of stretching into empty whitespace.
+      alignItems: align,
     }}
   >
     {children}
@@ -72,6 +74,25 @@ const TwoCol = ({ children }) => (
 const MAX_LOGS = 200;
 const POLL_INTERVAL = 5000;
 const TRACKED_SYMBOLS = ['SOXL', 'SOXS'];
+// Symbols whose indicators belong on this SOXX/semis command center. Fetched
+// directly from /api/indicators so the cards always have data — the old
+// socket-log source only populated when a session happened to broadcast (and
+// leaked the Crypto session's BTC/ETH, which are irrelevant here).
+const INDICATOR_SYMBOLS = ['SOXL', 'SOXS', 'SOXX'];
+
+// Flatten /api/indicators' nested shape into the panel's simple fields.
+const mapIndicators = ind => {
+  if (!ind) return null;
+  return {
+    rsi: ind.rsi?.value ?? null,
+    macd: ind.macd?.value ?? ind.macd?.histogram ?? null,
+    volumeRatio: ind.volume?.ratio ?? null,
+    adx: ind.adx?.value ?? null,
+    // panel multiplies by 100; endpoint returns %B as a 0–1 fraction
+    bbPercentB: ind.bollingerBands?.percentB ?? null,
+    updatedAt: ind.timestamp || new Date().toISOString(),
+  };
+};
 
 const IntraDayCommandCenter = ({ tradingMode }) => {
   const [sessions, setSessions] = useState([]);
@@ -91,8 +112,39 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const [wsConnected, setWsConnected] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [flashTrades, setFlashTrades] = useState(new Set());
-  const [liveIndicators, setLiveIndicators] = useState({});
+  const [indicatorData, setIndicatorData] = useState({});
   const [socket, setSocket] = useState(null);
+
+  // Poll indicators for the semis symbols directly — reliable, always populated.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchIndicators = async () => {
+      const entries = await Promise.all(
+        INDICATOR_SYMBOLS.map(async sym => {
+          try {
+            const res = await fetch(
+              `/api/indicators/${sym}?timeframe=5&unit=minute`
+            );
+            if (!res.ok) return [sym, null];
+            const data = await res.json();
+            return [sym, mapIndicators(data.indicators)];
+          } catch {
+            return [sym, null];
+          }
+        })
+      );
+      if (cancelled) return;
+      const next = {};
+      for (const [sym, ind] of entries) if (ind) next[sym] = ind;
+      setIndicatorData(next);
+    };
+    fetchIndicators();
+    const id = setInterval(fetchIndicators, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   // Guards setState calls in fetchData from firing after unmount — critical
   // because the page polls 5s with a Promise.all of 5 endpoints; navigating
@@ -244,21 +296,8 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     });
 
     sock.on('trading_log', log => {
-      if (log.symbol && log.data?.indicators) {
-        const ind = log.data.indicators;
-        setLiveIndicators(prev => ({
-          ...prev,
-          [log.symbol]: {
-            rsi: parseFloat(ind.rsi),
-            macd: parseFloat(ind.macd),
-            volumeRatio: parseFloat(ind.volumeRatio),
-            adx: parseFloat(ind.adx),
-            bbPercentB: ind.bbPercentB != null ? parseFloat(ind.bbPercentB) / 100 : null,
-            regime: log.data.regime,
-            updatedAt: log.timestamp || new Date().toISOString(),
-          },
-        }));
-      }
+      // Indicators for the Gates panel come from /api/indicators (polled above),
+      // not the socket — this handler just streams log messages to the feed.
       if (log.message) {
         addLog(log.level || 'INFO', log.message, log.sessionName || log.sessionId);
       }
@@ -363,7 +402,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         />
         <GatesAndIndicatorsPanel
           logs={logs}
-          indicators={liveIndicators}
+          indicators={indicatorData}
           sentiment={sentiment}
         />
       </TwoCol>
@@ -373,11 +412,10 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         <SoxxMovers />
         <MultiTimeframeTechnicals symbol="SOXL" />
       </TwoCol>
-      <TwoCol>
+      <TwoCol align="start">
         <SemiconductorSentimentPanel />
         <TechnicalRegimeCard symbol="SOXL" />
       </TwoCol>
-      <LeveragedEtfPanel enabled={true} />
 
       <SectionHeader index={4} label="Activity" />
       <SessionCardGrid sessions={sessions} flashTrades={flashTrades} />

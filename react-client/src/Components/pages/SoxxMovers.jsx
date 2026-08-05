@@ -3,21 +3,44 @@ import theme from '../../theme';
 import Card from '../common/Card';
 import { fmtET } from '../../utils/timeFormat';
 
-// Market caps in $B — approximate, refreshed periodically. Used for context only.
+// SOXX (iShares Semiconductor ETF) constituents — weights + market caps are
+// approximate, for context only. ~30 holdings; big names like ASML/TSM/NXPI
+// were previously omitted (list was truncated at 12).
 const SOXX_TOP = [
   { sym: 'NVDA', weight: 9.5, mcapB: 5300 },
   { sym: 'AVGO', weight: 8.0, mcapB: 2000 },
   { sym: 'AMD',  weight: 7.5, mcapB: 750 },
+  { sym: 'TSM',  weight: 6.5, mcapB: 1050 },
+  { sym: 'ASML', weight: 5.5, mcapB: 400 },
   { sym: 'QCOM', weight: 5.0, mcapB: 270 },
+  { sym: 'TXN',  weight: 4.5, mcapB: 270 },
   { sym: 'MU',   weight: 4.5, mcapB: 90 },
   { sym: 'INTC', weight: 4.5, mcapB: 600 },
-  { sym: 'TXN',  weight: 4.5, mcapB: 270 },
   { sym: 'AMAT', weight: 4.0, mcapB: 360 },
   { sym: 'LRCX', weight: 4.0, mcapB: 390 },
-  { sym: 'ADI',  weight: 4.0, mcapB: 200 },
   { sym: 'KLAC', weight: 4.0, mcapB: 250 },
+  { sym: 'ADI',  weight: 4.0, mcapB: 200 },
   { sym: 'MRVL', weight: 3.5, mcapB: 150 },
+  { sym: 'NXPI', weight: 3.2, mcapB: 55 },
+  { sym: 'MCHP', weight: 3.0, mcapB: 40 },
+  { sym: 'MPWR', weight: 2.4, mcapB: 45 },
+  { sym: 'ON',   weight: 2.0, mcapB: 30 },
+  { sym: 'ENTG', weight: 1.6, mcapB: 20 },
+  { sym: 'TER',  weight: 1.5, mcapB: 25 },
+  { sym: 'STM',  weight: 1.4, mcapB: 30 },
+  { sym: 'SWKS', weight: 1.2, mcapB: 15 },
+  { sym: 'QRVO', weight: 1.0, mcapB: 9 },
+  { sym: 'MKSI', weight: 1.0, mcapB: 8 },
+  { sym: 'LSCC', weight: 0.9, mcapB: 8 },
+  { sym: 'RMBS', weight: 0.8, mcapB: 7 },
+  { sym: 'AMKR', weight: 0.7, mcapB: 7 },
+  { sym: 'ALGM', weight: 0.6, mcapB: 5 },
+  { sym: 'SLAB', weight: 0.6, mcapB: 4 },
+  { sym: 'WOLF', weight: 0.4, mcapB: 2 },
 ];
+
+// How many rows to show before the user expands.
+const COLLAPSED_COUNT = 12;
 
 const rate = pct => {
   if (pct == null || !Number.isFinite(pct)) return { label: '—', color: theme.colors.gray500, bg: 'transparent' };
@@ -67,6 +90,7 @@ const SoxxMovers = () => {
   const [quotes, setQuotes] = useState({});
   const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +134,8 @@ const SoxxMovers = () => {
     });
   }, [quotes]);
 
-  const totalContribution = rows.reduce(
+  const visibleRows = expanded ? rows : rows.slice(0, COLLAPSED_COUNT);
+  const totalContribution = visibleRows.reduce(
     (sum, r) => sum + (r.contribution || 0),
     0
   );
@@ -124,7 +149,7 @@ const SoxxMovers = () => {
         <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, fontFamily: 'monospace' }}>
           {loading ? 'loading…' : (
             <>
-              top-12 sum:{' '}
+              top-{visibleRows.length} sum:{' '}
               <span style={{ color: totalContribution >= 0 ? theme.colors.success : theme.colors.error, fontWeight: 700 }}>
                 {totalContribution >= 0 ? '+' : ''}{totalContribution.toFixed(2)}%
               </span>
@@ -143,7 +168,7 @@ const SoxxMovers = () => {
         <div style={{ textAlign: 'right' }}>Contrib %</div>
       </div>
       <div>
-        {rows.map(({ sym, weight, mcapB, last, pct, contribution }) => {
+        {visibleRows.map(({ sym, weight, mcapB, last, pct, contribution }) => {
           const pctColor = pct == null ? theme.colors.gray500 : pct >= 0 ? theme.colors.success : theme.colors.error;
           const r = rate(pct);
           return (
@@ -179,6 +204,29 @@ const SoxxMovers = () => {
           );
         })}
       </div>
+      {rows.length > COLLAPSED_COUNT && (
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          style={{
+            marginTop: theme.spacing.sm,
+            width: '100%',
+            padding: '6px',
+            border: `1px solid ${theme.colors.gray200}`,
+            borderRadius: 4,
+            background: 'transparent',
+            color: theme.colors.gray600,
+            cursor: 'pointer',
+            fontSize: theme.typography.fontSize.xs,
+            fontFamily: 'monospace',
+            letterSpacing: '0.04em',
+          }}
+        >
+          {expanded
+            ? '▲ Show top 12'
+            : `▼ Show all ${rows.length} constituents`}
+        </button>
+      )}
     </Card>
   );
 };

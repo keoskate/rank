@@ -5,8 +5,8 @@ import Card from '../common/Card';
 const TIMEFRAMES = [
   { label: '5m',  timeframe: '5',  unit: 'minute' },
   { label: '15m', timeframe: '15', unit: 'minute' },
-  { label: '1H',  timeframe: '60', unit: 'minute' },
-  { label: '4H',  timeframe: '4',  unit: 'hour' },
+  { label: '1H',  timeframe: '1',  unit: 'hour' },
+  // 4H removed: the indicator engine returns no values for 4-hour bars.
   { label: '1D',  timeframe: '1',  unit: 'day' },
 ];
 

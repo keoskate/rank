@@ -47,7 +47,7 @@ const indicatorColor = (label, val) => {
 const SymbolIndicators = memo(({ symbol, indicators }) => {
   if (!indicators) {
     return (
-      <div style={{ flex: 1, minWidth: 220, padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray200}`, borderRadius: 4 }}>
+      <div style={{ minWidth: 0, padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray200}`, borderRadius: 4 }}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{symbol}</div>
         <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>awaiting first evaluation…</div>
       </div>
@@ -61,7 +61,7 @@ const SymbolIndicators = memo(({ symbol, indicators }) => {
     fmtIndicator('BB%', indicators.bbPercentB != null ? indicators.bbPercentB * 100 : null, { fixed: 0, suffix: '%' }),
   ];
   return (
-    <div style={{ flex: 1, minWidth: 220, padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray200}`, borderRadius: 4 }}>
+    <div style={{ minWidth: 0, padding: theme.spacing.sm, border: `1px solid ${theme.colors.gray200}`, borderRadius: 4 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <div style={{ fontWeight: 700 }}>{symbol}</div>
         <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, fontFamily: 'monospace' }}>
@@ -129,7 +129,7 @@ const GatesAndIndicatorsPanel = ({ logs, indicators, sentiment }) => {
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
         {Object.entries(indicators || {}).map(([sym, ind]) => (
           <SymbolIndicators key={sym} symbol={sym} indicators={ind} />
         ))}
