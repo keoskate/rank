@@ -2913,6 +2913,75 @@ module.exports = function (deps) {
     });
   });
 
+  // SOXX earnings timeline — next-upcoming + most-recent-past (with the actual
+  // 1-day reaction + EPS beat/miss) for each SOXX constituent, from UW. Cached
+  // 1h at the route level (UW client also caches 6h per symbol).
+  const SOXX_EARNINGS_SYMS = [
+    'NVDA', 'AVGO', 'AMD', 'TSM', 'ASML', 'QCOM', 'TXN', 'MU', 'INTC', 'AMAT',
+    'LRCX', 'KLAC', 'ADI', 'MRVL', 'NXPI', 'MCHP', 'MPWR', 'ON', 'ENTG', 'TER',
+    'STM', 'SWKS', 'QRVO', 'MKSI', 'LSCC', 'RMBS', 'AMKR', 'ALGM', 'SLAB', 'WOLF',
+  ];
+  let _soxxEarningsCache = { at: 0, data: null };
+  const num = v => (v != null && Number.isFinite(parseFloat(v)) ? parseFloat(v) : null);
+
+  router.get('/api/soxx/earnings', async (req, res) => {
+    try {
+      if (_soxxEarningsCache.data && Date.now() - _soxxEarningsCache.at < 60 * 60 * 1000) {
+        return res.json(_soxxEarningsCache.data);
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = [];
+      const past = [];
+      const batch = 6;
+      for (let i = 0; i < SOXX_EARNINGS_SYMS.length; i += batch) {
+        const syms = SOXX_EARNINGS_SYMS.slice(i, i + batch);
+        const rowsArr = await Promise.all(
+          syms.map(s => unusualWhalesClient.getEarnings(s).catch(() => []))
+        );
+        syms.forEach((sym, j) => {
+          const rows = rowsArr[j] || [];
+          const future = rows
+            .filter(r => r.report_date && r.report_date >= today)
+            .sort((a, b) => a.report_date.localeCompare(b.report_date));
+          if (future[0]) {
+            upcoming.push({
+              sym,
+              date: future[0].report_date,
+              time: future[0].report_time || 'unknown',
+              expectedMovePct: num(future[0].expected_move_perc) != null ? num(future[0].expected_move_perc) * 100 : null,
+              estimated: !!future[0].is_date_estimate,
+            });
+          }
+          const done = rows
+            .filter(r => r.report_date && r.report_date < today && r.post_earnings_move_1d != null)
+            .sort((a, b) => b.report_date.localeCompare(a.report_date));
+          if (done[0]) {
+            const r = done[0];
+            const eps = num(r.actual_eps);
+            const est = num(r.street_mean_est);
+            past.push({
+              sym,
+              date: r.report_date,
+              reaction1d: num(r.post_earnings_move_1d) != null ? num(r.post_earnings_move_1d) * 100 : null,
+              eps,
+              estimate: est,
+              beat: eps != null && est != null ? eps >= est : null,
+              expectedMovePct: num(r.expected_move_perc) != null ? num(r.expected_move_perc) * 100 : null,
+            });
+          }
+        });
+      }
+      upcoming.sort((a, b) => a.date.localeCompare(b.date));
+      past.sort((a, b) => b.date.localeCompare(a.date));
+      const data = { upcoming, past, asOf: new Date().toISOString() };
+      _soxxEarningsCache = { at: Date.now(), data };
+      res.json(data);
+    } catch (error) {
+      console.error('Error building SOXX earnings:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ================================
   // STRATEGY VALIDATOR
   // ================================

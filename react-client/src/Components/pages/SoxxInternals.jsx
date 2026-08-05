@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { useMemo, useState, useEffect, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
 import { fmtET } from '../../utils/timeFormat';
@@ -32,6 +32,23 @@ const HeatBar = memo(({ pct, scale = 1.5 }) => {
         }}
       />
     </div>
+  );
+});
+
+// Tiny sparkline of the breadth (% green) history, 0–100 with a dashed 50 line.
+const Sparkline = memo(({ points, w = 130, h = 26 }) => {
+  if (!points || points.length < 2) return null;
+  const xStep = w / (points.length - 1);
+  const y = v => h - (Math.max(0, Math.min(100, v)) / 100) * h;
+  const d = points
+    .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * xStep).toFixed(1)} ${y(v).toFixed(1)}`)
+    .join(' ');
+  const rising = points[points.length - 1] >= points[0];
+  return (
+    <svg width={w} height={h} style={{ display: 'block' }}>
+      <line x1="0" y1={y(50)} x2={w} y2={y(50)} stroke={theme.colors.gray200} strokeWidth="1" strokeDasharray="2 2" />
+      <path d={d} fill="none" stroke={rising ? theme.colors.success : theme.colors.error} strokeWidth="1.5" />
+    </svg>
   );
 });
 
@@ -97,6 +114,42 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
 
   const loading = stats.scored === 0;
 
+  // Rolling intraday breadth history (client-accumulated since page open; one
+  // sample per 30s poll, capped ~1hr) → shows if participation is building or
+  // rolling over.
+  const [history, setHistory] = useState([]);
+  useEffect(() => {
+    if (!updatedAt || stats.pctGreen == null) return;
+    const t = updatedAt.getTime ? updatedAt.getTime() : Date.now();
+    setHistory(h =>
+      h.length && h[h.length - 1].t === t
+        ? h
+        : [...h, { t, pct: stats.pctGreen }].slice(-120)
+    );
+  }, [updatedAt, stats.pctGreen]);
+
+  const trend = useMemo(() => {
+    if (history.length < 4) return null;
+    const now = history[history.length - 1];
+    const target = now.t - 20 * 60 * 1000; // ~20 min ago (or oldest we have)
+    let past = history[0];
+    for (const h of history) {
+      if (h.t <= target) past = h;
+      else break;
+    }
+    const delta = now.pct - past.pct;
+    const label = delta > 5 ? 'building' : delta < -5 ? 'fading' : 'stable';
+    const color =
+      delta > 5 ? theme.colors.success : delta < -5 ? theme.colors.error : theme.colors.gray600;
+    return {
+      delta,
+      label,
+      color,
+      mins: Math.max(1, Math.round((now.t - past.t) / 60000)),
+      points: history.map(h => h.pct),
+    };
+  }, [history]);
+
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: theme.spacing.sm }}>
@@ -126,6 +179,27 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
             <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', background: theme.colors.error }}>
               <div style={{ width: `${stats.pctGreen}%`, background: theme.colors.success }} />
             </div>
+          </Section>
+
+          {/* Intraday breadth trend */}
+          <Section label="Breadth trend (intraday)">
+            {trend ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+                <Sparkline points={trend.points} />
+                <div style={{ fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
+                  <span style={{ color: trend.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {trend.label}
+                  </span>
+                  <div style={{ color: theme.colors.gray500, marginTop: 2 }}>
+                    {trend.delta >= 0 ? '+' : ''}{trend.delta.toFixed(0)} pts vs {trend.mins}m ago
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                gathering… (builds over the session)
+              </div>
+            )}
           </Section>
 
           {/* Sub-sector rotation */}

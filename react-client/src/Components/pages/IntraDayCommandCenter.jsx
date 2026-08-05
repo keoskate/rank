@@ -13,6 +13,7 @@ import GatesAndIndicatorsPanel from './GatesAndIndicatorsPanel';
 import MarketStrip from './MarketStrip';
 import SoxxMovers from './SoxxMovers';
 import SoxxInternals from './SoxxInternals';
+import SoxxEarnings from './SoxxEarnings';
 import MacroContextPanel from './MacroContextPanel';
 import { SOXX_TOP } from './soxxConstituents';
 import MultiTimeframeTechnicals from './MultiTimeframeTechnicals';
@@ -455,8 +456,9 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
           quotes={constituentQuotes}
           updatedAt={constituentUpdatedAt}
         />
-        <MultiTimeframeTechnicals symbol="SOXL" />
+        <SoxxEarnings />
       </TwoCol>
+      <MultiTimeframeTechnicals symbol="SOXL" />
       <TwoCol align="start">
         <SemiconductorSentimentPanel />
         <TechnicalRegimeCard symbol="SOXL" />
