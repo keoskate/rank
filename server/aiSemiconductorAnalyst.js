@@ -11,6 +11,80 @@
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
+const { getSemiContext } = require('./semiMarketContext');
+
+// Render the live market-context pack into a compact, model-friendly block.
+// Mirrors the reads shown to the human on the Command Center so the AI reasons
+// over the SAME data. Returns '' when no context is available.
+function formatContext(ctx) {
+  if (!ctx) return 'Live market context: unavailable (reasoning from summary only).\n';
+  const fx = (v, d = 1) => (v == null || !Number.isFinite(v) ? 'n/a' : `${v >= 0 ? '+' : ''}${v.toFixed(d)}%`);
+  const daysFromToday = iso => {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const today = new Date();
+    const t0 = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    return Math.round((Date.UTC(y, m - 1, d) - t0) / 86400000);
+  };
+  const rel = n => (n == null ? '' : n <= 0 ? 'today' : n === 1 ? 'in 1d' : `in ${n}d`);
+
+  const lines = [];
+  const asOf = ctx.asOf ? new Date(ctx.asOf).toLocaleTimeString('en-US', { timeZone: 'America/New_York' }) : '';
+  lines.push(`Live market context (as of ${asOf} ET${ctx.stale ? ', STALE' : ''}):`);
+
+  const b = ctx.breadth;
+  if (b && b.scored) {
+    lines.push(
+      `- SOXX breadth: ${b.up} up / ${b.down} down of ${b.scored} (${b.pctGreen != null ? b.pctGreen.toFixed(0) : 'n/a'}% green, ${b.wPctGreen != null ? b.wPctGreen.toFixed(0) : 'n/a'}% by weight)`
+    );
+    lines.push(
+      `- Concentration: NVDA/AVGO/AMD = ${(b.megaShare * 100).toFixed(0)}% of the move (${b.narrow ? 'NARROW — mega-cap led, fragile if they roll' : 'broad-based'})`
+    );
+  }
+  if (Array.isArray(ctx.rotation) && ctx.rotation.length) {
+    lines.push(`- Sub-sector rotation (weighted): ${ctx.rotation.map(r => `${r.name} ${fx(r.pct, 2)}`).join(', ')}`);
+  }
+
+  const m = ctx.macro;
+  if (m) {
+    if (Array.isArray(m.items)) {
+      lines.push(`- Macro (day%): ${m.items.map(i => `${i.label} ${fx(i.pct)}`).join(', ')}`);
+    }
+    lines.push(
+      `- Regime: ${m.regime} · Semis vs Tech (SMH−QQQ): ${fx(m.spread, 2)} ${m.spread == null ? '' : m.spread >= 0 ? '(leading)' : '(lagging)'} · VIX: ${m.vixConfirm}${m.safeHaven ? ' · safe-haven bid (caution)' : ''}`
+    );
+  }
+
+  const e = ctx.earnings;
+  if (e) {
+    const up = (e.upcoming || []).slice(0, 5);
+    if (up.length) {
+      const imminent = up.filter(u => {
+        const n = daysFromToday(u.date);
+        return n != null && n <= 2;
+      });
+      lines.push(
+        `- Upcoming SOXX earnings: ${up.map(u => `${u.sym} ${rel(daysFromToday(u.date))}${u.expectedMovePct != null ? ` (±${u.expectedMovePct.toFixed(1)}%)` : ''}`).join(', ')}`
+      );
+      if (imminent.length) {
+        lines.push(`  ⚠ EVENT RISK — reporting within 48h: ${imminent.map(u => u.sym).join(', ')}`);
+      }
+    }
+    const past = e.past || [];
+    if (past.length) {
+      const upN = past.filter(p => p.reaction1d != null && p.reaction1d > 0).length;
+      const downN = past.filter(p => p.reaction1d != null && p.reaction1d < 0).length;
+      const notable = past
+        .slice(0, 4)
+        .map(p => `${p.sym} ${fx(p.reaction1d)}${p.beat == null ? '' : p.beat ? ' beat' : ' miss'}`)
+        .join(', ');
+      lines.push(`- Recent earnings reactions: ${upN} up / ${downN} down of ${upN + downN} (${notable})`);
+    }
+  }
+
+  return lines.join('\n') + '\n';
+}
 
 class AISemiconductorAnalyst {
   constructor(options = {}) {
@@ -63,14 +137,19 @@ Respond with ONLY valid JSON in this exact format (no markdown, no explanation):
 
 Guidelines:
 - confidenceAdjustment adjusts the base technical confidence by -20 to +20 points
-- Use positive adjustment when fundamentals support the direction
-- Use negative adjustment when there are concerns or uncertainty
+- Use positive adjustment when the provided data corroborates the direction
+- Use negative adjustment when the data is mixed, contradictory, or risky
 - "avoid" holdDuration means skip trading entirely due to high risk
-- Consider semiconductor earnings (NVDA, AMD, INTC, TSM, AVGO, QCOM)
-- Consider macro factors (interest rates, tariffs, China demand, AI demand)
-- Consider technical context provided in the data
-- Be concise and actionable
-- If uncertain, recommend "neutral" with negative confidence adjustment`;
+- You are given REAL live data below: SOXX breadth (advance/decline + concentration),
+  sub-sector rotation, macro cross-asset (indices, VIX, gold, rates, dollar),
+  a risk regime, the semis-vs-tech spread, and the SOXX earnings calendar with
+  recent reactions. Ground your reasoning in THESE numbers — cite them in
+  keyFactors — do not speculate about data you were not given.
+- Narrow breadth (mega-cap-led) is fragile; broad breadth is more durable.
+- If a heavyweight (esp. NVDA/AVGO/AMD) reports within ~48h, treat direction as
+  higher-risk (elevated gap risk on a 3x ETF) → lean neutral / negative adjustment.
+- A diverging VIX or semis lagging the broad tape argues against conviction.
+- Be concise and actionable. If uncertain, recommend "neutral" with a negative adjustment.`;
   }
 
   /**
@@ -79,7 +158,7 @@ Guidelines:
    * @param {string} trigger - What triggered this analysis
    * @returns {string} User message
    */
-  buildUserMessage(marketData, trigger) {
+  buildUserMessage(marketData, trigger, context = null) {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
 
@@ -107,7 +186,8 @@ Dynamic Thresholds:
 Signals:
 ${marketData.signals?.map(s => `- ${s}`).join('\n') || '- No signals'}
 
-Based on this data and your knowledge of semiconductor markets, what is your trading recommendation?`;
+${formatContext(context)}
+Ground your recommendation in the live market context above. What is your trading recommendation?`;
   }
 
   /**
@@ -167,9 +247,12 @@ Based on this data and your knowledge of semiconductor markets, what is your tra
    * Get AI analysis of semiconductor sector
    * @param {Object} marketData - Current market data (from SemiconductorSentimentEngine)
    * @param {string} trigger - What triggered this analysis (phase_transition, direction_change, manual)
+   * @param {Object} [options] - { contextWaitMs } — how long to wait for the live
+   *   market-context pack. Trade path uses the short default so a decision never
+   *   blocks; user-initiated refreshes pass a larger value to get grounded data.
    * @returns {Promise<Object>} AI analysis with confidence adjustment
    */
-  async analyze(marketData, trigger = 'manual') {
+  async analyze(marketData, trigger = 'manual', options = {}) {
     // Return cached if same trigger and recent
     if (
       this.analysisCache &&
@@ -195,6 +278,15 @@ Based on this data and your knowledge of semiconductor markets, what is your tra
 
     console.log(`[AI Semiconductor Analyst] Running analysis (trigger: ${trigger})`);
 
+    // Assemble the live market-context pack (breadth / rotation / macro / earnings).
+    // Guarded + time-boxed inside getSemiContext so it never blocks a trade decision.
+    let context = null;
+    try {
+      context = await getSemiContext({ maxWaitMs: options.contextWaitMs || 2500 });
+    } catch {
+      context = null;
+    }
+
     try {
       const response = await this.anthropic.messages.create({
         model: this.config.model,
@@ -203,7 +295,7 @@ Based on this data and your knowledge of semiconductor markets, what is your tra
         messages: [
           {
             role: 'user',
-            content: this.buildUserMessage(marketData, trigger),
+            content: this.buildUserMessage(marketData, trigger, context),
           },
         ],
       });
@@ -217,6 +309,9 @@ Based on this data and your knowledge of semiconductor markets, what is your tra
         timestamp: new Date().toISOString(),
         trigger,
         model: this.config.model,
+        contextAsOf: context?.asOf || null,
+        contextStale: !!context?.stale,
+        contextAvailable: !!context,
         inputData: {
           direction: marketData.direction,
           confidence: marketData.confidence,
@@ -260,7 +355,9 @@ Based on this data and your knowledge of semiconductor markets, what is your tra
     this.analysisCache = null;
     this.lastAnalysis = null;
     this.lastTrigger = null;
-    return this.analyze(marketData, trigger);
+    // User-initiated (button / POST /analyze) — off the trading hot path, so wait
+    // long enough for a cold context fetch (~30 SOXX + 9 macro snapshots) to ground it.
+    return this.analyze(marketData, trigger, { contextWaitMs: 9000 });
   }
 
   /**

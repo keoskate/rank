@@ -85,23 +85,26 @@ class MarketPhaseTracker {
    * @returns {number} Hours in decimal (e.g., 9.5 = 9:30 AM)
    */
   getETTimeDecimal() {
-    const now = new Date();
+    // Use the IANA tz database (America/New_York) for a DST-correct ET clock.
+    // The previous month-based approximation (month>=2 && month<=10) was wrong in
+    // the early-Nov / mid-March transition weeks — a real hazard for a strategy
+    // that force-exits at 3:55 PM ET.
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
 
-    // Get UTC hours and convert to ET (UTC-5, or UTC-4 during DST)
-    // Using a simple offset; for production, consider using a timezone library
-    const month = now.getMonth();
-    const isDST = month >= 2 && month <= 10; // Rough DST approximation (March-November)
-    const etOffset = isDST ? -4 : -5;
+    let etHours = 0;
+    let etMinutes = 0;
+    for (const p of parts) {
+      if (p.type === 'hour') etHours = parseInt(p.value, 10);
+      else if (p.type === 'minute') etMinutes = parseInt(p.value, 10);
+    }
+    if (etHours === 24) etHours = 0; // some environments render midnight as '24'
 
-    const utcHours = now.getUTCHours();
-    const utcMinutes = now.getUTCMinutes();
-    let etHours = utcHours + etOffset;
-
-    // Handle day wrap
-    if (etHours < 0) etHours += 24;
-    if (etHours >= 24) etHours -= 24;
-
-    return etHours + utcMinutes / 60;
+    return etHours + etMinutes / 60;
   }
 
   /**
@@ -288,6 +291,52 @@ class SemiconductorSentimentEngine {
       exit: Math.max(minThreshold * 0.6, entryThreshold * 0.6),
       switchDirection: entryThreshold * 1.5, // Need larger move to switch mid-day
     };
+  }
+
+  /**
+   * Derive short-term trend + volume ratio from OHLCV candles. Feeds signals 5
+   * (trend confirm ±8) and 6 (volume confirm ±5) in analyzeDirection(). Uses only
+   * the candles already fetched — no extra network call.
+   * @param {Array} candles - full candle set (5-min, ~72h)
+   * @param {Array} intradayCandles - today's candles (preferred when ≥20 bars)
+   * @returns {{ shortTermTrend: string|null, volumeRatio: number|null }}
+   */
+  computeTechnicalData(candles, intradayCandles) {
+    const bars =
+      intradayCandles && intradayCandles.length >= 20 ? intradayCandles : candles || [];
+    const closes = bars.map(c => c.close ?? c.c).filter(Number.isFinite);
+    const vols = bars.map(c => c.volume ?? c.v).filter(v => Number.isFinite(v) && v > 0);
+
+    // EMA helper (runs over the whole series, returns the final value).
+    const ema = (arr, period) => {
+      const k = 2 / (period + 1);
+      let e = arr[0];
+      for (let i = 1; i < arr.length; i++) e = arr[i] * k + e * (1 - k);
+      return e;
+    };
+
+    // Short-term trend: EMA9 vs EMA21 over the recent window, with a 0.1%
+    // deadband so a flat tape reads 'sideways' rather than flip-flopping.
+    let shortTermTrend = null;
+    if (closes.length >= 21) {
+      const recent = closes.slice(-40);
+      const ema9 = ema(recent, 9);
+      const ema21 = ema(recent, 21);
+      if (ema9 > ema21 * 1.001) shortTermTrend = 'bullish';
+      else if (ema9 < ema21 * 0.999) shortTermTrend = 'bearish';
+      else shortTermTrend = 'sideways';
+    }
+
+    // Volume ratio: recent (last 5 bars) avg vs overall avg.
+    let volumeRatio = null;
+    if (vols.length >= 10) {
+      const overallAvg = vols.reduce((a, b) => a + b, 0) / vols.length;
+      const recentVols = vols.slice(-5);
+      const recentAvg = recentVols.reduce((a, b) => a + b, 0) / recentVols.length;
+      if (overallAvg > 0) volumeRatio = recentAvg / overallAvg;
+    }
+
+    return { shortTermTrend, volumeRatio };
   }
 
   /**
@@ -520,8 +569,13 @@ class SemiconductorSentimentEngine {
         openPrice,
       };
 
-      // Analyze direction with momentum data
-      const analysis = this.analyzeDirection(intradayChange, thresholds, {}, momentumData);
+      // Derive short-term trend + volume confirmation from the candles we already
+      // have, so signals 5 & 6 in analyzeDirection() actually fire (previously
+      // passed {} → those two confirmations were dead code).
+      const technicalData = this.computeTechnicalData(candles, intradayCandles);
+
+      // Analyze direction with momentum + technical data
+      const analysis = this.analyzeDirection(intradayChange, thresholds, technicalData, momentumData);
 
       // Check for direction change (triggers AI analysis)
       const directionChanged = this.lastDirection !== null && this.lastDirection !== analysis.direction;
@@ -661,9 +715,35 @@ class SemiconductorSentimentEngine {
 const sentimentEngine = new SemiconductorSentimentEngine();
 const phaseTracker = new MarketPhaseTracker();
 
+// ---------------------------------------------------------------------------
+// SENTIMENT_MODEL — read-only DESCRIPTOR of the direction/confidence model.
+//
+// The live threshold config is already readable at runtime via
+// `sentimentEngine.config` (minConfidenceToTrade, highConfidence, baseEntry, …),
+// so the System Map reads that directly. What has NO data form in the code are
+// the six confidence weights inside analyzeDirection() — they are inline
+// `confidence += N` literals. This object documents them so the transparency
+// snapshot is complete. It does NOT drive analyzeDirection(); if you change a
+// weight there, update this object in the same edit.
+const SENTIMENT_MODEL = Object.freeze({
+  // Direction starts neutral at 50 confidence; each signal nudges it.
+  baseConfidence: 50,
+  // Effective entry threshold is thresholds.entry * 0.7 (30% more sensitive).
+  effectiveThresholdMult: 0.7,
+  signals: Object.freeze([
+    { key: 'intradayDirection', points: 15, weightLabel: '30%', note: 'move from open beyond effective threshold' },
+    { key: 'rollingMomentum', points: 12, weightLabel: '25%', note: 'recent 75-min direction' },
+    { key: 'reversal', points: 12, weightLabel: '25%', note: 'position within intraday range (drop-from-high / rise-from-low)' },
+    { key: 'strongMove', points: 10, weightLabel: '20%', note: '+5 for building momentum' },
+    { key: 'technicalTrend', points: 8, weightLabel: '±', note: '-5 when short-term trend conflicts' },
+    { key: 'volumeConfirm', points: 5, weightLabel: '±', note: '-3 on low volume' },
+  ]),
+});
+
 module.exports = {
   SemiconductorSentimentEngine,
   MarketPhaseTracker,
   sentimentEngine,
   phaseTracker,
+  SENTIMENT_MODEL,
 };

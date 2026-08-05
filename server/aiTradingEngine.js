@@ -22,6 +22,7 @@ const tradingLogger = require('./tradingLogger');
 const assetUtils = require('./assetUtils');
 const { sentimentEngine, phaseTracker } = require('./semiconductorSentiment');
 const { aiAnalyst } = require('./aiSemiconductorAnalyst');
+const { shouldApplyAiAdjustment } = require('./semiAiAdjustmentGuard');
 const LeveragedEtfStrategy = require('./leveragedEtfStrategy');
 const alpacaStream = require('./alpacaStreamClient');
 const signalEvaluator = require('./signalEvaluator');
@@ -3121,19 +3122,32 @@ async function analyzeAndTrade(sessionId) {
       );
       aiAnalysis = await aiAnalyst.analyze(sentiment, aiTrigger.trigger);
 
-      // Apply AI confidence adjustment
+      // Apply AI confidence adjustment — only when FRESH and computed for the
+      // CURRENT phase (see semiAiAdjustmentGuard). analyze() has its own 60s
+      // cache and can return a result from a now-changed phase; without this a
+      // stale -15 would silently drag live trading confidence. Either way we keep
+      // the analysis on `sentiment` for display/broadcast; we just don't APPLY it.
       if (aiAnalysis && aiAnalysis.confidenceAdjustment) {
-        const originalConfidence = sentiment.confidence;
-        sentiment.confidence = Math.max(
-          0,
-          Math.min(100, sentiment.confidence + aiAnalysis.confidenceAdjustment)
-        );
-        sentiment.aiEnhanced = true;
-        sentiment.aiAnalysis = aiAnalysis;
-        tradingLogger.logInfo(
-          `[AI Engine] ${session.name}: AI adjusted confidence ${originalConfidence}% -> ${sentiment.confidence}%`,
-          { sessionId, sessionName: session.name }
-        );
+        const guard = shouldApplyAiAdjustment(aiAnalysis, sentiment.phase);
+        if (guard.apply) {
+          const originalConfidence = sentiment.confidence;
+          sentiment.confidence = Math.max(
+            0,
+            Math.min(100, sentiment.confidence + aiAnalysis.confidenceAdjustment)
+          );
+          sentiment.aiEnhanced = true;
+          sentiment.aiAnalysis = aiAnalysis;
+          tradingLogger.logInfo(
+            `[AI Engine] ${session.name}: AI adjusted confidence ${originalConfidence}% -> ${sentiment.confidence}%`,
+            { sessionId, sessionName: session.name }
+          );
+        } else {
+          sentiment.aiAnalysis = aiAnalysis; // keep for display, do NOT apply
+          tradingLogger.logInfo(
+            `[AI Engine] ${session.name}: AI adjustment SKIPPED (${guard.reason}, nowPhase=${sentiment.phase})`,
+            { sessionId, sessionName: session.name }
+          );
+        }
       }
     }
 

@@ -1,240 +1,96 @@
 /**
  * Semiconductor Sentiment Panel
  *
- * Visualizes SOXX-based sentiment for SOXL/SOXS momentum trading.
- * Shows direction, confidence, market phase, and AI analysis.
+ * Visualizes SOXX-based sentiment for SOXL/SOXS momentum trading: direction,
+ * confidence, market phase, dynamic thresholds, active signals, and the
+ * (real, data-grounded) Claude analysis. Styled with the shared design system
+ * (theme + Card) so it matches the rest of the Command Center.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import theme from '../../theme';
+import Card from '../common/Card';
+import { fmtET } from '../../utils/timeFormat';
 
-// Styles
-const styles = {
-  container: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: '12px',
-    padding: '20px',
-    color: '#fff',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  header: {
+// ── color helpers ──────────────────────────────────────────────────────────
+const dirColor = d =>
+  d === 'bullish'
+    ? theme.colors.success
+    : d === 'bearish'
+      ? theme.colors.error
+      : theme.colors.warningDark;
+
+const confColor = (confidence, direction) => {
+  if (confidence >= 75) return dirColor(direction);
+  if (confidence >= 55) return theme.colors.warningDark;
+  return theme.colors.error;
+};
+
+const phaseColor = phase =>
+  ({
+    ACTIVE: theme.colors.success,
+    WIND_DOWN: theme.colors.warningDark,
+    CLOSE: theme.colors.error,
+    OPEN: theme.colors.warningDark,
+    SETTLE: theme.colors.warningDark,
+    PRE_MARKET: theme.colors.gray500,
+    AFTER_HOURS: theme.colors.gray500,
+    CLOSED: theme.colors.gray400,
+  })[phase] || theme.colors.gray500;
+
+// ── shared inline styles ───────────────────────────────────────────────────
+const s = {
+  headerRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    borderBottom: '1px solid #333',
-    paddingBottom: '12px',
+    alignItems: 'baseline',
+    marginBottom: theme.spacing.md,
   },
-  title: {
-    fontSize: '18px',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  refreshButton: {
+  title: { margin: 0, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold },
+  meta: { fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, fontFamily: theme.typography.fontFamilyMono },
+  btn: {
     background: 'transparent',
-    border: '1px solid #555',
-    borderRadius: '6px',
-    padding: '6px 12px',
-    color: '#aaa',
+    border: `1px solid ${theme.colors.gray300}`,
+    borderRadius: theme.borderRadius.sm,
+    padding: '5px 10px',
+    color: theme.colors.gray700,
     cursor: 'pointer',
-    fontSize: '12px',
-    transition: 'all 0.2s',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.medium,
   },
-  mainDisplay: {
+  statGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-    marginBottom: '20px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
-  card: {
-    backgroundColor: '#252542',
-    borderRadius: '8px',
-    padding: '16px',
+  statCard: {
+    backgroundColor: theme.colors.gray100,
+    border: `1px solid ${theme.colors.gray200}`,
+    borderRadius: theme.borderRadius.sm,
+    padding: theme.spacing.sm,
   },
-  cardLabel: {
-    fontSize: '12px',
-    color: '#888',
+  label: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.gray500,
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    marginBottom: '8px',
+    letterSpacing: '0.05em',
+    marginBottom: 6,
   },
-  cardValue: {
-    fontSize: '24px',
-    fontWeight: '600',
-  },
-  cardSubtext: {
-    fontSize: '12px',
-    color: '#666',
-    marginTop: '4px',
-  },
-  directionBullish: {
-    color: '#00c853',
-  },
-  directionBearish: {
-    color: '#ff5252',
-  },
-  directionNeutral: {
-    color: '#ffc107',
-  },
-  confidenceBar: {
-    height: '8px',
-    backgroundColor: '#333',
-    borderRadius: '4px',
-    marginTop: '8px',
-    overflow: 'hidden',
-  },
-  confidenceFill: {
-    height: '100%',
-    borderRadius: '4px',
-    transition: 'width 0.5s ease',
-  },
-  phaseIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  phaseDot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-  },
-  signalsContainer: {
-    backgroundColor: '#252542',
-    borderRadius: '8px',
-    padding: '16px',
-    marginBottom: '20px',
-  },
-  signalsList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-  },
-  signalItem: {
-    padding: '8px 0',
-    borderBottom: '1px solid #333',
-    fontSize: '13px',
-    color: '#ccc',
-  },
-  aiSection: {
-    backgroundColor: '#1e1e3f',
-    borderRadius: '8px',
-    padding: '16px',
-    border: '1px solid #3f3f8f',
-  },
-  aiHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '12px',
-  },
-  aiBadge: {
-    backgroundColor: '#6366f1',
-    color: '#fff',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    fontSize: '10px',
-    fontWeight: '600',
-  },
-  aiReasoning: {
-    fontSize: '13px',
-    color: '#aaa',
-    fontStyle: 'italic',
-    marginTop: '8px',
-    padding: '8px',
-    backgroundColor: '#252542',
-    borderRadius: '4px',
-  },
-  tradingRecommendation: {
-    marginTop: '20px',
-    padding: '16px',
-    borderRadius: '8px',
-    textAlign: 'center',
-  },
-  recommendBuy: {
-    backgroundColor: 'rgba(0, 200, 83, 0.15)',
-    border: '1px solid #00c853',
-  },
-  recommendSell: {
-    backgroundColor: 'rgba(255, 82, 82, 0.15)',
-    border: '1px solid #ff5252',
-  },
-  recommendWait: {
-    backgroundColor: 'rgba(255, 193, 7, 0.15)',
-    border: '1px solid #ffc107',
-  },
-  recommendSymbol: {
-    fontSize: '28px',
-    fontWeight: '700',
-    marginBottom: '8px',
-  },
-  thresholdsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '8px',
-    marginTop: '12px',
-  },
-  thresholdItem: {
-    textAlign: 'center',
-    padding: '8px',
-    backgroundColor: '#333',
-    borderRadius: '4px',
-  },
-  thresholdLabel: {
-    fontSize: '10px',
-    color: '#888',
-    textTransform: 'uppercase',
-  },
-  thresholdValue: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#fff',
-  },
-  error: {
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
-    border: '1px solid #ff5252',
-    borderRadius: '8px',
-    padding: '16px',
-    color: '#ff5252',
-    textAlign: 'center',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '40px',
-    color: '#666',
-  },
+  statValue: { fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.bold, fontVariantNumeric: 'tabular-nums' },
+  subtext: { fontSize: theme.typography.fontSize.xs, color: theme.colors.gray600, marginTop: 4, fontFamily: theme.typography.fontFamilyMono },
+  section: { marginBottom: theme.spacing.md },
 };
 
-// Phase colors
-const phaseColors = {
-  PRE_MARKET: '#666',
-  OPEN: '#ffc107',
-  SETTLE: '#ff9800',
-  ACTIVE: '#00c853',
-  WIND_DOWN: '#ff5722',
-  CLOSE: '#f44336',
-  AFTER_HOURS: '#666',
-  CLOSED: '#444',
-};
-
-// Direction to color
-const getDirectionColor = direction => {
-  switch (direction) {
-    case 'bullish':
-      return '#00c853';
-    case 'bearish':
-      return '#ff5252';
-    default:
-      return '#ffc107';
-  }
-};
-
-// Confidence bar color
-const getConfidenceColor = (confidence, direction) => {
-  if (confidence >= 80) return getDirectionColor(direction);
-  if (confidence >= 60) return '#ffc107';
-  return '#ff5722';
-};
+const Section = ({ label, right, children }) => (
+  <div style={s.section}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+      <span style={s.label}>{label}</span>
+      {right}
+    </div>
+    {children}
+  </div>
+);
 
 const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
   const [sentiment, setSentiment] = useState(null);
@@ -244,25 +100,18 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
 
-  // Fetch sentiment data
   const fetchSentiment = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
-
       const [sentimentRes, phaseRes, aiRes] = await Promise.all([
         fetch(`/api/semiconductor/sentiment${forceRefresh ? '?refresh=true' : ''}`),
         fetch('/api/semiconductor/phase'),
         fetch('/api/semiconductor/ai-analysis'),
       ]);
-
-      const sentimentData = await sentimentRes.json();
-      const phaseData = await phaseRes.json();
-      const aiData = await aiRes.json();
-
-      setSentiment(sentimentData);
-      setPhase(phaseData);
-      setAiAnalysis(aiData);
+      setSentiment(await sentimentRes.json());
+      setPhase(await phaseRes.json());
+      setAiAnalysis(await aiRes.json());
       setLastUpdate(new Date());
     } catch (err) {
       setError(err.message);
@@ -271,7 +120,6 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
     }
   }, []);
 
-  // Trigger AI analysis
   const triggerAIAnalysis = async () => {
     try {
       const response = await fetch('/api/semiconductor/analyze', {
@@ -280,7 +128,6 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
         body: JSON.stringify({ trigger: 'manual' }),
       });
       const data = await response.json();
-
       if (data.sentiment) setSentiment(data.sentiment);
       if (data.analysis) setAiAnalysis({ available: true, analysis: data.analysis });
       setLastUpdate(new Date());
@@ -289,68 +136,84 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
     }
   };
 
-  // Initial fetch and polling
   useEffect(() => {
     fetchSentiment();
-
-    // Poll every 30 seconds
     const interval = setInterval(() => fetchSentiment(), 30000);
     return () => clearInterval(interval);
   }, [fetchSentiment]);
 
   if (loading && !sentiment) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loading}>Loading semiconductor sentiment...</div>
-      </div>
+      <Card padding="large">
+        <div style={{ textAlign: 'center', padding: theme.spacing.xl, color: theme.colors.gray500 }}>
+          Loading semiconductor sentiment…
+        </div>
+      </Card>
     );
   }
 
   if (error && !sentiment) {
     return (
-      <div style={styles.container}>
-        <div style={styles.error}>
-          <div style={{ fontSize: '16px', marginBottom: '8px' }}>Failed to load sentiment</div>
-          <div style={{ fontSize: '12px' }}>{error}</div>
-          <button
-            style={{ ...styles.refreshButton, marginTop: '12px' }}
-            onClick={() => fetchSentiment(true)}
-          >
+      <Card variant="error" padding="large">
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: theme.typography.fontSize.base, marginBottom: theme.spacing.sm, color: theme.colors.errorDark }}>
+            Failed to load sentiment
+          </div>
+          <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray600 }}>{error}</div>
+          <button style={{ ...s.btn, marginTop: theme.spacing.sm }} onClick={() => fetchSentiment(true)}>
             Retry
           </button>
         </div>
-      </div>
+      </Card>
     );
   }
 
-  const directionStyle =
-    sentiment?.direction === 'bullish'
-      ? styles.directionBullish
-      : sentiment?.direction === 'bearish'
-        ? styles.directionBearish
-        : styles.directionNeutral;
-
   const recommendedSymbol = sentiment?.recommendedSymbol || 'WAIT';
   const canTrade = sentiment?.canTrade && phase?.tradingAllowed;
+  const confidence = sentiment?.confidence || 0;
+  const analysis = aiAnalysis?.available && aiAnalysis.analysis ? aiAnalysis.analysis : null;
+
+  const recTint =
+    recommendedSymbol === 'SOXL'
+      ? { bg: theme.colors.successLight, border: theme.colors.successBorder, color: theme.colors.success }
+      : recommendedSymbol === 'SOXS'
+        ? { bg: theme.colors.errorLight, border: theme.colors.errorBorder, color: theme.colors.error }
+        : { bg: theme.colors.warningLight, border: theme.colors.warningBorder, color: theme.colors.warningDark };
 
   return (
-    <div style={styles.container}>
+    <Card padding="large">
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.title}>
-          <span>Semiconductor Sentiment</span>
-          <span style={{ fontSize: '12px', color: '#666' }}>SOXX</span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            style={styles.refreshButton}
-            onClick={() => fetchSentiment(true)}
-            title="Refresh sentiment"
-          >
+      <div style={s.headerRow}>
+        <h3 style={s.title}>
+          Semiconductor Sentiment{' '}
+          <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray400, fontWeight: theme.typography.fontWeight.normal }}>
+            SOXX
+          </span>
+          {sentiment?.stale && (
+            <span
+              title={sentiment.staleReason || 'data is stale'}
+              style={{
+                marginLeft: 8,
+                fontSize: '10px',
+                fontFamily: theme.typography.fontFamilyMono,
+                color: theme.colors.warningDark,
+                background: theme.colors.warningLight,
+                border: `1px solid ${theme.colors.warningBorder}`,
+                borderRadius: theme.borderRadius.sm,
+                padding: '1px 5px',
+              }}
+            >
+              STALE
+            </span>
+          )}
+        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+          <span style={s.meta}>{lastUpdate ? `${fmtET(lastUpdate)} ET` : '—'}</span>
+          <button style={s.btn} onClick={() => fetchSentiment(true)} title="Refresh sentiment">
             Refresh
           </button>
           <button
-            style={{ ...styles.refreshButton, backgroundColor: '#3f3f8f', borderColor: '#6366f1' }}
+            style={{ ...s.btn, borderColor: theme.colors.info, color: theme.colors.info }}
             onClick={triggerAIAnalysis}
             title="Run AI analysis"
           >
@@ -359,226 +222,205 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
         </div>
       </div>
 
-      {/* Main Display */}
-      <div style={styles.mainDisplay}>
-        {/* Direction Card */}
-        <div style={styles.card}>
-          <div style={styles.cardLabel}>Direction</div>
-          <div style={{ ...styles.cardValue, ...directionStyle }}>
+      {/* Main stats */}
+      <div style={s.statGrid}>
+        <div style={s.statCard}>
+          <div style={s.label}>Direction</div>
+          <div style={{ ...s.statValue, color: dirColor(sentiment?.direction) }}>
             {sentiment?.direction?.toUpperCase() || 'UNKNOWN'}
           </div>
-          <div style={styles.cardSubtext}>{sentiment?.intradayChange || 'N/A'}</div>
+          <div style={s.subtext}>{sentiment?.intradayChange || 'N/A'}</div>
         </div>
 
-        {/* Confidence Card */}
-        <div style={styles.card}>
-          <div style={styles.cardLabel}>Confidence</div>
-          <div style={styles.cardValue}>{sentiment?.confidence || 0}%</div>
-          <div style={styles.confidenceBar}>
-            <div
-              style={{
-                ...styles.confidenceFill,
-                width: `${sentiment?.confidence || 0}%`,
-                backgroundColor: getConfidenceColor(sentiment?.confidence, sentiment?.direction),
-              }}
-            />
+        <div style={s.statCard}>
+          <div style={s.label}>Confidence</div>
+          <div style={s.statValue}>{confidence}%</div>
+          <div style={{ height: 6, backgroundColor: theme.colors.gray200, borderRadius: theme.borderRadius.sm, marginTop: 8, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${confidence}%`, backgroundColor: confColor(confidence, sentiment?.direction), transition: 'width 0.5s ease' }} />
           </div>
           {sentiment?.aiEnhanced && (
-            <div style={{ ...styles.cardSubtext, color: '#6366f1' }}>AI Enhanced</div>
+            <div style={{ ...s.subtext, color: theme.colors.info }}>AI enhanced</div>
           )}
         </div>
 
-        {/* Phase Card */}
-        <div style={styles.card}>
-          <div style={styles.cardLabel}>Market Phase</div>
-          <div style={styles.phaseIndicator}>
-            <div
-              style={{
-                ...styles.phaseDot,
-                backgroundColor: phaseColors[phase?.phase] || '#666',
-              }}
-            />
-            <span style={styles.cardValue}>{phase?.phase || 'UNKNOWN'}</span>
+        <div style={s.statCard}>
+          <div style={s.label}>Market Phase</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: phaseColor(phase?.phase) }} />
+            <span style={{ ...s.statValue, fontSize: theme.typography.fontSize.md }}>{phase?.phase || 'UNKNOWN'}</span>
           </div>
-          <div style={styles.cardSubtext}>
-            {phase?.tradingAllowed ? 'Trading Allowed' : 'No Trading'}
-          </div>
+          <div style={s.subtext}>{phase?.tradingAllowed ? 'Trading allowed' : 'No trading'}</div>
         </div>
 
-        {/* SOXX Price Card */}
-        <div style={styles.card}>
-          <div style={styles.cardLabel}>SOXX Price</div>
-          <div style={styles.cardValue}>${sentiment?.currentPrice || 'N/A'}</div>
-          <div style={styles.cardSubtext}>Open: ${sentiment?.openPrice || 'N/A'}</div>
+        <div style={s.statCard}>
+          <div style={s.label}>SOXX Price</div>
+          <div style={s.statValue}>${sentiment?.currentPrice || 'N/A'}</div>
+          <div style={s.subtext}>Open: ${sentiment?.openPrice || 'N/A'}</div>
         </div>
       </div>
 
-      {/* Dynamic Thresholds */}
+      {/* Dynamic thresholds */}
       {sentiment?.thresholds && (
-        <div style={styles.card}>
-          <div style={styles.cardLabel}>Dynamic Thresholds (Volatility-Scaled)</div>
-          <div style={styles.thresholdsGrid}>
-            <div style={styles.thresholdItem}>
-              <div style={styles.thresholdLabel}>Entry</div>
-              <div style={styles.thresholdValue}>{sentiment.thresholds.entry}</div>
-            </div>
-            <div style={styles.thresholdItem}>
-              <div style={styles.thresholdLabel}>Exit</div>
-              <div style={styles.thresholdValue}>{sentiment.thresholds.exit}</div>
-            </div>
-            <div style={styles.thresholdItem}>
-              <div style={styles.thresholdLabel}>Switch</div>
-              <div style={styles.thresholdValue}>{sentiment.thresholds.switch}</div>
-            </div>
+        <Section label={`Dynamic thresholds (vol-scaled · ${sentiment.volatility})`}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.sm }}>
+            {[
+              ['Entry', sentiment.thresholds.entry],
+              ['Exit', sentiment.thresholds.exit],
+              ['Switch', sentiment.thresholds.switch],
+            ].map(([lbl, val]) => (
+              <div key={lbl} style={{ ...s.statCard, textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: theme.colors.gray500, textTransform: 'uppercase' }}>{lbl}</div>
+                <div style={{ fontSize: theme.typography.fontSize.base, fontWeight: theme.typography.fontWeight.bold, fontFamily: theme.typography.fontFamilyMono }}>
+                  {val}
+                </div>
+              </div>
+            ))}
           </div>
-          <div style={{ ...styles.cardSubtext, marginTop: '8px' }}>
-            Volatility: {sentiment.volatility}
-          </div>
-        </div>
+        </Section>
       )}
 
-      {/* Signals */}
+      {/* Active signals */}
       {sentiment?.signals && sentiment.signals.length > 0 && (
-        <div style={styles.signalsContainer}>
-          <div style={styles.cardLabel}>Active Signals</div>
-          <ul style={styles.signalsList}>
+        <Section label="Active signals">
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {sentiment.signals.map((signal, idx) => (
-              <li key={idx} style={styles.signalItem}>
+              <li
+                key={idx}
+                style={{
+                  padding: '6px 0',
+                  borderBottom: idx < sentiment.signals.length - 1 ? `1px solid ${theme.colors.gray200}` : 'none',
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray700,
+                  fontFamily: theme.typography.fontFamilyMono,
+                }}
+              >
                 {signal}
               </li>
             ))}
           </ul>
-        </div>
+        </Section>
       )}
 
-      {/* AI Analysis Section */}
-      {aiAnalysis?.available && aiAnalysis.analysis && (
-        <div style={styles.aiSection}>
-          <div style={styles.aiHeader}>
-            <span style={styles.aiBadge}>AI</span>
-            <span style={{ fontWeight: '600' }}>Claude Analysis</span>
-            <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>
-              {aiAnalysis.analysis.timestamp
-                ? new Date(aiAnalysis.analysis.timestamp).toLocaleTimeString()
-                : ''}
+      {/* Claude analysis (real, data-grounded) */}
+      {analysis && (
+        <div
+          style={{
+            background: theme.colors.infoLight,
+            border: `1px solid ${theme.colors.infoBorder}`,
+            borderRadius: theme.borderRadius.sm,
+            padding: theme.spacing.md,
+            marginBottom: theme.spacing.md,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: theme.spacing.sm }}>
+            <span style={{ background: theme.colors.info, color: '#fff', padding: '1px 6px', borderRadius: theme.borderRadius.sm, fontSize: '10px', fontWeight: theme.typography.fontWeight.bold }}>
+              AI
+            </span>
+            <span style={{ fontWeight: theme.typography.fontWeight.bold, fontSize: theme.typography.fontSize.sm }}>Claude Analysis</span>
+            <span style={{ ...s.meta, marginLeft: 'auto' }}>
+              {analysis.timestamp ? `${fmtET(new Date(analysis.timestamp))} ET` : ''}
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.sm }}>
             <div>
-              <div style={styles.cardLabel}>AI Direction</div>
-              <div style={{ ...styles.cardValue, fontSize: '16px', color: getDirectionColor(aiAnalysis.analysis.direction) }}>
-                {aiAnalysis.analysis.direction?.toUpperCase()}
+              <div style={s.label}>AI Direction</div>
+              <div style={{ fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold, color: dirColor(analysis.direction) }}>
+                {analysis.direction?.toUpperCase()}
               </div>
             </div>
             <div>
-              <div style={styles.cardLabel}>Confidence Adj.</div>
+              <div style={s.label}>Confidence Adj.</div>
               <div
                 style={{
-                  ...styles.cardValue,
-                  fontSize: '16px',
-                  color:
-                    aiAnalysis.analysis.confidenceAdjustment > 0
-                      ? '#00c853'
-                      : aiAnalysis.analysis.confidenceAdjustment < 0
-                        ? '#ff5252'
-                        : '#fff',
+                  fontSize: theme.typography.fontSize.md,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color: analysis.confidenceAdjustment > 0 ? theme.colors.success : analysis.confidenceAdjustment < 0 ? theme.colors.error : theme.colors.gray700,
                 }}
               >
-                {aiAnalysis.analysis.confidenceAdjustment > 0 ? '+' : ''}
-                {aiAnalysis.analysis.confidenceAdjustment}
+                {analysis.confidenceAdjustment > 0 ? '+' : ''}
+                {analysis.confidenceAdjustment}
               </div>
             </div>
             <div>
-              <div style={styles.cardLabel}>Risk Level</div>
+              <div style={s.label}>Risk Level</div>
               <div
                 style={{
-                  ...styles.cardValue,
-                  fontSize: '16px',
-                  color:
-                    aiAnalysis.analysis.riskLevel === 'low'
-                      ? '#00c853'
-                      : aiAnalysis.analysis.riskLevel === 'high'
-                        ? '#ff5252'
-                        : '#ffc107',
+                  fontSize: theme.typography.fontSize.md,
+                  fontWeight: theme.typography.fontWeight.bold,
+                  color: analysis.riskLevel === 'low' ? theme.colors.success : analysis.riskLevel === 'high' ? theme.colors.error : theme.colors.warningDark,
                 }}
               >
-                {aiAnalysis.analysis.riskLevel?.toUpperCase()}
+                {analysis.riskLevel?.toUpperCase()}
               </div>
             </div>
           </div>
 
-          {aiAnalysis.analysis.reasoning && (
-            <div style={styles.aiReasoning}>"{aiAnalysis.analysis.reasoning}"</div>
-          )}
-
-          {aiAnalysis.analysis.keyFactors && aiAnalysis.analysis.keyFactors.length > 0 && (
-            <div style={{ marginTop: '8px', fontSize: '12px', color: '#888' }}>
-              Key factors: {aiAnalysis.analysis.keyFactors.join(', ')}
+          {analysis.reasoning && (
+            <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray700, fontStyle: 'italic', marginTop: theme.spacing.sm, padding: theme.spacing.sm, background: theme.colors.surface, borderRadius: theme.borderRadius.sm }}>
+              &ldquo;{analysis.reasoning}&rdquo;
             </div>
           )}
+
+          {analysis.keyFactors && analysis.keyFactors.length > 0 && (
+            <div style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSize.xs, color: theme.colors.gray600 }}>
+              Key factors: {analysis.keyFactors.join(', ')}
+            </div>
+          )}
+
+          {/* Grounding freshness — is the AI reasoning over live data? */}
+          <div style={{ marginTop: theme.spacing.sm, fontSize: '10px', fontFamily: theme.typography.fontFamilyMono, color: theme.colors.gray500 }}>
+            {analysis.contextAvailable === false
+              ? '⚠ reasoned from summary — live breadth/macro/earnings context unavailable'
+              : analysis.contextAsOf
+                ? `grounded on live breadth · macro · earnings${analysis.contextStale ? ' (stale)' : ''} · ${fmtET(new Date(analysis.contextAsOf))} ET`
+                : ''}
+          </div>
         </div>
       )}
 
-      {/* Trading Recommendation */}
+      {/* Trading recommendation */}
       <div
         style={{
-          ...styles.tradingRecommendation,
-          ...(recommendedSymbol === 'SOXL'
-            ? styles.recommendBuy
-            : recommendedSymbol === 'SOXS'
-              ? styles.recommendSell
-              : styles.recommendWait),
+          padding: theme.spacing.md,
+          borderRadius: theme.borderRadius.sm,
+          textAlign: 'center',
+          background: recTint.bg,
+          border: `1px solid ${recTint.border}`,
         }}
       >
-        <div style={styles.cardLabel}>Recommended Action</div>
-        <div
-          style={{
-            ...styles.recommendSymbol,
-            color:
-              recommendedSymbol === 'SOXL'
-                ? '#00c853'
-                : recommendedSymbol === 'SOXS'
-                  ? '#ff5252'
-                  : '#ffc107',
-          }}
-        >
+        <div style={s.label}>Recommended Action</div>
+        <div style={{ fontSize: theme.typography.fontSize.xxl, fontWeight: theme.typography.fontWeight.bold, color: recTint.color, marginBottom: 4 }}>
           {recommendedSymbol === 'CASH' ? 'WAIT' : recommendedSymbol}
         </div>
-        <div style={{ fontSize: '12px', color: '#888' }}>
+        <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray600 }}>
           {canTrade
-            ? `${sentiment?.confidence}% confidence - Ready to trade`
+            ? `${confidence}% confidence — ready to trade`
             : phase?.tradingAllowed
-              ? 'Confidence too low - Wait for stronger signal'
-              : `${phase?.phase} - Trading not allowed`}
+              ? 'Confidence too low — wait for a stronger signal'
+              : `${phase?.phase} — trading not allowed`}
         </div>
 
         {onPresetSelect && canTrade && recommendedSymbol !== 'CASH' && (
           <button
             style={{
-              marginTop: '12px',
-              padding: '10px 20px',
-              backgroundColor: recommendedSymbol === 'SOXL' ? '#00c853' : '#ff5252',
+              marginTop: theme.spacing.sm,
+              padding: '8px 18px',
+              backgroundColor: recTint.color,
               color: '#fff',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: theme.borderRadius.sm,
               cursor: 'pointer',
-              fontWeight: '600',
+              fontWeight: theme.typography.fontWeight.bold,
+              fontSize: theme.typography.fontSize.xs,
             }}
-            onClick={() =>
-              onPresetSelect(recommendedSymbol === 'SOXL' ? 'SOXL_MOMENTUM' : 'SOXS_HEDGE')
-            }
+            onClick={() => onPresetSelect(recommendedSymbol === 'SOXL' ? 'SOXL_MOMENTUM' : 'SOXS_HEDGE')}
           >
             Start {recommendedSymbol === 'SOXL' ? 'SOXL_MOMENTUM' : 'SOXS_HEDGE'} Session
           </button>
         )}
       </div>
-
-      {/* Last Update */}
-      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: '#555' }}>
-        Last updated: {lastUpdate?.toLocaleTimeString() || 'Never'}
-      </div>
-    </div>
+    </Card>
   );
 };
 
