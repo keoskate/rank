@@ -221,10 +221,12 @@ async function executeEntry(sessionId, symbol, decision) {
       });
     }
 
-    // Check total exposure across all sessions
-    // Use actual account equity as denominator (not session's allocatedCapital)
-    // to avoid falsely blocking entries when other sessions hold positions
-    const { positionsBySymbol } = ctx.getGlobalPositionExposure();
+    // Check total exposure across all sessions ON THIS SESSION'S ACCOUNT.
+    // Denominator is the real account equity; scope the numerator to the SAME
+    // account so an isolated account (paper-mixer) isn't charged the shared
+    // main account's exposure (the 0-position/70%-blocked Vol-Target bug).
+    const { positionsBySymbol } =
+      ctx.getGlobalPositionExposure(tradingMode);
     let totalExposure = 0;
     for (const [, holders] of positionsBySymbol) {
       for (const h of holders) {
@@ -311,8 +313,20 @@ async function executeEntry(sessionId, symbol, decision) {
 
     // Position size based on ATR/risk (with fallback if stopLoss not set)
     let quantity;
-    const currentPrice = parseFloat(decision.currentPrice);
+    let currentPrice = parseFloat(decision.currentPrice);
     const isCrypto = assetUtils.isCrypto(assetType);
+
+    // Portfolio-rule strategies (e.g. vol-target-mix) intentionally return no
+    // price and expect the engine to execute at market. Fetch the live IEX
+    // trade price rather than rejecting the entry for price=null.
+    if (!currentPrice || currentPrice <= 0) {
+      try {
+        const t = await alpacaClient.getLatestTrade(symbol);
+        currentPrice = parseFloat(t && t.price);
+      } catch (_) {
+        /* fall through to the invalid-price guard below */
+      }
+    }
 
     if (!currentPrice || currentPrice <= 0) {
       tradingLogger.logError(`[AI Engine] Invalid price for ${symbol}`, {
@@ -916,8 +930,11 @@ async function executeExit(sessionId, symbol, decision) {
             );
             if (filledOrder.status === 'filled' && filledOrder.filledAvgPrice) {
               filledPrice = filledOrder.filledAvgPrice;
+              const signalStr = Number.isFinite(decision.currentPrice)
+                ? `$${decision.currentPrice.toFixed(2)}`
+                : 'n/a';
               tradingLogger.logInfo(
-                `[AI Engine] Exit filled: ${quantity} ${symbol} @ $${filledPrice.toFixed(2)} (signal was $${decision.currentPrice.toFixed(2)})`,
+                `[AI Engine] Exit filled: ${quantity} ${symbol} @ $${filledPrice.toFixed(2)} (signal was ${signalStr})`,
                 { sessionId, sessionName: session.name, symbol }
               );
               break;
@@ -1008,6 +1025,15 @@ async function executeExit(sessionId, symbol, decision) {
         decision.entryPrice ||
         positionState?.averageCost ||
         0;
+      // Defensive: a submitted-but-unfilled exit (or one fired without a fresh
+      // quote, so decision.currentPrice is undefined) leaves filledPrice
+      // non-finite, which crashes the ENTIRE SELL path at the first
+      // `$${filledPrice.toFixed(2)}` — the observed "Cannot read properties of
+      // undefined (reading 'toFixed')" failure. Coalesce to the best price we
+      // have so P&L math and every downstream $-format stay finite.
+      if (!Number.isFinite(filledPrice)) {
+        filledPrice = entryPrice > 0 ? entryPrice : 0;
+      }
       const grossPnl =
         entryPrice > 0
           ? (filledPrice - entryPrice) * quantity

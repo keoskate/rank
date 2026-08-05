@@ -1241,7 +1241,7 @@ function handleRegimeSessionSwitch(blockedSession, sentiment) {
  * Returns a map of symbols to the sessions holding them with market value.
  * @returns {{ heldSymbols: Set<string>, positionsBySymbol: Map<string, Array> }}
  */
-function getGlobalPositionExposure() {
+function getGlobalPositionExposure(accountFilter = null) {
   const heldSymbols = new Set();
   const positionsBySymbol = new Map();
 
@@ -1254,6 +1254,17 @@ function getGlobalPositionExposure() {
     // 292%), which wrongly tripped the total-exposure cap and froze the paper
     // account flat — blocking every real entry. Real (paper/live) sessions only.
     if (session.config.simulationMode) continue;
+    // ACCOUNT ISOLATION: when a filter is given, count only sessions whose REAL
+    // orders route to that SAME Alpaca account. Sessions on separate accounts
+    // (e.g. the isolated paper-mixer vs the shared main paper) have independent
+    // buying power, so their exposures must not be pooled. Without this, the
+    // first session on a dedicated account (Vol-Target on paper-mixer, 0
+    // positions / $100k) inherited the main account's ~70% exposure and every
+    // entry was blocked by the total-exposure cap. Default (null) = legacy
+    // global behaviour for the cross-session dedup caller.
+    if (accountFilter && getSessionTradingMode(session) !== accountFilter) {
+      continue;
+    }
     for (const [symbol, position] of session.portfolio.positions) {
       const upper = symbol.toUpperCase();
       heldSymbols.add(upper);
@@ -1558,6 +1569,7 @@ async function placeOrderForAsset(orderParams, tradingMode, assetType) {
         extended_hours: true,
         time_in_force: 'day',
       },
+      null,
       tradingMode
     );
   }
@@ -1565,7 +1577,12 @@ async function placeOrderForAsset(orderParams, tradingMode, assetType) {
   if (assetUtils.isCrypto(assetType)) {
     return alpacaClient.placeCryptoOrder(cleanParams, tradingMode);
   }
-  return alpacaClient.placeOrder(cleanParams, tradingMode);
+  // placeOrder(orderParams, accountValue, MODE) — tradingMode is the 3rd arg.
+  // Passing it as the 2nd (accountValue) left mode=null, routing every stock
+  // order to the GLOBAL default account. Harmless while every session was on
+  // the main paper account, but it misrouted Vol-Target (bound to paper-mixer)
+  // onto Main. accountValue is only used for buying-power validation → null.
+  return alpacaClient.placeOrder(cleanParams, null, tradingMode);
 }
 
 /**

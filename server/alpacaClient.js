@@ -40,6 +40,37 @@ async function rateLimit() {
   lastRequestTime = Date.now();
 }
 
+// ---------------------------------------------------------------------------
+// Short-TTL account/positions cache, keyed per Alpaca account.
+//
+// WHY: N running sessions on the SAME account each fetch /v2/account +
+// /v2/positions every tick. With 7 sessions that's ~84 redundant req/min on
+// one account alone — past Alpaca's ~200/min, which 429s the whole app (UI
+// "Failed to fetch"; sessions "Failed to sync portfolio", and stale-data
+// trades). A few seconds of staleness is fine for a PERIODIC sync, and any
+// write (order/close) invalidates the account so post-trade syncs are fresh.
+const _readCache = new Map(); // key -> { data, expires }
+const READ_CACHE_TTL_MS =
+  parseInt(process.env.ALPACA_READ_CACHE_TTL_MS, 10) || 4000;
+function _resolveMode(mode) {
+  return mode || tradingModeManager.getCurrentMode() || 'default';
+}
+function _cacheGet(key) {
+  const hit = _readCache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  return undefined;
+}
+function _cacheSet(key, data) {
+  _readCache.set(key, { data, expires: Date.now() + READ_CACHE_TTL_MS });
+}
+// Drop an account's cached account+positions so the next read is fresh — call
+// after any order/close on that account.
+function invalidateAccountCache(mode = null) {
+  const m = _resolveMode(mode);
+  _readCache.delete(`account:${m}`);
+  _readCache.delete(`positions:${m}`);
+}
+
 /**
  * Make authenticated request to Alpaca API
  * Automatically uses the correct endpoint and credentials based on current trading mode
@@ -96,10 +127,15 @@ async function alpacaRequest(method, endpoint, data = null, mode = null) {
  * @returns {Object} - Account details (equity, cash, buying_power, etc.)
  */
 async function getAccount(mode = null) {
+  const cacheKey = `account:${_resolveMode(mode)}`;
+  const cached = _cacheGet(cacheKey);
+  if (cached !== undefined) return cached;
+
   const modeLabel = mode ? mode.toUpperCase() : tradingModeManager.getModeInfo().statusText;
   console.log(`📊 Fetching Alpaca account info (${modeLabel})...`);
 
   const account = await alpacaRequest('GET', '/v2/account', null, mode);
+  _cacheSet(cacheKey, account);
 
   console.log(`✅ Account Status: ${account.status}`);
   console.log(
@@ -120,13 +156,17 @@ async function getAccount(mode = null) {
  * @returns {Array} - Array of position objects
  */
 async function getPositions(mode = null) {
+  const cacheKey = `positions:${_resolveMode(mode)}`;
+  const cached = _cacheGet(cacheKey);
+  if (cached !== undefined) return cached;
+
   const modeLabel = mode ? mode.toUpperCase() : 'CURRENT';
   console.log(`📊 Fetching Alpaca positions (${modeLabel})...`);
   const positions = await alpacaRequest('GET', '/v2/positions', null, mode);
 
   console.log(`✅ Found ${positions.length} open positions`);
 
-  return positions.map(pos => ({
+  const mapped = positions.map(pos => ({
     symbol: pos.symbol,
     quantity: parseFloat(pos.qty), // Use parseFloat to support fractional crypto quantities
     side: pos.side,
@@ -138,6 +178,8 @@ async function getPositions(mode = null) {
     unrealizedPLPercent: parseFloat(pos.unrealized_plpc) * 100,
     changeToday: parseFloat(pos.change_today) * 100,
   }));
+  _cacheSet(cacheKey, mapped);
+  return mapped;
 }
 
 /**
@@ -224,6 +266,7 @@ async function placeOrder(orderParams, accountValue = null, mode = null) {
   );
 
   const order = await alpacaRequest('POST', '/v2/orders', orderParams, mode);
+  invalidateAccountCache(mode); // fresh account/positions on the next sync
 
   console.log(`✅ Order placed: ${order.id} (${order.status})`);
 
@@ -757,6 +800,7 @@ async function placeCryptoOrder(orderParams, mode = null) {
   );
 
   const order = await alpacaRequest('POST', '/v2/orders', orderParams, mode);
+  invalidateAccountCache(mode); // fresh account/positions on the next sync
 
   console.log(`✅ Crypto order placed: ${order.id} (${order.status})`);
 
@@ -832,6 +876,7 @@ async function closeCryptoPosition(symbol, mode = null) {
   console.log(`🪙 Closing crypto position: ${positionSymbol} (${modeLabel})`);
 
   const result = await alpacaRequest('DELETE', `/v2/positions/${positionSymbol}`, null, mode);
+  invalidateAccountCache(mode);
   console.log(`✅ Crypto position closed: ${positionSymbol}`);
   return result;
 }
@@ -1044,6 +1089,7 @@ async function closePosition(symbol, mode = null) {
   const modeLabel = mode ? mode.toUpperCase() : 'DEFAULT';
   console.log(`📤 Closing position: ${symbol} (${modeLabel})`);
   const result = await alpacaRequest('DELETE', `/v2/positions/${symbol}`, null, mode);
+  invalidateAccountCache(mode);
   console.log(`✅ Position closed: ${symbol}`);
   return result;
 }
