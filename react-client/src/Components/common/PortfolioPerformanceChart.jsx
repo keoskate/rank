@@ -27,6 +27,17 @@ const PERIOD_OPTIONS = [
   { label: '1Y', value: '1A', timeframe: '1D' },
 ];
 
+// Persist the user's last-used chart view (timeframe + Trades overlay) so it
+// survives refreshes and navigation instead of snapping back to 1M / Trades OFF.
+const CHART_PREFS_KEY = 'portfolio_chart_prefs';
+const loadChartPrefs = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CHART_PREFS_KEY)) || {};
+  } catch {
+    return {};
+  }
+};
+
 const PortfolioPerformanceChart = ({
   tradingMode = 'live',
   orders = [],
@@ -34,11 +45,29 @@ const PortfolioPerformanceChart = ({
 }) => {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
-  const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[2]); // Default 1M
+  // Restore the last-used view (persisted below); fall back to 1M / Trades OFF.
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    const saved = loadChartPrefs().period;
+    return PERIOD_OPTIONS.find(o => o.value === saved) || PERIOD_OPTIONS[2];
+  });
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showTrades, setShowTrades] = useState(false);
+  const [showTrades, setShowTrades] = useState(
+    () => loadChartPrefs().showTrades === true
+  );
+
+  // Persist view changes so the chart reopens exactly where the user left it.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        CHART_PREFS_KEY,
+        JSON.stringify({ period: selectedPeriod.value, showTrades })
+      );
+    } catch {
+      /* private mode — preference just won't persist */
+    }
+  }, [selectedPeriod, showTrades]);
 
   // Fetch portfolio history when period or mode changes
   useEffect(() => {
@@ -46,24 +75,36 @@ const PortfolioPerformanceChart = ({
       setLoading(true);
       setError(null);
 
-      try {
-        const params = new URLSearchParams({
-          mode: tradingMode,
-          period: selectedPeriod.value,
-          timeframe: selectedPeriod.timeframe,
-        });
+      const params = new URLSearchParams({
+        mode: tradingMode,
+        period: selectedPeriod.value,
+        timeframe: selectedPeriod.timeframe,
+      });
 
-        const res = await fetch(`/api/alpaca/portfolio-history?${params}`);
-        if (!res.ok) throw new Error('Failed to fetch portfolio history');
-
-        const data = await res.json();
-        setHistoryData(data);
-      } catch (err) {
-        console.error('Portfolio history error:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      // Retry a couple times on failure — a transient Alpaca rate-limit (429)
+      // shouldn't blank the whole chart with "Failed to fetch".
+      let lastErr = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise(r => setTimeout(r, 700 * attempt));
+          }
+          const res = await fetch(`/api/alpaca/portfolio-history?${params}`);
+          if (!res.ok) throw new Error('Failed to fetch portfolio history');
+          const data = await res.json();
+          setHistoryData(data);
+          setError(null);
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
       }
+      if (lastErr) {
+        console.error('Portfolio history error:', lastErr);
+        setError(lastErr.message);
+      }
+      setLoading(false);
     };
 
     fetchHistory();
@@ -73,17 +114,27 @@ const PortfolioPerformanceChart = ({
   const prevOrdersKeyRef = useRef('');
   const ordersKey = getOrdersKey(orders);
 
-  // Process orders into trade markers - only when ordersKey actually changes
+  // Process orders into trade markers - only when ordersKey actually changes.
+  // Fills that land on the SAME chart point (same timeframe bar) are AGGREGATED
+  // into one marker per side, each carrying every fill — so a cluster (e.g. 4
+  // SOXL buys in one 5-min bar) shows as a single marker whose hover breaks
+  // down exactly what happened, instead of stacking invisibly.
   const tradeMarkers = useMemo(() => {
-    if (!historyData?.timestamp?.length || !orders?.length) return { buys: [], sells: [] };
+    if (!historyData?.timestamp?.length || !orders?.length)
+      return { buys: [], sells: [] };
 
-    const buys = [];
-    const sells = [];
+    const byKey = new Map(); // `${idx}-${side}` -> { x, y, side, trades: [] }
 
     orders.forEach(order => {
       if (order.status !== 'filled') return;
 
-      const orderTime = new Date(order.filledAt || order.filled_at || order.createdAt || order.created_at).getTime() / 1000;
+      const orderTime =
+        new Date(
+          order.filledAt ||
+            order.filled_at ||
+            order.createdAt ||
+            order.created_at
+        ).getTime() / 1000;
 
       // Find closest timestamp in history data
       let closestIdx = 0;
@@ -98,29 +149,50 @@ const PortfolioPerformanceChart = ({
 
       // Only include if within reasonable time range (1 hour for intraday, 1 day for daily)
       const maxDiff = selectedPeriod.timeframe === '1D' ? 86400 : 3600;
-      if (minDiff < maxDiff) {
-        const marker = {
+      if (minDiff >= maxDiff) return;
+
+      const side = order.side === 'buy' ? 'buy' : 'sell';
+      const key = `${closestIdx}-${side}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, {
           x: closestIdx,
           y: historyData.equity[closestIdx],
-          symbol: order.symbol,
-          qty: order.filledQty || order.filled_qty || order.quantity || order.qty,
-          price: order.filledAvgPrice || order.filled_avg_price,
-        };
-
-        if (order.side === 'buy') {
-          buys.push(marker);
-        } else {
-          sells.push(marker);
-        }
+          side,
+          trades: [],
+        });
       }
+      byKey.get(key).trades.push({
+        symbol: order.symbol,
+        qty: Number(
+          order.filledQty || order.filled_qty || order.quantity || order.qty
+        ),
+        price: parseFloat(order.filledAvgPrice || order.filled_avg_price),
+      });
     });
+
+    const buys = [];
+    const sells = [];
+    for (const m of byKey.values()) {
+      // Biggest fill first so the tooltip leads with the primary trade.
+      m.trades.sort((a, b) => (b.qty || 0) - (a.qty || 0));
+      (m.side === 'buy' ? buys : sells).push(m);
+    }
 
     // Update previous key ref
     prevOrdersKeyRef.current = ordersKey;
 
     return { buys, sells };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyData, ordersKey, selectedPeriod]);
+
+  // Total fills (not marker buckets) — for the legend counts.
+  const tradeCounts = useMemo(
+    () => ({
+      buys: tradeMarkers.buys.reduce((s, m) => s + m.trades.length, 0),
+      sells: tradeMarkers.sells.reduce((s, m) => s + m.trades.length, 0),
+    }),
+    [tradeMarkers]
+  );
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -225,13 +297,16 @@ const PortfolioPerformanceChart = ({
     }
 
     // Add trade markers only when toggled on
+    // Bigger dot when more fills stack on one point, so clusters are obvious.
+    const clusterRadius = c => Math.min(5 + (c.raw?.trades?.length || 1), 12);
     if (showTrades && tradeMarkers.buys.length > 0) {
       datasets.push({
         label: 'Buy',
         data: tradeMarkers.buys,
         borderColor: theme.colors.success,
         backgroundColor: theme.colors.success,
-        pointRadius: 6,
+        pointRadius: clusterRadius,
+        pointHoverRadius: clusterRadius,
         pointStyle: 'triangle',
         showLine: false,
         order: 0,
@@ -244,7 +319,8 @@ const PortfolioPerformanceChart = ({
         data: tradeMarkers.sells,
         borderColor: theme.colors.error,
         backgroundColor: theme.colors.error,
-        pointRadius: 6,
+        pointRadius: clusterRadius,
+        pointHoverRadius: clusterRadius,
         pointStyle: 'triangle',
         rotation: 180,
         showLine: false,
@@ -273,14 +349,22 @@ const PortfolioPerformanceChart = ({
                 if (item?.raw?.timestamp) {
                   return new Date(item.raw.timestamp * 1000).toLocaleString();
                 }
-                if (item?.raw?.symbol) {
-                  return `${item.dataset.label}: ${item.raw.symbol}`;
+                if (item?.raw?.trades) {
+                  const n = item.raw.trades.length;
+                  return `${item.dataset.label}${n > 1 ? ` ×${n}` : ''}`;
                 }
                 return '';
               },
               label: context => {
-                if (context.raw?.symbol) {
-                  return `${context.raw.qty} @ $${context.raw.price?.toFixed(2) || '--'}`;
+                // Trade marker: break down EVERY fill at this point (one line
+                // each: side · symbol · qty @ price) so clustered trades are
+                // fully visible instead of hidden behind a single dot.
+                if (context.raw?.trades) {
+                  const side = context.dataset.label || '';
+                  return context.raw.trades.map(
+                    t =>
+                      `${side} ${t.symbol}: ${t.qty} @ $${Number.isFinite(t.price) ? t.price.toFixed(2) : '--'}`
+                  );
                 }
                 const value = context.parsed.y;
                 return `Value: $${value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '--'}`;
@@ -524,14 +608,16 @@ const PortfolioPerformanceChart = ({
             gap: theme.spacing.md,
           }}
         >
-          {tradeMarkers.buys.length > 0 && (
+          {tradeCounts.buys > 0 && (
             <span>
-              <span style={{ color: theme.colors.success }}>&#9650;</span> {tradeMarkers.buys.length} Buy{tradeMarkers.buys.length > 1 ? 's' : ''}
+              <span style={{ color: theme.colors.success }}>&#9650;</span>{' '}
+              {tradeCounts.buys} Buy{tradeCounts.buys > 1 ? 's' : ''}
             </span>
           )}
-          {tradeMarkers.sells.length > 0 && (
+          {tradeCounts.sells > 0 && (
             <span>
-              <span style={{ color: theme.colors.error }}>&#9660;</span> {tradeMarkers.sells.length} Sell{tradeMarkers.sells.length > 1 ? 's' : ''}
+              <span style={{ color: theme.colors.error }}>&#9660;</span>{' '}
+              {tradeCounts.sells} Sell{tradeCounts.sells > 1 ? 's' : ''}
             </span>
           )}
         </div>

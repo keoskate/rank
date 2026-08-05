@@ -1,6 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccountView } from '../../contexts/AccountViewContext';
 import theme from '../../theme';
+
+const fmtMoney = v =>
+  v == null || isNaN(v)
+    ? '—'
+    : `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+
+// Signed dollar with a true minus, for the day-P&L glance.
+const fmtSigned = v => {
+  const n = Number(v) || 0;
+  const abs = Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return `${n < 0 ? '−' : '+'}$${abs}`;
+};
 
 /**
  * AccountPicker — the global account dropdown (lives in the NavBar).
@@ -28,6 +40,46 @@ const KIND_STYLE = {
 const AccountPicker = () => {
   const { account, accounts, setAccountId } = useAccountView();
   const [open, setOpen] = useState(false);
+  // Per-account { equity, dayPnl, dayPnlPct } — fetched when the dropdown opens
+  // so each row shows a glanceable value + today's P&L.
+  const [balances, setBalances] = useState({});
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    accounts
+      .filter(a => a.configured)
+      .forEach(a => {
+        fetch(`/api/alpaca/account?mode=${a.id}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(j => {
+            if (cancelled || !j) return;
+            const acct = j.account || j;
+            const eq = parseFloat(acct.equity ?? acct.portfolio_value);
+            const le = parseFloat(acct.last_equity);
+            // Only show a day P&L when there's a real prior-close mark (Alpaca
+            // returns last_equity "0" on accounts that haven't closed yet —
+            // don't render the whole equity as "today's P&L").
+            const dayPnl =
+              Number.isFinite(eq) && Number.isFinite(le) && le > 0
+                ? eq - le
+                : null;
+            setBalances(prev => ({
+              ...prev,
+              [a.id]: {
+                equity: Number.isFinite(eq) ? eq : null,
+                dayPnl,
+                dayPnlPct: dayPnl != null ? (dayPnl / le) * 100 : null,
+              },
+            }));
+          })
+          .catch(() => {});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, accounts]);
+
   if (!account) return null;
   const style = KIND_STYLE[account.kind] || KIND_STYLE.paper;
 
@@ -87,7 +139,7 @@ const AccountPicker = () => {
             backgroundColor: theme.colors.surface,
             borderRadius: theme.borderRadius.md,
             boxShadow: theme.shadows.lg,
-            minWidth: '250px',
+            minWidth: '320px',
             overflow: 'hidden',
             zIndex: 1200,
           }}
@@ -156,8 +208,48 @@ const AccountPicker = () => {
                     </span>
                   )}
                 </span>
+                {a.configured && (
+                  <span
+                    style={{
+                      textAlign: 'right',
+                      flexShrink: 0,
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'block',
+                        fontWeight: 700,
+                        fontSize: theme.typography.fontSize.sm,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {balances[a.id] ? fmtMoney(balances[a.id].equity) : '···'}
+                    </span>
+                    {balances[a.id] && balances[a.id].dayPnl != null && (
+                      <span
+                        style={{
+                          display: 'block',
+                          fontSize: '11px',
+                          color:
+                            balances[a.id].dayPnl >= 0
+                              ? theme.colors.success
+                              : theme.colors.error,
+                        }}
+                      >
+                        {fmtSigned(balances[a.id].dayPnl)} (
+                        {balances[a.id].dayPnlPct >= 0 ? '+' : ''}
+                        {balances[a.id].dayPnlPct.toFixed(2)}%)
+                      </span>
+                    )}
+                  </span>
+                )}
                 {selected && (
-                  <span style={{ color: s.border, fontWeight: 700 }}>✓</span>
+                  <span
+                    style={{ color: s.border, fontWeight: 700, marginLeft: 4 }}
+                  >
+                    ✓
+                  </span>
                 )}
               </button>
             );
