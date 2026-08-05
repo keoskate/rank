@@ -65,6 +65,8 @@ async function computeSoxxEarnings(forceRefresh = false) {
           sym,
           date: r.report_date,
           reaction1d: num(r.post_earnings_move_1d) != null ? num(r.post_earnings_move_1d) * 100 : null,
+          // 1-week follow-through after the report (UW), to see if the reaction held.
+          postMove1w: num(r.post_earnings_move_1w) != null ? num(r.post_earnings_move_1w) * 100 : null,
           eps,
           estimate: est,
           beat: eps != null && est != null ? eps >= est : null,
@@ -81,45 +83,80 @@ async function computeSoxxEarnings(forceRefresh = false) {
   return data;
 }
 
-// Daily close on (or just after) a given YYYY-MM-DD — "what the stock was when
-// it reported". Best-effort; returns null on any failure.
-async function closeOnDate(symbol, date) {
+const DAY_MS = 86400000;
+const RUNUP_BARS = 21; // ~1 trading month
+const iso = ms => new Date(ms).toISOString().slice(0, 10);
+
+// Best-effort daily bars [start, end] (YYYY-MM-DD), oldest first; [] on failure.
+async function dailyBars(symbol, start, end) {
   try {
-    const end = new Date(new Date(`${date}T00:00:00Z`).getTime() + 6 * 86400000)
-      .toISOString()
-      .slice(0, 10);
-    const bars = await alpacaClient.getBars(symbol, '1Day', date, end, 10);
-    if (!Array.isArray(bars) || !bars.length) return null;
-    const onDay = bars.find(
-      b => new Date(b.timestamp).toISOString().slice(0, 10) === date
-    );
-    const bar = onDay || bars[0];
-    return Number.isFinite(bar.close) ? bar.close : null;
+    const bars = await alpacaClient.getBars(symbol, '1Day', start, end, 80);
+    return Array.isArray(bars) ? bars.filter(b => Number.isFinite(b.close)) : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
+const pctChange = (from, to) =>
+  Number.isFinite(from) && Number.isFinite(to) && from > 0 ? ((to - from) / from) * 100 : null;
+
 /**
  * Enriched earnings for the DISPLAY route only (kept off the AI-context path so
- * that stays lean): adds approximate market cap to every row and, for past
- * reports, the stock's close on the report date (`priceThen`). Cached 1h.
+ * that stays lean). Per row, fetches one daily-bars window and derives:
+ *   - upcoming: current approx mcap + trailing ~1-month run-up INTO the print
+ *   - past: close on report date (`priceThen`), the ~1-month run-up INTO the
+ *     report, and approx mcap. (1-week follow-through comes from UW in the lean fn.)
+ * Cached 1h.
  */
 async function computeSoxxEarningsEnriched(forceRefresh = false) {
   if (!forceRefresh && _enrichedCache.data && Date.now() - _enrichedCache.at < CACHE_MS) {
     return _enrichedCache.data;
   }
   const base = await computeSoxxEarnings(forceRefresh);
-
-  const upcoming = base.upcoming.map(r => ({ ...r, mcapB: MCAP_B[r.sym] ?? null }));
-
-  // Fetch the report-date close for each past row in small batches.
-  const past = [];
   const batch = 6;
+
+  // Upcoming — trailing ~1-month run-up so far (window up to today).
+  const nowMs = Date.now();
+  const upcoming = [];
+  for (let i = 0; i < base.upcoming.length; i += batch) {
+    const chunk = base.upcoming.slice(i, i + batch);
+    const barsArr = await Promise.all(
+      chunk.map(r => dailyBars(r.sym, iso(nowMs - 45 * DAY_MS), iso(nowMs + DAY_MS)))
+    );
+    chunk.forEach((r, j) => {
+      const b = barsArr[j];
+      let runupSoFar = null;
+      if (b.length > 1) {
+        const last = b[b.length - 1].close;
+        const prior = b[Math.max(0, b.length - 1 - RUNUP_BARS)].close;
+        runupSoFar = pctChange(prior, last);
+      }
+      upcoming.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, runupSoFar });
+    });
+  }
+
+  // Past — report-date close + ~1-month run-up into the report.
+  const past = [];
   for (let i = 0; i < base.past.length; i += batch) {
     const chunk = base.past.slice(i, i + batch);
-    const prices = await Promise.all(chunk.map(r => closeOnDate(r.sym, r.date)));
-    chunk.forEach((r, j) => past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen: prices[j] }));
+    const barsArr = await Promise.all(
+      chunk.map(r => {
+        const t = new Date(`${r.date}T00:00:00Z`).getTime();
+        return dailyBars(r.sym, iso(t - 45 * DAY_MS), iso(t + 4 * DAY_MS));
+      })
+    );
+    chunk.forEach((r, j) => {
+      const b = barsArr[j];
+      let priceThen = null;
+      let runupPct = null;
+      if (b.length) {
+        const idx = b.findIndex(x => new Date(x.timestamp).toISOString().slice(0, 10) === r.date);
+        const rptIdx = idx >= 0 ? idx : b.length - 1;
+        priceThen = b[rptIdx].close;
+        runupPct = pctChange(b[Math.max(0, rptIdx - RUNUP_BARS)].close, priceThen);
+      }
+      past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen, runupPct });
+    });
   }
 
   const data = { upcoming, past, asOf: base.asOf };

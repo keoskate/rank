@@ -43,8 +43,12 @@ const agoLabel = days =>
 
 const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : '');
 
-const UP_COLS = '48px 70px 62px minmax(0,1fr) 40px 58px';
-const PAST_COLS = '48px 70px 62px minmax(0,1fr) 42px 74px';
+const UP_COLS = '46px 60px 58px minmax(0,1fr) 54px 34px 54px';
+const PAST_COLS = '46px 60px 58px minmax(0,1fr) 54px 38px 72px';
+
+// Signed % with sign, colored. e.g. "+25%" / "-6.7%".
+const fmtSignedPct = (v, dp = 0) =>
+  v == null || !Number.isFinite(v) ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(dp)}%`;
 
 const colHeadStyle = {
   fontSize: '9px',
@@ -148,6 +152,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                     <span>Mkt cap</span>
                     <span style={{ textAlign: 'right' }}>Price</span>
                     <span>Date</span>
+                    <span style={{ textAlign: 'right' }} title="run-up so far (~1 month)">1mo</span>
                     <span style={{ textAlign: 'right' }}>Time</span>
                     <span style={{ textAlign: 'right' }}>±Move</span>
                   </div>
@@ -163,6 +168,9 @@ const SoxxEarnings = ({ quotes = {} }) => {
                           <span style={{ color: soon ? theme.colors.warningDark : theme.colors.gray600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {label}
                             <span style={{ color: theme.colors.gray400, marginLeft: 5 }}>{relLabel(days)}{e.estimated ? '*' : ''}</span>
+                          </span>
+                          <span style={{ textAlign: 'right', color: pctColor(e.runupSoFar), fontWeight: 600 }} title="price change over the last ~1 month (run-up into the report)">
+                            {fmtSignedPct(e.runupSoFar)}
                           </span>
                           <span style={{ color: theme.colors.gray400, textAlign: 'right' }}>{timeTag(e.time)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="expected move (options-implied)">
@@ -204,6 +212,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                     <span title="market cap at report time (approx)">Mkt cap</span>
                     <span style={{ textAlign: 'right' }} title="price at report time">Price</span>
                     <span>Date</span>
+                    <span style={{ textAlign: 'right' }} title="run-up into the report (~1 month before)">1mo</span>
                     <span style={{ textAlign: 'center' }}>EPS</span>
                     <span style={{ textAlign: 'right' }}>React</span>
                   </div>
@@ -229,6 +238,9 @@ const SoxxEarnings = ({ quotes = {} }) => {
                             {label}
                             <span style={{ color: theme.colors.gray400, marginLeft: 5 }}>{agoLabel(days)}</span>
                           </span>
+                          <span style={{ textAlign: 'right', color: pctColor(e.runupPct), fontWeight: 600 }} title="run-up into the report (~1 month price change before)">
+                            {fmtSignedPct(e.runupPct)}
+                          </span>
                           <span
                             style={{ textAlign: 'center', color: e.beat == null ? theme.colors.gray400 : e.beat ? theme.colors.success : theme.colors.error }}
                             title="EPS vs street estimate"
@@ -238,9 +250,15 @@ const SoxxEarnings = ({ quotes = {} }) => {
                           <span
                             style={{ textAlign: 'right', fontWeight: 700, color: pctColor(r) }}
                             title={
-                              e.expectedMovePct != null && r != null
-                                ? `market moved ${Math.abs(r).toFixed(1)}% vs ±${e.expectedMovePct.toFixed(1)}% implied (${bigMove ? 'bigger' : 'smaller'} than expected)`
-                                : 'market 1-day reaction'
+                              [
+                                r != null && e.expectedMovePct != null
+                                  ? `1-day reaction ${fmtSignedPct(r, 1)} vs ±${e.expectedMovePct.toFixed(1)}% implied (${bigMove ? 'bigger' : 'smaller'} than expected)`
+                                  : 'market 1-day reaction',
+                                e.runupPct != null ? `ran ${fmtSignedPct(e.runupPct, 1)} into the report` : null,
+                                e.postMove1w != null ? `${fmtSignedPct(e.postMove1w, 1)} over the following week` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')
                             }
                           >
                             {r == null ? '—' : `${r >= 0 ? '▲ +' : '▼ '}${r.toFixed(1)}%`}
@@ -283,7 +301,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
           )}
 
           <div style={{ fontSize: '10px', color: theme.colors.gray400, fontFamily: 'monospace' }}>
-            ~mcap = approx (no live shares) · past = value at report time · beat/miss = EPS vs estimate · ▲▼% = 1-day reaction · ≠ = diverged · * = est. date
+            ~mcap = approx (no live shares) · past = value at report time · 1mo = run-up into the report · beat/miss = EPS vs estimate · ▲▼% = 1-day reaction (hover for 1-week) · ≠ = diverged · * = est. date
           </div>
         </>
       )}
