@@ -2928,6 +2928,19 @@ module.exports = function (deps) {
     }
   });
 
+  // SOXX sub-sector rotation over time (~30 sessions) + SPY benchmark — the
+  // trajectory behind SoxxInternals' snapshot (which pockets lead/lag over time).
+  const { getSectorHistory } = require('../soxxSectorHistory');
+  router.get('/api/soxx/sector-history', async (req, res) => {
+    try {
+      const data = await getSectorHistory(req.query.refresh === 'true');
+      res.json(data);
+    } catch (error) {
+      console.error('Error building SOXX sector history:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // SOXX hourly self-improving predictor (pre-registered forward-test).
   const soxxPredictionLoop = require('../soxxPredictionLoop');
   const soxxPredStore = require('../soxxPredictions');
