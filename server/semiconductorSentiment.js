@@ -437,6 +437,47 @@ class SemiconductorSentimentEngine {
       }
     }
 
+    // ── Reversal reconciliation ──────────────────────────────────────────────
+    // The signals above can leave `direction` anchored to the day's NET move (up
+    // from open) even as the RECENT trend rolls over — projecting false confidence
+    // (a contradicting momentum reading even added confidence above). Reconcile it:
+    // on a conflict, damp the confidence and flag it MIXED; on a strong, CONFIRMED
+    // reversal, neutralize the call to CASH rather than fight the tape.
+    const revDown = rollingMomentum < -momentumThreshold; // recent momentum fading
+    const revUp = rollingMomentum > momentumThreshold;
+    const trendDown = technicalData.shortTermTrend === 'bearish';
+    const trendUp = technicalData.shortTermTrend === 'bullish';
+    // "confirmed" = momentum past 1.5× its threshold AND (technical trend agrees OR
+    // price sits in the bottom/top of the day's range — not merely bounced off it).
+    const strongDown =
+      rollingMomentum < -momentumThreshold * 1.5 &&
+      (trendDown || (totalRange > 1.0 && dropFromHigh < -totalRange * 0.5 && riseFromLow < totalRange * 0.4));
+    const strongUp =
+      rollingMomentum > momentumThreshold * 1.5 &&
+      (trendUp || (totalRange > 1.0 && riseFromLow > totalRange * 0.5 && dropFromHigh > -totalRange * 0.4));
+
+    let conflict = false;
+    let reversalOverride = false;
+    if (direction === 'bullish' && (revDown || trendDown)) conflict = true;
+    else if (direction === 'bearish' && (revUp || trendUp)) conflict = true;
+
+    if (conflict) {
+      if ((direction === 'bullish' && strongDown) || (direction === 'bearish' && strongUp)) {
+        // Strong, confirmed reversal — stand down rather than buy into the fade.
+        reversalOverride = true;
+        signals.push(
+          `⚠ Reversal: ${direction} from open overridden by momentum ${rollingMomentum.toFixed(2)}%${technicalData.shortTermTrend ? ` + ${technicalData.shortTermTrend} trend` : ''} → NEUTRAL`
+        );
+        direction = 'neutral';
+        confidence = Math.min(confidence, 35);
+      } else {
+        // Mixed but not a clean reversal — keep the direction, kill the false confidence.
+        signals.push('⚠ Mixed: up from open but momentum/trend fading — confidence damped');
+        confidence = Math.min(confidence, 42) - 8;
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Ensure confidence is within bounds
     confidence = Math.max(0, Math.min(100, Math.round(confidence)));
 
@@ -444,6 +485,8 @@ class SemiconductorSentimentEngine {
       direction,
       confidence,
       signals,
+      conflict,
+      reversalOverride,
       momentumData: {
         rollingMomentum: rollingMomentum.toFixed(2) + '%',
         dropFromHigh: dropFromHigh.toFixed(2) + '%',

@@ -208,8 +208,11 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
   const confidence = sentiment?.confidence || 0;
   const analysis = aiAnalysis?.available && aiAnalysis.analysis ? aiAnalysis.analysis : null;
 
-  const recTint =
-    recommendedSymbol === 'SOXL'
+  // Only tint the banner as a go-signal when it's actually tradeable; a low-
+  // confidence / conflicted / phase-gated rec reads neutral grey, not green/red.
+  const recTint = !canTrade
+    ? { bg: theme.colors.gray100, border: theme.colors.gray200, color: theme.colors.gray500 }
+    : recommendedSymbol === 'SOXL'
       ? { bg: theme.colors.successLight, border: theme.colors.successBorder, color: theme.colors.success }
       : recommendedSymbol === 'SOXS'
         ? { bg: theme.colors.errorLight, border: theme.colors.errorBorder, color: theme.colors.error }
@@ -357,6 +360,24 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
           <div style={{ ...s.statValue, color: dirColor(sentiment?.direction) }}>
             {sentiment?.direction?.toUpperCase() || 'UNKNOWN'}
           </div>
+          {(sentiment?.reversalOverride || sentiment?.conflict) && (
+            <div
+              title="From-open direction disagrees with recent momentum / technical trend — confidence damped; a confirmed reversal stands down to CASH."
+              style={{
+                display: 'inline-block',
+                marginTop: 4,
+                padding: '1px 6px',
+                borderRadius: 4,
+                fontSize: '10px',
+                fontWeight: 700,
+                fontFamily: 'monospace',
+                color: sentiment.reversalOverride ? theme.colors.errorDark : theme.colors.warningDark,
+                background: sentiment.reversalOverride ? theme.colors.errorLight || '#fde8e8' : theme.colors.warningLight || '#fdf3d7',
+              }}
+            >
+              {sentiment.reversalOverride ? '⚠ REVERSAL → CASH' : '⚠ MIXED · fading'}
+            </div>
+          )}
           <div style={s.subtext}>{sentiment?.intradayChange || 'N/A'}</div>
         </div>
 
