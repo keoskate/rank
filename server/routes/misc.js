@@ -2928,6 +2928,48 @@ module.exports = function (deps) {
     }
   });
 
+  // SOXX hourly self-improving predictor (pre-registered forward-test).
+  const soxxPredictionLoop = require('../soxxPredictionLoop');
+  const soxxPredStore = require('../soxxPredictions');
+
+  // Current live prediction + countdown to its 1h evaluation.
+  router.get('/api/soxx/prediction', (req, res) => {
+    try {
+      res.json(soxxPredictionLoop.getCurrent());
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Track record: accuracy, Brier, by-hour, recent results.
+  router.get('/api/soxx/prediction/record', (req, res) => {
+    try {
+      const days = Math.min(90, parseInt(req.query.days, 10) || 30);
+      const preds = soxxPredStore.loadRecent(days);
+      res.json({ ...soxxPredStore.computeStats(preds), asOf: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Test-only manual triggers (force a prediction / evaluation off the market clock).
+  router.post('/api/soxx/prediction/tick', async (req, res) => {
+    try {
+      const rec = await soxxPredictionLoop.recordPrediction();
+      res.json({ recorded: !!rec, prediction: rec });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  router.post('/api/soxx/prediction/evaluate', async (req, res) => {
+    try {
+      await soxxPredictionLoop.runEvaluations();
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ================================
   // STRATEGY VALIDATOR
   // ================================

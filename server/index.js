@@ -1288,6 +1288,16 @@ server.listen(PORT, () => {
   // seed watchlist for up to 30 min after a restart.
   setTimeout(refreshScanners, 90 * 1000);
 
+  // SOXX hourly self-improving predictor (pre-registered forward-test). Additive,
+  // market-hours-guarded, decoupled from the trading engine. SOXX_PREDICTION_LOOP=off to disable.
+  if (process.env.SOXX_PREDICTION_LOOP !== 'off') {
+    try {
+      require('./soxxPredictionLoop').startSoxxPredictionLoop();
+    } catch (err) {
+      console.error('SOXX prediction loop failed to start:', err.message);
+    }
+  }
+
   // Options self-improvement heartbeat: one earnest scan + full grading per
   // market day, ledger delta to Telegram. OPTIONS_DAILY_LOOP=off to disable.
   try {
