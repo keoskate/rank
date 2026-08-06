@@ -3020,6 +3020,27 @@ module.exports = function (deps) {
     }
   });
 
+  // Semiconductor daily Telegram briefing (self-improving, 9:30/10:10/11:11 ET).
+  const semiDailyLoop = require('../semiDailyLoop');
+  router.get('/api/soxx/briefing/preview', async (req, res) => {
+    try {
+      const slot = semiDailyLoop.SLOTS.find(s => s.key === req.query.slot) || semiDailyLoop.SLOTS[0];
+      const text = await semiDailyLoop.buildBriefing(slot);
+      res.json({ slot: slot.at, text });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  router.post('/api/soxx/briefing/send', async (req, res) => {
+    try {
+      const slot = semiDailyLoop.SLOTS.find(s => s.key === (req.body && req.body.slot)) || semiDailyLoop.SLOTS[0];
+      const text = await semiDailyLoop.sendBriefing(slot);
+      res.json({ sent: true, text });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ================================
   // STRATEGY VALIDATOR
   // ================================

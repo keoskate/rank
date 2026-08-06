@@ -1304,6 +1304,17 @@ server.listen(PORT, () => {
     }
   }
 
+  // Semiconductor daily Telegram briefing — self-improving snapshots at
+  // 9:30 / 10:10 / 11:11 ET. Additive, weekday-guarded, no engine side-effects.
+  // SEMI_DAILY_LOOP=off to disable.
+  if (process.env.SEMI_DAILY_LOOP !== 'off') {
+    try {
+      require('./semiDailyLoop').start();
+    } catch (err) {
+      console.error('Semi daily briefing loop failed to start:', err.message);
+    }
+  }
+
   // Options self-improvement heartbeat: one earnest scan + full grading per
   // market day, ledger delta to Telegram. OPTIONS_DAILY_LOOP=off to disable.
   try {
