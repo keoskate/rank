@@ -124,6 +124,12 @@ async function tick() {
   } catch (e) {
     console.error('[SOXX prediction] eval error:', e.message);
   }
+  // Also the grading heartbeat for the AI analyst's own forward-test.
+  try {
+    await require('./aiAnalysisLedger').evaluatePending();
+  } catch (e) {
+    console.error('[AI analysis] eval error:', e.message);
+  }
 }
 
 function startSoxxPredictionLoop() {

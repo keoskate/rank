@@ -65,6 +65,28 @@ module.exports = function (deps) {
     }
   });
 
+  // AI analyst track record — is the AI adding value? Accuracy + edge-vs-base
+  // (when the AI diverges from the engine, does it win more?). Self-improving proof.
+  router.get('/api/semiconductor/ai-analysis/record', (req, res) => {
+    try {
+      const ledger = require('../aiAnalysisLedger');
+      const days = Math.min(120, parseInt(req.query.days, 10) || 45);
+      const recs = ledger.loadRecent(days);
+      res.json({ ...ledger.computeStats(recs), asOf: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  // Test-only: force-evaluate any pending AI-analysis records off the loop clock.
+  router.post('/api/semiconductor/ai-analysis/evaluate', async (req, res) => {
+    try {
+      await require('../aiAnalysisLedger').evaluatePending();
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ================================
   // SEMICONDUCTOR AUTO-TRADER ENDPOINTS
   // ================================

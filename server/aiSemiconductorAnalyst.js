@@ -417,6 +417,14 @@ Ground your recommendation in ALL the data above — especially any reversal/con
         `[AI Semiconductor Analyst] Analysis complete: ${analysis.direction} (adj: ${analysis.confidenceAdjustment > 0 ? '+' : ''}${analysis.confidenceAdjustment})`
       );
 
+      // Grade it over time: record this fresh call to the append-only forward-test
+      // ledger (with the SOXX price + base direction now). Never blocks.
+      try {
+        require('./aiAnalysisLedger').record(this.analysisCache, marketData);
+      } catch {
+        /* ledger optional */
+      }
+
       return this.analysisCache;
     } catch (error) {
       console.error('[AI Semiconductor Analyst] API error:', error.message);
