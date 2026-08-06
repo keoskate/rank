@@ -7,7 +7,8 @@
 
 const { phaseTracker } = require('./semiconductorSentiment');
 const { assembleFeatures } = require('./soxxFeatures');
-const { predict } = require('./soxxPredictorCore');
+const { predict, probUp } = require('./soxxPredictorCore');
+const cal = require('./soxxCalibration');
 const store = require('./soxxPredictions');
 
 const HORIZON_MIN = 60;
@@ -30,6 +31,11 @@ async function recordPrediction() {
   const { soxxPrice, features } = await assembleFeatures();
   if (soxxPrice == null) return null; // no price → can't evaluate later, skip
   const prediction = predict(features);
+  // Phase B: record the empirically-calibrated probability alongside the raw one
+  // (metadata only — not acted on yet; graduates to informing calls once the record
+  // is thick + significant). At N=0 this equals the raw probUp.
+  const calHist = cal.historyFrom(store.loadRecent(60));
+  const calibration = { probUp: cal.calibrateProb(probUp(prediction), calHist), n: calHist.length };
   const tsMs = Date.now();
   const rec = {
     id: `${tsMs}|${seq++}`,
@@ -38,6 +44,7 @@ async function recordPrediction() {
     horizonMin: HORIZON_MIN,
     features,
     prediction,
+    calibration,
     evaluated: false,
   };
   store.appendPrediction(rec);

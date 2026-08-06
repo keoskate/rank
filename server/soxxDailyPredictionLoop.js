@@ -14,7 +14,8 @@
 
 const { phaseTracker } = require('./semiconductorSentiment');
 const { assembleFeatures } = require('./soxxFeatures');
-const { predict } = require('./soxxPredictorCore');
+const { predict, probUp } = require('./soxxPredictorCore');
+const cal = require('./soxxCalibration');
 const store = require('./soxxDailyPredictions');
 
 const firedDays = new Set(); // etDate → fire once per trading day
@@ -36,6 +37,9 @@ async function recordPrediction() {
   const { soxxPrice, features } = await assembleFeatures();
   if (soxxPrice == null) return null; // no price → can't evaluate later, skip
   const prediction = predict(features);
+  // Phase B: calibrated probability alongside the raw one (metadata only; N=0 → raw).
+  const calHist = cal.historyFrom(store.loadRecent(90));
+  const calibration = { probUp: cal.calibrateProb(probUp(prediction), calHist), n: calHist.length };
   const tsMs = Date.now();
   const rec = {
     id: `${tsMs}|${seq++}`,
@@ -46,6 +50,7 @@ async function recordPrediction() {
     soxxPriceAtT: soxxPrice,
     features,
     prediction,
+    calibration,
     evaluated: false,
   };
   store.appendPrediction(rec);
