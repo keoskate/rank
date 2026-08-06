@@ -372,7 +372,7 @@ function _stats(exits) {
 /** Full report: summary stats + playbook comparison + the picks. */
 async function getReport({ limit = 50 } = {}) {
   await evaluatePending();
-  const picks = _load();
+  const picks = loadPicks();
   await markOpenPicks(picks);
 
   const gradedPicks = picks.filter(p => p.exit);
@@ -444,4 +444,286 @@ async function getReport({ limit = 50 } = {}) {
   };
 }
 
-module.exports = { recordPicks, gradePick, gradeStockLeg, evaluatePending, getReport, STORE_FILE, GRADE_VERSION };
+// ─── Learning timeline (feeds the Learning tab AND the daily Telegram) ──────
+
+const DTE_BUCKETS = [
+  { label: '≤10d', max: 10 },
+  { label: '11–30d', max: 30 },
+  { label: '31–90d', max: 90 },
+  { label: '>90d', max: Infinity },
+];
+const DELTA_BANDS = [
+  { label: '0.15–0.25', max: 0.25 },
+  { label: '0.25–0.40', max: 0.4 },
+  { label: '0.40+', max: Infinity },
+];
+
+function _sliceStats(arr) {
+  const stats = _stats(arr.map(p => p.exit));
+  if (!stats) return null;
+  const clusters = new Set(arr.map(p => `${p.card.underlying}|${p.recordedAt.slice(0, 10)}`));
+  return { ...stats, clusterN: clusters.size };
+}
+
+/**
+ * Everything the scoreboard needs, computed PURELY from the ledger — one
+ * source of truth rendered two ways (web tab + daily Telegram). Curves are
+ * "$100 ticket per pick" cumulative P&L bucketed by exit date. Cluster
+ * stats give one vote per underlying-day so multi-strike boards can't
+ * stuff the ballot.
+ */
+function computeTimeline(picks) {
+  const graded = picks.filter(p => p.exit);
+
+  const curve = (arr, exitOf) => {
+    const byDay = new Map();
+    for (const p of arr) {
+      const e = exitOf(p);
+      if (!e) continue;
+      if (!byDay.has(e.exitDate)) byDay.set(e.exitDate, { n: 0, dayPl: 0 });
+      const d = byDay.get(e.exitDate);
+      d.n++;
+      d.dayPl += e.returnPct * 100; // $100 ticket
+    }
+    let cum = 0;
+    return [...byDay.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, d]) => {
+        cum += d.dayPl;
+        return { date, n: d.n, dayPl: +d.dayPl.toFixed(2), cumulativePer100: +cum.toFixed(2) };
+      });
+  };
+
+  // Partial-day honesty: stop-outs grade before winners, so a day whose
+  // picks are still open would otherwise look artificially terrible. Track
+  // total recorded per day and flag partials.
+  const recordedByDay = new Map();
+  for (const p of picks) {
+    const day = p.recordedAt.slice(0, 10);
+    recordedByDay.set(day, (recordedByDay.get(day) || 0) + 1);
+  }
+  const calByDay = new Map();
+  for (const p of graded) {
+    const day = p.recordedAt.slice(0, 10);
+    if (!calByDay.has(day)) calByDay.set(day, []);
+    calByDay.get(day).push(p);
+  }
+  const calibrationByDay = [...calByDay.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([day, arr]) => ({
+      day,
+      n: arr.length,
+      total: recordedByDay.get(day) || arr.length,
+      partial: arr.length < (recordedByDay.get(day) || arr.length),
+      predicted: +(arr.reduce((s, p) => s + p.card.popModel, 0) / arr.length).toFixed(4),
+      realized: +(arr.filter(p => p.exit.win).length / arr.length).toFixed(4),
+    }));
+
+  const bucketBy = (defs, valueOf) =>
+    defs.map(def => {
+      const arr = graded.filter(p => {
+        const v = valueOf(p);
+        return v != null && v <= def.max && !defs.some(d => d.max < def.max && v <= d.max);
+      });
+      return { label: def.label, ...( _sliceStats(arr) || { graded: 0 }) };
+    });
+
+  // Cluster-weighted overall: one vote per underlying-day (mean return).
+  const clusterMap = new Map();
+  for (const p of graded) {
+    const key = `${p.card.underlying}|${p.recordedAt.slice(0, 10)}`;
+    if (!clusterMap.has(key)) clusterMap.set(key, []);
+    clusterMap.get(key).push(p.exit.returnPct);
+  }
+  const clusterReturns = [...clusterMap.values()].map(rs => rs.reduce((s, n) => s + n, 0) / rs.length);
+  const clusterStats = clusterReturns.length
+    ? {
+        clusters: clusterReturns.length,
+        winRate: +(clusterReturns.filter(r => r > 0).length / clusterReturns.length).toFixed(4),
+        avgReturnPct: +(clusterReturns.reduce((s, n) => s + n, 0) / clusterReturns.length).toFixed(4),
+      }
+    : null;
+
+  return {
+    gradedPicks: graded.length,
+    equityCurves: {
+      withStops: curve(graded, p => p.exit),
+      holdToPlan: curve(picks.filter(p => p.exitHold), p => p.exitHold),
+    },
+    calibrationByDay,
+    slices: {
+      byDte: bucketBy(DTE_BUCKETS, p => p.card.dte),
+      byDelta: bucketBy(DELTA_BANDS, p =>
+        Number.isFinite(p.card.greeks?.delta) ? Math.abs(p.card.greeks.delta) : null
+      ),
+      byEarnings: [
+        { label: 'spans earnings', ...( _sliceStats(graded.filter(p => p.card.earnings?.spansEarnings)) || { graded: 0 }) },
+        { label: 'no earnings', ...( _sliceStats(graded.filter(p => !p.card.earnings?.spansEarnings)) || { graded: 0 }) },
+      ],
+      byDirection: [
+        { label: 'calls (long)', ...( _sliceStats(graded.filter(p => p.card.direction === 'LONG')) || { graded: 0 }) },
+        { label: 'puts (short)', ...( _sliceStats(graded.filter(p => p.card.direction === 'SHORT')) || { graded: 0 }) },
+      ],
+    },
+    clusterStats,
+    evidence: {
+      clusters: clusterStats?.clusters || 0,
+      days: calByDay.size,
+      clustersNeeded: 30,
+      daysNeeded: 10,
+    },
+    methodology: {
+      gradeVersion: GRADE_VERSION,
+      exits: 'bid-adjusted option closes (half entry-time spread haircut); intrinsic at expiry unhaircut',
+      fills: 'modeled (mid + quarter-spread) — real-fill slippage tracked separately when Telegram orders exist',
+    },
+  };
+}
+
+async function getTimeline() {
+  await evaluatePending();
+  return computeTimeline(loadPicks());
+}
+
+// ─── Archival: the hot file stays small forever, nothing is ever deleted ────
+
+const ARCHIVE_DIR = path.join(__dirname, '..', '..', 'data', 'options-track-record-archive');
+const ARCHIVE_AFTER_DAYS = 60;
+
+/** PURE: which picks are safe to move to cold storage. */
+function partitionForArchive(picks, cutoffDate) {
+  const keep = [];
+  const archive = [];
+  for (const p of picks) {
+    const fullyGraded = p.exit && p.exitHold && p.stockLeg;
+    (fullyGraded && p.exit.exitDate < cutoffDate ? archive : keep).push(p);
+  }
+  return { keep, archive };
+}
+
+/** Move fully-graded picks older than the cutoff into monthly archive files. */
+function archiveOldPicks() {
+  const cutoff = _dateStr(Date.now() - ARCHIVE_AFTER_DAYS * DAY_MS);
+  const { keep, archive } = partitionForArchive(_load(), cutoff);
+  if (!archive.length) return { archived: 0 };
+  fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+  const byMonth = new Map();
+  for (const p of archive) {
+    const month = p.recordedAt.slice(0, 7);
+    if (!byMonth.has(month)) byMonth.set(month, []);
+    byMonth.get(month).push(p);
+  }
+  for (const [month, entries] of byMonth) {
+    const file = path.join(ARCHIVE_DIR, `${month}.json`);
+    let existing = [];
+    try { existing = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* new month */ }
+    fs.writeFileSync(file, JSON.stringify(existing.concat(entries), null, 2));
+  }
+  _save(keep);
+  return { archived: archive.length };
+}
+
+/** Active + archived — the full immutable record, for all-time stats. */
+function loadPicks() {
+  const all = [..._load()];
+  try {
+    for (const f of fs.readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.json'))) {
+      try { all.push(...JSON.parse(fs.readFileSync(path.join(ARCHIVE_DIR, f), 'utf8'))); } catch { /* skip bad file */ }
+    }
+  } catch { /* no archive yet */ }
+  return all;
+}
+
+/**
+ * Daily snapshot of every OPEN pick — bid/ask, stock price, and a live
+ * re-scored popModel. This is the "see what the model sees over time"
+ * series the pick-detail chart plots. One entry per pick per day, bounded
+ * by the holding horizon.
+ */
+async function appendOpenPickSnapshots() {
+  const alpacaOptions = require('../alpacaOptionsClient');
+  const alpacaClient = require('../alpacaClient');
+  const { scoreContract } = require('./optionsPricingModel');
+  const picks = _load();
+  const open = picks.filter(p => p.status === 'open');
+  if (!open.length) return { appended: 0 };
+  const today = _dateStr(Date.now());
+
+  const marks = await alpacaOptions.getSnapshotsBySymbols(open.map(p => p.card.contractSymbol));
+  const stockCache = new Map();
+  let appended = 0;
+  for (const p of open) {
+    const existing = (p.history || []).find(h => h.date === today);
+    if (existing && existing.stockPrice != null) continue; // self-heal null-price entries
+    const snap = marks.snapshots?.[p.card.contractSymbol];
+    const q = snap?.latestQuote;
+    if (!q || !Number.isFinite(q.bp)) continue;
+    const sym = p.card.underlying;
+    if (!stockCache.has(sym)) {
+      try {
+        // getSnapshot returns a NORMALIZED shape: { price, last, close, ... }
+        const s = await alpacaClient.getSnapshot(sym);
+        stockCache.set(sym, s?.price ?? s?.last ?? s?.close ?? null);
+      } catch {
+        stockCache.set(sym, null);
+      }
+    }
+    const stockPrice = stockCache.get(sym);
+    let popModel = null;
+    const rescore = scoreContract(
+      {
+        symbol: sym,
+        direction: p.card.direction,
+        probability: p.card.stockProbability,
+        currentPrice: Number.isFinite(stockPrice) ? stockPrice : p.card.underlyingPrice,
+        targetPrice: p.card.targetPrice,
+        stopPrice: p.card.stopPrice,
+        horizonDays: p.horizonDays,
+      },
+      {
+        occSymbol: p.card.contractSymbol,
+        strike: p.card.strike,
+        expiration: p.card.expiration,
+        type: p.card.type,
+        bid: q.bp,
+        ask: q.ap,
+        greeks: snap.greeks || null,
+        iv: snap.impliedVolatility ?? null,
+        openInterest: p.card.openInterest,
+        dayVolume: null,
+      },
+      { today, ivRank: p.card.ivRank, earnings: p.card.earnings },
+      {}
+    );
+    if (rescore.ok) popModel = rescore.row.popModel;
+    const entry = {
+      date: today,
+      bid: q.bp,
+      ask: q.ap,
+      stockPrice: Number.isFinite(stockPrice) ? +stockPrice.toFixed(4) : null,
+      popModel,
+    };
+    p.history = p.history || [];
+    if (existing) Object.assign(existing, entry);
+    else p.history.push(entry);
+    appended++;
+  }
+  if (appended) _save(picks);
+  return { appended };
+}
+
+module.exports = {
+  recordPicks,
+  gradePick,
+  gradeStockLeg,
+  evaluatePending,
+  getReport,
+  computeTimeline,
+  getTimeline,
+  loadPicks,
+  appendOpenPickSnapshots,
+  partitionForArchive,
+  archiveOldPicks,
+  STORE_FILE,
+  GRADE_VERSION,
+};

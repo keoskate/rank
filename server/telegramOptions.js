@@ -253,8 +253,9 @@ async function handleOptPositions(bot, msg) {
 
       let stockPrice = null;
       try {
+        // getSnapshot returns a NORMALIZED shape: { price, last, close }
         const snap = await alpacaClient.getSnapshot(meta.underlying);
-        stockPrice = snap?.latestTrade?.p ?? snap?.dailyBar?.c ?? null;
+        stockPrice = snap?.price ?? snap?.last ?? snap?.close ?? null;
       } catch { /* recommendation degrades gracefully */ }
 
       const rec = card

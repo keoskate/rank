@@ -84,12 +84,73 @@ function calibrationReady(picks) {
     && countGradedDays(picks) >= CALIBRATION_READY_DAYS;
 }
 
+/**
+ * Progress snapshot for the daily Telegram — PURE render over the timeline
+ * (the same computation the Learning tab charts), so message and UI can
+ * never drift apart. Unit-tested.
+ */
+function renderProgressSnapshot(timeline, picks, today) {
+  if (!timeline.gradedPicks) return '';
+  const lang = require('../../react-client/src/utils/optionsPlainLanguage');
+  const pct = n => `${n >= 0 ? '+' : ''}${Math.round(n)}`;
+  let text = '\n*📈 Progress snapshot*\n';
+
+  const gradedToday = picks.filter(p => p.exit && (p.evaluatedAt || '').slice(0, 10) === today);
+  if (gradedToday.length) {
+    const wins = gradedToday.filter(p => p.exit.win).length;
+    const avg = gradedToday.reduce((s, p) => s + p.exit.returnPct, 0) / gradedToday.length;
+    text += `Today's graded batch: ${gradedToday.length} picks → ${wins}W/${gradedToday.length - wins}L, avg ${pct(avg * 100)}%\n`;
+    const sorted = [...gradedToday].sort((a, b) => b.exit.returnPct - a.exit.returnPct);
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+    text += `Best: ${lang.betSentence(best.card)} → ${pct(best.exit.returnPct * 100)}%\n`;
+    if (worst !== best) text += `Worst: ${lang.betSentence(worst.card)} → ${pct(worst.exit.returnPct * 100)}%\n`;
+  }
+
+  const last = arr => arr[arr.length - 1];
+  const stops = last(timeline.equityCurves.withStops);
+  const hold = last(timeline.equityCurves.holdToPlan);
+  if (stops && hold) {
+    text += `$100/pick cumulative: hold-to-plan ${pct(hold.cumulativePer100)} · stops ${pct(stops.cumulativePer100)}\n`;
+  }
+
+  const cal = timeline.calibrationByDay.slice(-5);
+  if (cal.length) {
+    text += `Calibration (pred→real by entry day): ${cal
+      .map(c => `${Math.round(c.predicted * 100)}→${Math.round(c.realized * 100)}${c.partial ? '*' : ''}`)
+      .join(' · ')}\n`;
+    if (cal.some(c => c.partial)) text += `_\\* day still has open picks — losers grade first_\n`;
+  }
+
+  const sliceable = [...timeline.slices.byDte, ...timeline.slices.byDelta, ...timeline.slices.byEarnings]
+    .filter(s => (s.graded || 0) >= 10);
+  if (sliceable.length >= 2) {
+    const byWr = [...sliceable].sort((a, b) => b.winRate - a.winRate);
+    const bestS = byWr[0];
+    const worstS = byWr[byWr.length - 1];
+    text += `Best slice: ${bestS.label} ${Math.round(bestS.winRate * 100)}% win (${bestS.graded}) · ` +
+      `Worst: ${worstS.label} ${Math.round(worstS.winRate * 100)}% (${worstS.graded})\n`;
+  }
+  return text;
+}
+
 async function _runDaily(dateEt) {
   const { runOptionsScan } = require('./optionsScanRunner');
-  const { getReport, STORE_FILE } = require('./optionsTrackRecord');
+  const { getReport, getTimeline, appendOpenPickSnapshots, STORE_FILE } = require('./optionsTrackRecord');
 
   const scan = await runOptionsScan({});
   const report = await getReport({ limit: 1 }); // getReport grades everything pending
+  try {
+    await appendOpenPickSnapshots(); // daily bid/stock/confidence point per open pick
+  } catch (err) {
+    console.log('[OptionsLoop] open-pick snapshots failed:', err.message);
+  }
+  try {
+    const { archived } = require('./optionsTrackRecord').archiveOldPicks();
+    if (archived) console.log(`[OptionsLoop] archived ${archived} fully-graded picks to cold storage`);
+  } catch (err) {
+    console.log('[OptionsLoop] archival failed:', err.message);
+  }
   const s = report.summary;
 
   let picks = [];
@@ -112,6 +173,13 @@ async function _runDaily(dateEt) {
       text += `Direction right ${Math.round(s.attribution.stockLegWinRate * 100)}% — when right, options avg ${s.attribution.whenStockWon.avgOptionReturnPct >= 0 ? '+' : ''}${Math.round(s.attribution.whenStockWon.avgOptionReturnPct * 100)}%\n`;
     }
   }
+  try {
+    const timeline = await getTimeline();
+    text += renderProgressSnapshot(timeline, picks, dateEt);
+  } catch (err) {
+    console.log('[OptionsLoop] progress snapshot failed:', err.message);
+  }
+
   text += `Evidence: ${clusters}/${CALIBRATION_READY_CLUSTERS} clusters over ${days}/${CALIBRATION_READY_DAYS} market days\n`;
   if (calibrationReady(picks)) {
     text += `\n📐 *Enough independent data to fit calibration.* Ask Claude to "calibrate the options scanner" — the fit is a reviewed step, not automatic.`;
@@ -167,6 +235,7 @@ module.exports = {
   countGradedClusters,
   countGradedDays,
   calibrationReady,
+  renderProgressSnapshot,
   RUN_HOUR_ET,
   CALIBRATION_READY_CLUSTERS,
   CALIBRATION_READY_DAYS,

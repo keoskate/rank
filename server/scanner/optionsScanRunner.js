@@ -296,10 +296,11 @@ async function requoteLatest() {
     alpacaOptions.getSnapshotsBySymbols(rows.map(r => r.contractSymbol), 30 * 1000),
     Promise.all([...new Set(rows.map(r => r.underlying))].map(async sym => {
       try {
+        // getSnapshot returns a NORMALIZED shape: { price, last, close, prevClose }
         const snap = await alpacaClient.getSnapshot(sym);
         return [sym, {
-          price: snap?.latestTrade?.p ?? snap?.minuteBar?.c ?? snap?.dailyBar?.c ?? null,
-          prevClose: snap?.prevDailyBar?.c ?? null,
+          price: snap?.price ?? snap?.last ?? snap?.close ?? null,
+          prevClose: snap?.prevClose ?? null,
         }];
       } catch {
         return [sym, { price: null, prevClose: null }];

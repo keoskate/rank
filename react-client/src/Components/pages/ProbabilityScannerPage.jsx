@@ -7,16 +7,19 @@ import OpportunityTable from '../scanner/OpportunityTable';
 import { getAllStockLists } from '../../config/stockLists';
 
 const OptionsScannerTab = lazy(() => import('../scanner/OptionsScannerTab'));
+const OptionsLearningTab = lazy(() => import('../scanner/OptionsLearningTab'));
 
 const TABS = [
   { key: 'stocks', label: 'Stocks' },
   { key: 'options', label: 'Options' },
+  { key: 'learning', label: 'Learning' },
 ];
 
 const ProbabilityScannerPage = () => {
   const { scan, loading, error, runScan } = useScanner();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') === 'options' ? 'options' : 'stocks';
+  const tabParam = searchParams.get('tab');
+  const activeTab = ['options', 'learning'].includes(tabParam) ? tabParam : 'stocks';
 
   const handleTabChange = useCallback(tab => {
     setSearchParams(tab === 'stocks' ? {} : { tab }, { replace: true });
@@ -74,7 +77,9 @@ const ProbabilityScannerPage = () => {
         }}>
           {activeTab === 'options'
             ? 'Expresses the stock scanner’s directional edge through long calls/puts. Ranked by expected ROI net of spread + theta; most contracts get filtered — that’s the point.'
-            : 'Ranks all stocks across your rank lists by probability × R:R. Calibrated 40–85% (no false 95% confidence).'}
+            : activeTab === 'learning'
+              ? 'The honest scoreboard: how every recommended pick actually performed, what we predicted vs what happened, and where the model is learning.'
+              : 'Ranks all stocks across your rank lists by probability × R:R. Calibrated 40–85% (no false 95% confidence).'}
         </div>
       </div>
 
@@ -110,6 +115,10 @@ const ProbabilityScannerPage = () => {
       {activeTab === 'options' ? (
         <Suspense fallback={<div style={{ padding: theme.spacing.xl, textAlign: 'center', color: theme.colors.gray500 }}>Loading…</div>}>
           <OptionsScannerTab universeSymbols={universeSymbols} />
+        </Suspense>
+      ) : activeTab === 'learning' ? (
+        <Suspense fallback={<div style={{ padding: theme.spacing.xl, textAlign: 'center', color: theme.colors.gray500 }}>Loading…</div>}>
+          <OptionsLearningTab />
         </Suspense>
       ) : (
         <>

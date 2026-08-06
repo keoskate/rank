@@ -70,6 +70,43 @@ module.exports = function () {
     }
   });
 
+  router.get('/api/scanner/options/pick/:id/history', async (req, res) => {
+    try {
+      const trackRecord = require('../scanner/optionsTrackRecord');
+      const alpacaOptions = require('../alpacaOptionsClient');
+      const polygonClient = require('../polygonClient');
+      const pick = trackRecord.loadPicks().find(p => p.id === req.params.id);
+      if (!pick) return res.status(404).json({ error: 'pick not found' });
+
+      const DAY = 86400000;
+      const from = new Date(Date.parse(pick.recordedAt) - 5 * DAY);
+      const to = pick.exit?.exitDate
+        ? new Date(Date.parse(`${pick.exit.exitDate}T00:00:00Z`) + 5 * DAY)
+        : new Date();
+      const [underlyingBars, optRes] = await Promise.all([
+        polygonClient.getAggregates(pick.card.underlying, 1, 'day', { from, to }),
+        alpacaOptions.getOptionBars([pick.card.contractSymbol], { start: from.toISOString().slice(0, 10) }),
+      ]);
+      res.json({
+        pick,
+        underlyingBars: underlyingBars || [],
+        optionBars: optRes.bars?.[pick.card.contractSymbol] || [],
+      });
+    } catch (err) {
+      console.error('Scanner /options/pick history error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/api/scanner/options/track-record/timeline', async (req, res) => {
+    try {
+      res.json(await require('../scanner/optionsTrackRecord').getTimeline());
+    } catch (err) {
+      console.error('Scanner /options/track-record/timeline error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.get('/api/scanner/options/track-record', async (req, res) => {
     try {
       const limit = Number.isFinite(+req.query.limit) ? +req.query.limit : 50;

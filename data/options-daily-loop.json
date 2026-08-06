@@ -1,9 +1,10 @@
 {
-  "lastRunDay": "2026-07-28",
+  "lastRunDay": "2026-08-06",
   "lastResult": {
     "picksOnBoard": 30,
-    "graded": 188,
-    "clusters": 41,
-    "at": "2026-07-28T15:19:26.086Z"
+    "graded": 397,
+    "clusters": 120,
+    "days": 8,
+    "at": "2026-08-06T14:02:19.843Z"
   }
 }

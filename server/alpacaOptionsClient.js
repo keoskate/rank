@@ -192,6 +192,18 @@ async function getSnapshotsBySymbols(occSymbols, ttlMs = 60 * 1000) {
   const syms = (occSymbols || []).filter(Boolean).map(s => String(s).toUpperCase());
   if (!syms.length) return { snapshots: {} };
 
+  // Alpaca caps symbols per request — chunk large batches and merge.
+  if (syms.length > 40) {
+    const snapshots = {};
+    let error;
+    for (let i = 0; i < syms.length; i += 40) {
+      const res = await getSnapshotsBySymbols(syms.slice(i, i + 40), ttlMs);
+      Object.assign(snapshots, res.snapshots);
+      error = error || res.error;
+    }
+    return { snapshots, ...(Object.keys(snapshots).length === 0 && error ? { error } : {}) };
+  }
+
   const query = `symbols=${encodeURIComponent(syms.join(','))}&feed=indicative`;
   const cacheKey = `bysym|${query}`;
   const hit = _cached(cacheKey, ttlMs);
