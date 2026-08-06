@@ -100,6 +100,33 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [prediction, setPrediction] = useState(null); // { prediction, secondsToEval }
+  const [record, setRecord] = useState(null); // track-record stats
+
+  // Self-improving 1-hour predictor (pre-registered forward-test). Polled apart
+  // from the sentiment read; the loop only fires during market hours.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [pRes, rRes] = await Promise.all([
+          fetch('/api/soxx/prediction'),
+          fetch('/api/soxx/prediction/record'),
+        ]);
+        if (cancelled) return;
+        setPrediction(pRes.ok ? await pRes.json() : null);
+        setRecord(rRes.ok ? await rRes.json() : null);
+      } catch {
+        /* leave prior */
+      }
+    };
+    load();
+    const id = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   const fetchSentiment = useCallback(async (forceRefresh = false) => {
     try {
@@ -222,6 +249,65 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
           </button>
         </div>
       </div>
+
+      {/* 1-hour prediction — self-improving, pre-registered forward-test */}
+      {(() => {
+        const rec = prediction?.prediction;
+        const pr = rec?.prediction;
+        const secs = prediction?.secondsToEval;
+        const last = record?.recent?.[0];
+        const dirColorP = d =>
+          d === 'bullish' ? theme.colors.success : d === 'bearish' ? theme.colors.error : theme.colors.warningDark;
+        const mins = secs != null ? Math.round(secs / 60) : null;
+        return (
+          <div style={{ border: `1px solid ${theme.colors.infoBorder}`, background: theme.colors.infoLight, borderRadius: theme.borderRadius.sm, padding: theme.spacing.md, marginBottom: theme.spacing.md }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={s.label}>
+                1-hour prediction{' '}
+                <span style={{ color: theme.colors.gray400, textTransform: 'none', letterSpacing: 0 }}>· SOXX next hour · self-improving</span>
+              </span>
+              <span style={s.meta}>
+                {rec && !rec.evaluated && mins != null ? `evaluates in ${mins}m` : 'next at market open'}
+              </span>
+            </div>
+            {pr ? (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: theme.typography.fontSize.xl, fontWeight: 700, color: dirColorP(pr.direction) }}>
+                  {pr.direction?.toUpperCase()}
+                </span>
+                <span style={{ fontFamily: theme.typography.fontFamilyMono, fontWeight: 700, color: theme.colors.gray700 }}>
+                  {(pr.probability * 100).toFixed(0)}%
+                </span>
+                <span style={{ color: theme.colors.gray400 }}>→</span>
+                <span style={{ fontWeight: 700, color: pr.action === 'SOXL' ? theme.colors.success : pr.action === 'SOXS' ? theme.colors.error : theme.colors.gray600 }}>
+                  {pr.action}
+                </span>
+                {rec.evaluated && Number.isFinite(rec.realizedReturn) && (
+                  <span style={{ fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs, color: rec.correct ? theme.colors.success : theme.colors.error }}>
+                    {rec.correct ? '✓ HIT' : '✗ miss'} ({rec.realizedReturn >= 0 ? '+' : ''}{rec.realizedReturn.toFixed(2)}%)
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>
+                First prediction posts at the next market open.
+              </div>
+            )}
+            <div style={{ marginTop: 6, fontSize: theme.typography.fontSize.xs, fontFamily: 'monospace', color: theme.colors.gray600 }}>
+              {last && Number.isFinite(last.realizedReturn) && (
+                <span>last hr: predicted {last.direction} · SOXX {last.realizedReturn >= 0 ? '+' : ''}{last.realizedReturn.toFixed(2)}% · {last.correct ? 'HIT' : 'miss'}{'  ·  '}</span>
+              )}
+              {record && record.directional > 0 ? (
+                <span>
+                  record: <strong style={{ color: theme.colors.gray800 }}>{(record.accuracy * 100).toFixed(0)}%</strong> over {record.directional} calls{record.brier != null ? ` · Brier ${record.brier.toFixed(2)}` : ''}
+                </span>
+              ) : (
+                <span style={{ color: theme.colors.gray500 }}>building a track record — it learns from each hour's result</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Main stats */}
       <div style={s.statGrid}>
