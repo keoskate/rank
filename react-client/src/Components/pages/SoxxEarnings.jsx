@@ -47,7 +47,8 @@ const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : 
 // Fixed columns grouped left; trailing 1fr track absorbs slack on the right so
 // the date doesn't balloon and disconnect the run-up/reaction columns.
 const UP_COLS = '46px 58px 58px 112px 58px 34px 54px 1fr';
-const PAST_COLS = '46px 58px 58px 112px 58px 38px 72px 1fr';
+// past adds a "Since" column (price at report → now) before the trailing spacer.
+const PAST_COLS = '46px 56px 56px 104px 56px 36px 66px 108px 1fr';
 
 // Signed % with sign, colored. e.g. "+25%" / "-6.7%".
 const fmtSignedPct = (v, dp = 0) =>
@@ -232,6 +233,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                     <span title="~1-month price run-up into the report">Run-up</span>
                     <span style={{ textAlign: 'center' }}>EPS</span>
                     <span style={{ textAlign: 'right' }} title="1-day price reaction after the report">Reaction</span>
+                    <span style={{ textAlign: 'right' }} title="price now vs at report — what the stock has done since earnings">Since (now)</span>
                   </div>
                   <div style={{ display: 'grid', gap: 3 }}>
                     {past.map(e => {
@@ -246,6 +248,8 @@ const SoxxEarnings = ({ quotes = {} }) => {
                           : e.mcapB;
                       const diverged = e.beat != null && r != null && ((e.beat && r < 0) || (!e.beat && r > 0));
                       const bigMove = e.expectedMovePct != null && r != null && Math.abs(r) > e.expectedMovePct;
+                      // What the stock has done since the report: report-day close → now.
+                      const since = e.priceThen != null && pNow ? ((pNow - e.priceThen) / e.priceThen) * 100 : null;
                       return (
                         <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: PAST_COLS, gap: 8, alignItems: 'baseline', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
                           <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{e.sym}</span>
@@ -283,6 +287,20 @@ const SoxxEarnings = ({ quotes = {} }) => {
                               </span>
                             )}
                           </span>
+                          {/* Since report: current price + % move since earnings */}
+                          <span
+                            style={{ textAlign: 'right', whiteSpace: 'nowrap' }}
+                            title={
+                              e.priceThen != null && pNow
+                                ? `$${e.priceThen.toFixed(2)} at report → $${pNow.toFixed(2)} now (${fmtSignedPct(since, 1)} since)`
+                                : 'current price unavailable'
+                            }
+                          >
+                            <span style={{ color: theme.colors.gray500 }}>{pNow != null ? `$${pNow.toFixed(0)}` : '—'}</span>
+                            {since != null && (
+                              <span style={{ color: pctColor(since), fontWeight: 700, marginLeft: 4 }}>{fmtSignedPct(since, 1)}</span>
+                            )}
+                          </span>
                         </div>
                       );
                     })}
@@ -316,7 +334,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
           )}
 
           <div style={{ fontSize: '10px', color: theme.colors.gray400, fontFamily: 'monospace' }}>
-            ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo price into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · ≠ = diverged vs beat/miss · * = est. date
+            ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
           </div>
         </>
       )}

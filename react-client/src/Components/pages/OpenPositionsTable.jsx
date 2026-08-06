@@ -63,6 +63,8 @@ const OpenPositionsTable = ({ positions, loading, error, lastUpdated, onRefresh 
   const [sortKey, setSortKey] = useState('marketValue');
   const [sortDir, setSortDir] = useState('desc'); // largest holdings first
   const [collapsed, setCollapsed] = useState(false);
+  const [showAll, setShowAll] = useState(false); // top 10 by sort, or all
+  const TOP_N = 10;
 
   const totals = useMemo(() => {
     if (!positions || positions.length === 0) return { unrealizedPL: 0, marketValue: 0 };
@@ -89,6 +91,8 @@ const OpenPositionsTable = ({ positions, loading, error, lastUpdated, onRefresh 
     if (sortDir === 'desc') arr.reverse();
     return arr;
   }, [positions, sortKey, sortDir]);
+
+  const visible = showAll ? sorted : sorted.slice(0, TOP_N);
 
   const onSort = key => {
     if (key === sortKey) {
@@ -202,7 +206,7 @@ const OpenPositionsTable = ({ positions, loading, error, lastUpdated, onRefresh 
               </tr>
             </thead>
             <tbody>
-              {sorted.map(p => {
+              {visible.map(p => {
                 const pl = Number(p.unrealizedPL);
                 const plColor = pl > 0 ? theme.colors.success : pl < 0 ? theme.colors.error : theme.colors.gray700;
                 return (
@@ -225,6 +229,25 @@ const OpenPositionsTable = ({ positions, loading, error, lastUpdated, onRefresh 
               })}
             </tbody>
           </table>
+          {sorted.length > TOP_N && (
+            <button
+              onClick={() => setShowAll(s => !s)}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                borderTop: `1px solid ${theme.colors.gray200}`,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                color: theme.colors.gray600,
+                cursor: 'pointer',
+                fontSize: theme.typography.fontSize.xs,
+                fontWeight: theme.typography.fontWeight.medium,
+                textAlign: 'left',
+              }}
+            >
+              {showAll ? `▴ Show top ${TOP_N}` : `▾ Show all ${sorted.length} positions`}
+            </button>
+          )}
         </div>
       )}
     </div>
