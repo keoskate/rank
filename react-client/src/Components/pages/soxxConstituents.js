@@ -32,10 +32,10 @@ export const SOXX_TOP = [
   { sym: 'MKSI', weight: 1.0, mcapB: 8, group: 'Equipment' },
   { sym: 'LSCC', weight: 0.9, mcapB: 8, group: 'Connectivity' },
   { sym: 'RMBS', weight: 0.8, mcapB: 7, group: 'Connectivity' },
-  { sym: 'AMKR', weight: 0.7, mcapB: 7, group: 'Misc' },
-  { sym: 'ALGM', weight: 0.6, mcapB: 5, group: 'Misc' },
+  { sym: 'AMKR', weight: 0.7, mcapB: 7, group: 'Equipment' },
+  { sym: 'ALGM', weight: 0.6, mcapB: 5, group: 'Analog/Power' },
   { sym: 'SLAB', weight: 0.6, mcapB: 4, group: 'Analog/Power' },
-  { sym: 'WOLF', weight: 0.4, mcapB: 2, group: 'Misc' },
+  { sym: 'WOLF', weight: 0.4, mcapB: 2, group: 'Analog/Power' },
 ];
 
 // Display order for the sub-sector rotation list.
@@ -46,7 +46,6 @@ export const GROUP_ORDER = [
   'Connectivity',
   'Analog/Power',
   'Foundry/CPU',
-  'Misc',
 ];
 
 // The three heaviest weights — used for the concentration / "broad vs narrow"

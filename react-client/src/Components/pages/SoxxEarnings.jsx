@@ -3,6 +3,7 @@ import theme from '../../theme';
 import Card from '../common/Card';
 import Sparkline from '../common/Sparkline';
 import DotHistory from '../common/DotHistory';
+import { SOXX_TOP } from './soxxConstituents';
 import { fmtET } from '../../utils/timeFormat';
 
 // Earnings across SOXX constituents (from Unusual Whales via /api/soxx/earnings):
@@ -17,6 +18,38 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 const pctColor = pct =>
   pct == null ? theme.colors.gray500 : pct >= 0 ? theme.colors.success : theme.colors.error;
+
+// Sub-sector per ticker, shown as a compact tag right of the ticker. Abbreviated
+// so the earnings rows stay single-line; the full sub-sector is in the tooltip.
+const GROUP_OF = Object.fromEntries(SOXX_TOP.map(c => [c.sym, c.group]));
+const SUBSECTOR_ABBR = {
+  'GPU/AI': 'GPU',
+  Equipment: 'Equip',
+  Memory: 'Mem',
+  Connectivity: 'Conn',
+  'Analog/Power': 'Analog',
+  'Foundry/CPU': 'Foundry',
+};
+const SectorTag = ({ sym }) => {
+  const g = GROUP_OF[sym];
+  if (!g) return null;
+  return (
+    <span
+      title={g}
+      style={{ fontSize: '8.5px', color: theme.colors.gray400, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}
+    >
+      {SUBSECTOR_ABBR[g] || g}
+    </span>
+  );
+};
+
+// Ticker + its sub-sector tag (used in both tables' first column).
+const TickerCell = ({ sym }) => (
+  <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0, overflow: 'hidden' }}>
+    <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{sym}</span>
+    <SectorTag sym={sym} />
+  </span>
+);
 
 const fmtMcap = b =>
   b == null || !Number.isFinite(b) ? '—' : b >= 1000 ? `~$${(b / 1000).toFixed(1)}T` : `~$${Math.round(b)}B`;
@@ -47,10 +80,10 @@ const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : 
 
 // Fixed columns grouped left; trailing 1fr track absorbs slack on the right so
 // the date doesn't balloon and disconnect the run-up/reaction columns.
-const UP_COLS = '46px 58px 58px 112px 58px 34px 54px 1fr';
+const UP_COLS = '90px 58px 58px 112px 58px 34px 54px 1fr';
 // past: adds an "After" 10-day dot path (right after Reaction) + a "Since" column
 // (price at report → now), before the trailing spacer.
-const PAST_COLS = '42px 50px 46px 86px 52px 32px 68px 72px 84px 1fr';
+const PAST_COLS = '80px 50px 46px 80px 52px 32px 68px 72px 84px 1fr';
 
 // Signed % with sign, colored. e.g. "+25%" / "-6.7%".
 const fmtSignedPct = (v, dp = 0) =>
@@ -184,7 +217,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                       const soon = days != null && days <= 5;
                       return (
                         <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: UP_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
-                          <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{e.sym}</span>
+                          <TickerCell sym={e.sym} />
                           <span style={{ color: theme.colors.gray500 }} title="approx current market cap">{fmtMcap(e.mcapB)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="current price">{fmtPrice(priceNow(e.sym))}</span>
                           <span style={{ color: soon ? theme.colors.warningDark : theme.colors.gray600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -255,7 +288,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                       const since = e.priceThen != null && pNow ? ((pNow - e.priceThen) / e.priceThen) * 100 : null;
                       return (
                         <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: PAST_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
-                          <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{e.sym}</span>
+                          <TickerCell sym={e.sym} />
                           <span style={{ color: theme.colors.gray500 }} title="approx market cap at report time">{fmtMcap(mcapThen)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="price at report time">{fmtPrice(e.priceThen)}</span>
                           <span style={{ color: theme.colors.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -350,7 +383,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
           )}
 
           <div style={{ fontSize: '10px', color: theme.colors.gray400, fontFamily: 'monospace' }}>
-            ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · After 10d = daily up/down for 10 sessions after · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
+            tag by ticker = sub-sector · ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · After 10d = daily up/down for 10 sessions after · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
           </div>
         </>
       )}
