@@ -14,19 +14,29 @@ const alpacaClient = require('./alpacaClient');
 const { SOXX_TOP, GROUP_ORDER } = require('./soxxConstituents');
 
 const DAY_MS = 86400000;
-const WINDOW_SESSIONS = 30; // trading days shown
-const LOOKBACK_DAYS = 48; // calendar days to cover ~30 sessions + slack
 const CACHE_MS = 2 * 60 * 60 * 1000;
 const BENCH = 'SPY';
 
-let _cache = { at: 0, data: null };
+// Selectable trailing windows — 30 days alone doesn't tell the rotation story, so
+// quarter / multi-quarter / year views show the cycle. sessions = trading days
+// shown; lookbackDays = calendar span to cover them + slack.
+const WINDOWS = {
+  '30d': { label: '30d', sessions: 30, lookbackDays: 48 },
+  '1Q': { label: '1Q', sessions: 63, lookbackDays: 100 },
+  '2Q': { label: '2Q', sessions: 126, lookbackDays: 195 },
+  '1Y': { label: '1Y', sessions: 252, lookbackDays: 380 },
+};
+const DEFAULT_WINDOW = '30d';
+const WINDOW_KEYS = Object.keys(WINDOWS);
+
+const _cache = new Map(); // windowKey -> { at, data }
 
 const iso = ms => new Date(ms).toISOString().slice(0, 10);
 const barDate = b => new Date(b.timestamp).toISOString().slice(0, 10);
 
-async function dailyBars(symbol, start, end) {
+async function dailyBars(symbol, start, end, limit = 450) {
   try {
-    const bars = await alpacaClient.getBars(symbol, '1Day', start, end, 80);
+    const bars = await alpacaClient.getBars(symbol, '1Day', start, end, limit);
     return Array.isArray(bars) ? bars.filter(b => Number.isFinite(b.close)) : [];
   } catch {
     return [];
@@ -97,22 +107,29 @@ function computeSectorSeries(closesBySym, dates, benchSym = BENCH) {
 }
 
 /**
- * Fetch + compute the cached sub-sector rotation history.
- * @returns {Promise<{asOf, sessions, from, to, benchmarkSym, benchmark, sectors}>}
+ * Fetch + compute the cached sub-sector rotation history for a trailing window
+ * (30d / 1Q / 2Q / 1Y). Cached per window ~2h.
+ * @param {boolean} force
+ * @param {string} windowKey - one of WINDOW_KEYS (default 30d)
+ * @returns {Promise<{asOf, window, sessions, from, to, benchmarkSym, benchmark, sectors}>}
  */
-async function getSectorHistory(force = false) {
-  if (!force && _cache.data && Date.now() - _cache.at < CACHE_MS) return _cache.data;
+async function getSectorHistory(force = false, windowKey = DEFAULT_WINDOW) {
+  const key = WINDOWS[windowKey] ? windowKey : DEFAULT_WINDOW;
+  const w = WINDOWS[key];
+  const cached = _cache.get(key);
+  if (!force && cached && Date.now() - cached.at < CACHE_MS) return cached.data;
 
   const nowMs = Date.now();
-  const start = iso(nowMs - LOOKBACK_DAYS * DAY_MS);
+  const start = iso(nowMs - w.lookbackDays * DAY_MS);
   const end = iso(nowMs + DAY_MS);
+  const limit = w.sessions + 80;
   const syms = [BENCH, ...SOXX_TOP.map(c => c.sym)];
 
   const closesBySym = {};
   const batch = 6;
   for (let i = 0; i < syms.length; i += batch) {
     const chunk = syms.slice(i, i + batch);
-    const barsArr = await Promise.all(chunk.map(s => dailyBars(s, start, end)));
+    const barsArr = await Promise.all(chunk.map(s => dailyBars(s, start, end, limit)));
     chunk.forEach((s, j) => {
       const m = {};
       for (const b of barsArr[j]) m[barDate(b)] = b.close;
@@ -127,17 +144,18 @@ async function getSectorHistory(force = false) {
     Object.values(closesBySym).forEach(m => Object.keys(m).forEach(d => set.add(d)));
     dates = [...set].sort();
   }
-  dates = dates.slice(-(WINDOW_SESSIONS + 1));
+  dates = dates.slice(-(w.sessions + 1));
 
   if (dates.length < 2) {
-    const data = { asOf: new Date().toISOString(), sessions: 0, from: null, to: null, benchmarkSym: BENCH, benchmark: null, sectors: [] };
-    _cache = { at: Date.now(), data };
+    const data = { asOf: new Date().toISOString(), window: key, sessions: 0, from: null, to: null, benchmarkSym: BENCH, benchmark: null, sectors: [] };
+    _cache.set(key, { at: Date.now(), data });
     return data;
   }
 
   const { benchmark, sectors } = computeSectorSeries(closesBySym, dates, BENCH);
   const data = {
     asOf: new Date().toISOString(),
+    window: key,
     sessions: dates.length - 1,
     from: dates[0],
     to: dates[dates.length - 1],
@@ -145,8 +163,8 @@ async function getSectorHistory(force = false) {
     benchmark,
     sectors,
   };
-  _cache = { at: Date.now(), data };
+  _cache.set(key, { at: Date.now(), data });
   return data;
 }
 
-module.exports = { getSectorHistory, computeSectorSeries };
+module.exports = { getSectorHistory, computeSectorSeries, WINDOW_KEYS };

@@ -48,6 +48,7 @@ const Section = ({ label, children }) => (
 // One sub-sector's cumulative-return trajectory over the window: name · sparkline
 // (rebased to 0 at the window start) · total return · lead/lag vs SPY.
 const ROT_COLS = '120px 80px 50px 56px';
+const ROT_WINDOWS = ['30d', '1Q', '2Q', '1Y']; // trailing windows for the rotation trend
 const SectorTimeRow = ({ name, note, cum, points, vsSpy, min, max, color }) => (
   <div style={{ display: 'grid', gridTemplateColumns: ROT_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs, padding: '1px 0' }}>
     <div style={{ color: theme.colors.gray700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -158,14 +159,17 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
 
   // Sub-sector rotation OVER TIME (vs SPY) — lazily fetched only when expanded.
   const [showDetails, setShowDetails] = useState(false);
+  const [sectorWindow, setSectorWindow] = useState('30d');
   const [sectorHist, setSectorHist] = useState(null);
   const [histErr, setHistErr] = useState(null);
   useEffect(() => {
-    if (!showDetails || sectorHist) return undefined;
+    if (!showDetails) return undefined;
     let cancelled = false;
+    setSectorHist(null); // show loading while the new window fetches
+    setHistErr(null);
     (async () => {
       try {
-        const res = await fetch('/api/soxx/sector-history');
+        const res = await fetch(`/api/soxx/sector-history?window=${sectorWindow}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!cancelled) setSectorHist(json);
@@ -176,7 +180,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
     return () => {
       cancelled = true;
     };
-  }, [showDetails, sectorHist]);
+  }, [showDetails, sectorWindow]);
 
   const histView = useMemo(() => {
     if (!sectorHist || !sectorHist.sectors?.length || !sectorHist.benchmark) return null;
@@ -300,6 +304,30 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
           </button>
           {showDetails && (
             <div style={{ marginTop: theme.spacing.sm }}>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+                {ROT_WINDOWS.map(w => {
+                  const active = sectorWindow === w;
+                  return (
+                    <button
+                      key={w}
+                      onClick={() => setSectorWindow(w)}
+                      style={{
+                        padding: '2px 10px',
+                        fontSize: theme.typography.fontSize.xs,
+                        fontWeight: active ? 700 : 500,
+                        color: active ? '#fff' : theme.colors.gray700,
+                        background: active ? theme.colors.primary : theme.colors.gray100,
+                        border: 'none',
+                        borderRadius: 10,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {w}
+                    </button>
+                  );
+                })}
+                <span style={{ fontSize: '10px', color: theme.colors.gray400, marginLeft: 2 }}>trailing window</span>
+              </div>
               {histErr ? (
                 <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
                   rotation history unavailable ({histErr})
@@ -312,7 +340,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: ROT_COLS, gap: 8, marginBottom: 4, fontSize: '9px', color: theme.colors.gray400, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'monospace' }}>
                     <span>Sector</span>
-                    <span>{sectorHist.sessions}-day path</span>
+                    <span>{sectorHist.window} · {sectorHist.sessions}d path</span>
                     <span style={{ textAlign: 'right' }}>Total</span>
                     <span style={{ textAlign: 'right' }}>vs SPY</span>
                   </div>
@@ -339,7 +367,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                     />
                   ))}
                   <div style={{ fontSize: '10px', color: theme.colors.gray500, fontFamily: 'monospace', marginTop: 6 }}>
-                    {histView.leader.name} leading · {histView.laggard.name} lagging · {histView.beat}/{histView.secs.length} beat SPY over {sectorHist.sessions}d
+                    {histView.leader.name} leading · {histView.laggard.name} lagging · {histView.beat}/{histView.secs.length} beat SPY over {sectorHist.window}
                   </div>
                 </>
               )}

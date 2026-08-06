@@ -2933,7 +2933,7 @@ module.exports = function (deps) {
   const { getSectorHistory } = require('../soxxSectorHistory');
   router.get('/api/soxx/sector-history', async (req, res) => {
     try {
-      const data = await getSectorHistory(req.query.refresh === 'true');
+      const data = await getSectorHistory(req.query.refresh === 'true', req.query.window);
       res.json(data);
     } catch (error) {
       console.error('Error building SOXX sector history:', error);
