@@ -50,7 +50,7 @@ const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : 
 const UP_COLS = '46px 58px 58px 112px 58px 34px 54px 1fr';
 // past: adds an "After" 10-day dot path (right after Reaction) + a "Since" column
 // (price at report → now), before the trailing spacer.
-const PAST_COLS = '42px 48px 46px 92px 48px 30px 62px 74px 84px 1fr';
+const PAST_COLS = '42px 50px 46px 86px 52px 32px 68px 72px 84px 1fr';
 
 // Signed % with sign, colored. e.g. "+25%" / "-6.7%".
 const fmtSignedPct = (v, dp = 0) =>
@@ -62,10 +62,10 @@ const fmtSignedPct = (v, dp = 0) =>
 const RunupSpark = ({ spark, pct, note }) => (
   <span
     title={pct == null ? 'run-up unavailable' : `ran ${fmtSignedPct(pct, 1)} ${note}`}
-    style={{ display: 'inline-flex', alignItems: 'center' }}
+    style={{ display: 'inline-flex', alignItems: 'center', overflow: 'hidden' }}
   >
     {Array.isArray(spark) && spark.length > 1 ? (
-      <Sparkline points={spark} w={52} h={16} strokeWidth={1.25} />
+      <Sparkline points={spark} w={46} h={14} strokeWidth={1.25} />
     ) : (
       <span style={{ color: pctColor(pct), fontWeight: 600 }}>{fmtSignedPct(pct)}</span>
     )}
@@ -183,7 +183,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                       const { label, days } = parseDate(e.date);
                       const soon = days != null && days <= 5;
                       return (
-                        <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: UP_COLS, gap: 8, alignItems: 'baseline', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
+                        <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: UP_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
                           <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{e.sym}</span>
                           <span style={{ color: theme.colors.gray500 }} title="approx current market cap">{fmtMcap(e.mcapB)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="current price">{fmtPrice(priceNow(e.sym))}</span>
@@ -254,7 +254,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                       // What the stock has done since the report: report-day close → now.
                       const since = e.priceThen != null && pNow ? ((pNow - e.priceThen) / e.priceThen) * 100 : null;
                       return (
-                        <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: PAST_COLS, gap: 8, alignItems: 'baseline', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
+                        <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: PAST_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
                           <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{e.sym}</span>
                           <span style={{ color: theme.colors.gray500 }} title="approx market cap at report time">{fmtMcap(mcapThen)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="price at report time">{fmtPrice(e.priceThen)}</span>
