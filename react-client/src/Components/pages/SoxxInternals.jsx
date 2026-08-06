@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, memo } from 'react';
+import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
 import Sparkline from '../common/Sparkline';
@@ -45,28 +45,109 @@ const Section = ({ label, children }) => (
   </div>
 );
 
-// One sub-sector's cumulative-return trajectory over the window: name · sparkline
-// (rebased to 0 at the window start) · total return · lead/lag vs SPY.
-const ROT_COLS = '120px 80px 50px 56px';
 const ROT_WINDOWS = ['30d', '1Q', '2Q', '1Y']; // trailing windows for the rotation trend
-const SectorTimeRow = ({ name, note, cum, points, vsSpy, min, max, color }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: ROT_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs, padding: '1px 0' }}>
-    <div style={{ color: theme.colors.gray700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-      {name}
-      {note != null && <span style={{ color: theme.colors.gray400 }}> {note}</span>}
+
+// Fixed per-sub-sector colors so the overlaid chart and the legend below agree.
+const SECTOR_COLORS = {
+  'GPU/AI': '#16a34a',
+  Memory: '#9333ea',
+  Equipment: '#ea580c',
+  Connectivity: '#0891b2',
+  'Analog/Power': '#dc2626',
+  'Foundry/CPU': '#ca8a04',
+};
+const SECTOR_ABBR = {
+  'GPU/AI': 'GPU',
+  Memory: 'Mem',
+  Equipment: 'Equip',
+  Connectivity: 'Conn',
+  'Analog/Power': 'Analog',
+  'Foundry/CPU': 'Foundry',
+};
+const SPY_COLOR = '#64748b';
+
+// Overlaid multi-line rotation chart — every sub-sector + SPY on ONE set of axes
+// (rebased to 0 at the window start), colored, with de-overlapped end labels
+// carrying each line's total return. Reads the rotation story at a glance:
+// divergence, crossovers, who's pulling away vs rolling over. Width auto-fits.
+const SectorRotationChart = ({ sectors, benchmark, min, max }) => {
+  const ref = useRef(null);
+  const [w, setW] = useState(560);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => setW(Math.max(280, el.clientWidth));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const H = 210;
+  const padL = 34;
+  const padR = 88;
+  const padT = 12;
+  const padB = 18;
+  const n = (benchmark && benchmark.series && benchmark.series.length) || 0;
+  const plotW = Math.max(20, w - padL - padR);
+  const plotH = H - padT - padB;
+  const span = max - min || 1;
+  const xAt = i => padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW);
+  const yAt = v => padT + (1 - (v - min) / span) * plotH;
+  const pathOf = s => s.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(p.pct).toFixed(1)}`).join(' ');
+
+  const lines = [
+    { name: 'SPY', abbr: 'SPY', color: SPY_COLOR, dashed: true, series: benchmark.series, cum: benchmark.cum },
+    ...sectors.map(s => ({ name: s.name, abbr: SECTOR_ABBR[s.name] || s.name, color: SECTOR_COLORS[s.name] || '#475569', dashed: false, series: s.series, cum: s.cum })),
+  ];
+  // de-overlap the end labels vertically
+  const labels = lines.map(l => ({ ...l, ly: yAt(l.series[l.series.length - 1].pct) })).sort((a, b) => a.ly - b.ly);
+  const gap = 13;
+  for (let i = 1; i < labels.length; i++) {
+    if (labels[i].ly - labels[i - 1].ly < gap) labels[i].ly = labels[i - 1].ly + gap;
+  }
+  const overflow = labels.length ? labels[labels.length - 1].ly - (padT + plotH) : 0;
+  if (overflow > 0) labels.forEach(l => (l.ly -= overflow));
+  const zeroY = yAt(0);
+
+  return (
+    <div ref={ref} style={{ width: '100%' }}>
+      {n < 2 ? (
+        <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>not enough history</div>
+      ) : (
+        <svg width={w} height={H} style={{ display: 'block' }}>
+          {min < 0 && max > 0 && (
+            <line x1={padL} y1={zeroY} x2={padL + plotW} y2={zeroY} stroke={theme.colors.gray300} strokeWidth="1" strokeDasharray="3 3" />
+          )}
+          <text x={padL - 5} y={padT + 3} textAnchor="end" fontSize="9" fill={theme.colors.gray400} fontFamily="monospace">
+            {max >= 0 ? '+' : ''}{max.toFixed(0)}%
+          </text>
+          <text x={padL - 5} y={padT + plotH} textAnchor="end" fontSize="9" fill={theme.colors.gray400} fontFamily="monospace">
+            {min.toFixed(0)}%
+          </text>
+          {lines.map(l => (
+            <path
+              key={l.name}
+              d={pathOf(l.series)}
+              fill="none"
+              stroke={l.color}
+              strokeWidth={l.dashed ? 1.5 : 2}
+              strokeDasharray={l.dashed ? '4 3' : undefined}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              opacity={l.dashed ? 0.75 : 0.95}
+            />
+          ))}
+          {labels.map(l => (
+            <text key={l.name} x={padL + plotW + 6} y={l.ly + 3} fontSize="10" fontWeight="700" fill={l.color} fontFamily="monospace">
+              {l.abbr} {l.cum >= 0 ? '+' : ''}{l.cum.toFixed(0)}%
+            </text>
+          ))}
+        </svg>
+      )}
     </div>
-    <Sparkline points={points} w={80} h={16} min={min} max={max} midline={0} color={color} strokeWidth={1.25} />
-    <div style={{ textAlign: 'right', color: pctColor(cum), fontWeight: 600 }}>
-      {cum >= 0 ? '+' : ''}{cum.toFixed(1)}%
-    </div>
-    <div
-      style={{ textAlign: 'right', color: vsSpy == null ? theme.colors.gray400 : pctColor(vsSpy) }}
-      title={vsSpy == null ? 'benchmark' : 'lead/lag vs SPY over the window'}
-    >
-      {vsSpy == null ? 'bench' : `${vsSpy >= 0 ? '+' : ''}${vsSpy.toFixed(1)}`}
-    </div>
-  </div>
-);
+  );
+};
 
 // SOXX Internals — breadth, sub-sector rotation, and leadership/concentration,
 // all derived from the shared constituent quotes. Answers "what's driving SOXX".
@@ -338,34 +419,30 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                 </div>
               ) : (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: ROT_COLS, gap: 8, marginBottom: 4, fontSize: '9px', color: theme.colors.gray400, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'monospace' }}>
-                    <span>Sector</span>
-                    <span>{sectorHist.window} · {sectorHist.sessions}d path</span>
-                    <span style={{ textAlign: 'right' }}>Total</span>
-                    <span style={{ textAlign: 'right' }}>vs SPY</span>
+                  <div style={{ fontSize: '9px', color: theme.colors.gray400, fontFamily: 'monospace', marginBottom: 2 }}>
+                    cumulative % since {sectorHist.from}, rebased to 0 · {sectorHist.window} ({sectorHist.sessions}d)
                   </div>
-                  <SectorTimeRow
-                    name="SPY"
-                    note="mkt"
-                    cum={histView.spy.cum}
-                    points={histView.spy.series.map(p => p.pct)}
-                    vsSpy={null}
-                    min={histView.min}
-                    max={histView.max}
-                    color={theme.colors.info}
-                  />
-                  {histView.secs.map(s => (
-                    <SectorTimeRow
-                      key={s.name}
-                      name={s.name}
-                      note={`(${s.members})`}
-                      cum={s.cum}
-                      points={s.series.map(p => p.pct)}
-                      vsSpy={s.vsSpy}
-                      min={histView.min}
-                      max={histView.max}
-                    />
-                  ))}
+                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} />
+                  {/* color-matched ranked legend with the precise numbers */}
+                  <div style={{ marginTop: 4 }}>
+                    {[{ name: 'SPY', cum: histView.spy.cum, vsSpy: null, members: null }, ...histView.secs].map(r => {
+                      const color = r.name === 'SPY' ? SPY_COLOR : SECTOR_COLORS[r.name] || theme.colors.gray500;
+                      return (
+                        <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '14px 1fr 58px 56px', gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs, padding: '1px 0' }}>
+                          <span style={{ width: 11, height: 3, borderRadius: 2, background: color, opacity: r.name === 'SPY' ? 0.75 : 1 }} />
+                          <span style={{ color: theme.colors.gray700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {r.name === 'SPY' ? 'SPY' : r.name}
+                            {r.members != null && <span style={{ color: theme.colors.gray400 }}> ({r.members})</span>}
+                            {r.name === 'SPY' && <span style={{ color: theme.colors.gray400 }}> mkt</span>}
+                          </span>
+                          <span style={{ textAlign: 'right', color: pctColor(r.cum), fontWeight: 600 }}>{r.cum >= 0 ? '+' : ''}{r.cum.toFixed(1)}%</span>
+                          <span style={{ textAlign: 'right', color: r.vsSpy == null ? theme.colors.gray400 : pctColor(r.vsSpy) }} title={r.vsSpy == null ? 'benchmark' : 'lead/lag vs SPY'}>
+                            {r.vsSpy == null ? 'bench' : `${r.vsSpy >= 0 ? '+' : ''}${r.vsSpy.toFixed(1)}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                   <div style={{ fontSize: '10px', color: theme.colors.gray500, fontFamily: 'monospace', marginTop: 6 }}>
                     {histView.leader.name} leading · {histView.laggard.name} lagging · {histView.beat}/{histView.secs.length} beat SPY over {sectorHist.window}
                   </div>
