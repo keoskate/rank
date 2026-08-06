@@ -476,7 +476,7 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
           and the shorter card fills its cell instead of leaving a page-bg gap. */}
       <TwoCol>
         <MacroContextPanel />
-        <MultiTimeframeTechnicals symbol="SOXL" />
+        <MultiTimeframeTechnicals symbol="SOXX" />
       </TwoCol>
       <TwoCol>
         <SoxxMovers

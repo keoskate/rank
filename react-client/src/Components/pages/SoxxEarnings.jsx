@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, memo } from 'react';
 import theme from '../../theme';
 import Card from '../common/Card';
 import Sparkline from '../common/Sparkline';
+import DotHistory from '../common/DotHistory';
 import { fmtET } from '../../utils/timeFormat';
 
 // Earnings across SOXX constituents (from Unusual Whales via /api/soxx/earnings):
@@ -23,7 +24,7 @@ const fmtPrice = p => (p == null || !Number.isFinite(p) ? '—' : `$${p.toFixed(
 const priceFromQuote = q => {
   if (!q) return null;
   const v = Number(q.last ?? q.close ?? q.price);
-  return Number.isFinite(v) ? v : null;
+  return Number.isFinite(v) && v > 0 ? v : null; // 0/NaN → treat as no quote (show —)
 };
 
 // "2026-08-26" -> { label: "Aug 26", days: N-from-today }
@@ -47,8 +48,9 @@ const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : 
 // Fixed columns grouped left; trailing 1fr track absorbs slack on the right so
 // the date doesn't balloon and disconnect the run-up/reaction columns.
 const UP_COLS = '46px 58px 58px 112px 58px 34px 54px 1fr';
-// past adds a "Since" column (price at report → now) before the trailing spacer.
-const PAST_COLS = '46px 56px 56px 104px 56px 36px 66px 108px 1fr';
+// past: adds an "After" 10-day dot path (right after Reaction) + a "Since" column
+// (price at report → now), before the trailing spacer.
+const PAST_COLS = '42px 48px 46px 92px 48px 30px 62px 74px 84px 1fr';
 
 // Signed % with sign, colored. e.g. "+25%" / "-6.7%".
 const fmtSignedPct = (v, dp = 0) =>
@@ -233,6 +235,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                     <span title="~1-month price run-up into the report">Run-up</span>
                     <span style={{ textAlign: 'center' }}>EPS</span>
                     <span style={{ textAlign: 'right' }} title="1-day price reaction after the report">Reaction</span>
+                    <span title="daily up/down path for up to 10 trading days after the report">After 10d</span>
                     <span style={{ textAlign: 'right' }} title="price now vs at report — what the stock has done since earnings">Since (now)</span>
                   </div>
                   <div style={{ display: 'grid', gap: 3 }}>
@@ -266,8 +269,10 @@ const SoxxEarnings = ({ quotes = {} }) => {
                           >
                             {e.beat == null ? '—' : e.beat ? 'beat' : 'miss'}
                           </span>
+                          {/* Reaction: % right-aligned with a FIXED ≠ slot so the
+                              numbers line up vertically whether or not it diverged. */}
                           <span
-                            style={{ textAlign: 'right', fontWeight: 700, color: pctColor(r) }}
+                            style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: 2, fontWeight: 700 }}
                             title={
                               [
                                 r != null && e.expectedMovePct != null
@@ -280,11 +285,22 @@ const SoxxEarnings = ({ quotes = {} }) => {
                                 .join(' · ')
                             }
                           >
-                            {r == null ? '—' : `${r >= 0 ? '▲ +' : '▼ '}${r.toFixed(1)}%`}
-                            {diverged && (
-                              <span style={{ color: theme.colors.warningDark, marginLeft: 3 }} title={e.beat ? 'beat but sold off' : 'missed but rallied'}>
-                                ≠
-                              </span>
+                            <span style={{ color: pctColor(r) }}>
+                              {r == null ? '—' : `${r >= 0 ? '▲ +' : '▼ '}${r.toFixed(1)}%`}
+                            </span>
+                            <span
+                              style={{ width: 9, textAlign: 'center', color: theme.colors.warningDark }}
+                              title={diverged ? (e.beat ? 'beat but sold off' : 'missed but rallied') : undefined}
+                            >
+                              {diverged ? '≠' : ''}
+                            </span>
+                          </span>
+                          {/* After: daily up/down path for up to 10 trading days post-report */}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'center', minWidth: 0 }}>
+                            {Array.isArray(e.after) && e.after.length ? (
+                              <DotHistory series={e.after} size={6} gap={1} maxMagnitude={8} />
+                            ) : (
+                              <span style={{ color: theme.colors.gray400 }}>—</span>
                             )}
                           </span>
                           {/* Since report: current price + % move since earnings */}
@@ -334,7 +350,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
           )}
 
           <div style={{ fontSize: '10px', color: theme.colors.gray400, fontFamily: 'monospace' }}>
-            ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
+            ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · After 10d = daily up/down for 10 sessions after · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
           </div>
         </>
       )}

@@ -1,6 +1,11 @@
 import { memo, useMemo, useState } from 'react';
 import theme from '../../theme';
 import { fmtET } from '../../utils/timeFormat';
+import { SOXX_TOP } from './soxxConstituents';
+
+// SOXX (semiconductor index) membership — flags which fund holdings are semis,
+// and is sortable so you can separate the SOXX names from everything else.
+const SOXX_SET = new Set(SOXX_TOP.map(c => c.sym));
 
 const formatMoney = (n, opts = {}) => {
   const { showSign = false, decimals = 2 } = opts;
@@ -26,9 +31,23 @@ const formatQty = n => {
   return Math.abs(num) < 1 ? num.toFixed(6) : num.toLocaleString('en-US');
 };
 
-// key = position field; num=false sorts as text (symbol).
+// key = position field; num=false sorts as text (symbol). sortVal overrides the
+// sort accessor (used for the derived SOXX-membership flag).
 const COLUMNS = [
   { key: 'symbol', label: 'Symbol', align: 'left', num: false, render: p => p.symbol },
+  {
+    key: 'isSoxx',
+    label: 'SOXX',
+    align: 'center',
+    num: true,
+    sortVal: p => (SOXX_SET.has(p.symbol) ? 1 : 0),
+    render: p =>
+      SOXX_SET.has(p.symbol) ? (
+        <span title="SOXX (semiconductor index) member" style={{ color: theme.colors.success }}>●</span>
+      ) : (
+        <span style={{ color: theme.colors.gray300 }}>·</span>
+      ),
+  },
   { key: 'quantity', label: 'Qty', align: 'right', num: true, render: p => formatQty(p.quantity) },
   { key: 'avgEntryPrice', label: 'Entry', align: 'right', num: true, render: p => formatMoney(p.avgEntryPrice) },
   { key: 'currentPrice', label: 'Current', align: 'right', num: true, render: p => formatMoney(p.currentPrice) },
@@ -79,14 +98,15 @@ const OpenPositionsTable = ({ positions, loading, error, lastUpdated, onRefresh 
 
   const sorted = useMemo(() => {
     const arr = [...(positions || [])];
-    const col = COLUMNS.find(c => c.key === sortKey) || COLUMNS[4];
+    const col = COLUMNS.find(c => c.key === sortKey) || COLUMNS.find(c => c.key === 'marketValue');
+    const val = p => (col.sortVal ? col.sortVal(p) : p[sortKey]);
     arr.sort((a, b) => {
       if (col.num) {
-        const av = Number.isFinite(Number(a[sortKey])) ? Number(a[sortKey]) : -Infinity;
-        const bv = Number.isFinite(Number(b[sortKey])) ? Number(b[sortKey]) : -Infinity;
+        const av = Number.isFinite(Number(val(a))) ? Number(val(a)) : -Infinity;
+        const bv = Number.isFinite(Number(val(b))) ? Number(val(b)) : -Infinity;
         return av - bv;
       }
-      return String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''));
+      return String(val(a) || '').localeCompare(String(val(b) || ''));
     });
     if (sortDir === 'desc') arr.reverse();
     return arr;

@@ -154,7 +154,8 @@ async function computeSoxxEarningsEnriched(forceRefresh = false) {
     const barsArr = await Promise.all(
       chunk.map(r => {
         const t = new Date(`${r.date}T00:00:00Z`).getTime();
-        return dailyBars(r.sym, iso(t - 45 * DAY_MS), iso(t + 4 * DAY_MS));
+        // widen the window to +18d so we can also read the ~10 trading days AFTER
+        return dailyBars(r.sym, iso(t - 45 * DAY_MS), iso(t + 18 * DAY_MS));
       })
     );
     chunk.forEach((r, j) => {
@@ -162,6 +163,7 @@ async function computeSoxxEarningsEnriched(forceRefresh = false) {
       let priceThen = null;
       let runupPct = null;
       let spark = [];
+      let after = []; // post-earnings daily path (up to 10 trading days after)
       if (b.length) {
         const idx = b.findIndex(x => new Date(x.timestamp).toISOString().slice(0, 10) === r.date);
         const rptIdx = idx >= 0 ? idx : b.length - 1;
@@ -170,8 +172,12 @@ async function computeSoxxEarningsEnriched(forceRefresh = false) {
         runupPct = pctChange(b[startIdx].close, priceThen);
         // series is the run-up INTO the report (window start → report date)
         spark = downsample(b.slice(startIdx, rptIdx + 1).map(x => x.close));
+        for (let k = rptIdx + 1; k < b.length && after.length < 10; k++) {
+          const p = pctChange(b[k - 1].close, b[k].close);
+          if (p != null) after.push({ date: new Date(b[k].timestamp).toISOString().slice(0, 10), pct: p });
+        }
       }
-      past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen, runupPct, spark });
+      past.push({ ...r, mcapB: MCAP_B[r.sym] ?? null, priceThen, runupPct, spark, after });
     });
   }
 

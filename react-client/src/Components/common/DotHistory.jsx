@@ -4,7 +4,7 @@ import theme from '../../theme';
 // Bright, traditional up/down that POPS, shaded by move size (deeper = bigger).
 const UP = theme.colors.success; // #28a745
 const DOWN = theme.colors.error; // #dc3545
-const FLAT = theme.colors.gray300;
+const FLAT = theme.colors.gray400; // visible even at small dot sizes
 const NEUTRAL_BAND = 0.15; // |day %| under this reads flat
 
 const hexToRgb = h => {
@@ -121,7 +121,8 @@ const DotHistory = ({
     if (dir === 0) return FLAT;
     const base = dir > 0 ? UP : DOWN;
     if (pct == null) return base;
-    const t = 0.45 + 0.55 * Math.min(1, Math.abs(pct) / maxMagnitude);
+    // floor at 0.5 so even small moves stay legible (esp. at 6px dot sizes)
+    const t = 0.5 + 0.5 * Math.min(1, Math.abs(pct) / maxMagnitude);
     return shade(base, t);
   };
   const dotTitle = d =>
