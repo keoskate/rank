@@ -1296,6 +1296,12 @@ server.listen(PORT, () => {
     } catch (err) {
       console.error('SOXX prediction loop failed to start:', err.message);
     }
+    // Sibling next-day (close-to-close) predictor. Same guard/kill switch.
+    try {
+      require('./soxxDailyPredictionLoop').startSoxxDailyPredictionLoop();
+    } catch (err) {
+      console.error('SOXX daily prediction loop failed to start:', err.message);
+    }
   }
 
   // Options self-improvement heartbeat: one earnest scan + full grading per

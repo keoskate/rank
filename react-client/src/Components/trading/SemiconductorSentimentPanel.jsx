@@ -100,22 +100,29 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [prediction, setPrediction] = useState(null); // { prediction, secondsToEval }
-  const [record, setRecord] = useState(null); // track-record stats
+  const [prediction, setPrediction] = useState(null); // hourly { prediction, secondsToEval }
+  const [record, setRecord] = useState(null); // hourly track-record stats
+  const [dailyPrediction, setDailyPrediction] = useState(null); // next-day { prediction }
+  const [dailyRecord, setDailyRecord] = useState(null); // next-day track-record stats
 
-  // Self-improving 1-hour predictor (pre-registered forward-test). Polled apart
-  // from the sentiment read; the loop only fires during market hours.
+  // Self-improving predictors (pre-registered forward-tests): the 1-hour horizon
+  // and the next-day (close-to-close) horizon. Polled apart from the sentiment
+  // read; the loops only fire during market hours.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const [pRes, rRes] = await Promise.all([
+        const [pRes, rRes, dpRes, drRes] = await Promise.all([
           fetch('/api/soxx/prediction'),
           fetch('/api/soxx/prediction/record'),
+          fetch('/api/soxx/daily-prediction'),
+          fetch('/api/soxx/daily-prediction/record'),
         ]);
         if (cancelled) return;
         setPrediction(pRes.ok ? await pRes.json() : null);
         setRecord(rRes.ok ? await rRes.json() : null);
+        setDailyPrediction(dpRes.ok ? await dpRes.json() : null);
+        setDailyRecord(drRes.ok ? await drRes.json() : null);
       } catch {
         /* leave prior */
       }
@@ -305,6 +312,40 @@ const SemiconductorSentimentPanel = ({ onPresetSelect }) => {
                 <span style={{ color: theme.colors.gray500 }}>building a track record — it learns from each hour's result</span>
               )}
             </div>
+
+            {/* Next-day (close-to-close) horizon */}
+            {(() => {
+              const drec = dailyPrediction?.prediction;
+              const dpr = drec?.prediction;
+              return (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${theme.colors.infoBorder}` }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+                    <span style={s.label}>
+                      Next day{' '}
+                      <span style={{ color: theme.colors.gray400, textTransform: 'none', letterSpacing: 0 }}>· close-to-close</span>
+                    </span>
+                    {dpr ? (
+                      <>
+                        <span style={{ fontWeight: 700, color: dirColorP(dpr.direction) }}>{dpr.direction?.toUpperCase()}</span>
+                        <span style={{ fontFamily: theme.typography.fontFamilyMono, fontWeight: 700, color: theme.colors.gray700 }}>{(dpr.probability * 100).toFixed(0)}%</span>
+                        <span style={{ color: theme.colors.gray400 }}>→</span>
+                        <span style={{ fontWeight: 700, color: dpr.action === 'SOXL' ? theme.colors.success : dpr.action === 'SOXS' ? theme.colors.error : theme.colors.gray600 }}>{dpr.action}</span>
+                        <span style={s.meta}>{drec.evaluated ? 'scored' : 'evaluates next session'}</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray600 }}>posts near the close</span>
+                    )}
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: theme.typography.fontSize.xs, fontFamily: 'monospace', color: theme.colors.gray600 }}>
+                    {dailyRecord && dailyRecord.directional > 0 ? (
+                      <span>day record: <strong style={{ color: theme.colors.gray800 }}>{(dailyRecord.accuracy * 100).toFixed(0)}%</strong> over {dailyRecord.directional}{dailyRecord.brier != null ? ` · Brier ${dailyRecord.brier.toFixed(2)}` : ''}</span>
+                    ) : (
+                      <span style={{ color: theme.colors.gray500 }}>next-day record builds one call per session</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}

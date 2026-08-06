@@ -2983,6 +2983,43 @@ module.exports = function (deps) {
     }
   });
 
+  // SOXX next-DAY predictor (daily horizon, close-to-close) — sibling of the above.
+  const soxxDailyLoop = require('../soxxDailyPredictionLoop');
+  const soxxDailyStore = require('../soxxDailyPredictions');
+
+  router.get('/api/soxx/daily-prediction', (req, res) => {
+    try {
+      res.json(soxxDailyLoop.getCurrent());
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  router.get('/api/soxx/daily-prediction/record', (req, res) => {
+    try {
+      const days = Math.min(120, parseInt(req.query.days, 10) || 45);
+      const preds = soxxDailyStore.loadRecent(days);
+      res.json({ ...soxxDailyStore.computeStats(preds), asOf: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  router.post('/api/soxx/daily-prediction/tick', async (req, res) => {
+    try {
+      const rec = await soxxDailyLoop.recordPrediction();
+      res.json({ recorded: !!rec, prediction: rec });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  router.post('/api/soxx/daily-prediction/evaluate', async (req, res) => {
+    try {
+      await soxxDailyLoop.runEvaluations();
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ================================
   // STRATEGY VALIDATOR
   // ================================
