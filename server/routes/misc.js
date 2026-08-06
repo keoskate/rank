@@ -3034,8 +3034,22 @@ module.exports = function (deps) {
   router.post('/api/soxx/briefing/send', async (req, res) => {
     try {
       const slot = semiDailyLoop.SLOTS.find(s => s.key === (req.body && req.body.slot)) || semiDailyLoop.SLOTS[0];
-      const text = await semiDailyLoop.sendBriefing(slot);
+      const headline = req.body && req.body.headline;
+      const text = await semiDailyLoop.sendBriefing(slot, headline ? { headline } : {});
       res.json({ sent: true, text });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  // Manually send a direction-change ("flip") card now (for the first send / testing).
+  router.post('/api/soxx/briefing/flip-test', async (req, res) => {
+    try {
+      const { sentimentEngine } = require('../semiconductorSentiment');
+      const sentiment = await sentimentEngine.getSentiment(req.query.refresh === 'true');
+      const to = sentiment.reversalOverride ? 'reversal' : sentiment.direction;
+      const from = (req.body && req.body.from) || 'neutral';
+      const text = await semiDailyLoop.sendFlipCard(sentiment, from, to);
+      res.json({ sent: true, from, to, text });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

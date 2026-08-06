@@ -96,7 +96,7 @@ function predLine(cur, stats, tail) {
  * @param {{at:string,label:string}} slot
  * @returns {Promise<string>}
  */
-async function buildBriefing(slot = SLOTS[0]) {
+async function buildBriefing(slot = SLOTS[0], opts = {}) {
   const [sentiment, ctx, sectorQ] = await Promise.all([
     sentimentEngine.getSentiment().catch(() => ({})),
     getSemiContext({ maxWaitMs: 4000 }).catch(() => null),
@@ -118,6 +118,24 @@ async function buildBriefing(slot = SLOTS[0]) {
   })();
   const hStats = soxxPredStore.computeStats(soxxPredStore.loadRecent(60));
   const dStats = soxxDailyStore.computeStats(soxxDailyStore.loadRecent(90));
+  // AI analyst recommendation (fresh if passed, else last cached) + its own track
+  // record (does it add value vs the base engine?).
+  const aiAnalysis =
+    opts.aiAnalysis ||
+    (() => {
+      try {
+        return require('./aiSemiconductorAnalyst').aiAnalyst.getCached();
+      } catch {
+        return null;
+      }
+    })();
+  let aiStats = null;
+  try {
+    const L = require('./aiAnalysisLedger');
+    aiStats = L.computeStats(L.loadRecent(45));
+  } catch {
+    /* optional */
+  }
   const { dateEt } = etParts();
 
   const b = ctx && ctx.breadth;
@@ -125,7 +143,7 @@ async function buildBriefing(slot = SLOTS[0]) {
   const price = num(parseFloat(sentiment.currentPrice)) || (hourly && hourly.prediction && hourly.prediction.soxxPriceAtT);
 
   const lines = [];
-  lines.push(`🔬 *SEMI SENTIMENT — ${slot.at} ET · ${slot.label}*`);
+  lines.push(opts.headline || `🔬 *SEMI SENTIMENT — ${slot.at} ET · ${slot.label}*`);
   lines.push(`_${dateEt}_`);
   lines.push('');
 
@@ -154,6 +172,25 @@ async function buildBriefing(slot = SLOTS[0]) {
   if (hStats.directional >= 20) readySignals.push('hourly');
   if (dStats.directional >= 20) readySignals.push('next-day');
   if (readySignals.length) lines.push(`📐 enough data to calibrate the ${readySignals.join(' + ')} predictor`);
+
+  // AI analyst recommendation + its own graded track record (edge vs the base engine)
+  if (aiAnalysis && aiAnalysis.direction && !aiAnalysis.aiDisabled && !aiAnalysis.error) {
+    const adj = num(aiAnalysis.confidenceAdjustment);
+    lines.push(
+      `*AI take:* ${dirEmoji(aiAnalysis.direction)} ${dirWord(aiAnalysis.direction)}${adj != null ? ` · adj ${adj >= 0 ? '+' : ''}${adj}` : ''}${aiAnalysis.riskLevel ? ` · ${aiAnalysis.riskLevel} risk` : ''}${aiAnalysis.holdDuration ? ` · ${aiAnalysis.holdDuration}` : ''}`
+    );
+    if (Array.isArray(aiAnalysis.keyFactors) && aiAnalysis.keyFactors[0]) {
+      lines.push(`   ${aiAnalysis.keyFactors[0]}`);
+    }
+    if (aiStats && aiStats.directional > 0) {
+      const edge = aiStats.edgeVsBase;
+      lines.push(
+        `   AI record: ${(aiStats.accuracy * 100).toFixed(0)}% over ${aiStats.directional}${edge != null ? ` · edge vs base ${edge >= 0 ? '+' : ''}${(edge * 100).toFixed(0)}%` : ''}`
+      );
+    } else {
+      lines.push('   AI record: grading — no scored calls yet');
+    }
+  }
   lines.push('');
 
   // Sub-sector rotation over a quarter (the fuller story than 30d)
@@ -191,14 +228,87 @@ async function buildBriefing(slot = SLOTS[0]) {
   return lines.join('\n');
 }
 
-async function sendBriefing(slot = SLOTS[0]) {
-  const text = await buildBriefing(slot);
+async function sendBriefing(slot = SLOTS[0], opts = {}) {
+  const text = await buildBriefing(slot, opts);
   try {
     require('./telegramBot').sendAlert(text);
   } catch (e) {
     console.error('[semi-daily] send failed:', e.message);
   }
   return text;
+}
+
+// ── Direction-change watcher ─────────────────────────────────────────────────
+// Sends the semiconductor card the moment the RECONCILED sentiment flips (a
+// bullish/bearish signal emerges, or a confirmed reversal stands it down). Strict
+// anti-spam so it's insight, not noise: market-hours + weekday only, a genuine
+// change in the reconciled direction (not confidence wiggles), a 20-min cooldown
+// against whipsaw, no send on the first observation after boot, and it carries a
+// FRESH AI take + the honest track records (never a fake confident call).
+const FLIP_COOLDOWN_MS = 20 * 60 * 1000;
+let flipArmed = false;
+
+const flipLabel = d =>
+  d === 'reversal' ? 'REVERSAL→CASH' : d === 'bullish' ? 'BULLISH' : d === 'bearish' ? 'BEARISH' : 'NEUTRAL';
+
+async function sendFlipCard(sentiment, prev, dir) {
+  // Fresh AI take reflecting the just-changed direction (falls back to cached).
+  let aiAnalysis = null;
+  try {
+    aiAnalysis = await require('./aiSemiconductorAnalyst').aiAnalyst.analyze(sentiment, 'direction_change', { contextWaitMs: 6000 });
+  } catch {
+    /* buildBriefing falls back to the cached analysis */
+  }
+  const emoji = dir === 'bullish' ? '🟢' : dir === 'bearish' ? '🔴' : '🔀';
+  const headline = `${emoji} *SEMI FLIP: ${flipLabel(prev)} → ${flipLabel(dir)}*`;
+  const text = await buildBriefing(SLOTS[0], { headline, aiAnalysis });
+  try {
+    require('./telegramBot').sendAlert(text);
+  } catch (e) {
+    console.error('[semi-flip] send failed:', e.message);
+  }
+  return text;
+}
+
+async function maybeSendFlip(state) {
+  const phase = phaseTracker.getCurrentPhase();
+  if (!phase || !['OPEN', 'SETTLE', 'ACTIVE', 'WIND_DOWN'].includes(phase.phase)) return;
+  if (!etParts().isWeekday) return;
+
+  const sentiment = await sentimentEngine.getSentiment().catch(() => null);
+  if (!sentiment || sentiment.error) return;
+  // Treat a confirmed reversal as its own state so bullish → (reversal to neutral) fires.
+  const dir = sentiment.reversalOverride ? 'reversal' : sentiment.direction;
+  if (!dir) return;
+
+  const prev = state.lastFlipDir || null;
+
+  // First observation after boot/restart: sync only, never alert (avoids boot spam).
+  if (!flipArmed) {
+    flipArmed = true;
+    if (prev !== dir) {
+      state.lastFlipDir = dir;
+      writeState(state);
+    }
+    return;
+  }
+  if (dir === prev) return; // no change
+
+  // Only alert on insightful transitions: a directional signal emerging/flipping, or
+  // a confirmed reversal (stand-down). Quiet neutral drift updates state silently.
+  const worthy = dir === 'bullish' || dir === 'bearish' || dir === 'reversal';
+  const nowMs = Date.now();
+  const cooled = !state.lastFlipTs || nowMs - new Date(state.lastFlipTs).getTime() >= FLIP_COOLDOWN_MS;
+
+  state.lastFlipDir = dir;
+  if (worthy && cooled) {
+    state.lastFlipTs = new Date(nowMs).toISOString();
+    writeState(state);
+    await sendFlipCard(sentiment, prev, dir);
+    console.log(`🔀 semi flip alert sent: ${prev} → ${dir}`);
+  } else {
+    writeState(state);
+  }
 }
 
 async function tick() {
@@ -209,7 +319,8 @@ async function tick() {
     if (t == null) return;
 
     let state = readState();
-    if (state.day !== dateEt) state = { day: dateEt, fired: {} };
+    // Preserve the flip tracking across the day boundary (don't re-arm daily).
+    if (state.day !== dateEt) state = { day: dateEt, fired: {}, lastFlipDir: state.lastFlipDir, lastFlipTs: state.lastFlipTs };
 
     for (const slot of SLOTS) {
       if (state.fired[slot.key]) continue;
@@ -220,6 +331,9 @@ async function tick() {
         console.log(`🔬 semi briefing sent: ${slot.at} ET (${slot.label})`);
       }
     }
+
+    // Event-driven direction-change alert (anti-spam guarded inside).
+    await maybeSendFlip(state);
   } catch (e) {
     console.error('[semi-daily] tick error:', e.message);
   }
@@ -231,4 +345,4 @@ function start() {
   console.log('🔬 semi daily briefing loop started (9:30 / 10:10 / 11:11 ET)');
 }
 
-module.exports = { start, tick, buildBriefing, sendBriefing, SLOTS };
+module.exports = { start, tick, buildBriefing, sendBriefing, sendFlipCard, maybeSendFlip, SLOTS };
