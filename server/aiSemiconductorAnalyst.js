@@ -86,6 +86,56 @@ function formatContext(ctx) {
   return lines.join('\n') + '\n';
 }
 
+// Render the extra intel we now surface on the card but weren't feeding the model:
+// the reversal-reconciliation verdict, sub-sector rotation OVER TIME (30d vs a
+// quarter, to catch late-cycle rotation), and the pre-registered predictors' own
+// track records (so the model calibrates its conviction to real hit-rates).
+function formatExtra(x) {
+  if (!x) return '';
+  const fx = (v, d = 0) => (v == null || !Number.isFinite(v) ? 'n/a' : `${v >= 0 ? '+' : ''}${v.toFixed(d)}%`);
+  const lines = [];
+
+  if (x.reversalOverride) {
+    lines.push(
+      '- ⚠ REVERSAL RECONCILIATION: a CONFIRMED intraday reversal has overridden the from-open direction to NEUTRAL (recent momentum + technical trend both turned). Do NOT recommend the faded direction — a contrarian directional call here is high-risk; lean neutral with a negative adjustment.'
+    );
+  } else if (x.conflict) {
+    lines.push(
+      "- ⚠ SIGNAL CONFLICT: the day's net move disagrees with recent momentum / the technical trend (fading). Treat directional conviction as LOW."
+    );
+  }
+
+  const rot = (h, label) => {
+    if (!h || !Array.isArray(h.sectors) || !h.sectors.length) return;
+    const lead = h.sectors[0];
+    const lag = h.sectors[h.sectors.length - 1];
+    const beat = h.sectors.filter(s => s.vsSpy > 0).length;
+    lines.push(`- Rotation ${label}: ${lead.name} ${fx(lead.cum)} leads · ${lag.name} ${fx(lag.cum)} lags · ${beat}/${h.sectors.length} beat SPY`);
+  };
+  rot(x.sectorHist30, '30d');
+  rot(x.sectorHistQ, '1Q (quarter)');
+  // Late-cycle rotation: a sector that led the quarter but is now near the bottom
+  // over 30d is rolling over — a bearish tell the daily snapshot alone can't show.
+  if (x.sectorHist30?.sectors?.length && x.sectorHistQ?.sectors?.length) {
+    const qLeader = x.sectorHistQ.sectors[0].name;
+    const rank30 = x.sectorHist30.sectors.findIndex(s => s.name === qLeader);
+    if (rank30 >= x.sectorHist30.sectors.length - 2) {
+      lines.push(`  → ${qLeader} led the quarter but is now near the bottom over 30d (rolling over — late-cycle rotation).`);
+    }
+  }
+
+  const tr = (s, label) => {
+    if (s && s.directional > 0) {
+      lines.push(`- ${label} predictor track record: ${(s.accuracy * 100).toFixed(0)}% over ${s.directional}${s.brier != null ? `, Brier ${s.brier.toFixed(2)}` : ''} — calibrate your conviction to this (near coin-flip ⇒ stay humble).`);
+    }
+  };
+  tr(x.hStats, 'Hourly');
+  tr(x.dStats, 'Next-day');
+
+  if (!lines.length) return '';
+  return 'Reconciliation, rotation cycle & model track record:\n' + lines.join('\n') + '\n';
+}
+
 class AISemiconductorAnalyst {
   constructor(options = {}) {
     // Initialize Anthropic client
@@ -149,6 +199,17 @@ Guidelines:
 - If a heavyweight (esp. NVDA/AVGO/AMD) reports within ~48h, treat direction as
   higher-risk (elevated gap risk on a 3x ETF) → lean neutral / negative adjustment.
 - A diverging VIX or semis lagging the broad tape argues against conviction.
+- CRITICAL — weigh RECENT momentum and the technical trend, not just the day's net
+  move: a broad up-day that is rolling over (negative recent momentum, price fading
+  off the high, a bearish technical regime) is NOT a bullish entry. The "Direction"
+  you are given is already AFTER a reversal-reconciliation pass. If a REVERSAL
+  RECONCILIATION or SIGNAL CONFLICT note appears below, RESPECT it: do not recommend
+  the faded direction — recommend neutral with a negative adjustment. Do not let a
+  green breadth number override a confirmed reversal.
+- Use the sub-sector rotation OVER TIME: a sector that led the quarter but is now
+  lagging over 30d is rolling over (late-cycle) — a bearish tell.
+- Use the predictor track records to calibrate conviction: if the models are near
+  coin-flip, keep adjustments small and lean neutral.
 - Be concise and actionable. If uncertain, recommend "neutral" with a negative adjustment.`;
   }
 
@@ -158,7 +219,7 @@ Guidelines:
    * @param {string} trigger - What triggered this analysis
    * @returns {string} User message
    */
-  buildUserMessage(marketData, trigger, context = null) {
+  buildUserMessage(marketData, trigger, context = null, extra = null) {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
 
@@ -186,8 +247,8 @@ Dynamic Thresholds:
 Signals:
 ${marketData.signals?.map(s => `- ${s}`).join('\n') || '- No signals'}
 
-${formatContext(context)}
-Ground your recommendation in the live market context above. What is your trading recommendation?`;
+${formatContext(context)}${formatExtra(extra)}
+Ground your recommendation in ALL the data above — especially any reversal/conflict note. What is your trading recommendation?`;
   }
 
   /**
@@ -287,6 +348,35 @@ Ground your recommendation in the live market context above. What is your tradin
       context = null;
     }
 
+    // Extra intel now surfaced on the card but previously withheld from the model:
+    // the reversal verdict, rotation OVER TIME (30d vs quarter), and the predictors'
+    // own track records. Lazy-required to avoid load-order cycles; each guarded so a
+    // miss never blocks the analysis.
+    const extra = { conflict: !!marketData.conflict, reversalOverride: !!marketData.reversalOverride };
+    try {
+      const { getSectorHistory } = require('./soxxSectorHistory');
+      const [h30, hQ] = await Promise.all([
+        getSectorHistory(false, '30d').catch(() => null),
+        getSectorHistory(false, '1Q').catch(() => null),
+      ]);
+      extra.sectorHist30 = h30;
+      extra.sectorHistQ = hQ;
+    } catch {
+      /* rotation-over-time unavailable */
+    }
+    try {
+      const predStore = require('./soxxPredictions');
+      extra.hStats = predStore.computeStats(predStore.loadRecent(60));
+    } catch {
+      /* hourly stats unavailable */
+    }
+    try {
+      const dailyStore = require('./soxxDailyPredictions');
+      extra.dStats = dailyStore.computeStats(dailyStore.loadRecent(90));
+    } catch {
+      /* daily stats unavailable */
+    }
+
     try {
       const response = await this.anthropic.messages.create({
         model: this.config.model,
@@ -295,7 +385,7 @@ Ground your recommendation in the live market context above. What is your tradin
         messages: [
           {
             role: 'user',
-            content: this.buildUserMessage(marketData, trigger, context),
+            content: this.buildUserMessage(marketData, trigger, context, extra),
           },
         ],
       });
