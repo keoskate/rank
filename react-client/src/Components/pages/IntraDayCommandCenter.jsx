@@ -472,11 +472,13 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       {/* Top-down: macro backdrop + SOXL's own multi-timeframe/daily trend, then
           the constituent detail (movers + earnings), then breadth + regime, then
           the grounded synthesis read (Semiconductor Sentiment) full-width. */}
-      <TwoCol align="start">
+      {/* Stretch (default) so paired cards share a row height — reads as a grid,
+          and the shorter card fills its cell instead of leaving a page-bg gap. */}
+      <TwoCol>
         <MacroContextPanel />
         <MultiTimeframeTechnicals symbol="SOXL" />
       </TwoCol>
-      <TwoCol align="start">
+      <TwoCol>
         <SoxxMovers
           quotes={constituentQuotes}
           updatedAt={constituentUpdatedAt}

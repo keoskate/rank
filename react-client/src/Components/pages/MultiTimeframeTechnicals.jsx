@@ -58,8 +58,6 @@ const MultiTimeframeTechnicals = ({ symbol = 'SOXL' }) => {
 
   // Daily direction history from the 1D candles already in the response.
   const daily = useMemo(() => dailyFromCandles(data['1D']?.candles), [data]);
-  const dots = useMemo(() => daily.slice(-30).map(d => d.dir), [daily]);
-  const mags = useMemo(() => daily.slice(-30).map(d => d.pct), [daily]); // signed day %
   const breakdown = useMemo(() => daily.slice(-20).reverse(), [daily]); // newest first
 
   useEffect(() => {
@@ -99,17 +97,11 @@ const MultiTimeframeTechnicals = ({ symbol = 'SOXL' }) => {
           <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>loading…</span>
         )}
       </div>
-      {/* 30-day daily direction — up/flat/down, shade scales with move size */}
-      {dots.length > 1 && (
+      {/* Daily direction — weekly-grouped, bright up/down shaded by move size;
+          hover to expand into a ~6-month calendar. */}
+      {daily.length > 1 && (
         <div style={{ marginBottom: theme.spacing.sm }}>
-          <DotHistory
-            recentDays={dots}
-            magnitudes={mags}
-            maxMagnitude={8}
-            label={`last ${dots.length} days`}
-            size={12}
-            gap={4}
-          />
+          <DotHistory series={daily} stripDays={30} weekly expandable maxMagnitude={8} size={12} gap={4} label="30d" />
         </div>
       )}
 
