@@ -45,6 +45,28 @@ const Section = ({ label, children }) => (
   </div>
 );
 
+// One sub-sector's cumulative-return trajectory over the window: name · sparkline
+// (rebased to 0 at the window start) · total return · lead/lag vs SPY.
+const ROT_COLS = '120px 80px 50px 56px';
+const SectorTimeRow = ({ name, note, cum, points, vsSpy, min, max, color }) => (
+  <div style={{ display: 'grid', gridTemplateColumns: ROT_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs, padding: '1px 0' }}>
+    <div style={{ color: theme.colors.gray700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {name}
+      {note != null && <span style={{ color: theme.colors.gray400 }}> {note}</span>}
+    </div>
+    <Sparkline points={points} w={80} h={16} min={min} max={max} midline={0} color={color} strokeWidth={1.25} />
+    <div style={{ textAlign: 'right', color: pctColor(cum), fontWeight: 600 }}>
+      {cum >= 0 ? '+' : ''}{cum.toFixed(1)}%
+    </div>
+    <div
+      style={{ textAlign: 'right', color: vsSpy == null ? theme.colors.gray400 : pctColor(vsSpy) }}
+      title={vsSpy == null ? 'benchmark' : 'lead/lag vs SPY over the window'}
+    >
+      {vsSpy == null ? 'bench' : `${vsSpy >= 0 ? '+' : ''}${vsSpy.toFixed(1)}`}
+    </div>
+  </div>
+);
+
 // SOXX Internals — breadth, sub-sector rotation, and leadership/concentration,
 // all derived from the shared constituent quotes. Answers "what's driving SOXX".
 const SoxxInternals = ({ quotes = {}, updatedAt }) => {
@@ -134,6 +156,44 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
     };
   }, [history]);
 
+  // Sub-sector rotation OVER TIME (vs SPY) — lazily fetched only when expanded.
+  const [showDetails, setShowDetails] = useState(false);
+  const [sectorHist, setSectorHist] = useState(null);
+  const [histErr, setHistErr] = useState(null);
+  useEffect(() => {
+    if (!showDetails || sectorHist) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/soxx/sector-history');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) setSectorHist(json);
+      } catch (e) {
+        if (!cancelled) setHistErr(e.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showDetails, sectorHist]);
+
+  const histView = useMemo(() => {
+    if (!sectorHist || !sectorHist.sectors?.length || !sectorHist.benchmark) return null;
+    const spy = sectorHist.benchmark;
+    const secs = sectorHist.sectors;
+    const allPts = [spy.series, ...secs.map(s => s.series)].flatMap(sr => sr.map(p => p.pct));
+    return {
+      spy,
+      secs,
+      min: Math.min(0, ...allPts),
+      max: Math.max(0, ...allPts),
+      beat: secs.filter(s => s.vsSpy > 0).length,
+      leader: secs[0],
+      laggard: secs[secs.length - 1],
+    };
+  }, [sectorHist]);
+
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: theme.spacing.sm }}>
@@ -218,6 +278,73 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
               </div>
             </div>
           </Section>
+
+          {/* Sub-sector rotation over time (expandable) — the trajectory behind the
+              snapshot above: which pockets are being bought vs sold, and vs SPY. */}
+          <button
+            onClick={() => setShowDetails(v => !v)}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: 'none',
+              borderTop: `1px solid ${theme.colors.gray200}`,
+              paddingTop: theme.spacing.sm,
+              color: theme.colors.gray600,
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.xs,
+              fontWeight: theme.typography.fontWeight.medium,
+              textAlign: 'left',
+            }}
+          >
+            {showDetails ? '▴ Hide sub-sector trend' : '▾ Show sub-sector trend over time (vs SPY)'}
+          </button>
+          {showDetails && (
+            <div style={{ marginTop: theme.spacing.sm }}>
+              {histErr ? (
+                <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                  rotation history unavailable ({histErr})
+                </div>
+              ) : !histView ? (
+                <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
+                  loading rotation history…
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: ROT_COLS, gap: 8, marginBottom: 4, fontSize: '9px', color: theme.colors.gray400, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'monospace' }}>
+                    <span>Sector</span>
+                    <span>{sectorHist.sessions}-day path</span>
+                    <span style={{ textAlign: 'right' }}>Total</span>
+                    <span style={{ textAlign: 'right' }}>vs SPY</span>
+                  </div>
+                  <SectorTimeRow
+                    name="SPY"
+                    note="mkt"
+                    cum={histView.spy.cum}
+                    points={histView.spy.series.map(p => p.pct)}
+                    vsSpy={null}
+                    min={histView.min}
+                    max={histView.max}
+                    color={theme.colors.info}
+                  />
+                  {histView.secs.map(s => (
+                    <SectorTimeRow
+                      key={s.name}
+                      name={s.name}
+                      note={`(${s.members})`}
+                      cum={s.cum}
+                      points={s.series.map(p => p.pct)}
+                      vsSpy={s.vsSpy}
+                      min={histView.min}
+                      max={histView.max}
+                    />
+                  ))}
+                  <div style={{ fontSize: '10px', color: theme.colors.gray500, fontFamily: 'monospace', marginTop: 6 }}>
+                    {histView.leader.name} leading · {histView.laggard.name} lagging · {histView.beat}/{histView.secs.length} beat SPY over {sectorHist.sessions}d
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
     </Card>
