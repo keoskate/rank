@@ -2,15 +2,17 @@ import { useEffect, useRef, useState, memo } from 'react';
 import { createChart } from 'lightweight-charts';
 import theme from '../../theme';
 import Card from '../common/Card';
+import TradingViewChart from '../common/TradingViewChart';
 
 // Canonical day-trading timeframes. alpacaToken maps to /api/alpaca/bars'
 // timeframe param (5→5Min, 15→15Min, 60→1Hour, day→1Day) — the real-time IEX
-// feed the engine trades on, not delayed Polygon.
+// feed the engine trades on, not delayed Polygon. indTf/indUnit map the same
+// timeframe onto the /api/indicators endpoint used by the advanced chart.
 const TIMEFRAMES = [
-  { label: '5m',  alpacaToken: '5',   limit: 78,  lookbackDays: 3 },
-  { label: '15m', alpacaToken: '15',  limit: 130, lookbackDays: 5 },
-  { label: '1H',  alpacaToken: '60',  limit: 140, lookbackDays: 14 },
-  { label: '1D',  alpacaToken: 'day', limit: 90,  lookbackDays: 180 },
+  { label: '5m',  alpacaToken: '5',   indTf: '5',  indUnit: 'minute', limit: 78,  lookbackDays: 3 },
+  { label: '15m', alpacaToken: '15',  indTf: '15', indUnit: 'minute', limit: 130, lookbackDays: 5 },
+  { label: '1H',  alpacaToken: '60',  indTf: '1',  indUnit: 'hour',   limit: 140, lookbackDays: 14 },
+  { label: '1D',  alpacaToken: 'day', indTf: '1',  indUnit: 'day',    limit: 90,  lookbackDays: 180 },
 ];
 
 const REFRESH_MS = 60000;
@@ -24,9 +26,16 @@ const SoxlChart = ({ symbol = 'SOXL', height = 320 }) => {
   const [loading, setLoading] = useState(true);
   const [lastClose, setLastClose] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  // Simple (built-in candles+volume) vs Advanced (full TradingViewChart with
+  // VWAP / MA / EMA / RSI / vol-profile toolbar, same as the live-trading page).
+  const [advanced, setAdvanced] = useState(false);
+  const [advCandles, setAdvCandles] = useState([]);
+  const [prevClose, setPrevClose] = useState(null);
 
+  // Simple chart: create the lightweight-charts instance. Skipped in advanced
+  // mode (TradingViewChart owns its own chart); re-inits when toggled back.
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (advanced || !containerRef.current) return;
     const chart = createChart(containerRef.current, {
       layout: {
         backgroundColor: theme.colors.surface,
@@ -78,7 +87,7 @@ const SoxlChart = ({ symbol = 'SOXL', height = 320 }) => {
       seriesRef.current = null;
       volumeRef.current = null;
     };
-  }, []);
+  }, [advanced]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,13 +134,35 @@ const SoxlChart = ({ symbol = 'SOXL', height = 320 }) => {
         if (!cancelled) setLoading(false);
       }
     };
-    fetchBars();
-    const id = setInterval(fetchBars, REFRESH_MS);
+    // Advanced mode pulls the same OHLCV the live-trading charts use, so
+    // TradingViewChart can compute VWAP/MA/EMA/RSI/vol-profile client-side.
+    const fetchAdvanced = async () => {
+      setLoading(true);
+      setErrorMsg(null);
+      try {
+        const res = await fetch(`/api/indicators/${symbol}?timeframe=${tf.indTf}&unit=${tf.indUnit}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (cancelled) return;
+        const c = Array.isArray(data.candles) ? data.candles : [];
+        setAdvCandles(c);
+        if (data.prevClose != null) setPrevClose(data.prevClose);
+        if (c.length > 0) setLastClose(c[c.length - 1].close);
+      } catch (err) {
+        if (!cancelled) setErrorMsg(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    const run = advanced ? fetchAdvanced : fetchBars;
+    run();
+    const id = setInterval(run, REFRESH_MS);
     return () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, [symbol, tf]);
+  }, [symbol, tf, advanced]);
 
   return (
     <Card>
@@ -152,7 +183,31 @@ const SoxlChart = ({ symbol = 'SOXL', height = 320 }) => {
             <span style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.error }}>{errorMsg}</span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', border: `1px solid ${theme.colors.gray200}`, borderRadius: 12, overflow: 'hidden' }}>
+            {[{ label: 'Simple', adv: false }, { label: 'Advanced', adv: true }].map(m => {
+              const active = advanced === m.adv;
+              return (
+                <button
+                  key={m.label}
+                  onClick={() => setAdvanced(m.adv)}
+                  title={m.adv ? 'Full chart: VWAP, MA/EMA, RSI, volume profile' : 'Simple candles + volume'}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: theme.typography.fontSize.xs,
+                    fontWeight: active ? 700 : 500,
+                    color: active ? '#fff' : theme.colors.gray700,
+                    background: active ? theme.colors.primary : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
           {TIMEFRAMES.map(t => {
             const active = tf.label === t.label;
             return (
@@ -174,9 +229,31 @@ const SoxlChart = ({ symbol = 'SOXL', height = 320 }) => {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
-      <div ref={containerRef} style={{ width: '100%', height }} />
+      {advanced ? (
+        advCandles.length === 0 ? (
+          <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.gray500, fontSize: theme.typography.fontSize.sm }}>
+            {errorMsg || 'Loading advanced chart…'}
+          </div>
+        ) : (
+          <TradingViewChart
+            symbol={symbol}
+            candles={advCandles}
+            currentCandleIndex={advCandles.length - 1}
+            trades={[]}
+            currentPosition={null}
+            dayOpen={advCandles[0]?.open || 0}
+            prevClose={prevClose}
+            height={height}
+            showRSI={height >= 300}
+            hideHeader
+          />
+        )
+      ) : (
+        <div ref={containerRef} style={{ width: '100%', height }} />
+      )}
     </Card>
   );
 };

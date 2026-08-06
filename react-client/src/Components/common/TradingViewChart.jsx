@@ -49,6 +49,7 @@ const TradingViewChart = ({
   showRSI = true, // Show RSI panel by default
   rsiHeight = 120,
   sigmaLevels = null, // Optional [dev1, dev2, dev3] override for VWAP bands
+  hideHeader = false, // Suppress the internal symbol/price header (embedders that already show one)
 }) => {
   const chartContainerRef = useRef(null);
   const rsiContainerRef = useRef(null);
@@ -1029,6 +1030,7 @@ const TradingViewChart = ({
       overflow: 'hidden',
     }}>
       {/* Chart Header */}
+      {!hideHeader && (
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -1082,6 +1084,7 @@ const TradingViewChart = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Indicator Toggle Bar */}
       <div style={{
@@ -1092,7 +1095,8 @@ const TradingViewChart = ({
         borderBottom: `1px solid ${theme.colors.border}`,
         backgroundColor: theme.colors.gray50,
         fontSize: '11px',
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
       }}>
         <span style={{ color: theme.colors.textMuted, marginRight: theme.spacing.xs }}>Indicators:</span>
         {[
@@ -1119,6 +1123,7 @@ const TradingViewChart = ({
               cursor: 'pointer',
               fontSize: '10px',
               fontWeight: indicators[key] ? 'bold' : 'normal',
+              whiteSpace: 'nowrap',
               transition: 'all 0.15s ease',
             }}
           >
@@ -1147,6 +1152,7 @@ const TradingViewChart = ({
             cursor: anchorMode ? 'crosshair' : 'pointer',
             fontSize: '10px',
             fontWeight: anchorMode || hasAvwap ? 'bold' : 'normal',
+            whiteSpace: 'nowrap',
             transition: 'all 0.15s ease',
           }}
         >
