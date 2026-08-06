@@ -33,8 +33,21 @@ const formatQty = n => {
 
 // key = position field; num=false sorts as text (symbol). sortVal overrides the
 // sort accessor (used for the derived SOXX-membership flag).
+// Fund holdings that are SOXX (semiconductor-index) members render their ticker
+// in a distinct dark blue so you can scan a card and instantly see which names
+// are the fund's semis exposure.
+const SOXX_BLUE = '#1e40af';
+
 const COLUMNS = [
-  { key: 'symbol', label: 'Symbol', align: 'left', num: false, render: p => p.symbol },
+  {
+    key: 'symbol',
+    label: 'Symbol',
+    align: 'left',
+    num: false,
+    render: p => (
+      <span style={{ color: SOXX_SET.has(p.symbol) ? SOXX_BLUE : theme.colors.gray800 }}>{p.symbol}</span>
+    ),
+  },
   {
     key: 'isSoxx',
     label: 'SOXX',
