@@ -413,8 +413,18 @@ module.exports = function (deps) {
           stale: false,
         });
       }
-      const snap = await alpacaClient.getSnapshot(symbol);
-      return res.json({ ...snap, source: 'alpaca-iex', stale: false });
+      // Shared cache + micro-batch coalescing + sanity gate (server/quoteCache).
+      const quoteCache = require('../quoteCache');
+      const snap = await quoteCache.getQuote(symbol);
+      if (!snap) {
+        return res.status(200).json({ symbol, last: null, price: null, stale: true, error: 'no quote' });
+      }
+      return res.json({
+        ...snap,
+        source: 'alpaca-iex',
+        stale: snap.last == null, // sanity-failed price → treated as no quote
+        unverified: !!snap.unverified,
+      });
     } catch (error) {
       // Never fall back to stale prev-close — surface staleness to the UI.
       console.error(`❌ /api/quote/${symbol}:`, error.message);
@@ -425,6 +435,31 @@ module.exports = function (deps) {
         stale: true,
         error: error.message,
       });
+    }
+  });
+
+  // Batch equity quotes — one round-trip for a basket (SOXX constituents, macro,
+  // SOXL/SOXS, …). Backed by the shared cache + Alpaca batch snapshot, so N
+  // client requests collapse to ~1 upstream call. Equities only (crypto → /api/quote).
+  router.get('/api/quotes', async (req, res) => {
+    try {
+      const symbols = String(req.query.symbols || '')
+        .split(',')
+        .map(s => s.trim().toUpperCase())
+        .filter(Boolean);
+      if (!symbols.length) return res.json({ quotes: {}, asOf: new Date().toISOString() });
+      const quoteCache = require('../quoteCache');
+      const raw = await quoteCache.getQuotes(symbols);
+      const quotes = {};
+      for (const [sym, snap] of Object.entries(raw)) {
+        quotes[sym] = snap
+          ? { ...snap, source: 'alpaca-iex', stale: snap.last == null, unverified: !!snap.unverified }
+          : { symbol: sym, last: null, price: null, stale: true };
+      }
+      res.json({ quotes, asOf: new Date().toISOString() });
+    } catch (error) {
+      console.error('❌ /api/quotes:', error.message);
+      res.status(500).json({ error: error.message });
     }
   });
 

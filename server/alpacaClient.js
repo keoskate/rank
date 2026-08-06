@@ -481,6 +481,69 @@ async function getSnapshot(symbol) {
 }
 
 /**
+ * Batch snapshots — Alpaca GET /v2/stocks/snapshots?symbols=A,B,C (IEX). Returns
+ * a { SYMBOL: snapshot } map in the SAME shape as getSnapshot(), missing symbols
+ * mapped to null. One request per ≤50 symbols instead of one per symbol.
+ * @param {string[]} symbols
+ * @returns {Object<string, object|null>}
+ */
+async function getSnapshots(symbols) {
+  if (!Array.isArray(symbols) || symbols.length === 0) return {};
+  const MARKET_DATA_URL = 'https://data.alpaca.markets';
+  const credentials = tradingModeManager.getCredentials();
+  const uniq = [...new Set(symbols.map(s => String(s).toUpperCase()))];
+  const out = {};
+  const CHUNK = 50;
+  for (let i = 0; i < uniq.length; i += CHUNK) {
+    const chunk = uniq.slice(i, i + CHUNK);
+    await rateLimit();
+    const response = await axios({
+      method: 'GET',
+      url: `${MARKET_DATA_URL}/v2/stocks/snapshots?symbols=${chunk.join(',')}&feed=iex`,
+      headers: {
+        'APCA-API-KEY-ID': credentials.apiKey,
+        'APCA-API-SECRET-KEY': credentials.secretKey,
+      },
+      timeout: 10000,
+    });
+    // Response may be { snapshots: {SYM: {...}} } or { SYM: {...} } depending on tier.
+    const body = response.data || {};
+    const map = body.snapshots || body;
+    for (const sym of chunk) {
+      const s = map[sym];
+      if (!s) {
+        out[sym] = null;
+        continue;
+      }
+      const lt = s.latestTrade || {};
+      const lq = s.latestQuote || {};
+      const db = s.dailyBar || {};
+      const pdb = s.prevDailyBar || {};
+      const last = parseFloat(lt.p);
+      const prevClose = parseFloat(pdb.c);
+      out[sym] = {
+        symbol: sym,
+        last: Number.isFinite(last) ? last : null,
+        price: Number.isFinite(last) ? last : null,
+        bid: parseFloat(lq.bp) || null,
+        ask: parseFloat(lq.ap) || null,
+        open: parseFloat(db.o) || null,
+        high: parseFloat(db.h) || null,
+        low: parseFloat(db.l) || null,
+        close: parseFloat(db.c) || null,
+        volume: parseInt(db.v, 10) || null,
+        prevClose: Number.isFinite(prevClose) ? prevClose : null,
+        change: Number.isFinite(last) && Number.isFinite(prevClose) ? last - prevClose : null,
+        changePercent:
+          Number.isFinite(last) && prevClose ? ((last - prevClose) / prevClose) * 100 : null,
+        timestamp: lt.t || null,
+      };
+    }
+  }
+  return out;
+}
+
+/**
  * Get bars (OHLCV) data
  *
  * @param {string} symbol - Stock symbol
@@ -1256,6 +1319,7 @@ module.exports = {
   getLatestQuote,
   getLatestTrade,
   getSnapshot,
+  getSnapshots,
   getBars,
 
   // Cross-validation
