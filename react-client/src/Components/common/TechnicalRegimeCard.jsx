@@ -13,24 +13,24 @@ import theme from '../../theme';
 const REGIME_INFO = {
   bull: {
     label: 'BULL',
-    color: '#22c55e',
-    bgColor: '#dcfce7',
-    icon: '📈',
-    description: 'Momentum up - let winners run',
+    color: theme.colors.success,
+    bgColor: theme.colors.successLight,
+    borderColor: theme.colors.successBorder,
+    description: 'Momentum up — let winners run',
   },
   bear: {
     label: 'BEAR',
-    color: '#ef4444',
-    bgColor: '#fee2e2',
-    icon: '📉',
-    description: 'Momentum down - protect capital',
+    color: theme.colors.error,
+    bgColor: theme.colors.errorLight,
+    borderColor: theme.colors.errorBorder,
+    description: 'Momentum down — protect capital',
   },
   sideways: {
     label: 'SIDEWAYS',
-    color: '#eab308',
-    bgColor: '#fef9c3',
-    icon: '↔️',
-    description: 'Choppy - be selective',
+    color: theme.colors.warningDark,
+    bgColor: theme.colors.warningLight,
+    borderColor: theme.colors.warningBorder,
+    description: 'Choppy — be selective',
   },
 };
 
@@ -124,8 +124,8 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
       {error && (
         <div style={{
           padding: theme.spacing.xs,
-          backgroundColor: '#fee2e2',
-          color: '#991b1b',
+          backgroundColor: theme.colors.errorLight,
+          color: theme.colors.errorDark,
           borderRadius: theme.borderRadius.sm,
           marginBottom: theme.spacing.sm,
           fontSize: '11px',
@@ -157,19 +157,22 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
             marginBottom: theme.spacing.sm,
           }}>
             <span style={{
-              padding: '8px 16px',
-              borderRadius: theme.borderRadius.md,
+              padding: '5px 12px',
+              borderRadius: theme.borderRadius.sm,
               backgroundColor: currentRegime.bgColor,
               color: currentRegime.color,
-              fontWeight: 'bold',
-              fontSize: theme.typography.fontSize.lg,
+              border: `1px solid ${currentRegime.borderColor}`,
+              fontWeight: theme.typography.fontWeight.bold,
+              fontSize: theme.typography.fontSize.md,
+              letterSpacing: '0.04em',
             }}>
-              {currentRegime.icon} {currentRegime.label}
+              {currentRegime.label}
             </span>
             {detection?.confidence && (
               <span style={{
                 fontSize: theme.typography.fontSize.sm,
-                color: theme.colors.textMuted,
+                color: theme.colors.gray500,
+                fontFamily: theme.typography.fontFamilyMono,
               }}>
                 {detection.confidence.toFixed(0)}% conf
               </span>
@@ -179,7 +182,7 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
           {/* Description */}
           <div style={{
             fontSize: theme.typography.fontSize.sm,
-            color: theme.colors.textSecondary,
+            color: theme.colors.gray700,
             marginBottom: theme.spacing.sm,
           }}>
             {detection?.description || currentRegime.description}
@@ -197,12 +200,12 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
                 <span style={{
                   padding: '2px 6px',
                   backgroundColor: parseFloat(detection.indicators.fiveDayReturn) > 0
-                    ? '#dcfce7'
-                    : '#fee2e2',
+                    ? theme.colors.successLight
+                    : theme.colors.errorLight,
                   borderRadius: theme.borderRadius.sm,
                   color: parseFloat(detection.indicators.fiveDayReturn) > 0
-                    ? '#166534'
-                    : '#991b1b',
+                    ? theme.colors.successDark
+                    : theme.colors.errorDark,
                 }}>
                   5d: {detection.indicators.fiveDayReturn}
                 </span>
@@ -211,12 +214,12 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
                 <span style={{
                   padding: '2px 6px',
                   backgroundColor: parseFloat(detection.indicators.tenDayReturn) > 0
-                    ? '#dcfce7'
-                    : '#fee2e2',
+                    ? theme.colors.successLight
+                    : theme.colors.errorLight,
                   borderRadius: theme.borderRadius.sm,
                   color: parseFloat(detection.indicators.tenDayReturn) > 0
-                    ? '#166534'
-                    : '#991b1b',
+                    ? theme.colors.successDark
+                    : theme.colors.errorDark,
                 }}>
                   10d: {detection.indicators.tenDayReturn}
                 </span>
@@ -225,12 +228,12 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
                 <span style={{
                   padding: '2px 6px',
                   backgroundColor: detection.indicators.priceVs50MA > 0
-                    ? '#dcfce7'
-                    : '#fee2e2',
+                    ? theme.colors.successLight
+                    : theme.colors.errorLight,
                   borderRadius: theme.borderRadius.sm,
                   color: detection.indicators.priceVs50MA > 0
-                    ? '#166534'
-                    : '#991b1b',
+                    ? theme.colors.successDark
+                    : theme.colors.errorDark,
                 }}>
                   vs 50MA: {detection.indicators.priceVs50MA > 0 ? '+' : ''}{detection.indicators.priceVs50MA.toFixed(1)}%
                 </span>
@@ -240,7 +243,7 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
                   padding: '2px 6px',
                   backgroundColor: theme.colors.gray100,
                   borderRadius: theme.borderRadius.sm,
-                  color: theme.colors.textSecondary,
+                  color: theme.colors.gray700,
                 }}>
                   ADX: {parseFloat(detection.indicators.adx).toFixed(0)}
                 </span>
@@ -250,7 +253,7 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
                   padding: '2px 6px',
                   backgroundColor: theme.colors.gray100,
                   borderRadius: theme.borderRadius.sm,
-                  color: theme.colors.textSecondary,
+                  color: theme.colors.gray700,
                 }}>
                   Vol: {detection.indicators.volatility}
                 </span>
@@ -262,10 +265,16 @@ const TechnicalRegimeCard = ({ symbol = 'QBTS', date, onRegimeChange, embedded =
           {detection?.indicators?.signals && (
             <div style={{
               marginTop: theme.spacing.sm,
-              fontSize: '10px',
-              color: theme.colors.textMuted,
+              fontSize: '11px',
+              color: theme.colors.gray500,
+              fontFamily: theme.typography.fontFamilyMono,
             }}>
-              Signals: 📈{detection.indicators.signals.bullish} / 📉{detection.indicators.signals.bearish} / ↔️{detection.indicators.signals.sideways}
+              Signals:{' '}
+              <span style={{ color: theme.colors.success, fontWeight: 700 }}>{detection.indicators.signals.bullish} up</span>
+              {' / '}
+              <span style={{ color: theme.colors.error, fontWeight: 700 }}>{detection.indicators.signals.bearish} down</span>
+              {' / '}
+              <span style={{ color: theme.colors.gray600 }}>{detection.indicators.signals.sideways} flat</span>
             </div>
           )}
         </div>

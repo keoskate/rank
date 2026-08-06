@@ -15,7 +15,7 @@ const TIMEFRAMES = [
 
 const REFRESH_MS = 60000;
 
-const SoxlChart = ({ symbol = 'SOXL' }) => {
+const SoxlChart = ({ symbol = 'SOXL', height = 320 }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -44,7 +44,7 @@ const SoxlChart = ({ symbol = 'SOXL' }) => {
         secondsVisible: false,
       },
       width: containerRef.current.clientWidth,
-      height: 320,
+      height,
     });
     const candles = chart.addCandlestickSeries({
       upColor: theme.colors.success,
@@ -176,7 +176,7 @@ const SoxlChart = ({ symbol = 'SOXL' }) => {
           })}
         </div>
       </div>
-      <div ref={containerRef} style={{ width: '100%', height: 320 }} />
+      <div ref={containerRef} style={{ width: '100%', height }} />
     </Card>
   );
 };

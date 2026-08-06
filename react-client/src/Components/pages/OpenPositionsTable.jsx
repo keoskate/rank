@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from 'react';
 import theme from '../../theme';
+import { fmtET } from '../../utils/timeFormat';
 
 const formatMoney = (n, opts = {}) => {
   const { showSign = false, decimals = 2 } = opts;
@@ -58,7 +59,7 @@ const headerCell = {
   userSelect: 'none',
 };
 
-const OpenPositionsTable = ({ positions, loading, error }) => {
+const OpenPositionsTable = ({ positions, loading, error, lastUpdated, onRefresh }) => {
   const [sortKey, setSortKey] = useState('marketValue');
   const [sortDir, setSortDir] = useState('desc'); // largest holdings first
   const [collapsed, setCollapsed] = useState(false);
@@ -146,16 +147,28 @@ const OpenPositionsTable = ({ positions, loading, error }) => {
             </span>
           )}
         </button>
-        {hasPositions && (
-          <div style={{ display: 'flex', gap: theme.spacing.md, fontSize: theme.typography.fontSize.sm, fontFamily: 'monospace' }}>
-            <span style={{ color: theme.colors.gray500 }}>
-              Value: <span style={{ color: theme.colors.gray700 }}>{formatMoney(totals.marketValue)}</span>
-            </span>
-            <span style={{ color: theme.colors.gray500 }}>
-              Unrealized: <span style={{ color: totalColor, fontWeight: theme.typography.fontWeight.medium }}>{formatMoney(totals.unrealizedPL, { showSign: true })}</span>
-            </span>
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: theme.spacing.md }}>
+          {hasPositions && (
+            <div style={{ display: 'flex', gap: theme.spacing.md, fontSize: theme.typography.fontSize.sm, fontFamily: 'monospace' }}>
+              <span style={{ color: theme.colors.gray500 }}>
+                Value: <span style={{ color: theme.colors.gray700 }}>{formatMoney(totals.marketValue)}</span>
+              </span>
+              <span style={{ color: theme.colors.gray500 }}>
+                Unrealized: <span style={{ color: totalColor, fontWeight: theme.typography.fontWeight.medium }}>{formatMoney(totals.unrealizedPL, { showSign: true })}</span>
+              </span>
+            </div>
+          )}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              title="Tap to refresh"
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: theme.typography.fontFamilyMono, fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}
+            >
+              {lastUpdated ? `${fmtET(lastUpdated)} ET` : ''}
+              <span style={{ fontSize: '12px' }}>↻</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {collapsed ? null : error ? (

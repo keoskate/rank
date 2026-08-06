@@ -55,11 +55,16 @@ const PortfolioPage = () => {
     setSearchParams(tab === 'overview' ? {} : { tab });
   };
 
+  // Only the Overview tab consumes this account/positions/orders data. The
+  // Command Center tab self-fetches (on its own slow cadence) and Analytics
+  // uses its own panel — so don't run this 10s Alpaca poll off-tab (it was
+  // hammering the rate limit on the command tab for data nothing there uses).
   useEffect(() => {
+    if (activeTab !== 'overview') return undefined;
     fetchPortfolioData();
-    const interval = setInterval(fetchPortfolioData, 10000); // Refresh every 10s for live updates
+    const interval = setInterval(fetchPortfolioData, 10000); // Overview: 10s live updates
     return () => clearInterval(interval);
-  }, [tradingMode]); // Re-fetch when mode changes
+  }, [tradingMode, activeTab]); // Re-fetch when mode or tab changes
 
   const fetchPortfolioData = async () => {
     try {

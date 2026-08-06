@@ -7,7 +7,7 @@ import CommandCenterLogFeed from './CommandCenterLogFeed';
 import AccountSummaryPanel from './AccountSummaryPanel';
 import OpenPositionsTable from './OpenPositionsTable';
 import TodaysTradeLedger from './TodaysTradeLedger';
-import LivePriceTickers from './LivePriceTickers';
+import LeverageTracker from './LeverageTracker';
 import SignalActivityPanel from './SignalActivityPanel';
 import GatesAndIndicatorsPanel from './GatesAndIndicatorsPanel';
 import MarketStrip from './MarketStrip';
@@ -75,8 +75,8 @@ const TwoCol = ({ children, align }) => (
 );
 
 const MAX_LOGS = 200;
-const POLL_INTERVAL = 5000;
-const TRACKED_SYMBOLS = ['SOXL', 'SOXS'];
+const POLL_INTERVAL = 5000; // live market loop (sessions + sentiment)
+const ACCOUNT_POLL_INTERVAL = 60000; // slow Alpaca account/positions loop (+ manual tap)
 // Symbols whose indicators belong on this SOXX/semis command center. Fetched
 // directly from /api/indicators so the cards always have data — the old
 // socket-log source only populated when a session happened to broadcast (and
@@ -114,11 +114,14 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
   const [logs, setLogs] = useState([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  // Account/positions refresh on a SLOW cadence + manual tap (rate-limit-friendly),
+  // decoupled from the live 5s market loop. baseValue (portfolio-history) → lifetime P&L.
+  const [lastAccountRefresh, setLastAccountRefresh] = useState(null);
+  const [baseValue, setBaseValue] = useState(null);
   const [flashTrades, setFlashTrades] = useState(new Set());
   const [indicatorData, setIndicatorData] = useState({});
   const [constituentQuotes, setConstituentQuotes] = useState({});
   const [constituentUpdatedAt, setConstituentUpdatedAt] = useState(null);
-  const [socket, setSocket] = useState(null);
 
   // Poll the 30 SOXX constituent quotes ONCE here and feed both SoxxMovers and
   // SoxxInternals (breadth/rotation), so we don't fetch them twice.
@@ -213,51 +216,59 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
     });
   }, []);
 
-  // REST polling
-  const fetchData = useCallback(async () => {
-    const newHealth = {
-      server: 'unknown',
-      alpaca: 'unknown',
-      sentiment: 'unknown',
-    };
-
+  // LIVE market loop (5s): sessions + sentiment. Global (not per-account), so no
+  // tradingMode dep. Drives the health bar's server/sentiment + lastRefresh.
+  const fetchMarket = useCallback(async () => {
+    const patch = { server: 'unknown', sentiment: 'unknown' };
     try {
-      const [sessionsRes, sentimentRes, accountRes, positionsRes, ordersRes] =
-        await Promise.all([
-          fetch('/api/ai/sessions/default_user'),
-          fetch('/api/semiconductor/sentiment'),
-          fetch(`/api/alpaca/account?mode=${tradingMode}`),
-          fetch(`/api/alpaca/positions?mode=${tradingMode}`),
-          fetch(`/api/alpaca/orders?mode=${tradingMode}&status=all&limit=100`),
-        ]);
-
-      if (!mountedRef.current) return; // unmounted during Promise.all → bail
-
-      // Server is reachable if any request succeeded
-      newHealth.server = sessionsRes.ok ? 'ok' : 'degraded';
-
+      const [sessionsRes, sentimentRes] = await Promise.all([
+        fetch('/api/ai/sessions/default_user'),
+        fetch('/api/semiconductor/sentiment'),
+      ]);
+      if (!mountedRef.current) return;
+      patch.server = sessionsRes.ok ? 'ok' : 'degraded';
       if (sessionsRes.ok) {
         const data = await sessionsRes.json();
         stableSet(setSessions, data.sessions || []);
       }
-
       if (sentimentRes.ok) {
         const data = await sentimentRes.json();
         stableSet(setSentiment, data);
-        newHealth.sentiment = 'ok';
+        patch.sentiment = 'ok';
       } else {
-        newHealth.sentiment = 'degraded';
+        patch.sentiment = 'degraded';
       }
+    } catch {
+      if (!mountedRef.current) return;
+      patch.server = 'down';
+      patch.sentiment = 'down';
+    }
+    if (!mountedRef.current) return;
+    setHealth(h => ({ ...h, ...patch }));
+    setLastRefresh(new Date());
+  }, []);
+
+  // SLOW Alpaca loop (60s + manual tap): account, positions, orders, and
+  // portfolio-history (baseValue → lifetime P&L). Rate-limit-friendly; display
+  // only (the engine fetches its own account state server-side).
+  const fetchAccount = useCallback(async () => {
+    try {
+      const [accountRes, positionsRes, ordersRes, historyRes] = await Promise.all([
+        fetch(`/api/alpaca/account?mode=${tradingMode}`),
+        fetch(`/api/alpaca/positions?mode=${tradingMode}`),
+        fetch(`/api/alpaca/orders?mode=${tradingMode}&status=all&limit=100`),
+        fetch(`/api/alpaca/portfolio-history?mode=${tradingMode}&period=1A`),
+      ]);
+      if (!mountedRef.current) return;
 
       if (accountRes.ok) {
-        newHealth.alpaca = 'ok';
         const data = await accountRes.json();
-        // The route wraps the body as { success: true, account: {...} }
-        stableSet(setAccount, data.account || data);
+        stableSet(setAccount, data.account || data); // route wraps as { account }
         setAccountError(null);
+        setHealth(h => ({ ...h, alpaca: 'ok' }));
       } else {
-        newHealth.alpaca = 'degraded';
         setAccountError(`HTTP ${accountRes.status}`);
+        setHealth(h => ({ ...h, alpaca: 'degraded' }));
       }
 
       if (positionsRes.ok) {
@@ -275,38 +286,45 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       } else {
         setOrdersError(`HTTP ${ordersRes.status}`);
       }
+
+      if (historyRes.ok) {
+        const data = await historyRes.json();
+        const bv = Number(data.baseValue);
+        if (Number.isFinite(bv)) setBaseValue(bv);
+      }
     } catch (err) {
       if (!mountedRef.current) return;
-      newHealth.server = 'down';
-      newHealth.alpaca = 'down';
-      newHealth.sentiment = 'down';
       setAccountError(err?.message || 'fetch failed');
       setPositionsError(err?.message || 'fetch failed');
       setOrdersError(err?.message || 'fetch failed');
+      setHealth(h => ({ ...h, alpaca: 'down' }));
     }
-
     if (!mountedRef.current) return;
-    setHealth(newHealth);
-    setLastRefresh(new Date());
+    setLastAccountRefresh(new Date());
   }, [tradingMode]);
 
-  // Keep the ref pointing at the latest fetchData so the WebSocket effect
-  // can call it without depending on fetchData identity.
-  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
+  // Post-trade refresh (from the WebSocket effect) pulls fresh account/positions.
+  useEffect(() => { fetchDataRef.current = fetchAccount; }, [fetchAccount]);
 
-  // Initial fetch + polling
+  // Live market loop (5s)
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    fetchMarket();
+    const id = setInterval(fetchMarket, POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, [fetchMarket]);
+
+  // Slow account loop (60s) — also re-fires when tradingMode changes
+  useEffect(() => {
+    fetchAccount();
+    const id = setInterval(fetchAccount, ACCOUNT_POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, [fetchAccount]);
 
   // WebSocket connection
   useEffect(() => {
     const sock = io(window.location.origin, {
       transports: ['websocket', 'polling'],
     });
-    setSocket(sock);
 
     const trackedTimeout = (cb, ms) => {
       const id = setTimeout(() => {
@@ -394,7 +412,6 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
     return () => {
       sock.disconnect();
-      setSocket(null);
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current.clear();
     };
@@ -420,18 +437,29 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
       <SectionHeader index={1} label="At a glance" />
       <AccountSummaryPanel
         account={account}
+        baseValue={baseValue}
         loading={!account && !accountError}
         error={accountError}
+        lastUpdated={lastAccountRefresh}
+        onRefresh={fetchAccount}
       />
 
       <SectionHeader index={2} label="Active trading" />
-      <LivePriceTickers socket={socket} symbols={TRACKED_SYMBOLS} positions={positions} />
-      <SoxlChart symbol="SOXL" />
+      {/* SOXX (the driver) as the big chart, SOXL/SOXS beneath, then the
+          leverage-tracking / slippage read across all three. */}
+      <SoxlChart symbol="SOXX" />
+      <TwoCol>
+        <SoxlChart symbol="SOXL" height={240} />
+        <SoxlChart symbol="SOXS" height={240} />
+      </TwoCol>
+      <LeverageTracker />
       <TwoCol align="start">
         <OpenPositionsTable
           positions={positions}
           loading={positions.length === 0 && !positionsError}
           error={positionsError}
+          lastUpdated={lastAccountRefresh}
+          onRefresh={fetchAccount}
         />
         <GatesAndIndicatorsPanel
           logs={logs}
