@@ -53,6 +53,29 @@ async function assembleFeatures() {
   const b = ctx && ctx.breadth;
   const m = ctx && ctx.macro;
 
+  // Sub-sector rotation over ~30 sessions (cached ~2h) → numeric rotation features.
+  // Captures leadership cycles: dispersion (spread), whether semis broadly lead/lag
+  // the market (vs SPY), and the breadth of that leadership. Recorded raw so future
+  // learning can weight them; live == the same computeSectorSeries core the UI uses.
+  const sectorHist = await require('./soxxSectorHistory')
+    .getSectorHistory()
+    .catch(() => null);
+  const rot = (() => {
+    if (!sectorHist || !sectorHist.sectors || !sectorHist.sectors.length || !sectorHist.benchmark) return {};
+    const secs = sectorHist.sectors; // sorted by cum desc
+    const spyCum = sectorHist.benchmark.cum;
+    const cums = secs.map(s => s.cum);
+    const meanCum = cums.reduce((a, c) => a + c, 0) / cums.length;
+    return {
+      rotLeader: secs[0].name,
+      rotLaggard: secs[secs.length - 1].name,
+      rotSpread: secs[0].cum - secs[secs.length - 1].cum,
+      rotSemisVsSpy: meanCum - spyCum,
+      rotPctBeatSpy: secs.filter(s => s.vsSpy > 0).length / secs.length,
+      rotSpyCum: spyCum,
+    };
+  })();
+
   const features = {
     // ── sentiment (heuristic read) ──
     sentDirection: sentiment.direction || 'neutral',
@@ -81,6 +104,13 @@ async function assembleFeatures() {
     etHour: hour,
     minutesFromOpen,
     weekday,
+    // ── sub-sector rotation over ~30d (leadership cycles / vs SPY) ──
+    rotLeader: rot.rotLeader ?? null,
+    rotLaggard: rot.rotLaggard ?? null,
+    rotSpread: rot.rotSpread ?? null,
+    rotSemisVsSpy: rot.rotSemisVsSpy ?? null,
+    rotPctBeatSpy: rot.rotPctBeatSpy ?? null,
+    rotSpyCum: rot.rotSpyCum ?? null,
     contextStale: ctx ? !!ctx.stale : true,
   };
 
