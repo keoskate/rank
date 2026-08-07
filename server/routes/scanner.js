@@ -70,6 +70,39 @@ module.exports = function () {
     }
   });
 
+  router.get('/api/scanner/options/tickets', async (req, res) => {
+    try {
+      res.json(await require('../scanner/optionsTickets').listTickets());
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/api/scanner/options/tickets/buy', async (req, res) => {
+    try {
+      const { card, horizonDays, qty } = req.body || {};
+      const result = await require('../scanner/optionsTickets').buyTicket({
+        card,
+        horizonDays: Number.isFinite(+horizonDays) ? +horizonDays : 5,
+        qty: Number.isFinite(+qty) ? +qty : 1,
+        source: 'web',
+      });
+      res.json({ ticket: result.ticket, orderStatus: result.order.status });
+    } catch (err) {
+      console.error('Ticket buy error:', err.message);
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.post('/api/scanner/options/tickets/:id/sell', async (req, res) => {
+    try {
+      const result = await require('../scanner/optionsTickets').sellTicket(req.params.id, { reason: 'manual' });
+      res.json({ ticket: result.ticket, orderStatus: result.order?.status ?? 'noOrder' });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
   router.get('/api/scanner/options/pick/:id/history', async (req, res) => {
     try {
       const trackRecord = require('../scanner/optionsTrackRecord');

@@ -5,6 +5,7 @@ import OptionsScanControls from './OptionsScanControls';
 import OptionsOpportunityTable from './OptionsOpportunityTable';
 import OptionsSimpleCards from './OptionsSimpleCards';
 import OptionsTrackRecord from './OptionsTrackRecord';
+import MyTicketsPanel from './MyTicketsPanel';
 
 const VIEW_STORAGE_KEY = 'optionsScannerView';
 
@@ -130,6 +131,28 @@ const OptionsScannerTab = ({ universeSymbols }) => {
     runScan({ ...opts, symbols: universeSymbols, maxResults: 30 });
   }, [runScan, universeSymbols]);
 
+  const [ticketsRefresh, setTicketsRefresh] = useState(0);
+  const handleBuy = useCallback(async card => {
+    const ok = window.confirm(
+      `Buy 1 contract: ${card.underlying} ${card.type.toUpperCase()} $${card.strike} exp ${card.expiration}?\n\n` +
+      `Cost ≈ $${Math.round(card.costPerContract)} — that's your max loss.\n` +
+      `The system will auto-sell it on the plan date (hold-to-plan playbook). Paper account.`
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch('/api/scanner/options/tickets/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ card, horizonDays: scan?.horizonDays ?? 5, qty: 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setTicketsRefresh(n => n + 1);
+    } catch (err) {
+      window.alert(`Buy failed: ${err.message}`);
+    }
+  }, [scan?.horizonDays]);
+
   const opportunities = requote?.opportunities ?? scan?.opportunities ?? [];
 
   return (
@@ -213,10 +236,12 @@ const OptionsScannerTab = ({ universeSymbols }) => {
 
       {scan && <FilterFunnel scan={scan} simple={viewMode === 'simple'} />}
 
+      <MyTicketsPanel refreshKey={ticketsRefresh} />
+
       <OptionsTrackRecord refreshKey={scan?.scanId} />
 
       {viewMode === 'simple'
-        ? <OptionsSimpleCards opportunities={opportunities} loading={loading} />
+        ? <OptionsSimpleCards opportunities={opportunities} loading={loading} onBuy={handleBuy} />
         : <OptionsOpportunityTable opportunities={opportunities} loading={loading} />}
     </>
   );

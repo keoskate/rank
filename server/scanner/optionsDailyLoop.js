@@ -198,6 +198,15 @@ async function _runDaily(dateEt) {
 async function _tick() {
   try {
     const et = _etParts();
+    // Ticket auto-management rides the same interval: exits fire on any
+    // tick during market hours once a ticket's plan date arrives.
+    if (et.isWeekday && et.hourEt >= 9 && et.hourEt < 16) {
+      try {
+        await require('./optionsTickets').managerTick({ todayEt: et.dateEt, marketOpen: true });
+      } catch (err) {
+        console.log('[OptionsLoop] ticket manager tick failed:', err.message);
+      }
+    }
     const state = _loadState();
     if (!shouldRunNow(state, et)) return;
     // Claim the day before the (slow) run so a restart can't double-fire.

@@ -85,7 +85,7 @@ const PriceLine = ({ o }) => {
   );
 };
 
-const SimpleCard = ({ o }) => {
+const SimpleCard = ({ o, onBuy }) => {
   const payout = payoutIfHit(o);
   const tier = riskTier(o);
   const worst = worstCase(o);
@@ -185,7 +185,7 @@ const SimpleCard = ({ o }) => {
 
       <DotHistory recentDays={o.recentDays} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, marginTop: 'auto' }}>
         <span style={{
           padding: '3px 10px',
           fontSize: '0.68rem',
@@ -200,12 +200,32 @@ const SimpleCard = ({ o }) => {
         <span style={{ fontSize: '0.72rem', color: theme.colors.gray500, fontFamily: theme.typography.fontFamilyMono }}>
           {expiresIn(o)}
         </span>
+        {onBuy && (
+          <button
+            onClick={() => onBuy(o)}
+            style={{
+              marginLeft: 'auto',
+              padding: '6px 14px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#fff',
+              background: theme.colors.charcoal,
+              border: 'none',
+              borderRadius: theme.borderRadius.xs,
+              cursor: 'pointer',
+            }}
+          >
+            Buy ticket · {fmtMoney(o.costPerContract)}
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-const OptionsSimpleCards = ({ opportunities = [], loading = false }) => {
+const OptionsSimpleCards = ({ opportunities = [], loading = false, onBuy = null }) => {
   if (loading && opportunities.length === 0) {
     return (
       <div style={{ padding: theme.spacing.xl, textAlign: 'center', color: theme.colors.gray500 }}>
@@ -237,7 +257,7 @@ const OptionsSimpleCards = ({ opportunities = [], loading = false }) => {
       gridTemplateColumns: 'repeat(auto-fill, minmax(min(380px, 100%), 1fr))',
       gap: theme.spacing.md,
     }}>
-      {opportunities.map(o => <SimpleCard key={o.contractSymbol} o={o} />)}
+      {opportunities.map(o => <SimpleCard key={o.contractSymbol} o={o} onBuy={onBuy} />)}
     </div>
   );
 };
