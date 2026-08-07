@@ -87,6 +87,16 @@ module.exports = function (deps) {
     }
   });
 
+  // Learning view — all three forward-tests (hourly / next-day / AI) with learning
+  // curves + calibration, for the Command Center "Learning" tab.
+  router.get('/api/semiconductor/learning', (req, res) => {
+    try {
+      res.json(require('../semiLearning').build());
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ================================
   // SEMICONDUCTOR AUTO-TRADER ENDPOINTS
   // ================================

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import theme from '../../theme';
 import SystemHealthBar from './SystemHealthBar';
@@ -19,6 +20,7 @@ import { SOXX_TOP } from './soxxConstituents';
 import MultiTimeframeTechnicals from './MultiTimeframeTechnicals';
 import SoxlChart from './SoxlChart';
 import SemiconductorSentimentPanel from '../trading/SemiconductorSentimentPanel';
+import SoxxLearningTab from './SoxxLearningTab';
 
 // Defined at module scope so referential identity is stable across parent
 // re-renders (5s poll cycle). Previously defined inline → new function
@@ -98,6 +100,15 @@ const mapIndicators = ind => {
 };
 
 const IntraDayCommandCenter = ({ tradingMode }) => {
+  // Dashboard | Learning sub-view (via ?view=, preserving the page's ?tab=command).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get('view') === 'learning' ? 'learning' : 'dashboard';
+  const setView = v => {
+    const p = new URLSearchParams(searchParams);
+    if (v === 'dashboard') p.delete('view');
+    else p.set('view', v);
+    setSearchParams(p, { replace: true });
+  };
   const [sessions, setSessions] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [account, setAccount] = useState(null);
@@ -425,6 +436,34 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[['dashboard', 'Dashboard'], ['learning', 'Learning']].map(([k, label]) => {
+          const active = view === k;
+          return (
+            <button
+              key={k}
+              onClick={() => setView(k)}
+              style={{
+                padding: '6px 16px',
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: active ? 700 : 500,
+                color: active ? '#fff' : theme.colors.gray700,
+                background: active ? theme.colors.primary : theme.colors.gray100,
+                border: 'none',
+                borderRadius: theme.borderRadius.sm,
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {view === 'learning' ? (
+        <SoxxLearningTab />
+      ) : (
+        <>
       <MarketStrip />
 
       <SystemHealthBar
@@ -502,6 +541,8 @@ const IntraDayCommandCenter = ({ tradingMode }) => {
         />
       </TwoCol>
       <CommandCenterLogFeed logs={logs} sentiment={sentiment} />
+        </>
+      )}
     </div>
   );
 };
