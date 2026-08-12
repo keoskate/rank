@@ -71,7 +71,7 @@ const SPY_COLOR = '#64748b';
 // (rebased to 0 at the window start), colored, with de-overlapped end labels
 // carrying each line's total return. Reads the rotation story at a glance:
 // divergence, crossovers, who's pulling away vs rolling over. Width auto-fits.
-const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters }) => {
+const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters, scale }) => {
   const ref = useRef(null);
   const [w, setW] = useState(560);
   useEffect(() => {
@@ -92,9 +92,31 @@ const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters }) => 
   const n = (benchmark && benchmark.series && benchmark.series.length) || 0;
   const plotW = Math.max(20, w - padL - padR);
   const plotH = H - padT - padB;
-  const span = max - min || 1;
   const xAt = i => padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW);
-  const yAt = v => padT + (1 - (v - min) / span) * plotH;
+  // Linear vs log (ratio) y-scale. Log plots the growth factor (1 + return), so one
+  // huge outlier (Memory +974%) stops crushing the smaller sectors into a flat band —
+  // every sector's compounding reads as a comparable slope.
+  const isLog = scale === 'log';
+  const gf = pct => Math.max(0.05, 1 + pct / 100);
+  let yAt;
+  let yTicks; // [{ pct, label, bold }]
+  if (isLog) {
+    const allG = [benchmark.series, ...sectors.map(s => s.series)].flatMap(sr => sr.map(p => gf(p.pct)));
+    const glo = Math.log(Math.min(...allG));
+    const ghi = Math.log(Math.max(...allG));
+    const gspan = ghi - glo || 1;
+    yAt = pct => padT + (1 - (Math.log(gf(pct)) - glo) / gspan) * plotH;
+    const gminV = Math.exp(glo);
+    const gmaxV = Math.exp(ghi);
+    yTicks = [0.25, 0.5, 1, 1.5, 2, 3, 5, 10, 20, 50, 100, 200]
+      .filter(g => g >= gminV * 0.97 && g <= gmaxV * 1.03)
+      .map(g => ({ pct: (g - 1) * 100, label: `${g >= 1 ? '+' : ''}${Math.round((g - 1) * 100)}%`, bold: g === 1 }));
+  } else {
+    const span = max - min || 1;
+    yAt = pct => padT + (1 - (pct - min) / span) * plotH;
+    yTicks = [{ pct: max, label: `${max >= 0 ? '+' : ''}${max.toFixed(0)}%` }, { pct: min, label: `${min.toFixed(0)}%` }];
+    if (min < 0 && max > 0) yTicks.push({ pct: 0, label: '0%', bold: true });
+  }
   const pathOf = s => s.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(p.pct).toFixed(1)}`).join(' ');
 
   const lines = [
@@ -109,7 +131,6 @@ const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters }) => 
   }
   const overflow = labels.length ? labels[labels.length - 1].ly - (padT + plotH) : 0;
   if (overflow > 0) labels.forEach(l => (l.ly -= overflow));
-  const zeroY = yAt(0);
 
   // Faint vertical guides at quarter boundaries (year-starts a touch bolder), so
   // multi-year cycles are legible on the 1Y/2Y views.
@@ -132,15 +153,15 @@ const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters }) => 
         <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>not enough history</div>
       ) : (
         <svg width={w} height={H} style={{ display: 'block' }}>
-          {min < 0 && max > 0 && (
-            <line x1={padL} y1={zeroY} x2={padL + plotW} y2={zeroY} stroke={theme.colors.gray300} strokeWidth="1" strokeDasharray="3 3" />
-          )}
-          <text x={padL - 5} y={padT + 3} textAnchor="end" fontSize="9" fill={theme.colors.gray400} fontFamily="monospace">
-            {max >= 0 ? '+' : ''}{max.toFixed(0)}%
-          </text>
-          <text x={padL - 5} y={padT + plotH} textAnchor="end" fontSize="9" fill={theme.colors.gray400} fontFamily="monospace">
-            {min.toFixed(0)}%
-          </text>
+          {yTicks.map((t, ti) => {
+            const ty = yAt(t.pct);
+            return (
+              <g key={`yt${ti}`}>
+                <line x1={padL} y1={ty} x2={padL + plotW} y2={ty} stroke={t.bold ? theme.colors.gray300 : theme.colors.gray100} strokeWidth="1" strokeDasharray={t.bold ? '3 3' : undefined} />
+                <text x={padL - 5} y={ty + 3} textAnchor="end" fontSize="8" fill={theme.colors.gray400} fontFamily="monospace">{t.label}</text>
+              </g>
+            );
+          })}
           {quarterMarks.map(qm => (
             <g key={qm.i}>
               <line
@@ -273,6 +294,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
   // Sub-sector rotation OVER TIME (vs SPY) — lazily fetched only when expanded.
   const [showDetails, setShowDetails] = useState(false);
   const [sectorWindow, setSectorWindow] = useState('30d');
+  const [sectorScale, setSectorScale] = useState('linear'); // linear | log (ratio)
   const [sectorHist, setSectorHist] = useState(null);
   const [histErr, setHistErr] = useState(null);
   useEffect(() => {
@@ -440,6 +462,30 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                   );
                 })}
                 <span style={{ fontSize: '10px', color: theme.colors.gray400, marginLeft: 2 }}>trailing window</span>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                  {['linear', 'log'].map(sc => {
+                    const active = sectorScale === sc;
+                    return (
+                      <button
+                        key={sc}
+                        onClick={() => setSectorScale(sc)}
+                        title={sc === 'log' ? 'Log (ratio) scale — every sector reads as a comparable slope; best on 1Y/2Y' : 'Linear scale'}
+                        style={{
+                          padding: '2px 8px',
+                          fontSize: theme.typography.fontSize.xs,
+                          fontWeight: active ? 700 : 500,
+                          color: active ? '#fff' : theme.colors.gray700,
+                          background: active ? theme.colors.primary : theme.colors.gray100,
+                          border: 'none',
+                          borderRadius: 10,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {sc === 'linear' ? 'Linear' : 'Log'}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               {histErr ? (
                 <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>
@@ -454,7 +500,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                   <div style={{ fontSize: '9px', color: theme.colors.gray400, fontFamily: 'monospace', marginBottom: 2 }}>
                     cumulative % since {sectorHist.from}, rebased to 0 · {sectorHist.window} ({sectorHist.sessions}d)
                   </div>
-                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} showQuarters={QUARTER_WINDOWS.includes(sectorWindow)} />
+                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} showQuarters={QUARTER_WINDOWS.includes(sectorWindow)} scale={sectorScale} />
                   {/* color-matched ranked legend with the precise numbers */}
                   <div style={{ marginTop: 4 }}>
                     {[{ name: 'SPY', cum: histView.spy.cum, vsSpy: null, members: null }, ...histView.secs].map(r => {
