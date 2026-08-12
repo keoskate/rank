@@ -25,6 +25,7 @@ const WINDOWS = {
   '1Q': { label: '1Q', sessions: 63, lookbackDays: 100 },
   '2Q': { label: '2Q', sessions: 126, lookbackDays: 195 },
   '1Y': { label: '1Y', sessions: 252, lookbackDays: 380 },
+  '2Y': { label: '2Y', sessions: 504, lookbackDays: 760 },
 };
 const DEFAULT_WINDOW = '30d';
 const WINDOW_KEYS = Object.keys(WINDOWS);

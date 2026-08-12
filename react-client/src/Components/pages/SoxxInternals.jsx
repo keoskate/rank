@@ -45,7 +45,8 @@ const Section = ({ label, children }) => (
   </div>
 );
 
-const ROT_WINDOWS = ['30d', '1Q', '2Q', '1Y']; // trailing windows for the rotation trend
+const ROT_WINDOWS = ['30d', '1Q', '2Q', '1Y', '2Y']; // trailing windows for the rotation trend
+const QUARTER_WINDOWS = ['2Q', '1Y', '2Y']; // windows long enough to mark quarter boundaries
 
 // Fixed per-sub-sector colors so the overlaid chart and the legend below agree.
 const SECTOR_COLORS = {
@@ -70,7 +71,7 @@ const SPY_COLOR = '#64748b';
 // (rebased to 0 at the window start), colored, with de-overlapped end labels
 // carrying each line's total return. Reads the rotation story at a glance:
 // divergence, crossovers, who's pulling away vs rolling over. Width auto-fits.
-const SectorRotationChart = ({ sectors, benchmark, min, max }) => {
+const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters }) => {
   const ref = useRef(null);
   const [w, setW] = useState(560);
   useEffect(() => {
@@ -84,7 +85,7 @@ const SectorRotationChart = ({ sectors, benchmark, min, max }) => {
   }, []);
 
   const H = 210;
-  const padL = 34;
+  const padL = 46; // room for large y-axis labels (e.g. +1300% on the 2Y view)
   const padR = 88;
   const padT = 12;
   const padB = 18;
@@ -110,6 +111,21 @@ const SectorRotationChart = ({ sectors, benchmark, min, max }) => {
   if (overflow > 0) labels.forEach(l => (l.ly -= overflow));
   const zeroY = yAt(0);
 
+  // Faint vertical guides at quarter boundaries (year-starts a touch bolder), so
+  // multi-year cycles are legible on the 1Y/2Y views.
+  const quarterMarks = [];
+  if (showQuarters && benchmark && Array.isArray(benchmark.series)) {
+    let prevKey = null;
+    benchmark.series.forEach((p, i) => {
+      const [y, mo] = (p.date || '').split('-').map(Number);
+      if (!y || !mo) return;
+      const q = Math.floor((mo - 1) / 3) + 1;
+      const key = y * 4 + q;
+      if (prevKey !== null && key !== prevKey) quarterMarks.push({ i, q, yy: y % 100, yearStart: q === 1 });
+      prevKey = key;
+    });
+  }
+
   return (
     <div ref={ref} style={{ width: '100%' }}>
       {n < 2 ? (
@@ -125,6 +141,22 @@ const SectorRotationChart = ({ sectors, benchmark, min, max }) => {
           <text x={padL - 5} y={padT + plotH} textAnchor="end" fontSize="9" fill={theme.colors.gray400} fontFamily="monospace">
             {min.toFixed(0)}%
           </text>
+          {quarterMarks.map(qm => (
+            <g key={qm.i}>
+              <line
+                x1={xAt(qm.i)}
+                y1={padT}
+                x2={xAt(qm.i)}
+                y2={padT + plotH}
+                stroke={qm.yearStart ? theme.colors.gray300 : theme.colors.gray200}
+                strokeWidth={qm.yearStart ? 1 : 0.75}
+                strokeDasharray={qm.yearStart ? undefined : '2 3'}
+              />
+              <text x={xAt(qm.i) + 2} y={padT + plotH + 9} fontSize="7" fill={theme.colors.gray400} fontFamily="monospace">
+                {qm.yearStart ? `'${qm.yy}` : `Q${qm.q}`}
+              </text>
+            </g>
+          ))}
           {lines.map(l => (
             <path
               key={l.name}
@@ -422,7 +454,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                   <div style={{ fontSize: '9px', color: theme.colors.gray400, fontFamily: 'monospace', marginBottom: 2 }}>
                     cumulative % since {sectorHist.from}, rebased to 0 · {sectorHist.window} ({sectorHist.sessions}d)
                   </div>
-                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} />
+                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} showQuarters={QUARTER_WINDOWS.includes(sectorWindow)} />
                   {/* color-matched ranked legend with the precise numbers */}
                   <div style={{ marginTop: 4 }}>
                     {[{ name: 'SPY', cum: histView.spy.cum, vsSpy: null, members: null }, ...histView.secs].map(r => {
