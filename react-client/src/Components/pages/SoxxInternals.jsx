@@ -71,7 +71,7 @@ const SPY_COLOR = '#64748b';
 // (rebased to 0 at the window start), colored, with de-overlapped end labels
 // carrying each line's total return. Reads the rotation story at a glance:
 // divergence, crossovers, who's pulling away vs rolling over. Width auto-fits.
-const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters, scale }) => {
+const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters, scale, height = 210 }) => {
   const ref = useRef(null);
   const [w, setW] = useState(560);
   useEffect(() => {
@@ -84,7 +84,7 @@ const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters, scale
     return () => ro.disconnect();
   }, []);
 
-  const H = 210;
+  const H = height;
   const padL = 46; // room for large y-axis labels (e.g. +1300% on the 2Y view)
   const padR = 88;
   const padT = 12;
@@ -669,7 +669,7 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                   <div style={{ fontSize: '9px', color: theme.colors.gray400, fontFamily: 'monospace', marginBottom: 2 }}>
                     cumulative % since {sectorHist.from}, rebased to 0 · {sectorHist.window} ({sectorHist.sessions}d)
                   </div>
-                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} showQuarters={QUARTER_WINDOWS.includes(sectorWindow)} scale={sectorScale} />
+                  <SectorRotationChart sectors={histView.secs} benchmark={histView.spy} min={histView.min} max={histView.max} showQuarters={QUARTER_WINDOWS.includes(sectorWindow)} scale={sectorScale} height={sectorWindow === '2Y' ? 320 : sectorWindow === '1Y' ? 270 : 210} />
                   {/* color-matched ranked legend with the precise numbers */}
                   <div style={{ marginTop: 4 }}>
                     {[{ name: 'SPY', cum: histView.spy.cum, vsSpy: null, members: null }, ...histView.secs].map(r => {
