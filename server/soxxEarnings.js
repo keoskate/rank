@@ -10,6 +10,15 @@
 const unusualWhalesClient = require('./unusualWhalesClient');
 const alpacaClient = require('./alpacaClient');
 const { SOXX_SYMS, SOXX_TOP } = require('./soxxConstituents');
+const { KEO_FUND_SYMS } = require('./keoFundHoldings');
+
+// Earnings universe = SOXX constituents ∪ Keo Fund holdings (deduped). Each row
+// carries `inSoxx` so the panel can dot the semiconductor (SOXX) members.
+const SOXX_SET = new Set(SOXX_SYMS);
+const EARNINGS_SYMS = [...new Set([...SOXX_SYMS, ...KEO_FUND_SYMS])];
+// Per-symbol last-known-good rows — carried forward when a fetch fails, so a major
+// name (e.g. NVDA) never silently vanishes on a transient UW error + gets cached out.
+const _bySym = new Map(); // sym -> { upcoming: row|null, past: row|null }
 
 const CACHE_MS = 60 * 60 * 1000; // 1h
 let _cache = { at: 0, data: null };
@@ -31,38 +40,43 @@ async function computeSoxxEarnings(forceRefresh = false) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = [];
-  const past = [];
   const batch = 6;
 
-  for (let i = 0; i < SOXX_SYMS.length; i += batch) {
-    const syms = SOXX_SYMS.slice(i, i + batch);
+  for (let i = 0; i < EARNINGS_SYMS.length; i += batch) {
+    const syms = EARNINGS_SYMS.slice(i, i + batch);
     const rowsArr = await Promise.all(
-      syms.map(s => unusualWhalesClient.getEarnings(s).catch(() => []))
+      // null = fetch FAILED (transient); [] = succeeded with no earnings.
+      syms.map(s => unusualWhalesClient.getEarnings(s).then(r => r || []).catch(() => null))
     );
     syms.forEach((sym, j) => {
-      const rows = rowsArr[j] || [];
+      const rows = rowsArr[j];
+      if (rows === null) return; // failed → keep last-known-good (carry forward)
+      const inSoxx = SOXX_SET.has(sym);
       const future = rows
         .filter(r => r.report_date && r.report_date >= today)
         .sort((a, b) => a.report_date.localeCompare(b.report_date));
+      const done = rows
+        .filter(r => r.report_date && r.report_date < today && r.post_earnings_move_1d != null)
+        .sort((a, b) => b.report_date.localeCompare(a.report_date));
+
+      const entry = { upcoming: null, past: null };
       if (future[0]) {
-        upcoming.push({
+        entry.upcoming = {
           sym,
+          inSoxx,
           date: future[0].report_date,
           time: future[0].report_time || 'unknown',
           expectedMovePct: num(future[0].expected_move_perc) != null ? num(future[0].expected_move_perc) * 100 : null,
           estimated: !!future[0].is_date_estimate,
-        });
+        };
       }
-      const done = rows
-        .filter(r => r.report_date && r.report_date < today && r.post_earnings_move_1d != null)
-        .sort((a, b) => b.report_date.localeCompare(a.report_date));
       if (done[0]) {
         const r = done[0];
         const eps = num(r.actual_eps);
         const est = num(r.street_mean_est);
-        past.push({
+        entry.past = {
           sym,
+          inSoxx,
           date: r.report_date,
           reaction1d: num(r.post_earnings_move_1d) != null ? num(r.post_earnings_move_1d) * 100 : null,
           // 1-week follow-through after the report (UW), to see if the reaction held.
@@ -71,11 +85,19 @@ async function computeSoxxEarnings(forceRefresh = false) {
           estimate: est,
           beat: eps != null && est != null ? eps >= est : null,
           expectedMovePct: num(r.expected_move_perc) != null ? num(r.expected_move_perc) * 100 : null,
-        });
+        };
       }
+      _bySym.set(sym, entry);
     });
   }
 
+  // Flatten from the carried-forward per-symbol map.
+  const upcoming = [];
+  const past = [];
+  for (const entry of _bySym.values()) {
+    if (entry.upcoming) upcoming.push(entry.upcoming);
+    if (entry.past) past.push(entry.past);
+  }
   upcoming.sort((a, b) => a.date.localeCompare(b.date));
   past.sort((a, b) => b.date.localeCompare(a.date));
   const data = { upcoming, past, asOf: new Date().toISOString() };

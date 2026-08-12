@@ -43,9 +43,21 @@ const SectorTag = ({ sym }) => {
   );
 };
 
-// Ticker + its sub-sector tag (used in both tables' first column).
-const TickerCell = ({ sym }) => (
-  <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0, overflow: 'hidden' }}>
+// Ticker + a SOXX-membership dot (filled = SOXX/semi member, hollow = Keo Fund
+// holding that isn't in SOXX) + its sub-sector tag. Used in both tables' first column.
+const TickerCell = ({ sym, inSoxx }) => (
+  <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, overflow: 'hidden' }}>
+    <span
+      title={inSoxx ? 'SOXX (semiconductor) member' : 'Keo Fund holding — not in SOXX'}
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        flexShrink: 0,
+        background: inSoxx ? theme.colors.success : 'transparent',
+        border: inSoxx ? 'none' : `1px solid ${theme.colors.gray300}`,
+      }}
+    />
     <span style={{ fontWeight: 700, color: theme.colors.gray800 }}>{sym}</span>
     <SectorTag sym={sym} />
   </span>
@@ -80,10 +92,10 @@ const timeTag = t => (t === 'premarket' ? 'pre' : t === 'postmarket' ? 'post' : 
 
 // Fixed columns grouped left; trailing 1fr track absorbs slack on the right so
 // the date doesn't balloon and disconnect the run-up/reaction columns.
-const UP_COLS = '90px 58px 58px 112px 58px 34px 54px 1fr';
+const UP_COLS = '106px 58px 58px 108px 58px 34px 54px 1fr';
 // past: adds an "After" 10-day dot path (right after Reaction) + a "Since" column
 // (price at report → now), before the trailing spacer.
-const PAST_COLS = '80px 50px 46px 80px 52px 32px 68px 72px 84px 1fr';
+const PAST_COLS = '94px 50px 46px 74px 52px 32px 68px 72px 84px 1fr';
 
 // Signed % with sign, colored. e.g. "+25%" / "-6.7%".
 const fmtSignedPct = (v, dp = 0) =>
@@ -177,7 +189,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: theme.spacing.sm }}>
         <h3 style={{ margin: 0, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.bold }}>
-          SOXX Earnings
+          SOXX + Fund Earnings
         </h3>
         <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500, fontFamily: 'monospace' }}>
           {loading ? 'loading…' : error ? 'unavailable' : data?.asOf ? `${fmtET(new Date(data.asOf))} ET` : ''}
@@ -217,7 +229,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                       const soon = days != null && days <= 5;
                       return (
                         <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: UP_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
-                          <TickerCell sym={e.sym} />
+                          <TickerCell sym={e.sym} inSoxx={e.inSoxx} />
                           <span style={{ color: theme.colors.gray500 }} title="approx current market cap">{fmtMcap(e.mcapB)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="current price">{fmtPrice(priceNow(e.sym))}</span>
                           <span style={{ color: soon ? theme.colors.warningDark : theme.colors.gray600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -288,7 +300,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
                       const since = e.priceThen != null && pNow ? ((pNow - e.priceThen) / e.priceThen) * 100 : null;
                       return (
                         <div key={e.sym} style={{ display: 'grid', gridTemplateColumns: PAST_COLS, gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: theme.typography.fontSize.xs }}>
-                          <TickerCell sym={e.sym} />
+                          <TickerCell sym={e.sym} inSoxx={e.inSoxx} />
                           <span style={{ color: theme.colors.gray500 }} title="approx market cap at report time">{fmtMcap(mcapThen)}</span>
                           <span style={{ textAlign: 'right', color: theme.colors.gray700 }} title="price at report time">{fmtPrice(e.priceThen)}</span>
                           <span style={{ color: theme.colors.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -383,7 +395,7 @@ const SoxxEarnings = ({ quotes = {} }) => {
           )}
 
           <div style={{ fontSize: '10px', color: theme.colors.gray400, fontFamily: 'monospace' }}>
-            tag by ticker = sub-sector · ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · After 10d = daily up/down for 10 sessions after · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
+            ● = SOXX (semi) member · ○ = Keo Fund holding (non-SOXX) · tag by ticker = sub-sector · ~mcap = approx (no live shares) · past = at report time · Run-up = ~1mo into the report (hover %) · Implied = options-implied move · Reaction = 1-day move (hover for 1-week) · After 10d = daily up/down for 10 sessions after · Since = price now + % since the report · ≠ = diverged vs beat/miss · * = est. date
           </div>
         </>
       )}
