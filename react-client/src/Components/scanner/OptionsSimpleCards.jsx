@@ -87,6 +87,15 @@ const PriceLine = ({ o }) => {
 
 const SimpleCard = ({ o, onBuy }) => {
   const payout = payoutIfHit(o);
+  // The "if it hits" payout is the value AT the scan's price target — a much
+  // bigger move than clearing break-even. Surface the target + its move so the
+  // multiple never reads as "the popModel% chance → this payout".
+  const targetPx = Number.isFinite(o.targetPrice) ? Math.round(o.targetPrice) : null;
+  const targetMovePct =
+    Number.isFinite(o.targetPrice) && Number.isFinite(o.underlyingPrice) && o.underlyingPrice > 0
+      ? Math.round((o.targetPrice / o.underlyingPrice - 1) * 100)
+      : null;
+  const bePx = Number.isFinite(o.breakeven) ? Math.round(o.breakeven) : null;
   const tier = riskTier(o);
   const worst = worstCase(o);
   const warnings = plainWarnings(o);
@@ -133,13 +142,21 @@ const SimpleCard = ({ o, onBuy }) => {
 
       <div style={{ display: 'flex', gap: theme.spacing.xl }}>
         <BigNumber label="Ticket price">{fmtMoney(o.costPerContract)}</BigNumber>
-        <BigNumber label="If it hits" accent={theme.colors.successMuted}>
+        <BigNumber label={targetPx ? `If it hits $${targetPx}` : 'If target hits'} accent={theme.colors.successMuted}>
           ~{fmtMoney(payout.dollars)}
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: theme.colors.gray600 }}>
             {' '}({payout.multiple.toFixed(1)}×)
           </span>
         </BigNumber>
       </div>
+      {targetPx && (
+        <div style={{ fontSize: '0.72rem', color: theme.colors.gray600, lineHeight: 1.45, marginTop: -4 }}>
+          Best case — the payout if {o.underlying} reaches its ~${targetPx}
+          {targetMovePct != null ? ` target (${targetMovePct >= 0 ? '+' : ''}${targetMovePct}%)` : ' target'}
+          {bePx != null ? `, well past the $${bePx} break-even` : ''}. That's a far bigger
+          move than the “chance to profit” below — which only needs it to clear break-even.
+        </div>
+      )}
 
       <div>
         <div style={{
@@ -150,8 +167,8 @@ const SimpleCard = ({ o, onBuy }) => {
           fontFamily: theme.typography.fontFamilyMono,
           marginBottom: 3,
         }}>
-          <span>Our estimate: <strong style={{ color: theme.colors.charcoal }}>{Math.round(o.popModel * 100)}%</strong></span>
-          <span>Market: {Math.round(o.popMarket * 100)}%</span>
+          <span>Chance to profit — us: <strong style={{ color: theme.colors.charcoal }}>{Math.round(o.popModel * 100)}%</strong></span>
+          <span>market: {Math.round(o.popMarket * 100)}%</span>
         </div>
         <PopBar popModel={o.popModel} popMarket={o.popMarket} direction={o.direction} />
         <div style={{ fontSize: '0.72rem', color: theme.colors.gray600, marginTop: 3 }}>
