@@ -2941,6 +2941,17 @@ module.exports = function (deps) {
     }
   });
 
+  // Year-over-year seasonality for one series (SOXX index or a sub-sector).
+  router.get('/api/soxx/seasonality', async (req, res) => {
+    try {
+      const data = await require('../soxxSeasonality').getSeasonality(req.query.target, req.query.refresh === 'true');
+      res.json(data);
+    } catch (error) {
+      console.error('Error building SOXX seasonality:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // SOXX hourly self-improving predictor (pre-registered forward-test).
   const soxxPredictionLoop = require('../soxxPredictionLoop');
   const soxxPredStore = require('../soxxPredictions');

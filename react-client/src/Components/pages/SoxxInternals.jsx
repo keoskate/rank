@@ -202,6 +202,100 @@ const SectorRotationChart = ({ sectors, benchmark, min, max, showQuarters, scale
   );
 };
 
+// ── Seasonality (year-over-year) ─────────────────────────────────────────────
+const MONTH_STARTS = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+const MONTH_LABELS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+const SEASON_COLORS = ['#2563eb', '#16a34a', '#ea580c', '#9333ea', '#94a3b8']; // newest → oldest
+
+// Overlays each calendar year of ONE series on a shared Jan→Dec axis (rebased to
+// Jan 1), so you can read seasonality — is this year tracking, leading, or lagging
+// prior years' shape. The current (newest) year is drawn boldest.
+const SeasonalityChart = ({ years }) => {
+  const ref = useRef(null);
+  const [w, setW] = useState(560);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => setW(Math.max(280, el.clientWidth));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  if (!years || !years.length) return null;
+  const H = 220;
+  const padL = 40;
+  const padR = 66;
+  const padT = 12;
+  const padB = 20;
+  const plotW = Math.max(20, w - padL - padR);
+  const plotH = H - padT - padB;
+  const maxDoy = 366;
+  const allPct = years.flatMap(y => y.series.map(p => p.pct));
+  const min = Math.min(0, ...allPct);
+  const max = Math.max(0, ...allPct);
+  const span = max - min || 1;
+  const xAt = doy => padL + ((doy - 1) / (maxDoy - 1)) * plotW;
+  const yAt = pct => padT + (1 - (pct - min) / span) * plotH;
+  const pathOf = s => s.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(p.doy).toFixed(1)},${yAt(p.pct).toFixed(1)}`).join(' ');
+
+  const desc = [...years].sort((a, b) => b.year - a.year); // newest first
+  const colorOf = year => SEASON_COLORS[desc.findIndex(y => y.year === year)] || '#94a3b8';
+  const newest = desc[0] && desc[0].year;
+
+  const yTicks = [{ pct: max, label: `${max >= 0 ? '+' : ''}${max.toFixed(0)}%` }, { pct: min, label: `${min.toFixed(0)}%` }];
+  if (min < 0 && max > 0) yTicks.push({ pct: 0, label: '0%', bold: true });
+
+  const endLabels = years
+    .map(y => ({ year: y.year, color: colorOf(y.year), last: y.series[y.series.length - 1] }))
+    .map(e => ({ ...e, ly: yAt(e.last.pct) }))
+    .sort((a, b) => a.ly - b.ly);
+  const gap = 12;
+  for (let i = 1; i < endLabels.length; i++) {
+    if (endLabels[i].ly - endLabels[i - 1].ly < gap) endLabels[i].ly = endLabels[i - 1].ly + gap;
+  }
+
+  return (
+    <div ref={ref} style={{ width: '100%' }}>
+      <svg width={w} height={H} style={{ display: 'block' }}>
+        {yTicks.map((t, ti) => {
+          const ty = yAt(t.pct);
+          return (
+            <g key={`yt${ti}`}>
+              <line x1={padL} y1={ty} x2={padL + plotW} y2={ty} stroke={t.bold ? theme.colors.gray300 : theme.colors.gray100} strokeWidth="1" strokeDasharray={t.bold ? '3 3' : undefined} />
+              <text x={padL - 5} y={ty + 3} textAnchor="end" fontSize="8" fill={theme.colors.gray400} fontFamily="monospace">{t.label}</text>
+            </g>
+          );
+        })}
+        {MONTH_STARTS.map((doy, i) => (
+          <g key={`m${i}`}>
+            <line x1={xAt(doy)} y1={padT} x2={xAt(doy)} y2={padT + plotH} stroke={theme.colors.gray100} strokeWidth="0.75" />
+            <text x={xAt(doy) + 1} y={padT + plotH + 10} fontSize="7" fill={theme.colors.gray400} fontFamily="monospace">{MONTH_LABELS[i]}</text>
+          </g>
+        ))}
+        {years.map(y => (
+          <path
+            key={y.year}
+            d={pathOf(y.series)}
+            fill="none"
+            stroke={colorOf(y.year)}
+            strokeWidth={y.year === newest ? 2.5 : 1.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            opacity={y.year === newest ? 1 : 0.75}
+          />
+        ))}
+        {endLabels.map(e => (
+          <text key={e.year} x={padL + plotW + 5} y={e.ly + 3} fontSize="9" fontWeight="700" fill={e.color} fontFamily="monospace">
+            {e.year} {e.last.pct >= 0 ? '+' : ''}{e.last.pct.toFixed(0)}%
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+};
+
 // SOXX Internals — breadth, sub-sector rotation, and leadership/concentration,
 // all derived from the shared constituent quotes. Answers "what's driving SOXX".
 const SoxxInternals = ({ quotes = {}, updatedAt }) => {
@@ -295,10 +389,14 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [sectorWindow, setSectorWindow] = useState('30d');
   const [sectorScale, setSectorScale] = useState('linear'); // linear | log (ratio)
+  const [rotView, setRotView] = useState('trend'); // trend | seasonality
+  const [seasonTarget, setSeasonTarget] = useState('SOXX');
+  const [seasonData, setSeasonData] = useState(null);
+  const [seasonErr, setSeasonErr] = useState(null);
   const [sectorHist, setSectorHist] = useState(null);
   const [histErr, setHistErr] = useState(null);
   useEffect(() => {
-    if (!showDetails) return undefined;
+    if (!showDetails || rotView !== 'trend') return undefined;
     let cancelled = false;
     setSectorHist(null); // show loading while the new window fetches
     setHistErr(null);
@@ -315,7 +413,28 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
     return () => {
       cancelled = true;
     };
-  }, [showDetails, sectorWindow]);
+  }, [showDetails, rotView, sectorWindow]);
+
+  // Seasonality (year-over-year) for the chosen target — fetched on demand.
+  useEffect(() => {
+    if (!showDetails || rotView !== 'seasonality') return undefined;
+    let cancelled = false;
+    setSeasonData(null);
+    setSeasonErr(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/soxx/seasonality?target=${encodeURIComponent(seasonTarget)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) setSeasonData(json);
+      } catch (e) {
+        if (!cancelled) setSeasonErr(e.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showDetails, rotView, seasonTarget]);
 
   const histView = useMemo(() => {
     if (!sectorHist || !sectorHist.sectors?.length || !sectorHist.benchmark) return null;
@@ -439,6 +558,56 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
           </button>
           {showDetails && (
             <div style={{ marginTop: theme.spacing.sm }}>
+              {/* Trend (rotation) vs Seasonality (year-over-year) */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                {[['trend', 'Trend'], ['seasonality', 'Seasonality']].map(([k, label]) => {
+                  const active = rotView === k;
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setRotView(k)}
+                      style={{ padding: '3px 12px', fontSize: theme.typography.fontSize.xs, fontWeight: active ? 700 : 500, color: active ? '#fff' : theme.colors.gray700, background: active ? theme.colors.primary : theme.colors.gray100, border: 'none', borderRadius: 10, cursor: 'pointer' }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {rotView === 'seasonality' ? (
+                <>
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {(seasonData?.targets || ['SOXX', ...GROUP_ORDER]).map(t => {
+                      const active = seasonTarget === t;
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => setSeasonTarget(t)}
+                          style={{ padding: '2px 9px', fontSize: theme.typography.fontSize.xs, fontWeight: active ? 700 : 500, color: active ? '#fff' : theme.colors.gray700, background: active ? theme.colors.primary : theme.colors.gray100, border: 'none', borderRadius: 10, cursor: 'pointer' }}
+                        >
+                          {t === 'SOXX' ? 'SOXX' : SECTOR_ABBR[t] || t}
+                        </button>
+                      );
+                    })}
+                    <span style={{ fontSize: '10px', color: theme.colors.gray400, marginLeft: 2 }}>year over year</span>
+                  </div>
+                  {seasonErr ? (
+                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>seasonality unavailable ({seasonErr})</div>
+                  ) : !seasonData || !seasonData.years || !seasonData.years.length ? (
+                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.gray500 }}>loading seasonality…</div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '9px', color: theme.colors.gray400, fontFamily: 'monospace', marginBottom: 2 }}>
+                        {seasonData.target === 'SOXX' ? 'SOXX index' : `${seasonData.target} sub-sector`} · each calendar year rebased to Jan 1
+                      </div>
+                      <SeasonalityChart years={seasonData.years} />
+                      <div style={{ fontSize: '10px', color: theme.colors.gray500, fontFamily: 'monospace', marginTop: 6 }}>
+                        newest year bold — compare this year's shape to prior years to read the seasonal / cyclical tendency
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
               <div style={{ display: 'flex', gap: 4, marginBottom: 8, alignItems: 'center' }}>
                 {ROT_WINDOWS.map(w => {
                   const active = sectorWindow === w;
@@ -524,6 +693,8 @@ const SoxxInternals = ({ quotes = {}, updatedAt }) => {
                   <div style={{ fontSize: '10px', color: theme.colors.gray500, fontFamily: 'monospace', marginTop: 6 }}>
                     {histView.leader.name} leading · {histView.laggard.name} lagging · {histView.beat}/{histView.secs.length} beat SPY over {sectorHist.window}
                   </div>
+                </>
+              )}
                 </>
               )}
             </div>
